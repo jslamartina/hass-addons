@@ -1,0 +1,83 @@
+name: "CyncLAN Bridge"
+version: "0.0.1"
+slug: "cync-lan"
+description: "Local controller for Cync/C by GE smart devices (DNS redirection required!)"
+arch:
+  - aarch64
+  - amd64
+  - armhf
+  - armv7
+  - i386
+startup: application
+services:
+  - "mqtt:need"
+init: false
+watchdog: tcp://[HOST]:[PORT:23779]
+boot: auto
+ports:
+  23779/tcp: 23779
+  23778/tcp: null
+ports_description:
+  23779/tcp: "TCP port for Cync device communication"
+  23778/tcp: "Web interface for device export (ingress)"
+ingress: true
+ingress_port: 23778
+#ingress_entry: static/index.html
+panel_icon: mdi:lightbulb
+panel_title: "CyncLAN"
+# just serving HTML/JS/CSS, no need for streaming
+panel_stream: false
+# during local testing, only build for local arch
+# machine:
+#   - qemux86-64
+
+environment:
+  TEST_VAR_111: "test_value_111 from add-on config.yaml environment dict"
+
+options:
+  account_username: null
+  account_password: null
+  debug_log_level: false
+  mqtt_host: ""
+  mqtt_port: 1883
+  mqtt_user: ""
+  mqtt_pass: ""
+  mqtt_topic: "cync_lan_addon"
+
+schema:
+  account_username: email
+  account_password: password
+  debug_log_level: bool
+  mqtt_topic: str
+  mqtt_host: str
+  mqtt_port: port
+  mqtt_user: str?
+  mqtt_pass: password?
+
+# To store UUID.txt in the hass filesystem to survive upgrades / rebuilds
+# Also would be nice to access the cync_mesh.yaml to do quick edits without re-exporting!
+map:
+  ### if path key isnt included /<type name> inside container
+  # /config on host
+  # - type: config
+  # FAIL TO START if 'addon_config' and/or 'homeassistant_config' are defined while 'config' is included.
+  # /homeassistant on host ?
+  - type: homeassistant_config
+  # /addon_configs/<my addon> on host
+  - type: addon_config
+  # /ssl on host
+  # - type: ssl
+  # /addons on host
+  # - type: addons
+  # /addon_configs on host
+  # - type: all_addon_configs
+  # /share on host
+  # - type: share
+  # /backup on host
+  # - type: backup
+  # /media on host
+  # - type: media
+
+url: "https://github.com/baudneo/hass-addons/tree/dev/cync-lan"
+host_network: true
+#image: "ghcr.io/baudneo/cync-lan-addon:{arch}-cync-lan"

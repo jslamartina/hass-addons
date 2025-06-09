@@ -1,0 +1,12 @@
+build_from:
+  armhf: ghcr.io/home-assistant/armhf-base-python:latest
+  armv7: ghcr.io/home-assistant/armv7-base-python:latest
+  aarch64: ghcr.io/home-assistant/aarch64-base-python:latest
+  amd64: ghcr.io/home-assistant/amd64-base-python:latest
+labels:
+  org.opencontainers.image.title: "CyncLAN Bridge - Home Assistant Add-on"
+  org.opencontainers.image.description: "Local MQTT controller for Cync/C by GE smart devices (DNS redirection required)"
+  org.opencontainers.image.source: "https://github.com/baudneo/hass-addons"
+  org.opencontainers.image.licenses: "MIT"
+#args:
+#  TEMPIO_VERSION: "2021.09.0"
