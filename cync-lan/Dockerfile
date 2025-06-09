@@ -56,5 +56,6 @@ COPY static/index.html /root/cync-lan/www/index.html
 
 COPY run.sh /
 RUN chmod a+x /run.sh
+ARG CB=1
 
 CMD [ "/run.sh" ]
