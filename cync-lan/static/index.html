@@ -19,6 +19,10 @@
       border-radius: 0.5rem;
       box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
     }
+    #yamlPreview {
+      max-height: 300px;
+      overflow-y: auto;
+    }
   </style>
 </head>
 <body class="bg-gray-100 dark:bg-gray-900 min-h-screen flex items-center justify-center">
@@ -26,10 +30,6 @@
     <h1 class="text-3xl font-bold text-center text-gray-800 dark:text-gray-100 mb-6">CyncLAN - Device Export</h1>
 
     <div class="space-y-4">
-            <span class="absolute left-1/2 -translate-x-1/2 mt-2 w-64 p-2 rounded bg-gray-800 text-white text-xs opacity-0 group-hover:opacity-100 group-focus:opacity-100 transition pointer-events-none z-10">
-        When you click "Start Export", the system will first try to use any cached tokens. If needed, you will be prompted for an OTP.
-      </span>
-</div>
       <!-- Start Export Button with Help Icon -->
       <button id="startButton" onclick="startExport()" class="w-full bg-indigo-600 text-white py-3 px-4 rounded-md hover:bg-indigo-700 flex items-center justify-center">
         <span id="startText">Start Export</span>
@@ -52,48 +52,39 @@
       <div id="otpSection" class="space-y-2">
         <label for="otpInput" class="block text-sm font-medium text-gray-700 dark:text-gray-200">Enter OTP:</label>
         <input type="text" id="otpInput" placeholder="123456" class="w-full p-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:text-gray-100" />
-        <!-- Submit OTP Button with Spinner -->
-        <button id="submitOtpButton" onclick="submitOTP()" class="flex-1 bg-green-600 text-white p-2 rounded-md hover:bg-green-700 flex items-center justify-center">
-          <span id="submitOtpText">Submit OTP</span>
-          <span class="ml-1 relative group focus:outline-none">
-            <svg class="w-4 h-4 text-white hover:text-gray-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <circle cx="12" cy="12" r="10" stroke-width="2"></circle>
-              <path stroke-width="2" d="M12 16v-4m0-4h.01"></path>
-            </svg>
-            <span class="absolute left-1/2 -translate-x-1/2 mt-2 w-56 p-2 rounded bg-gray-800 text-white text-xs opacity-0 group-hover:opacity-100 group-focus:opacity-100 transition pointer-events-none z-10">
-              Submit an OTP. If valid, the returned token is cached and a config file is exported.
+        <div class="flex items-center">
+          <button id="submitOtpButton" onclick="submitOTP()" class="w-full bg-green-600 text-white p-2 rounded-md hover:bg-green-700 flex items-center justify-center">
+            <span id="submitOtpText">Submit OTP</span>
+            <span class="ml-1 relative group focus:outline-none">
+              <svg class="w-4 h-4 text-white hover:text-gray-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <circle cx="12" cy="12" r="10" stroke-width="2"></circle>
+                <path stroke-width="2" d="M12 16v-4m0-4h.01"></path>
+              </svg>
+              <span class="absolute left-1/2 -translate-x-1/2 mt-2 w-56 p-2 rounded bg-gray-800 text-white text-xs opacity-0 group-hover:opacity-100 group-focus:opacity-100 transition pointer-events-none z-10">
+                Submit an OTP. If valid, the returned token is cached and a config file is exported.
+              </span>
             </span>
-          </span>
-          <svg id="submitOtpSpinner" class="hidden animate-spin h-5 w-5 ml-2 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-          </svg>
-        </button>
-
-        <!-- Request OTP Button with Spinner -->
-        <button id="requestOtpButton" onclick="requestOTP()" class="flex-1 bg-yellow-500 text-white p-2 rounded-md hover:bg-yellow-600 flex items-center justify-center">
-          <span id="requestOtpText">Request OTP</span>
-          <span class="ml-1 relative group focus:outline-none">
-            <svg class="w-4 h-4 text-white hover:text-gray-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <circle cx="12" cy="12" r="10" stroke-width="2"></circle>
-              <path stroke-width="2" d="M12 16v-4m0-4h.01"></path>
+            <svg id="submitOtpSpinner" class="hidden animate-spin h-5 w-5 ml-2 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
             </svg>
-            <span class="absolute left-1/2 -translate-x-1/2 mt-2 w-56 p-2 rounded bg-gray-800 text-white text-xs opacity-0 group-hover:opacity-100 group-focus:opacity-100 transition pointer-events-none z-10">
-              For manual use. Requests a new OTP if you need one.
-            </span>
-          </span>
-          <svg id="requestOtpSpinner" class="hidden animate-spin h-5 w-5 ml-2 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-          </svg>
-        </button>
+          </button>
+        </div>
       </div>
 
       <!-- Result Display -->
       <div id="successSection" class="hidden animate__animated animate__fadeIn space-y-4">
         <p class="text-green-500 text-lg font-semibold">Export Successful!</p>
         <a id="downloadLink" href="#" download="cync_mesh.yaml" class="block bg-indigo-600 text-white text-center py-2 rounded hover:bg-indigo-700">Download Config File</a>
-        <pre id="yamlPreview" class="rounded bg-gray-900 text-white overflow-auto p-4 text-sm"><code class="language-yaml"></code></pre>
+        <div class="relative">
+          <pre id="yamlPreview" class="rounded bg-gray-900 text-white p-4 text-sm"><code class="language-yaml"></code></pre>
+          <button id="copyButton" onclick="copyConfig()" class="absolute top-2 right-2 bg-gray-700 text-white p-2 rounded-md hover:bg-gray-600 flex items-center">
+            <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
+            </svg>
+            Copy
+          </button>
+        </div>
       </div>
 
       <!-- Error Message -->
@@ -128,6 +119,39 @@
       const otpField = document.getElementById('otpInput');
       otpField.focus();
       otpField.select();
+    }
+
+    function copyConfig() {
+      const yamlText = document.querySelector('#yamlPreview code').textContent.trim();
+      const copyButton = document.getElementById('copyButton');
+
+      try {
+        // Create a temporary textarea to hold the text for copying
+        const tempTextarea = document.createElement('textarea');
+        tempTextarea.value = yamlText;
+        document.body.appendChild(tempTextarea);
+        tempTextarea.select();
+        document.execCommand('copy');
+        document.body.removeChild(tempTextarea);
+
+        showToast('Config copied to clipboard!');
+        copyButton.innerHTML = `
+          <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+          </svg>
+          Copied!
+        `;
+        setTimeout(() => {
+          copyButton.innerHTML = `
+            <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
+            </svg>
+            Copy
+          `;
+        }, 2000);
+      } catch (e) {
+        showError('Failed to copy config: ' + e.message);
+      }
     }
 
     async function startExport() {
@@ -179,19 +203,6 @@
         }
       } catch (e) {
         showError('OTP submit error: ' + e.message);
-      }
-    }
-
-    async function requestOTP() {
-      try {
-        const response = await fetch(`${BASE_PATH}/api/export/otp/request`);
-        const result = await response.json();
-        if (!result.success) {
-          showToast(result.message || "OTP requested.");
-          focusOTP();
-        }
-      } catch (e) {
-        showError('OTP request error: ' + e.message);
       }
     }
 

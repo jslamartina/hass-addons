@@ -29,11 +29,6 @@ RUN set -x \
         git \
     && rm -rf /var/cache/apk/*
 
-VOLUME /root/cync-lan/.auth
-
-EXPOSE 23779
-EXPOSE 23778
-
 ENV CYNC_HOST="0.0.0.0" \
     CYNC_DEBUG=0 \
     CYNC_RAW_DEBUG=0 \
@@ -54,8 +49,10 @@ ENV CYNC_HOST="0.0.0.0" \
 # Copy data for add-on
 COPY static/index.html /root/cync-lan/www/index.html
 
+EXPOSE 23779
+EXPOSE 23778
+
 COPY run.sh /
 RUN chmod a+x /run.sh
-ARG CB=1
 
 CMD [ "/run.sh" ]

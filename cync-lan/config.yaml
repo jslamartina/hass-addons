@@ -1,5 +1,5 @@
 name: "CyncLAN Bridge"
-version: "0.0.1a1"
+version: "0.0.1"
 slug: "cync-lan"
 description: "Local controller for Cync/C by GE smart devices (DNS redirection required)"
 arch:
@@ -32,8 +32,8 @@ panel_title: "CyncLAN"
 # hassio_role: manager
 # homeassistant_api: true
 
-environment:
-  TEST_VAR_111: "test_value_111 from add-on config.yaml environment dict"
+#environment:
+#  TEST_VAR_111: "test_value_111 from add-on config.yaml environment dict"
 
 options:
   account_username: null
@@ -71,7 +71,7 @@ map:
   # - type: config
   # read_only: false
   # FAIL TO START if 'addon_config' and/or 'homeassistant_config' are defined while 'config' is included.
-  # /homeassistant in container ?
+  # /homeassistant in container?
   - type: homeassistant_config
     read_only: false
   # /addon_configs/<my addon> on host
