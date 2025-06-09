@@ -29,7 +29,7 @@ RUN set -x \
         git \
     && rm -rf /var/cache/apk/*
 
-VOLUME /root/cync-lan/config
+VOLUME /root/cync-lan/.auth
 
 EXPOSE 23779
 EXPOSE 23778
@@ -52,7 +52,7 @@ ENV CYNC_HOST="0.0.0.0" \
     CYNC_TCP_WHITELIST=""
 
 # Copy data for add-on
-COPY static/old.html /root/cync-lan/www/index.html
+COPY static/index.html /root/cync-lan/www/index.html
 
 COPY run.sh /
 RUN chmod a+x /run.sh

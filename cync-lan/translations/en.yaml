@@ -3,29 +3,30 @@ network:
   23778/tcp: Port used for the web interface to export devices (ingress)
 
 configuration:
-  CYNC_ACCOUNT_USERNAME:
+  account_username:
     name: Cync Account Username
-    description: The email address used for your Cync account (required)
-  CYNC_ACCOUNT_PASSWORD:
+    description: The email address used for your Cync account
+  account_password:
     name: Cync Account Password
-    description: The password used for your Cync account (required)
+    description: The password used for your Cync account
   mqtt_host:
     name: MQTT Host
-    description: The hostname or IP address of your MQTT broker (required)
+    description: The hostname or IP address of your MQTT broker
   mqtt_port:
     name: MQTT Port
-    description: 'The port number for your MQTT broker (required, default: 1883)'
+    description: "The port number for your MQTT broker (default: 1883)"
   mqtt_user:
     name: MQTT User
-    description: The username for your MQTT broker (optional)
+    description: The username for your MQTT broker
   mqtt_pass:
     name: MQTT Password
-    description: The password for your MQTT broker (optional)
-  CYNC_TOPIC:
+    description: The password for your MQTT broker
+  mqtt_topic:
     name: Cync MQTT Topic
-    description: The MQTT topic for Cync device messages (required)
-  CYNC_DEBUG:
+    description: The MQTT topic for Cync device messages
+  debug_log_level:
     name: Debug
-    description: 'Enable debug level logging (default: false)'
-
-
+    description: "Enable debug level logging (default: false)"
+  tuning:
+    name: Tunables
+    description: Tunables to dial-in command latency / how in-sync commands are across device groups

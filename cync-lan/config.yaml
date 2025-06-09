@@ -1,7 +1,7 @@
 name: "CyncLAN Bridge"
-version: "0.0.1"
+version: "0.0.1a1"
 slug: "cync-lan"
-description: "Local controller for Cync/C by GE smart devices (DNS redirection required!)"
+description: "Local controller for Cync/C by GE smart devices (DNS redirection required)"
 arch:
   - aarch64
   - amd64
@@ -22,14 +22,15 @@ ports_description:
   23778/tcp: "Web interface for device export (ingress)"
 ingress: true
 ingress_port: 23778
-#ingress_entry: static/index.html
-panel_icon: mdi:lightbulb
+# ingress_entry: static/index.html
+panel_icon: mdi:lightbulb-variant
 panel_title: "CyncLAN"
-# just serving HTML/JS/CSS, no need for streaming
-panel_stream: false
-# during local testing, only build for local arch
-# machine:
-#   - qemux86-64
+
+# can grab core-mosquitto creds using this method and bashio
+# but it reduces rating points, easier to just configure it
+# hassio_api: true
+# hassio_role: manager
+# homeassistant_api: true
 
 environment:
   TEST_VAR_111: "test_value_111 from add-on config.yaml environment dict"
@@ -43,6 +44,10 @@ options:
   mqtt_user: ""
   mqtt_pass: ""
   mqtt_topic: "cync_lan_addon"
+  tuning:
+    tcp_whitelist: ""
+    command_targets: 2
+    max_clients: 8
 
 schema:
   account_username: email
@@ -53,6 +58,10 @@ schema:
   mqtt_port: port
   mqtt_user: str?
   mqtt_pass: password?
+  tuning:
+    tcp_whitelist: str?
+    command_targets: int(1,)
+    max_clients: int(1,)
 
 # To store UUID.txt in the hass filesystem to survive upgrades / rebuilds
 # Also would be nice to access the cync_mesh.yaml to do quick edits without re-exporting!
@@ -60,11 +69,14 @@ map:
   ### if path key isnt included /<type name> inside container
   # /config on host
   # - type: config
+  # read_only: false
   # FAIL TO START if 'addon_config' and/or 'homeassistant_config' are defined while 'config' is included.
-  # /homeassistant on host ?
+  # /homeassistant in container ?
   - type: homeassistant_config
+    read_only: false
   # /addon_configs/<my addon> on host
   - type: addon_config
+    read_only: false
   # /ssl on host
   # - type: ssl
   # /addons on host
@@ -78,6 +90,6 @@ map:
   # /media on host
   # - type: media
 
-url: "https://github.com/baudneo/hass-addons/tree/dev/cync-lan"
+url: "https://github.com/baudneo/hass-addons"
 host_network: true
-#image: "ghcr.io/baudneo/cync-lan-addon:{arch}-cync-lan"
+#image: "ghcr.io/baudneo/hass-addons:{arch}-cync-lan"
