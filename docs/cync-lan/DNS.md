@@ -19,29 +19,31 @@ There are a few different methods using OPNsense depending on your setup. Unboun
 requesting device IP, DNS redirection.
 
 ## Unbound DNS
-To perform domain level DNS redirection (all devices that request `cm.gelighting.com` / `cm-sec.gelighting.com` will be redirected to ip: 10.0.1.9)
+To perform domain level DNS redirection (all devices that request `cm.gelighting.com` / `cm-sec.gelighting.com`
+will be redirected to ip: 10.0.1.9)
 
 - Go to `Services`>`Unbound DNS`>`Overrides`.
-![Unbound DNS Overrides](./assets/opnsense_unbound_host_overrides_.png)
+![Unbound DNS domain overrides](./assets/opnsense_unbound_host_overrides_.png)
 - Create a new override for `cm.gelighting.com`, `cm-sec.gelighting.com` or `cm-ge.xlink.cn` and point it to your local server.
-![Unbound DNS Overrides](./assets/opnsense_unbound_edit_host_overrides.png)
+![Unbound DNS domain overrides](./assets/opnsense_unbound_edit_host_overrides.png)
 - Click Save.
 - Power cycle cync devices.
 
 ### Selective DNS routing
-**Selective DNS routing means, only certain devies will have their DNS redirected, the rest of your network will not have their DNS redirected for those specific domains**
+**Selective DNS routing means only certain configured requesting IP addresses will have their DNS redirected, 
+the rest of your network will not have their DNS redirected for those specific domains**
 
 You can use `views` to selectively route DNS requests based on the requesting device.
 
-- First disable domain level redirection if you have already configured it. (all devices requesting a domain get redirected)
+- First, disable domain level redirection if you have already configured it. (all devices requesting a domain get redirected)
 - Go to `Services`>`Unbound DNS`>`Custom Options`.
 ![Unbound DNS Custom Options](./assets/opnsense_unbound_custom_options.png)
 - Enter the data, click Save, go back to `Services`>`Unbound DNS`>`General` and restart unbound by clicking the button beside the green arrow.
 ![Unbound DNS Restart](./assets/opnsense_unbound_restart.png)
-- Power cycle cync devices.
+- Power cycle Cync devices.
 
 The following example will match the above screenshot to reroute DNS requests for `cm.gelighting.com`, `cm-sec.gelighting.com` 
-and `cm-ge.xlink.cn` to local IP `10.0.1.20` (this is where your Home Assistant server should be running) 
+and `cm-ge.xlink.cn` to local IP `10.0.1.20` (this is where your CyncLAN bridge should be running) 
 **only for requesting device IPs** `10.0.2.216`, `10.0.2.223`, `10.0.2.225`, and `10.0.2.245` (These should be Cync WiFi devices).
 
 
@@ -71,12 +73,12 @@ local-data: "cm-ge.xlink.cn. 90 IN A 10.0.1.20"
 > debugging communication between the phone app and the cloud using socat (or other programs similar to socat). 
 
 >[!TIP]
-> If you have a decent (6+) amount of Cync WiFi devices, after you get things working correctly,
-> only DNS redirect Cync WiFi devices that are mostly always on, like plugs, mains powered switches / always on bulbs.
+> If you have a decent (6+) number of Cync Wi-Fi devices, after you get things working correctly,
+> only DNS redirect Cync Wi-Fi devices that are mostly always on, like plugs, mains powered switches / always on bulbs.
 > I have 30+ Cync devices and only have 5 always on devices connected to my `cync-lan` server.
 
 # DNSCryptProxy
-As far as I know, you can only override a domain network wide, not selectively by device.
+As far as I know, you can only override a domain network wide, not selectively by requesting device IP.
 
 - Go to `Services`>`DNSCryptProxy`>`Configuration`.
 - Click on the `Overrides` tab.
@@ -104,7 +106,7 @@ As far as I know, Pi-Hole does not support selective DNS routing, only network w
 - Your local DNS records will appear under the **List of local DNS domains** – as shown below.
 ![Pi-hole Local DNS Example Records](./assets/pi-hole-local-dns-examples.webp)
 
-- Test the DNS record by running `dig cm.gelighting.com` or `dig cm-ge.xlink.cn` from a device on your network.
+- Test the DNS record by running `dig cm.gelighting.com`, `dig cm-sec.gelighting.com` or `dig cm-ge.xlink.cn` from a device on your network.
 ```bash
 ❯ dig cm.gelighting.com
 
