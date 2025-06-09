@@ -11,7 +11,7 @@ to your Home Assistant server's local IP address. This will trick Cync devices i
 > Once added and a new config is exported, you can control the newly added devices locally
 
 ## Prerequisites
-- DNS redirection is required. See the [DNS documentation](https://github.com/baudneo/cync-lan-addon/tree/dev/docs/DNS.md)
+- DNS redirection is required. See the [DNS documentation](https://github.com/baudneo/hass-addons/tree/dev/docs/DNS.md)
 - A Cync account with devices registered and a Cync app for managing your devices
 - Home Assistant with the MQTT integration configured and MQTT auto-discovery enabled
 - A MQTT broker (e.g., Mosquitto, EMQX) running and accessible from Home Assistant
@@ -34,6 +34,6 @@ to your Home Assistant server's local IP address. This will trick Cync devices i
 9. As long as DNS redirection is set up correctly and you power cycled your Wi-Fi Cync devices, all supported and discovered devices should now be controllable from Home Assistant (Even BTLE only devices!)
 
 ## Tips / Troubleshooting
-See the [tips documentation](https://github.com/baudneo/cync-lan-addon/docs/tips.md) for tips on how to have a better experience with the add-on.
+See the [tips documentation](https://github.com/baudneo/hass-addons/docs/tips.md) for tips on how to have a better experience with the add-on.
 
-See the [troubleshooting documentation](https://github.com/baudneo/cync-lan-addon/docs/troubleshooting.md) for common issues and how to resolve them.
+See the [troubleshooting documentation](https://github.com/baudneo/hass-addons/docs/troubleshooting.md) for common issues and how to resolve them.
