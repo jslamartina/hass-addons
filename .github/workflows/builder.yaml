@@ -2,17 +2,15 @@ name: Builder
 
 env:
 #  BUILD_ARGS: "--test"
-  MONITORED_FILES: "build.yaml config.yaml Dockerfile run.sh en.yaml"
+  MONITORED_FILES: "build.yaml config.yaml Dockerfile run.sh"
 
 on:
-  release:
-    types: [ published ]
-#  push:
-#    branches:
-#      - main
-#  pull_request:
-#    branches:
-#      - main
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
 
 jobs:
   init:
