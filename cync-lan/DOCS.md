@@ -40,18 +40,18 @@ In order to perform a seemless migration from the old monolithic, non add-on set
 ## Exporting Device Configuration
 Visit the CyncLAN 'ingress' webpage (from the sidebar, or from the add-on page `Open Web UI` button). You will be greeted with a simple form that has provisions for being sent an OTP and to enter and submit the OTP.
 
-![Cync device export web app](https://github.com/baudneo/hass-addons/tree/dev/docs/cync-lan/assets/export_modal.png)
+![Cync device export web app](https://github.com/baudneo/hass-addons/blob/dev/docs/cync-lan/assets/export_modal.png)
 
 - The `Start Export` button will check for a cached access token and use it to export your device config, removing the need for an OTP email to be sent
 - The `Submit OTP` button will evaluate the OTP textbox and send the OTP to the backend export server
     - You can also request an OTP from the Cync app and then use the Submit OTP button, bypassing the `Start Export` button.
     - After submitting an OTP, the backend will use the OTP and Cync account creds to generate a new access token
     - The access token and metadata are stored on disk in a cache for future operations (Cync sets a 24 hr expiration on new access tokens)
-    - Cync cloud API supplies a refresh token, but I need to figure out the endpoint and data structure to use it for re-newing access tokens 
+    - Cync cloud API supplies a refresh token, but I need to figure out the endpoint and data structure to use it for renewing access tokens 
 - The `Request OTP` button is for manually requesting an OTP to be sent to your Cync account email address, you should never really need to use this button
 - After a successful export, the `cync_mesh.yaml` contents will be displayed in a text-box with syntax highlighting (via PRISM) and a `Download Config File` button will be available to allow downloading the newly exported config
 
-![Cync device export SUCCESS](https://github.com/baudneo/hass-addons/tree/dev/docs/cync-lan/assets/export_success.png)
+![Cync device export SUCCESS](https://github.com/baudneo/hass-addons/blob/dev/docs/cync-lan/assets/export_success.png)
 
 
 ## Tips / Troubleshooting
