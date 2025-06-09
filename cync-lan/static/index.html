@@ -164,7 +164,7 @@
       if (!/^[0-9]{4,10}$/.test(otp)) return showError("OTP must be 4–10 digits");
 
       try {
-        const response = await fetch(`${BASE_PATH}/api/export/otp`, {
+        const response = await fetch(`${BASE_PATH}/api/export/otp/submit`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ otp: parseInt(otp, 10) })
@@ -184,7 +184,7 @@
 
     async function requestOTP() {
       try {
-        const response = await fetch(`${BASE_PATH}/api/export/start`);
+        const response = await fetch(`${BASE_PATH}/api/export/otp/request`);
         const result = await response.json();
         if (!result.success) {
           showToast(result.message || "OTP requested.");
