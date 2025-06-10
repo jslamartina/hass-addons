@@ -32,10 +32,13 @@ to your Home Assistant server's local IP address. This will trick Cync devices i
 9. As long as DNS redirection is set up correctly and you power cycled your Wi-Fi Cync devices, all supported and discovered devices should now be controllable from Home Assistant (Even BTLE only devices!)
 
 ## Migration
-In order to perform a seemless migration from the old monolithic, non add-on setup:
-- SSH into the host or get to the CLI on the device
+To perform a seamless migration from the old monolithic, non add-on setup:
+- SSH into HASS or get to the CLI on the device
 - create a folder to hold the config in the correct location: `mkdir -p /homeassistant/.storage/cync-lan/config`
 - copy your existing `cync_mesh.yaml` into the new dir: `cp /path/to/cync_mesh.yaml /homeassistant/.storage/cync-lan/config`
+- Start the add-on, it will automatically detect the existing config and use it
+- Change your DNS redirection to point to the Home Assistant server's local IP address
+- Power cycle the Cync devices, so they perform a DNS request and get the new IP address of the CyncLAN bridge
 
 ## Exporting Device Configuration
 Visit the CyncLAN 'ingress' webpage (from the sidebar, or from the add-on page `Open Web UI` button). You will be greeted with a simple form that has provisions for being sent an OTP and to enter and submit the OTP.
