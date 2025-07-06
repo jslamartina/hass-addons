@@ -28,8 +28,8 @@ See [known devices](https://github.com/baudneo/cync-lan-addon/tree/dev/docs/know
 #### UNTESTED
 - Cameras
 - Thermostat and temp sensors
-- Dynamic functions (the lights should still work, just uncertain about the dynamic functions)
+- Dynamic functions (the lights should still work, just dont know about dynamic functions)
 
 
 
-[polling-shield]: https://img.shields.io/badge/Polling-LOCAL_PUSH-green.svg
+[polling-shield]: https://img.shields.io/badge/Polling-Local_Push-blue.svg
