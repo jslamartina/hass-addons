@@ -6,7 +6,7 @@ build_from:
 labels:
   org.opencontainers.image.title: "CyncLAN Bridge - Home Assistant Add-on"
   org.opencontainers.image.description: "Local MQTT controller for Cync/C by GE smart devices (DNS redirection required)"
-  org.opencontainers.image.source: "https://github.com/baudneo/hass-addons"
+  org.opencontainers.image.source: "https://github.com/jslamartina/hass-addons"
   org.opencontainers.image.licenses: "MIT"
 #args:
 #  TEMPIO_VERSION: "2021.09.0"
