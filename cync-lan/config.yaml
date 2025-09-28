@@ -36,13 +36,13 @@ panel_title: "CyncLAN"
 #  TEST_VAR_111: "test_value_111 from add-on config.yaml environment dict"
 
 options:
-  account_username: null
+  account_username: jslamartina@gmail.com
   account_password: null
-  debug_log_level: false
-  mqtt_host: ""
+  debug_log_level: true
+  mqtt_host: "homeassistant.local"
   mqtt_port: 1883
-  mqtt_user: ""
-  mqtt_pass: ""
+  mqtt_user: "cync_lan"
+  mqtt_pass: "cync_lan"
   mqtt_topic: "cync_lan_addon"
   tuning:
     tcp_whitelist: ""
