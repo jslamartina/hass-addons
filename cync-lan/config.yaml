@@ -68,7 +68,7 @@ map:
   - type: homeassistant_config
     read_only: false
 
-url: "https://github.com/baudneo/hass-addons"
+url: "https://github.com/jslamartina/hass-addons"
 host_network: true
 
-#image: "ghcr.io/baudneo/hass-addons:{arch}-cync-lan"
+#image: "ghcr.io/jslamartina/hass-addons:{arch}-cync-lan"
