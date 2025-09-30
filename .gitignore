@@ -1,11 +1,8 @@
-.devcontainer/
-
 # Node.js
 node_modules/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-package-lock.json
 yarn.lock
 .pnpm-debug.log*
 
@@ -96,6 +93,8 @@ temp/
 logs
 *.log
 
+.git/
+
 # Runtime data
 pids
 *.pid
@@ -140,7 +139,6 @@ jspm_packages/
 .env
 
 # IDE and Editor files
-.vscode/
 .idea/
 *.swp
 *.swo

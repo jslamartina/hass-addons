@@ -1,0 +1,56 @@
+{
+  "folders": [
+    {
+      "name": "hass-addons",
+      "path": "/workspaces/hass-addons",
+    },
+    {
+      "name": "cync-lan-python",
+      "path": "/workspaces/cync-lan",
+    },
+  ],
+  "settings": {
+    "python.defaultInterpreterPath": "/usr/local/python/current/bin/python3",
+    "python.terminal.activateEnvironment": true,
+    "python.analysis.typeCheckingMode": "basic",
+    "editor.formatOnSave": true,
+    "[python]": {
+      "editor.defaultFormatter": "ms-python.black-formatter",
+    },
+    "[shellscript]": {
+      "editor.defaultFormatter": "esbenp.prettier-vscode",
+    },
+    "ruff.organizeImports": true,
+    "files.exclude": {
+      "**/node_modules": true,
+      "**/__pycache__": true,
+      "**/.pytest_cache": true,
+      "**/.mypy_cache": true,
+      "**/.git": false,
+    },
+    "search.exclude": {
+      "**/node_modules": true,
+      "**/__pycache__": true,
+      "**/.pytest_cache": true,
+      "**/.mypy_cache": true,
+    },
+    "cursorpyright.analysis.extraPaths": [
+      "/workspaces/cync-lan",
+      "/workspaces/hass-addons",
+    ],
+  },
+  "extensions": {
+    "recommendations": [
+      "ms-python.python",
+      "ms-python.vscode-pylance",
+      "ms-python.black-formatter",
+      "charliermarsh.ruff",
+      "ms-python.isort",
+      "timonwong.shellcheck",
+      "esbenp.prettier-vscode",
+      "ms-vscode.vscode-json",
+      "redhat.vscode-yaml",
+      "ms-azuretools.vscode-docker",
+    ],
+  },
+}

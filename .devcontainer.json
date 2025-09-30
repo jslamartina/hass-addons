@@ -1,9 +1,14 @@
 {
-  "name": "Example devcontainer for add-on repositories",
+  "name": "CyncLAN Multi-Repo Development",
   "image": "ghcr.io/home-assistant/devcontainer:2-addons",
   "appPort": ["7123:8123", "7357:4357"],
-  "postStartCommand": "bash devcontainer_bootstrap",
-  "postCreateCommand": "chmod +x .devcontainer/*.sh && bash .devcontainer/setup.sh",
+  "features": {
+    "ghcr.io/devcontainers/features/python:1": {
+      "version": "3.12",
+      "installTools": true
+    }
+  },
+  "postCreateCommand": "chmod +x .devcontainer/*.sh && bash .devcontainer/00-addon-setup-nodejs.sh && bash .devcontainer/99-python-setup-all.sh",
   "runArgs": ["-e", "GIT_EDITOR=code --wait", "--privileged"],
   "containerEnv": {
     "WORKSPACE_DIRECTORY": "${containerWorkspaceFolder}"
@@ -13,7 +18,14 @@
       "extensions": [
         "timonwong.shellcheck",
         "esbenp.prettier-vscode",
-        "ms-vscode.vscode-json"
+        "ms-vscode.vscode-json",
+        "ms-python.python",
+        "ms-python.vscode-pylance",
+        "ms-python.black-formatter",
+        "charliermarsh.ruff",
+        "ms-python.isort",
+        "redhat.vscode-yaml",
+        "ms-azuretools.vscode-docker"
       ],
       "settings": {
         "terminal.integrated.profiles.linux": {
@@ -30,15 +42,26 @@
         "[shellscript]": {
           "editor.defaultFormatter": "esbenp.prettier-vscode"
         },
+        "[python]": {
+          "editor.defaultFormatter": "ms-python.black-formatter"
+        },
         "prettier.prettierPath": "/workspaces/hass-addons/node_modules/prettier",
         "prettier.requireConfig": false,
         "prettier.documentSelectors": ["**/*.sh"],
-        "prettier.enable": true
+        "prettier.enable": true,
+        "python.defaultInterpreterPath": "/usr/local/bin/python3",
+        "python.analysis.extraPaths": [
+          "/workspaces/cync-lan",
+          "/workspaces/hass-addons"
+        ],
+        "python.analysis.typeCheckingMode": "basic",
+        "ruff.organizeImports": true
       }
     }
   },
   "mounts": [
     "type=volume,target=/var/lib/docker",
-    "type=volume,target=/mnt/supervisor"
+    "type=volume,target=/mnt/supervisor",
+    "source=${localWorkspaceFolder}/../cync-lan,target=/workspaces/cync-lan,type=bind,consistency=cached"
   ]
 }
