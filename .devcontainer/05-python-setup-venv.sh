@@ -10,6 +10,7 @@ setup_venv() {
 
   echo "Setting up Python venv for $workspace_name..."
 
+  echo "$workspace_path"
   cd "$workspace_path"
 
   if [ ! -d ".venv" ]; then
@@ -43,9 +44,10 @@ setup_venv() {
 }
 
 # Setup venvs for both workspaces
-setup_venv "/workspaces/hass-addons"
+# Arguments: $1 = WORKSPACE_DIRECTORY, $2 = CYNC_LAN_DIR
+setup_venv "$1" 
 echo ""
-setup_venv "/workspaces/cync-lan"
+setup_venv "$2"
 
 echo ""
 echo "✅ All Python virtual environments configured!"

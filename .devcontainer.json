@@ -8,11 +8,16 @@
       "installTools": true
     }
   },
+  "postStartCommand": "bash devcontainer_bootstrap",
   "postCreateCommand": "chmod +x .devcontainer/*.sh && bash .devcontainer/00-addon-setup-nodejs.sh && bash .devcontainer/99-python-setup-all.sh",
   "runArgs": ["-e", "GIT_EDITOR=code --wait", "--privileged"],
   "containerEnv": {
+    "WORKSPACE_NAME": "hass-cync-dev",
     "WORKSPACE_DIRECTORY": "${containerWorkspaceFolder}"
   },
+  
+  "workspaceFolder": "/mnt/supervisor/addons/local/${localWorkspaceFolderBasename}",
+  "workspaceMount": "source=${localWorkspaceFolder},target=${containerWorkspaceFolder},type=bind,consistency=default",
   "customizations": {
     "vscode": {
       "extensions": [
@@ -45,14 +50,14 @@
         "[python]": {
           "editor.defaultFormatter": "ms-python.black-formatter"
         },
-        "prettier.prettierPath": "/workspaces/hass-addons/node_modules/prettier",
+        "prettier.prettierPath": "${containerWorkspaceFolder}/node_modules/prettier",
         "prettier.requireConfig": false,
         "prettier.documentSelectors": ["**/*.sh"],
         "prettier.enable": true,
         "python.defaultInterpreterPath": "/usr/local/bin/python3",
         "python.analysis.extraPaths": [
-          "/workspaces/cync-lan",
-          "/workspaces/hass-addons"
+          "/mnt/supervisor/addons/local/cync-lan",
+          "${containerWorkspaceFolder}"
         ],
         "python.analysis.typeCheckingMode": "basic",
         "ruff.organizeImports": true
@@ -62,6 +67,6 @@
   "mounts": [
     "type=volume,target=/var/lib/docker",
     "type=volume,target=/mnt/supervisor",
-    "source=${localWorkspaceFolder}/../cync-lan,target=/workspaces/cync-lan,type=bind,consistency=cached"
+    "source=${localWorkspaceFolder}/../cync-lan,target=/mnt/supervisor/addons/local/cync-lan,type=bind,consistency=cached"
   ]
 }

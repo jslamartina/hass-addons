@@ -3,14 +3,19 @@ set -e
 
 echo "Configuring VS Code for multi-repository development..."
 
+# Get the workspace parent directory
+WORKSPACE_PARENT="$(dirname "${WORKSPACE_DIRECTORY}")"
+CYNC_LAN_DIR="${WORKSPACE_PARENT}/cync-lan"
+VSCODE_CONFIG_DIR="${WORKSPACE_PARENT}/.vscode"
+
 # Create a global settings file for the devcontainer
-mkdir -p /workspaces/.vscode
-cat > /workspaces/.vscode/settings.json << 'EOF'
+sudo mkdir -p "${VSCODE_CONFIG_DIR}"
+sudo tee "${VSCODE_CONFIG_DIR}/settings.json" > /dev/null << EOF
 {
   "python.defaultInterpreterPath": "/usr/local/bin/python3",
   "python.analysis.extraPaths": [
-    "/workspaces/cync-lan",
-    "/workspaces/hass-addons"
+    "${CYNC_LAN_DIR}",
+    "${WORKSPACE_DIRECTORY}"
   ],
   "python.linting.enabled": true,
   "python.linting.pylintEnabled": true,
@@ -36,8 +41,7 @@ cat > /workspaces/.vscode/settings.json << 'EOF'
 EOF
 
 # Create a launch configuration for debugging
-mkdir -p /workspaces/.vscode
-cat > /workspaces/.vscode/launch.json << 'EOF'
+sudo tee "${VSCODE_CONFIG_DIR}/launch.json" > /dev/null << 'EOF'
 {
   "version": "0.2.0",
   "configurations": [
@@ -57,4 +61,8 @@ cat > /workspaces/.vscode/launch.json << 'EOF'
 }
 EOF
 
-echo "VS Code configuration complete"
+# Fix permissions so non-root user can access these files
+sudo chmod -R 755 "${VSCODE_CONFIG_DIR}"
+sudo chown -R vscode:vscode "${VSCODE_CONFIG_DIR}" 2> /dev/null || true
+
+echo "VS Code configuration complete at ${VSCODE_CONFIG_DIR}"

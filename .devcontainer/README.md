@@ -20,7 +20,7 @@ This directory contains setup scripts for the CyncLAN development environment.
 - **`99-python-setup-all.sh`** - Runs all Python development scripts in order (01-04)
 
 ### Workspace Files
-- **`multi-repo-workspace.code-workspace`** - Multi-root workspace configuration
+- **`hass-cync-dev.code-workspace`** - Multi-root workspace configuration (in repo root)
 
 ## Devcontainer Configuration
 
@@ -56,9 +56,10 @@ bash .devcontainer/addon-format-code.sh
 ## Directory Structure After Setup
 
 ```
-/workspaces/
+/mnt/supervisor/addons/local/
 ├── hass-addons/           # Home Assistant addon repository
 │   ├── cync-lan-source/   # Symlink to cync-lan repo
+│   ├── hass-cync-dev.code-workspace  # Multi-repo workspace file
 │   └── test-cync-lan.sh   # Test script
 ├── cync-lan/              # Python package repository
 └── .vscode/               # Global VS Code settings
@@ -66,8 +67,20 @@ bash .devcontainer/addon-format-code.sh
 
 ## Development Workflow
 
-1. Open the workspace: `cync-dev.code-workspace`
-2. Make changes to either repository
-3. Test with: `./test-cync-lan.sh`
-4. Format code: `npm run format`
+### Multi-Repository Setup
+
+**To automatically load both repositories:**
+1. From your **local machine**, open the file: `hass-cync-dev.code-workspace`
+2. VS Code/Cursor will prompt to "Reopen in Container"
+3. Both repositories will load automatically in the multi-root workspace
+
+**If you opened the folder first (single repo view):**
+1. Inside the container, click File → Open Workspace from File
+2. Select: `hass-cync-dev.code-workspace`
+3. This will reload with both hass-addons and cync-lan repositories
+
+### Daily Development
+1. Make changes to either repository
+2. Test with: `./test-cync-lan.sh`
+3. Format code: `npm run format`
 

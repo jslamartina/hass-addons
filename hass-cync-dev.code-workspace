@@ -2,17 +2,14 @@
   "folders": [
     {
       "name": "hass-addons",
-      "path": "/workspaces/hass-addons",
+      "path": "/mnt/supervisor/addons/local/hass-addons",
     },
     {
       "name": "cync-lan-python",
-      "path": "/workspaces/cync-lan",
+      "path": "/mnt/supervisor/addons/local/cync-lan",
     },
   ],
   "settings": {
-    "python.defaultInterpreterPath": "/usr/local/python/current/bin/python3",
-    "python.terminal.activateEnvironment": true,
-    "python.analysis.typeCheckingMode": "basic",
     "editor.formatOnSave": true,
     "[python]": {
       "editor.defaultFormatter": "ms-python.black-formatter",
@@ -35,8 +32,8 @@
       "**/.mypy_cache": true,
     },
     "cursorpyright.analysis.extraPaths": [
-      "/workspaces/cync-lan",
-      "/workspaces/hass-addons",
+      "/mnt/supervisor/addons/local/cync-lan",
+      "/mnt/supervisor/addons/local/hass-addons",
     ],
   },
   "extensions": {
