@@ -8,14 +8,14 @@
       "installTools": true
     }
   },
-  "postStartCommand": "bash devcontainer_bootstrap",
+  "postStartCommand": "bash devcontainer_bootstrap && sudo service docker start && sudo supervisor_run && ha install addon",
   "postCreateCommand": "chmod +x .devcontainer/*.sh && bash .devcontainer/00-addon-setup-nodejs.sh && bash .devcontainer/99-python-setup-all.sh",
   "runArgs": ["-e", "GIT_EDITOR=code --wait", "--privileged"],
   "containerEnv": {
     "WORKSPACE_NAME": "hass-cync-dev",
     "WORKSPACE_DIRECTORY": "${containerWorkspaceFolder}"
   },
-  
+
   "workspaceFolder": "/mnt/supervisor/addons/local/${localWorkspaceFolderBasename}",
   "workspaceMount": "source=${localWorkspaceFolder},target=${containerWorkspaceFolder},type=bind,consistency=default",
   "customizations": {
@@ -30,7 +30,9 @@
         "charliermarsh.ruff",
         "ms-python.isort",
         "redhat.vscode-yaml",
-        "ms-azuretools.vscode-docker"
+        "ms-azuretools.vscode-docker",
+        "cnshenj.vscode-task-manager",
+        "docker.docker"
       ],
       "settings": {
         "terminal.integrated.profiles.linux": {

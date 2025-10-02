@@ -3,6 +3,11 @@ set -e
 
 echo "🚀 Setting up development environment..."
 
+# Configure Git globally
+echo "🔧 Configuring Git..."
+git config --global user.name "jslamartina"
+git config --global user.email "jslamartina@gmail.com"
+
 # Install Node.js
 echo "📦 Installing Node.js..."
 curl -fsSL https://deb.nodesource.com/setup_lts.x | sudo -E bash -
