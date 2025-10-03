@@ -1,19 +1,30 @@
 {
   "name": "CyncLAN Multi-Repo Development",
   "image": "ghcr.io/home-assistant/devcontainer:2-addons",
-  "appPort": ["7123:8123", "7357:4357"],
+  "appPort": ["7123:8123", "7357:4357", "1883:1883", "23779:23779"],
   "features": {
     "ghcr.io/devcontainers/features/python:1": {
       "version": "3.12",
       "installTools": true
+    },
+    "ghcr.io/devcontainers/features/node:1": {
+      "version": "lts",
+      "nodeGypDependencies": true,
+      "installYarnUsingApt": true
+    },
+    "ghcr.io/devcontainers/features/common-utils:2": {
+      "installZsh": false,
+      "installOhMyZsh": false,
+      "upgradePackages": true
     }
   },
-  "postStartCommand": "bash devcontainer_bootstrap && sudo service docker start && sudo supervisor_run && ha install addon",
-  "postCreateCommand": "chmod +x .devcontainer/*.sh && bash .devcontainer/00-addon-setup-nodejs.sh && bash .devcontainer/99-python-setup-all.sh",
+  "postStartCommand": "bash ${containerWorkspaceFolder}/.devcontainer/post-start.sh",
+  "postCreateCommand": "bash ${containerWorkspaceFolder}/.devcontainer/post-create.sh",
   "runArgs": ["-e", "GIT_EDITOR=code --wait", "--privileged"],
   "containerEnv": {
     "WORKSPACE_NAME": "hass-cync-dev",
-    "WORKSPACE_DIRECTORY": "${containerWorkspaceFolder}"
+    "WORKSPACE_DIRECTORY": "${containerWorkspaceFolder}",
+    "CONTAINER_WORKSPACE_FOLDER": "${containerWorkspaceFolder}"
   },
 
   "workspaceFolder": "/mnt/supervisor/addons/local/${localWorkspaceFolderBasename}",
@@ -32,7 +43,9 @@
         "redhat.vscode-yaml",
         "ms-azuretools.vscode-docker",
         "cnshenj.vscode-task-manager",
-        "docker.docker"
+        "docker.docker",
+        "bodil.file-browser",
+        "openai.chatgpt"
       ],
       "settings": {
         "terminal.integrated.profiles.linux": {
@@ -40,6 +53,8 @@
             "path": "/usr/bin/zsh"
           }
         },
+        "remote.autoForwardPorts": true,
+        "remote.autoForwardPortsSource": "hybrid",
         "terminal.integrated.defaultProfile.linux": "zsh",
         "editor.formatOnPaste": false,
         "editor.formatOnSave": true,

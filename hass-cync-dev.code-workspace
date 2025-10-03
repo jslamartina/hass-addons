@@ -35,6 +35,8 @@
       "/mnt/supervisor/addons/local/cync-lan",
       "/mnt/supervisor/addons/local/hass-addons",
     ],
+    "terminal.integrated.allowChords": false,
+    "terminal.integrated.sendKeybindingsToShell": true,
   },
   "extensions": {
     "recommendations": [

@@ -1,21 +1,12 @@
 #!/bin/bash
 set -e
 
-echo "🚀 Setting up development environment..."
+echo "🚀 Setting up Prettier and development tools..."
 
 # Configure Git globally
 echo "🔧 Configuring Git..."
 git config --global user.name "jslamartina"
 git config --global user.email "jslamartina@gmail.com"
-
-# Install Node.js
-echo "📦 Installing Node.js..."
-curl -fsSL https://deb.nodesource.com/setup_lts.x | sudo -E bash -
-sudo apt-get install -y nodejs
-
-# Verify installation
-echo "✅ Node.js version: $(node --version)"
-echo "✅ npm version: $(npm --version)"
 
 # Initialize npm project
 echo "📝 Initializing npm project..."
@@ -65,6 +56,6 @@ npm pkg set scripts.format:check="npx prettier --check ."
 npm pkg set scripts.format:shell="npx prettier --write '**/*.sh'"
 npm pkg set scripts.format:json="npx prettier --write '**/*.{json,yaml,yml}'"
 
-echo "🎉 Setup complete! Prettier with shell plugin is ready to use."
+echo "🎉 Prettier setup complete!"
 echo "💡 Use 'npm run format' to format all files including shell scripts"
 echo "💡 Use 'npm run format:shell' to format only shell scripts"

@@ -197,6 +197,9 @@ configuration.yaml.bak
 
 # Build artifacts
 *.tar.gz
+*.tar
 *.zip
 build/
 dist/
+
+emqx_container/

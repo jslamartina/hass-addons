@@ -25,19 +25,19 @@ chmod +x "${WORKSPACE_DIRECTORY}/.devcontainer"/*.sh
 echo "Running setup scripts in order..."
 
 echo "1/5: Setting up Python environment..."
-bash "${WORKSPACE_DIRECTORY}/.devcontainer/01-python-setup-env.sh"
+bash "${WORKSPACE_DIRECTORY}/.devcontainer/01-01-python-env-setup.sh"
 
 echo "2/5: Cloning cync-lan repository..."
-bash "${WORKSPACE_DIRECTORY}/.devcontainer/02-python-clone-repo.sh"
+bash "${WORKSPACE_DIRECTORY}/.devcontainer/01-02-python-clone-repo.sh"
 
 echo "3/5: Setting up workspace..."
-bash "${WORKSPACE_DIRECTORY}/.devcontainer/03-python-setup-workspace.sh"
+bash "${WORKSPACE_DIRECTORY}/.devcontainer/01-03-python-workspace-setup.sh"
 
 echo "4/5: Configuring VS Code..."
-bash "${WORKSPACE_DIRECTORY}/.devcontainer/04-python-configure-vscode.sh"
+bash "${WORKSPACE_DIRECTORY}/.devcontainer/01-04-python-vscode-configure.sh"
 
 echo "5/5: Setting up Python virtual environments..."
-bash "${WORKSPACE_DIRECTORY}/.devcontainer/05-python-setup-venv.sh" "${WORKSPACE_DIRECTORY}" "${CYNC_LAN_DIR}"
+bash "${WORKSPACE_DIRECTORY}/.devcontainer/01-05-python-venv-setup.sh" "${WORKSPACE_DIRECTORY}" "${CYNC_LAN_DIR}"
 
 echo "✅ Complete devcontainer setup finished!"
 echo ""
