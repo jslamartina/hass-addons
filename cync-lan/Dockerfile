@@ -19,16 +19,15 @@ RUN set -x \
     -subj '/CN=*.xlink.cn' -sha256 -days 3650 -nodes \
   && rm -rf /var/cache/apk/*
 
+# Copy local cync-lan source
+COPY cync-lan-python /tmp/cync-lan-python
+
 ARG BUILD_ARCH
 ARG BUILD_VERSION
 RUN set -x \
-  && apk add --no-cache --no-interactive \
-    git \
   && pip install --no-cache-dir -U pip \
-  && pip install --no-cache-dir "git+https://github.com/jslamartina/cync-lan@hass_addon" \
-  && apk del --no-interactive --purge \
-    git \
-  && rm -rf /var/cache/apk/*
+  && pip install --no-cache-dir /tmp/cync-lan-python \
+  && rm -rf /tmp/cync-lan-python
 
 ENV CYNC_HOST="0.0.0.0" \
   CYNC_DEBUG=1 \

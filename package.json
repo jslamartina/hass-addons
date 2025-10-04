@@ -4,8 +4,7 @@
   "description": "The following add-ons are available in this repository:",
   "main": "index.js",
   "directories": {
-    "doc": "docs",
-    "example": "example"
+    "doc": "docs"
   },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",

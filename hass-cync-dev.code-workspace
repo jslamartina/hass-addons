@@ -37,6 +37,12 @@
     ],
     "terminal.integrated.allowChords": false,
     "terminal.integrated.sendKeybindingsToShell": true,
+    "terminal.integrated.scrollback": 10000,
+    "terminal.integrated.defaultProfile.linux": "fish",
+    "terminal.integrated.profiles.linux": {
+      "fish": { "path": "/usr/bin/fish" },
+      "nu": { "path": "/usr/local/bin/nu" },
+    },
   },
   "extensions": {
     "recommendations": [

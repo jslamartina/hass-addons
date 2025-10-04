@@ -39,10 +39,10 @@ options:
   account_username: jslamartina@gmail.com
   account_password: null
   debug_log_level: true
-  mqtt_host: "localhost"
+  mqtt_host: "homeassistant.local"
   mqtt_port: 1883
-  mqtt_user: "dev"
-  mqtt_pass: "dev"
+  mqtt_user: "cync_lan"
+  mqtt_pass: "cync_lan"
   mqtt_topic: "cync_lan_addon"
   tuning:
     tcp_whitelist: ""
@@ -70,4 +70,5 @@ map:
 
 url: "https://github.com/jslamartina/hass-addons"
 host_network: true
+
 #image: "ghcr.io/jslamartina/hass-addons:{arch}-cync-lan"
