@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "git": { "push": true, "createBranch": true, "createPr": true },
+    "shell": {
+      "enabled": true,
+      "allowCommands": [
+        "npm install",
+        "npm test",
+        "pytest",
+        "go test",
+        "docker build ."
+      ]
+    },
+    "fs": { "write": true, "paths": ["BASELINE_REVIEW.md"] }
+  }
+}
