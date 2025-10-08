@@ -203,3 +203,4 @@ build/
 dist/
 
 emqx_container/
+cync-lan/cync-lan-python/**

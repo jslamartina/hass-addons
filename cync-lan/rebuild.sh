@@ -2,7 +2,9 @@
 set -e
 
 echo "Syncing cync-lan source code..."
-rsync -av --delete /mnt/supervisor/addons/local/cync-lan/ /mnt/supervisor/addons/local/hass-addons/cync-lan/cync-lan-python/ \
+rsync -av --delete \
+  /mnt/supervisor/addons/local/cync-lan/ \
+  /mnt/supervisor/addons/local/hass-addons/cync-lan/cync-lan-python/ \
   --exclude='.*/' --exclude='__pycache__' --exclude='*.pyc'
 
 echo "Rebuilding addon..."
