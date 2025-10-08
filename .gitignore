@@ -195,6 +195,10 @@ venv.bak/
 secrets.yaml
 configuration.yaml.bak
 
+# Backup files (security risk - never commit)
+*.backup
+config.yaml.backup
+
 # Build artifacts
 *.tar.gz
 *.tar
@@ -204,3 +208,4 @@ dist/
 
 emqx_container/
 cync-lan/cync-lan-python/**
+code-reviews/**

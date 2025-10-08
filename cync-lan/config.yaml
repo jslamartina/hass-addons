@@ -36,13 +36,13 @@ panel_title: "CyncLAN"
 #  TEST_VAR_111: "test_value_111 from add-on config.yaml environment dict"
 
 options:
-  account_username: jslamartina@gmail.com
+  account_username: null
   account_password: null
   debug_log_level: true
   mqtt_host: "localhost"
   mqtt_port: 1883
-  mqtt_user: "dev"
-  mqtt_pass: "dev"
+  mqtt_user: null
+  mqtt_pass: null
   mqtt_topic: "cync_lan_addon"
   tuning:
     tcp_whitelist: ""
