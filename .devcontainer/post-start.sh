@@ -95,14 +95,15 @@ echo "  Token extracted successfully!"
 
 # Wait for all supervisor components to be ready
 echo "Waiting for all supervisor components to be ready..."
-MAX_WAIT=120
+MAX_WAIT_SECONDS=240
+TOTAL_WAIT=0
 WAIT_COUNT=0
 
 # Critical components that must be ready before proceeding
 COMPONENTS=("core" "audio" "dns" "cli" "observer" "multicast")
 
-WAIT_DELAY=1
-while [ $WAIT_COUNT -lt $MAX_WAIT ]; do
+WAIT_INTERVAL=2
+while [ $TOTAL_WAIT -lt $MAX_WAIT_SECONDS ]; do
   ALL_READY=true
   SUPERVISOR_HEALTHY=$(curl -s -H "Authorization: Bearer ${TOKEN}" http://supervisor/supervisor/info | jq -r '.data.healthy' 2> /dev/null || echo "false")
 
@@ -126,15 +127,15 @@ while [ $WAIT_COUNT -lt $MAX_WAIT ]; do
     break
   fi
 
-  echo "  Waiting for remaining components... (sleep ${WAIT_DELAY}s)"
   WAIT_COUNT=$((WAIT_COUNT + 1))
-  sleep $WAIT_DELAY
-  # cap backoff at 15s for this loop to keep responsiveness
-  if [ $WAIT_DELAY -lt 15 ]; then WAIT_DELAY=$((WAIT_DELAY * 2)); fi
+  echo "  Waiting for remaining components... (sleep ${WAIT_INTERVAL}s)"
+
+  sleep $WAIT_INTERVAL
+  TOTAL_WAIT=$((TOTAL_WAIT + WAIT_INTERVAL))
 done
 
-if [ $WAIT_COUNT -ge $MAX_WAIT ]; then
-  echo "  WARNING: Timeout waiting for supervisor components"
+if [ $TOTAL_WAIT -ge $MAX_WAIT_SECONDS ]; then
+  echo "  WARNING: Timeout waiting for supervisor components after ${TOTAL_WAIT}s"
 fi
 
 # Step 6: Restore full backup (includes addons, configuration, and all data)
