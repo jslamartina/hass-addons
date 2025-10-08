@@ -134,23 +134,21 @@
       const copyButton = document.getElementById('copyButton');
 
       try {
-        // Use modern Clipboard API if available
+        // Preferred: Modern Clipboard API
         if (navigator.clipboard && window.isSecureContext) {
           await navigator.clipboard.writeText(yamlText);
+          showToast('Config copied to clipboard!');
         } else {
-          // Fallback for older browsers or non-secure contexts
-          const tempTextarea = document.createElement('textarea');
-          tempTextarea.value = yamlText;
-          tempTextarea.style.position = 'fixed';
-          tempTextarea.style.left = '-999999px';
-          tempTextarea.style.top = '-999999px';
-          document.body.appendChild(tempTextarea);
-          tempTextarea.select();
-          document.execCommand('copy');
-          document.body.removeChild(tempTextarea);
+          // Fallback: Select text and instruct manual copy (avoids deprecated execCommand)
+          const pre = document.querySelector('#yamlPreview code');
+          const range = document.createRange();
+          range.selectNodeContents(pre);
+          const selection = window.getSelection();
+          selection.removeAllRanges();
+          selection.addRange(range);
+          showError('Press Ctrl/⌘+C to copy the selected text');
         }
 
-        showToast('Config copied to clipboard!');
         copyButton.innerHTML = `
           <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>

@@ -15,9 +15,13 @@ sudo service docker start || echo "  Docker already running or start attempted"
 
 # Step 2: Wait for Docker to be ready
 echo "Waiting for Docker to be ready..."
+RETRY_DELAY=1
+MAX_DELAY=30
 until docker info > /dev/null 2>&1; do
-  echo "  Still waiting for Docker..."
-  sleep 2
+  echo "  Still waiting for Docker... (sleep ${RETRY_DELAY}s)"
+  sleep $RETRY_DELAY
+  RETRY_DELAY=$((RETRY_DELAY * 2))
+  [ $RETRY_DELAY -gt $MAX_DELAY ] && RETRY_DELAY=$MAX_DELAY
 done
 echo "Docker is ready!"
 
@@ -51,9 +55,13 @@ sudo script -q -c 'sudo supervisor_run' /tmp/supervisor_run.log &
 
 echo "Waiting for Supervisor to be ready..."
 sleep 5
+RETRY_DELAY=1
+MAX_DELAY=30
 until ha supervisor info 2> /dev/null; do
-  echo "  Still waiting for Supervisor..."
-  sleep 2
+  echo "  Still waiting for Supervisor... (sleep ${RETRY_DELAY}s)"
+  sleep $RETRY_DELAY
+  RETRY_DELAY=$((RETRY_DELAY * 2))
+  [ $RETRY_DELAY -gt $MAX_DELAY ] && RETRY_DELAY=$MAX_DELAY
 done
 echo "Supervisor is ready!"
 
@@ -63,13 +71,17 @@ TOKEN=""
 RETRY_COUNT=0
 MAX_RETRIES=10
 
+RETRY_DELAY=1
+MAX_DELAY=30
 while [ -z "$TOKEN" ] && [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
   TOKEN=$(ha --log-level debug supervisor info 2>&1 | grep -oP 'apiToken=\K[^ ]+' || echo "")
 
   if [ -z "$TOKEN" ]; then
     RETRY_COUNT=$((RETRY_COUNT + 1))
-    echo "  Token extraction attempt $RETRY_COUNT/$MAX_RETRIES failed, retrying..."
-    sleep 2
+    echo "  Token extraction attempt $RETRY_COUNT/$MAX_RETRIES failed, retrying in ${RETRY_DELAY}s..."
+    sleep $RETRY_DELAY
+    RETRY_DELAY=$((RETRY_DELAY * 2))
+    [ $RETRY_DELAY -gt $MAX_DELAY ] && RETRY_DELAY=$MAX_DELAY
   fi
 done
 
@@ -89,6 +101,7 @@ WAIT_COUNT=0
 # Critical components that must be ready before proceeding
 COMPONENTS=("core" "audio" "dns" "cli" "observer" "multicast")
 
+WAIT_DELAY=1
 while [ $WAIT_COUNT -lt $MAX_WAIT ]; do
   ALL_READY=true
   SUPERVISOR_HEALTHY=$(curl -s -H "Authorization: Bearer ${TOKEN}" http://supervisor/supervisor/info | jq -r '.data.healthy' 2> /dev/null || echo "false")
@@ -113,9 +126,11 @@ while [ $WAIT_COUNT -lt $MAX_WAIT ]; do
     break
   fi
 
-  echo "  Waiting for remaining components..."
+  echo "  Waiting for remaining components... (sleep ${WAIT_DELAY}s)"
   WAIT_COUNT=$((WAIT_COUNT + 1))
-  sleep 2
+  sleep $WAIT_DELAY
+  # cap backoff at 15s for this loop to keep responsiveness
+  if [ $WAIT_DELAY -lt 15 ]; then WAIT_DELAY=$((WAIT_DELAY * 2)); fi
 done
 
 if [ $WAIT_COUNT -ge $MAX_WAIT ]; then

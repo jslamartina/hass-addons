@@ -15,15 +15,11 @@ import socket
 import ssl
 import time
 import sys
+from checksum import calculate_checksum_between_markers
 
 # Mode values
 MODE_TRADITIONAL = 0x50  # Relay enabled
 MODE_SMART = 0xB0  # Relay disabled
-
-
-def calculate_checksum(data):
-    """Calculate checksum: sum(data[18:41]) % 256"""
-    return sum(data[18:41]) % 256
 
 
 def craft_mode_packet(endpoint, counter, mode_byte):
@@ -90,7 +86,7 @@ def craft_mode_packet(endpoint, counter, mode_byte):
     )
 
     # Calculate and insert checksum
-    checksum = calculate_checksum(packet)
+    checksum = calculate_checksum_between_markers(bytes(packet))
     packet[41] = checksum
 
     return bytes(packet)
