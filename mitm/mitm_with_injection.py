@@ -1,5 +1,13 @@
 #!/usr/bin/env python3
 """
+⚠️⚠️⚠️ SECURITY WARNING ⚠️⚠️⚠️
+This is a Man-in-the-Middle proxy for debugging Cync protocol.
+- Disables ALL SSL security
+- For LOCAL DEBUGGING ONLY
+- DO NOT use on untrusted networks
+- DO NOT use in production
+⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️
+
 MITM proxy that forwards traffic to Cync cloud AND can inject test packets
 Run this instead of socat when you want to test mode changes
 """
@@ -71,8 +79,10 @@ def log(msg):
     try:
         with open("mitm.log", "a") as f:
             f.write(log_msg + "\n")
-    except Exception:
-        pass  # Don't fail if file write fails
+    except IOError as e:
+        print(f"WARNING: Failed to write to mitm.log: {e}", file=sys.stderr)
+    except Exception as e:
+        print(f"ERROR: Unexpected logging failure: {e}", file=sys.stderr)
 
 
 def calculate_checksum(data):
@@ -419,7 +429,7 @@ def check_injection_periodically(
                 try:
                     send_mode_query(cloud_ssl, counter_holder)
                 except Exception as e:
-                    pass  # Silent
+                    log(f"[MODE QUERY] Error: {e}")
 
             # Only process injections on the target connection
             if not is_target_connection:
@@ -585,12 +595,16 @@ def handle_device_connection(device_socket, device_addr):
     finally:
         try:
             device_socket.close()
-        except:
-            pass
+        except OSError as e:
+            print(f"WARNING: Failed to close device socket: {e}", file=sys.stderr)
+        except Exception as e:
+            print(f"ERROR: Unexpected error closing device socket: {e}", file=sys.stderr)
         try:
             cloud_socket.close()
-        except:
-            pass
+        except OSError as e:
+            print(f"WARNING: Failed to close cloud socket: {e}", file=sys.stderr)
+        except Exception as e:
+            print(f"ERROR: Unexpected error closing cloud socket: {e}", file=sys.stderr)
         log(f"Connection closed for {device_addr}")
 
 

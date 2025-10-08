@@ -1,113 +1,50 @@
-# MITM Debugging Tools for Cync Devices
+# ⚠️⚠️⚠️ SECURITY WARNING ⚠️⚠️⚠️
 
-This directory contains tools for intercepting and analyzing traffic between Cync devices and the Cync cloud servers. This is useful for reverse engineering device behavior and discovering new protocol features.
+## DEBUG TOOLS ONLY - DO NOT USE IN PRODUCTION
 
-## 📁 Contents
+This directory contains **Man-in-the-Middle (MITM) debugging tools** that are designed for local development and protocol analysis only.
 
-- `create_certs.sh` - Generate self-signed SSL certificates for MITM
-- `mitm_capture.sh` - Run socat MITM proxy and capture traffic
-- `certs/` - SSL certificates directory (gitignored)
+### ⚠️ CRITICAL SECURITY RISKS
 
-## 🚀 Quick Start
+These tools:
+- **Disable ALL SSL/TLS certificate verification**
+- **Make you vulnerable to man-in-the-middle attacks**
+- **Should NEVER be used on untrusted networks**
+- **Should NEVER be used in production environments**
 
-### 1. Generate Certificates (First Time Only)
+### 🎯 Intended Use
 
-```bash
-cd mitm
-./create_certs.sh
-```
+These tools are designed for:
+- Local debugging of Cync device communication
+- Protocol analysis and reverse engineering
+- Development and testing in controlled environments
 
-This creates:
-- `certs/key.pem` - Private key
-- `certs/cert.pem` - Public certificate
-- `certs/server.pem` - Combined certificate for socat
+### 🚫 What NOT to do
 
-### 2. Set Up DNS Redirection
+- ❌ Run these on public networks
+- ❌ Use in production environments
+- ❌ Trust these tools for secure communication
+- ❌ Share these tools without security warnings
 
-Configure your DNS server (AdGuard Home, Unbound, or router) to redirect these domains to your machine:
+### 🔒 Security Best Practices
 
-- `cm.gelighting.com` → Your machine IP
-- `cm-sec.gelighting.com` → Your machine IP
-- `cm-ge.xlink.cn` → Your machine IP
+1. **Only use on isolated local networks**
+2. **Never run on production systems**
+3. **Always review code before execution**
+4. **Consider these tools as permanently compromised for security purposes**
 
-### 3. Run MITM Capture
+### 📁 Files in this directory
 
-```bash
-./mitm_capture.sh my_capture_session.txt
-```
+- `mitm_with_injection.py` - Main MITM proxy with packet injection
+- `query_mode.py` - Device mode query tool
+- `send_via_mitm.py` - Mode change packet sender
+- `packet_parser.py` - Protocol packet parser
+- `*.sh` - Various shell scripts for MITM setup
 
-**Important**: Turn OFF Bluetooth on your phone to force HTTP/TCP communication!
+### 🛡️ For Production Use
 
-### 4. Test with Cync App
+Use the main CyncLAN add-on in the parent directory for secure, production-ready device control.
 
-1. Open Cync mobile app
-2. Navigate to device settings
-3. Toggle **ONE** setting at a time
-4. Wait 10 seconds
-5. Press `Ctrl+C` to stop capture
+---
 
-### 5. Analyze Results
-
-```bash
-# View entire capture
-cat my_capture_session.txt
-
-# View device → cloud traffic
-grep '>' my_capture_session.txt
-
-# View cloud → device traffic
-grep '<' my_capture_session.txt
-```
-
-## 📊 Understanding the Logs
-
-- `>` = Traffic from device/app to cloud
-- `<` = Traffic from cloud to device/app
-- Hex values show the raw packet data
-- Compare with `cync-lan/docs/packet_structure.md` for known packet types
-
-## 🎯 Best Practices
-
-1. **One change per capture** - Only modify one setting per session for clean logs
-2. **Descriptive filenames** - Name captures after what you're testing:
-   - `switch_smart_bulb_mode_enable.txt`
-   - `dimmer_fade_rate_change.txt`
-   - `motion_sensor_timeout_adjust.txt`
-3. **Take notes** - Document what you changed and when
-4. **Compare before/after** - Capture baseline, make change, capture again
-
-## 🔍 What to Look For
-
-When reverse engineering configuration commands:
-
-- New packet types not in `packet_structure.md`
-- Different data patterns in known packet types
-- Sequence of packets when making config changes
-- Response codes from the cloud server
-- Differences between control vs configuration packets
-
-## 🛠️ Troubleshooting
-
-**No traffic captured?**
-- Verify DNS redirection is working (`nslookup cm.gelighting.com`)
-- Ensure Bluetooth is OFF on your phone
-- Check firewall isn't blocking port 23779
-- Try power cycling the Cync device
-
-**Certificate errors?**
-- Regenerate certificates: `./create_certs.sh`
-- Ensure `certs/server.pem` exists and is readable
-
-**socat not found?**
-- Install: `sudo apt-get install socat` (Debian/Ubuntu)
-
-## 🔐 Security Note
-
-These tools are for **local debugging only**. The self-signed certificates should never be used in production. All certificate files are gitignored to prevent accidental commits.
-
-## 📚 Related Documentation
-
-- [Cync Packet Structure](../cync-lan/cync-lan-python/docs/packet_structure.md)
-- [Debugging Setup Guide](../cync-lan/cync-lan-python/docs/debugging_setup.md)
-- [Known Devices](../cync-lan/cync-lan-python/docs/known_devices.md)
-
+**Remember: These are debugging tools, not production code!**

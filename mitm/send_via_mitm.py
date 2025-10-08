@@ -1,5 +1,13 @@
 #!/usr/bin/env python3
 """
+⚠️⚠️⚠️ SECURITY WARNING ⚠️⚠️⚠️
+This script disables SSL verification for MITM debugging.
+- Disables ALL SSL security
+- For LOCAL DEBUGGING ONLY
+- DO NOT use on untrusted networks
+- DO NOT use in production
+⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️
+
 Send mode change packet through active MITM connection
 We'll monitor the MITM capture file and inject our packet
 """

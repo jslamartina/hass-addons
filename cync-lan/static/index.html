@@ -86,7 +86,7 @@
         <a id="downloadLink" href="#" download="cync_mesh.yaml" class="block bg-indigo-600 text-white text-center py-2 rounded hover:bg-indigo-700">Download Config File</a>
         <div class="relative">
           <pre id="yamlPreview" class="rounded bg-gray-900 text-white p-4 text-sm"><code class="language-yaml"></code></pre>
-          <button id="copyButton" onclick="copyConfig()" class="absolute top-2 right-2 bg-gray-700 text-white p-2 rounded-md hover:bg-gray-600 flex items-center">
+          <button id="copyButton" onclick="copyConfig().catch(e => showError('Copy failed: ' + e.message))" class="absolute top-2 right-2 bg-gray-700 text-white p-2 rounded-md hover:bg-gray-600 flex items-center">
             <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
             </svg>
@@ -129,18 +129,26 @@
       otpField.select();
     }
 
-    function copyConfig() {
+    async function copyConfig() {
       const yamlText = document.querySelector('#yamlPreview code').textContent.trim();
       const copyButton = document.getElementById('copyButton');
 
       try {
-        // Create a temporary textarea to hold the text for copying
-        const tempTextarea = document.createElement('textarea');
-        tempTextarea.value = yamlText;
-        document.body.appendChild(tempTextarea);
-        tempTextarea.select();
-        document.execCommand('copy');
-        document.body.removeChild(tempTextarea);
+        // Use modern Clipboard API if available
+        if (navigator.clipboard && window.isSecureContext) {
+          await navigator.clipboard.writeText(yamlText);
+        } else {
+          // Fallback for older browsers or non-secure contexts
+          const tempTextarea = document.createElement('textarea');
+          tempTextarea.value = yamlText;
+          tempTextarea.style.position = 'fixed';
+          tempTextarea.style.left = '-999999px';
+          tempTextarea.style.top = '-999999px';
+          document.body.appendChild(tempTextarea);
+          tempTextarea.select();
+          document.execCommand('copy');
+          document.body.removeChild(tempTextarea);
+        }
 
         showToast('Config copied to clipboard!');
         copyButton.innerHTML = `
