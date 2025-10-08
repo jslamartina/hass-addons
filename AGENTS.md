@@ -24,6 +24,7 @@
 - Mirror existing history: single-sentence, present-tense summaries that capture both change and motivation (e.g., `Refine run.sh; export MQTT credentials by default`).
 - Group related edits per commit and keep diffs focused on one feature or bug fix.
 - PRs should describe test evidence, affected Home Assistant versions, DNS or MQTT changes, and link related issues or forum threads.
+- Don't commit the files, so that they can be reviewed by me locally first.
 
 ## Security & Configuration Tips
 - Never commit credentials; rely on `.env` files referenced by `--env` or add-on secrets.
