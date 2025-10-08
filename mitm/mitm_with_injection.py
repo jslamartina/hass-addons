@@ -19,6 +19,7 @@ import sys
 import os
 from packet_parser import parse_cync_packet, format_packet_log
 from datetime import datetime
+from checksum import calculate_checksum_between_markers
 
 # Cync cloud server
 CLOUD_SERVER = "35.196.85.236"
@@ -85,13 +86,7 @@ def log(msg):
         print(f"ERROR: Unexpected logging failure: {e}", file=sys.stderr)
 
 
-def calculate_checksum(data):
-    """Calculate checksum: sum of data bytes between the 0x7e markers"""
-    # Find the 0x7e markers
-    start = data.index(0x7E)
-    end = len(data) - 1  # Last byte is the closing 0x7E
-    # Sum bytes between markers, excluding the markers themselves and the checksum byte
-    return sum(data[start + 1 : end - 1]) % 256
+### centralized checksum now provided by checksum.calculate_checksum_between_markers
 
 
 def craft_mode_packet(endpoint, counter, mode_byte):
@@ -145,11 +140,8 @@ def craft_mode_packet(endpoint, counter, mode_byte):
         ]
     )
 
-    # Calculate checksum: sum of bytes from position 18 to 33 (excluding checksum itself)
-    # This is the inner command data after the 0x7e marker, excluding the marker itself
-    checksum_data = packet[18:33]
-    checksum = sum(checksum_data) % 256
-    packet[33] = checksum
+    # Calculate checksum using centralized helper
+    packet[33] = calculate_checksum_between_markers(bytes(packet))
 
     return bytes(packet)
 
@@ -384,9 +376,7 @@ def send_mode_query(cloud_ssl, counter_holder):
         ]
     )
 
-    checksum_data = packet[18:33]
-    checksum = sum(checksum_data) % 256
-    packet[33] = checksum
+    packet[33] = calculate_checksum_between_markers(bytes(packet))
 
     cloud_ssl.sendall(bytes(packet))
 

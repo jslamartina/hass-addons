@@ -5,9 +5,11 @@ Test script to send smart bulb mode change command to Cync switch
 import socket
 import sys
 import time
+import os
+from checksum import calculate_checksum_between_markers
 
 # Device configuration
-DEVICE_IP = "172.64.66.1"  # Replace with your switch IP
+DEVICE_IP = os.getenv("DEVICE_IP", "172.64.66.1")  # Override via env or CLI arg
 DEVICE_PORT = 23779
 DEVICE_ENDPOINT = bytes([0x1b, 0xdc, 0xda, 0x3e])
 
@@ -16,10 +18,8 @@ MODE_TRADITIONAL = 0x50  # Relay enabled
 MODE_SMART = 0xb0        # Relay disabled
 
 def calculate_checksum(data):
-    """Calculate checksum: sum(data[18:41]) % 256"""
-    # Data should be the full packet bytes
-    # Checksum is sum of bytes from position 18 to 40 (inclusive)
-    return sum(data[18:41]) % 256
+    """Calculate checksum based on inner 0x7E-bounded structure"""
+    return calculate_checksum_between_markers(bytes(data))
 
 def craft_mode_packet(endpoint, counter, mode_byte):
     """
@@ -159,6 +159,9 @@ if __name__ == "__main__":
         sys.exit(1)
     
     mode_arg = sys.argv[1].lower()
+    # Optional CLI override for device IP
+    if len(sys.argv) >= 3:
+        DEVICE_IP = sys.argv[2]
     
     if mode_arg == "traditional":
         mode_byte = MODE_TRADITIONAL
