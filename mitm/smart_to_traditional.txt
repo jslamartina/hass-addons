@@ -1,0 +1,256 @@
+2025/10/07 20:24:12 socat[5099] N listening on AF=2 0.0.0.0:23779
+2025/10/07 20:24:14 socat[5099] N accepting connection from AF=2 172.64.66.1:64933 on AF=2 172.17.0.2:23779
+2025/10/07 20:24:14 socat[5099] N forked off child process 5117
+2025/10/07 20:24:14 socat[5099] N listening on AF=2 0.0.0.0:23779
+2025/10/07 20:24:15 socat[5117] N no peer certificate and no check
+2025/10/07 20:24:15 socat[5117] N SSL proto version used: TLSv1.2
+2025/10/07 20:24:15 socat[5117] N SSL connection using AES256-SHA256
+2025/10/07 20:24:15 socat[5117] N SSL connection compression "none"
+2025/10/07 20:24:15 socat[5117] N SSL connection expansion "none"
+2025/10/07 20:24:15 socat[5117] N opening connection to AF=2 35.196.85.236:23779
+2025/10/07 20:24:15 socat[5117] N successfully connected from local address AF=2 172.17.0.2:36818
+2025/10/07 20:24:15 socat[5117] N option openssl-verify disabled, no check of certificate
+2025/10/07 20:24:15 socat[5117] N SSL proto version used: TLSv1.2
+2025/10/07 20:24:15 socat[5117] N SSL connection using ECDHE-RSA-AES256-GCM-SHA384
+2025/10/07 20:24:15 socat[5117] N SSL connection compression "none"
+2025/10/07 20:24:15 socat[5117] N SSL connection expansion "none"
+2025/10/07 20:24:15 socat[5117] N starting data transfer loop with FDs [8,8] and [7,7]
+> 2025/10/07 20:24:16.000771762  length=31 from=0 to=30
+ 23 00 00 00 1a 03 64 57 e7 f2 00 10 31 65 30 37  #.....dW....1e07
+ 64 34 63 39 64 64 35 34 36 34 30 31 00 00 3c     d4c9dd546401..<
+--
+< 2025/10/07 20:24:16.000814482  length=7 from=0 to=6
+ 28 00 00 00 02 00 00                             (......
+--
+> 2025/10/07 20:24:16.000987458  length=420 from=31 to=450
+ 83 00 00 00 25 64 57 e7 f2 0c 0e 00 7e f8 62 22  ....%dW.....~.b"
+ 11 fa db 13 00 11 11 11 4c 00 4c 00 db 11 02 01  ........L.L.....
+ 01 32 ff 00 00 00 00 00 da 7e 83 00 00 00 25 64  .2.......~....%d
+ 57 e7 f2 0c 0f 00 7e f9 62 22 11 fa db 13 00 11  W.....~.b"......
+ 11 11 85 00 85 00 db 11 02 01 01 64 00 00 00 00  ...........d....
+ 00 00 da 7e 83 00 00 00 25 64 57 e7 f2 0c 10 00  ...~....%dW.....
+ 7e fa 62 22 11 fa db 13 00 11 11 11 95 00 95 00  ~.b"............
+ db 11 02 01 01 64 38 00 00 00 00 00 da 7e 83 00  .....d8......~..
+ 00 00 25 64 57 e7 f2 0c 11 00 7e fb 62 22 11 fa  ..%dW.....~.b"..
+ db 13 00 11 11 11 f6 00 f6 00 db 11 02 01 01 64  ...............d
+ 38 00 00 00 00 00 da 7e 83 00 00 00 25 64 57 e7  8......~....%dW.
+ f2 0c 12 00 7e fc 62 22 11 fa db 13 00 11 11 11  ....~.b"........
+ 93 00 93 00 db 11 02 01 01 64 38 00 00 00 00 00  .........d8.....
+ da 7e 83 00 00 00 25 64 57 e7 f2 0c 13 00 7e fd  .~....%dW.....~.
+ 62 22 11 fa db 13 00 11 11 11 0b 00 0b 00 db 11  b"..............
+ 02 01 01 64 38 00 00 00 00 00 da 7e 83 00 00 00  ...d8......~....
+ 25 64 57 e7 f2 0c 14 00 7e fe 62 22 11 fa db 13  %dW.....~.b"....
+ 00 11 11 11 c7 00 c7 00 db 11 02 01 01 64 38 00  .............d8.
+ 00 00 00 00 da 7e 83 00 00 00 25 64 57 e7 f2 0c  .....~....%dW...
+ 15 00 7e ff 62 22 11 fa db 13 00 11 11 11 4e 00  ..~.b"........N.
+ 4e 00 db 11 02 01 01 64 38 00 00 00 00 00 da 7e  N......d8......~
+ 83 00 00 00 25 64 57 e7 f2 0c 16 00 7e 00 63 22  ....%dW.....~.c"
+ 11 fa db 13 00 11 11 11 a0 00 a0 00 db 11 02 01  ................
+ 01 21 00 00 00 00 00 00 da 7e 83 00 00 00 25 64  .!.......~....%d
+ 57 e7 f2 0c 17 00 7e 01 63 22 11 fa db 13 00 11  W.....~.c"......
+ 11 11 1a 00 1a 00 db 11 02 01 01 64 00 00 00 00  ...........d....
+ 00 00 da 7e                                      ...~
+--
+< 2025/10/07 20:24:17.000031252  length=8 from=7 to=14
+ 88 00 00 00 03 0c 0e 00                          ........
+--
+< 2025/10/07 20:24:17.000031596  length=8 from=15 to=22
+ 88 00 00 00 03 0c 0f 00                          ........
+--
+< 2025/10/07 20:24:17.000033507  length=8 from=23 to=30
+ 88 00 00 00 03 0c 10 00                          ........
+--
+< 2025/10/07 20:24:17.000035129  length=8 from=31 to=38
+ 88 00 00 00 03 0c 11 00                          ........
+--
+< 2025/10/07 20:24:17.000035233  length=8 from=39 to=46
+ 88 00 00 00 03 0c 12 00                          ........
+--
+< 2025/10/07 20:24:17.000035305  length=8 from=47 to=54
+ 88 00 00 00 03 0c 13 00                          ........
+--
+< 2025/10/07 20:24:17.000036629  length=8 from=55 to=62
+ 88 00 00 00 03 0c 14 00                          ........
+--
+< 2025/10/07 20:24:17.000036793  length=8 from=63 to=70
+ 88 00 00 00 03 0c 15 00                          ........
+--
+< 2025/10/07 20:24:17.000036846  length=8 from=71 to=78
+ 88 00 00 00 03 0c 16 00                          ........
+--
+< 2025/10/07 20:24:17.000038341  length=8 from=79 to=86
+ 88 00 00 00 03 0c 17 00                          ........
+--
+> 2025/10/07 20:24:17.000206937  length=204 from=451 to=654
+ 43 00 00 00 c7 64 57 e7 f2 01 01 06 05 00 10 4c  C....dW........L
+ 01 32 ff 00 00 00 01 00 4c 00 00 00 00 00 00 06  .2......L.......
+ 00 10 85 01 64 00 00 00 00 01 25 4c 00 00 00 00  ....d.....%L....
+ 00 00 07 00 10 95 01 64 38 00 00 00 01 25 4c 00  .......d8....%L.
+ 00 00 00 00 00 08 00 10 f6 01 64 38 00 00 00 01  ..........d8....
+ 2b 4c 00 00 00 00 00 00 09 00 10 93 01 64 38 00  +L...........d8.
+ 00 00 01 1a 4c 00 00 00 00 00 00 0a              ....L.......
+ 00 10 0b 01 64 38 00 00 00 01 26 4c 00 00 00 00  ....d8....&L....
+ 00 00 0b 00 10 c7 01 64 38 00 00 00 01 2b 4c 00  .......d8....+L.
+ 00 00 00 00 00 0c 00 10 4e 01 64 38 00 00 00 01  ........N.d8....
+ 2b 4c 00 00 00 00 00 00 0d 00 10 a0 01 21 00 00  +L...........!..
+ 00 00 01 22 4c 00 00 00 00 00 00 0e 00 10 1a 01  ..."L...........
+ 64 00 00 00 00 01 22 4c 00 00 00 00 00 00 15 73  d....."L.......s
+--
+< 2025/10/07 20:24:17.000246846  length=8 from=87 to=94
+ 48 00 00 00 03 01 01 00                          H.......
+--
+2025/10/07 20:24:20 socat[5099] N accepting connection from AF=2 172.64.66.1:57423 on AF=2 172.17.0.2:23779
+2025/10/07 20:24:20 socat[5099] N forked off child process 5143
+2025/10/07 20:24:20 socat[5099] N listening on AF=2 0.0.0.0:23779
+2025/10/07 20:24:20 socat[5143] N no peer certificate and no check
+2025/10/07 20:24:20 socat[5143] N SSL proto version used: TLSv1.2
+2025/10/07 20:24:20 socat[5143] N SSL connection using AES256-SHA256
+2025/10/07 20:24:20 socat[5143] N SSL connection compression "none"
+2025/10/07 20:24:20 socat[5143] N SSL connection expansion "none"
+2025/10/07 20:24:20 socat[5143] N opening connection to AF=2 35.196.85.236:23779
+2025/10/07 20:24:20 socat[5143] N successfully connected from local address AF=2 172.17.0.2:36822
+2025/10/07 20:24:20 socat[5143] N option openssl-verify disabled, no check of certificate
+2025/10/07 20:24:20 socat[5143] N SSL proto version used: TLSv1.2
+2025/10/07 20:24:20 socat[5143] N SSL connection using ECDHE-RSA-AES256-GCM-SHA384
+2025/10/07 20:24:20 socat[5143] N SSL connection compression "none"
+2025/10/07 20:24:20 socat[5143] N SSL connection expansion "none"
+2025/10/07 20:24:20 socat[5143] N starting data transfer loop with FDs [8,8] and [7,7]
+> 2025/10/07 20:24:20.000963394  length=31 from=0 to=30
+ 23 00 00 00 1a 03 60 b1 74 37 00 10 31 65 30 37  #.....`.t7..1e07
+ 64 32 63 63 61 62 35 66 64 36 38 66 00 00 3c     d2ccab5fd68f..<
+--
+< 2025/10/07 20:24:21.000006709  length=7 from=0 to=6
+ 28 00 00 00 02 00 00                             (......
+--
+2025/10/07 20:24:21 socat[5099] N accepting connection from AF=2 172.64.66.1:57324 on AF=2 172.17.0.2:23779
+2025/10/07 20:24:21 socat[5099] N forked off child process 5186
+2025/10/07 20:24:21 socat[5099] N listening on AF=2 0.0.0.0:23779
+2025/10/07 20:24:21 socat[5186] N no peer certificate and no check
+2025/10/07 20:24:21 socat[5186] N SSL proto version used: TLSv1.2
+2025/10/07 20:24:21 socat[5186] N SSL connection using AES256-SHA256
+2025/10/07 20:24:21 socat[5186] N SSL connection compression "none"
+2025/10/07 20:24:21 socat[5186] N SSL connection expansion "none"
+2025/10/07 20:24:21 socat[5186] N opening connection to AF=2 35.196.85.236:23779
+2025/10/07 20:24:21 socat[5186] N successfully connected from local address AF=2 172.17.0.2:36832
+2025/10/07 20:24:21 socat[5186] N option openssl-verify disabled, no check of certificate
+2025/10/07 20:24:21 socat[5186] N SSL proto version used: TLSv1.2
+2025/10/07 20:24:21 socat[5186] N SSL connection using ECDHE-RSA-AES256-GCM-SHA384
+2025/10/07 20:24:21 socat[5186] N SSL connection compression "none"
+2025/10/07 20:24:21 socat[5186] N SSL connection expansion "none"
+2025/10/07 20:24:21 socat[5186] N starting data transfer loop with FDs [8,8] and [7,7]
+> 2025/10/07 20:24:21.000935427  length=31 from=0 to=30
+ 23 00 00 00 1a 03 60 b1 7e f1 00 10 31 65 30 37  #.....`.~...1e07
+ 64 32 63 63 61 62 35 66 64 61 39 63 00 00 3c     d2ccab5fda9c..<
+--
+< 2025/10/07 20:24:21.000979100  length=7 from=0 to=6
+ 28 00 00 00 02 00 00                             (......
+--
+> 2025/10/07 20:24:22.000987134  length=35 from=655 to=689
+ 43 00 00 00 1e 64 57 e7 f2 01 01 06 c7 90 12 32  C....dW........2
+ 30 32 35 31 30 30 37 3a 31 35 32 34 3a 2d 33 35  0251007:1524:-35
+ 2c 1f c3                                         ,..
+--
+< 2025/10/07 20:24:23.000034834  length=8 from=95 to=102
+ 48 00 00 00 03 01 01 00                          H.......
+--
+2025/10/07 20:24:24 socat[5099] N accepting connection from AF=2 172.64.66.1:41732 on AF=2 172.17.0.2:23779
+2025/10/07 20:24:24 socat[5099] N forked off child process 5202
+2025/10/07 20:24:24 socat[5099] N listening on AF=2 0.0.0.0:23779
+2025/10/07 20:24:24 socat[5099] N accepting connection from AF=2 172.64.66.1:57153 on AF=2 172.17.0.2:23779
+2025/10/07 20:24:24 socat[5099] N forked off child process 5203
+2025/10/07 20:24:24 socat[5099] N listening on AF=2 0.0.0.0:23779
+2025/10/07 20:24:24 socat[5202] N no peer certificate and no check
+2025/10/07 20:24:24 socat[5202] N SSL proto version used: TLSv1.2
+2025/10/07 20:24:24 socat[5202] N SSL connection using AES256-CCM
+2025/10/07 20:24:24 socat[5202] N SSL connection compression "none"
+2025/10/07 20:24:24 socat[5202] N SSL connection expansion "none"
+2025/10/07 20:24:24 socat[5202] N opening connection to AF=2 35.196.85.236:23779
+2025/10/07 20:24:24 socat[5202] N successfully connected from local address AF=2 172.17.0.2:38882
+2025/10/07 20:24:24 socat[5203] N no peer certificate and no check
+2025/10/07 20:24:24 socat[5203] N SSL proto version used: TLSv1.2
+2025/10/07 20:24:24 socat[5203] N SSL connection using AES256-SHA256
+2025/10/07 20:24:24 socat[5203] N SSL connection compression "none"
+2025/10/07 20:24:24 socat[5203] N SSL connection expansion "none"
+2025/10/07 20:24:24 socat[5203] N opening connection to AF=2 35.196.85.236:23779
+2025/10/07 20:24:24 socat[5203] N successfully connected from local address AF=2 172.17.0.2:38894
+2025/10/07 20:24:24 socat[5202] N option openssl-verify disabled, no check of certificate
+2025/10/07 20:24:24 socat[5202] N SSL proto version used: TLSv1.2
+2025/10/07 20:24:24 socat[5202] N SSL connection using ECDHE-RSA-AES256-GCM-SHA384
+2025/10/07 20:24:24 socat[5202] N SSL connection compression "none"
+2025/10/07 20:24:24 socat[5202] N SSL connection expansion "none"
+2025/10/07 20:24:24 socat[5202] N starting data transfer loop with FDs [8,8] and [7,7]
+> 2025/10/07 20:24:24.000950988  length=31 from=0 to=30
+ 23 00 00 00 1a 03 64 a4 f2 da 00 10 31 65 30 37  #.....d.....1e07
+ 64 34 63 65 63 64 32 62 33 61 37 61 00 00 3c     d4cecd2b3a7a..<
+--
+< 2025/10/07 20:24:24.000994620  length=7 from=0 to=6
+ 28 00 00 00 02 00 00                             (......
+--
+2025/10/07 20:24:25 socat[5203] N option openssl-verify disabled, no check of certificate
+2025/10/07 20:24:25 socat[5203] N SSL proto version used: TLSv1.2
+2025/10/07 20:24:25 socat[5203] N SSL connection using ECDHE-RSA-AES256-GCM-SHA384
+2025/10/07 20:24:25 socat[5203] N SSL connection compression "none"
+2025/10/07 20:24:25 socat[5203] N SSL connection expansion "none"
+2025/10/07 20:24:25 socat[5203] N starting data transfer loop with FDs [8,8] and [7,7]
+> 2025/10/07 20:24:25.000026930  length=31 from=0 to=30
+ 23 00 00 00 1a 03 60 b1 7c 4a 00 10 31 65 30 37  #.....`.|J..1e07
+ 64 32 63 63 61 62 35 66 64 38 35 65 00 00 3c     d2ccab5fd85e..<
+--
+< 2025/10/07 20:24:25.000069078  length=7 from=0 to=6
+ 28 00 00 00 02 00 00                             (......
+--
+< 2025/10/07 20:24:25.000986640  length=35 from=103 to=137
+ 73 00 00 00 1e 1b dc da 3e 00 1f 00 7e 23 01 00  s.......>...~#..
+ 00 f8 8e 0c 00 24 01 00 00 00 a0 00 f7 11 02 01  .....$..........
+ 01 6b 7e                                         .k~
+--
+> 2025/10/07 20:24:26.000041557  length=12 from=690 to=701
+ 7b 00 00 00 07 1b dc da 3e 00 1f 00              {.......>...
+--
+> 2025/10/07 20:24:26.000070842  length=24 from=702 to=725
+ 73 00 00 00 13 1b dc da 3e 00 ff 00 7e 23 01 00  s.......>...~#..
+ 00 f9 8e 01 00 00 8f 7e                          .......~
+--
+> 2025/10/07 20:24:27.000217725  length=43 from=726 to=768
+ 73 00 00 00 26 1b dc da 3e 01 00 00 7e 23 01 00  s...&...>...~#..
+ 00 fa 8e 14 00 73 04 00 a0 00 4c 00 ea 11 02 a0  .....s....L.....
+ 81 50 00 00 00 00 00 00 14 87 7e                 .P........~
+--
+< 2025/10/07 20:24:27.000625507  length=23 from=138 to=160
+ 73 00 00 00 12 1b dc da 3e 00 20 00 7e 25 01 00  s.......>. .~%..
+ 00 f8 ea 00 00 ea 7e                             ......~
+--
+> 2025/10/07 20:24:27.000684022  length=12 from=769 to=780
+ 7b 00 00 00 07 1b dc da 3e 00 20 00              {.......>. .
+--
+> 2025/10/07 20:24:28.000067374  length=24 from=781 to=804
+ 73 00 00 00 13 1b dc da 3e 01 01 00 7e 25 01 00  s.......>...~%..
+ 00 f9 ea 01 00 00 eb 7e                          .......~
+--
+> 2025/10/07 20:24:30.000083120  length=57 from=31 to=87
+ 43 00 00 00 34 60 b1 74 37 01 01 06 c7 90 2a 32  C...4`.t7.....*2
+ 30 32 35 31 30 30 37 3a 31 35 32 34 3a 2d 32 37  0251007:1524:-27
+ 2c 30 30 30 30 36 2c 30 30 30 30 31 2c 30 30 30  ,00006,00001,000
+ 30 31 2c 30 30 30 30 31 2c                       01,00001,
+--
+< 2025/10/07 20:24:30.000125719  length=8 from=7 to=14
+ 48 00 00 00 03 01 01 00                          H.......
+--
+> 2025/10/07 20:24:30.000914440  length=57 from=31 to=87
+ 43 00 00 00 34 60 b1 7e f1 01 01 06 c7 90 2a 32  C...4`.~......*2
+ 30 32 35 31 30 30 37 3a 31 35 32 34 3a 2d 34 32  0251007:1524:-42
+ 2c 30 30 30 30 30 2c 30 30 30 30 30 2c 30 30 30  ,00000,00000,000
+ 30 30 2c 30 30 30 30 30 2c                       00,00000,
+--
+< 2025/10/07 20:24:30.000985637  length=8 from=7 to=14
+ 48 00 00 00 03 01 01 00                          H.......
+--
+> 2025/10/07 20:24:34.000179379  length=57 from=31 to=87
+ 43 00 00 00 34 60 b1 7c 4a 01 01 06 c7 90 2a 32  C...4`.|J.....*2
+ 30 32 35 31 30 30 37 3a 31 35 32 34 3a 2d 33 34  0251007:1524:-34
+ 2c 30 30 30 30 30 2c 30 30 30 30 30 2c 30 30 30  ,00000,00000,000
+ 30 30 2c 30 30 30 30 30 2c                       00,00000,
+--
+< 2025/10/07 20:24:34.000221913  length=8 from=7 to=14
+ 48 00 00 00 03 01 01 00                          H.......
+--

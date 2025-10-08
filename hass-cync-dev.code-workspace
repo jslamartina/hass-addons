@@ -17,6 +17,15 @@
     "[shellscript]": {
       "editor.defaultFormatter": "esbenp.prettier-vscode",
     },
+    "[markdown]": {
+      "editor.defaultFormatter": "yzhang.markdown-all-in-one",
+    },
+    "[markdown-math]": {
+      "editor.defaultFormatter": "yzhang.markdown-all-in-one",
+    },
+    "[markdown_latex_combined]": {
+      "editor.defaultFormatter": "yzhang.markdown-all-in-one",
+    },
     "ruff.organizeImports": true,
     "files.exclude": {
       "**/node_modules": true,

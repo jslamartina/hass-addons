@@ -59,7 +59,8 @@
         "cnshenj.vscode-task-manager",
         "docker.docker",
         "bodil.file-browser",
-        "ms-azuretools.vscode-containers"
+        "ms-azuretools.vscode-containers",
+        "yzhang.markdown-all-in-one"
       ],
       "settings": {
         "terminal.integrated.scrollback": 10000,
@@ -80,6 +81,15 @@
         },
         "[python]": {
           "editor.defaultFormatter": "ms-python.black-formatter"
+        },
+        "[markdown]": {
+          "editor.defaultFormatter": "yzhang.markdown-all-in-one"
+        },
+        "[markdown-math]": {
+          "editor.defaultFormatter": "yzhang.markdown-all-in-one"
+        },
+        "[markdown_latex_combined]": {
+          "editor.defaultFormatter": "yzhang.markdown-all-in-one"
         },
         "prettier.prettierPath": "${containerWorkspaceFolder}/node_modules/prettier",
         "prettier.requireConfig": false,

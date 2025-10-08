@@ -11,8 +11,6 @@ ha addons rebuild local_cync-lan
 echo "Restarting addon..."
 ha addons restart local_cync-lan
 
-echo "Waiting for addon to start..."
-sleep 25
+ha addons info local_cync-lan
 
 echo "✓ Addon rebuilt and restarted successfully!"
-
