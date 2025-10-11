@@ -1,0 +1,10 @@
+{
+  "agentCanUpdateSnapshot": true,
+  "install": "python -m pip install --upgrade pip setuptools wheel && pip install -e '.[dev]'",
+  "terminals": [
+    {
+      "name": "bash",
+      "command": "bash"
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "brave": {
+      "type": "http",
+      "url": "https://server.smithery.ai/brave/mcp",
+      "headers": {}
+    }
+  }
+}

@@ -207,10 +207,5 @@ config.yaml.backup
 build/
 dist/
 
-# Cursor/IDE configuration with secrets
-.cursor/
-.cursor/**
-
-emqx_container/
 cync-lan/cync-lan-python/**
 code-reviews/**
