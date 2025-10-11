@@ -48,6 +48,38 @@ This project uses a devcontainer based on the Home Assistant add-on development 
 # Credentials: dev/dev (stored in hass-credentials.env)
 ```
 
+## AI Agent Tools
+
+### Web Search
+
+When working with this codebase, AI agents should use web search tools to stay current with:
+- Home Assistant API changes and best practices
+- Python package updates and security advisories
+- Protocol standards and networking concepts
+- Docker and containerization best practices
+
+**Tool Priority:**
+1. **`brave_web_search`** (preferred) - Primary Brave Search MCP tool for web searches
+2. **`web_search`** (fallback) - Use if Brave Search MCP is not available or not connected
+
+**Additional Brave Search MCP tools available:**
+- `brave_image_search` - Image search
+- `brave_news_search` - News articles search
+- `brave_local_search` - Local businesses/POI search
+- `brave_video_search` - Video search
+
+**⚠️ If Brave Search MCP tools are not available:**
+- **Automatically fall back to `web_search` tool** - This is a standard tool that should always be available
+- Do NOT skip searching - use whatever search tool is available
+- Continue with the task using web_search instead
+
+**When to search:**
+- Verifying current Home Assistant add-on APIs
+- Looking up recent changes in dependencies (asyncio, MQTT, FastAPI, etc.)
+- Understanding DNS/networking concepts for device interception
+- Researching protocol standards (TCP, SSL/TLS, packet structures)
+- Checking for security best practices when dealing with MITM proxies
+
 ## Key Concepts
 
 ### Cloud Relay Mode
