@@ -71,19 +71,11 @@ def status_logger_thread():
 
 
 def log(msg):
-    """Log with timestamp to both console and file"""
+    """Log with timestamp to console (captured by tee in shell script)"""
     timestamp = datetime.now().strftime("%H:%M:%S")
     log_msg = f"[{timestamp}] {msg}"
     print(log_msg, flush=True)
-
-    # Also write to mitm.log
-    try:
-        with open("mitm.log", "a") as f:
-            f.write(log_msg + "\n")
-    except IOError as e:
-        print(f"WARNING: Failed to write to mitm.log: {e}", file=sys.stderr)
-    except Exception as e:
-        print(f"ERROR: Unexpected logging failure: {e}", file=sys.stderr)
+    # Note: File logging is handled by shell script using 'tee mitm_proxy.log'
 
 
 ### centralized checksum now provided by checksum.calculate_checksum_between_markers
@@ -188,82 +180,115 @@ def forward_data(
                             f"[COUNTER] Initialized from Dev->Cloud, starting at 0x{counter_holder['cloud_to_dev']:02x}"
                         )
 
-            # Check for switch endpoint in 0x73/0x83 packets
-            if switch_endpoint_holder is not None and len(data) >= 35:
-                if data[0] in [0x73, 0x83]:  # Configuration/status packets
-                    packet_endpoint = data[
-                        5:9
-                    ]  # User/home endpoint (e.g., 1b dc da 3e)
-
-                    # Look for mode configuration packets (fa 8e 14 pattern) or mode status (a0 81 pattern)
-                    # This indicates a switch with smart bulb mode capability
-                    for i in range(len(data) - 3):
-                        if data[i : i + 3] == bytes([0xFA, 0x8E, 0x14]) or data[
-                            i : i + 2
-                        ] == bytes([0xA0, 0x81]):
-                            # Found mode packet! Extract device IDs
-                            # Device IDs are at positions 24-25 and 26-27 (little-endian)
-                            if i >= 8 and len(data) >= i + 20:
-                                # Look for device ID bytes near the mode pattern
-                                # Pattern: a0 00 4c 00 ... a0 81 [MODE]
-                                # The device IDs are encoded as little-endian shorts before the mode bytes
-                                device_id_offset = (
-                                    i - 8
-                                )  # Approximate offset to device IDs
-                                if (
-                                    device_id_offset >= 0
-                                    and device_id_offset + 4 <= len(data)
-                                ):
-                                    # Try to extract device ID (looking for 0xa0 0x00 = 160)
-                                    for j in range(
-                                        max(0, i - 15), min(i, len(data) - 1)
-                                    ):
-                                        if data[j] == 0xA0 and data[j + 1] == 0x00:
-                                            device_id = int.from_bytes(
-                                                data[j : j + 2], "little"
-                                            )
-                                            if device_id == 160:
-                                                if (
-                                                    switch_endpoint_holder.get(
-                                                        "device_id"
-                                                    )
-                                                    is None
-                                                ):
-                                                    switch_endpoint_holder[
-                                                        "endpoint"
-                                                    ] = packet_endpoint
-                                                    switch_endpoint_holder[
-                                                        "device_id"
-                                                    ] = device_id
-                                                    switch_endpoint_holder[
-                                                        "device_addr"
-                                                    ] = device_addr
-                                                    log(
-                                                        f"🎯 FOUND TARGET SWITCH! Device ID: {device_id} (Hallway 4way Switch)"
-                                                    )
-                                                    log(
-                                                        f"   Home/User Endpoint: {' '.join(f'{b:02x}' for b in packet_endpoint)}"
-                                                    )
-
-                                                # Also log the mode if we see a0 81 pattern
-                                                if data[i : i + 2] == bytes(
-                                                    [0xA0, 0x81]
-                                                ) and i + 2 < len(data):
-                                                    mode_byte = data[i + 2]
-                                                    mode_name = (
-                                                        "SMART (Dimmable)"
-                                                        if mode_byte == 0xB0
-                                                        else (
-                                                            "TRADITIONAL"
-                                                            if mode_byte == 0x50
-                                                            else f"UNKNOWN(0x{mode_byte:02x})"
-                                                        )
-                                                    )
-                                                    log(
-                                                        f"[MODE STATUS] Device 160: {mode_name}"
-                                                    )
-                                            break
+            # Check for switch endpoint in 0x43/0x73/0x83 packets
+            if switch_endpoint_holder is not None and len(data) >= 20:
+                # For 0x43 DEVICE_INFO packets, check if device 160 (0xa0) is present
+                if data[0] == 0x43 and switch_endpoint_holder.get("device_id") is None:
+                    # Look for device 160 (0xa0 0x00) in the packet
+                    for i in range(len(data) - 1):
+                        if data[i] == 0xA0 and data[i + 1] == 0x00:
+                            # Found device 160! Extract the switch endpoint
+                            packet_endpoint = data[5:9]  # Switch endpoint ID
+                            switch_endpoint_holder["endpoint"] = packet_endpoint
+                            switch_endpoint_holder["device_id"] = 160
+                            switch_endpoint_holder["device_addr"] = device_addr
+                            log(
+                                f"🎯 FOUND TARGET SWITCH! Device ID: 160 (Hallway 4way Switch)"
+                            )
+                            log(
+                                f"   Switch Endpoint: {' '.join(f'{b:02x}' for b in packet_endpoint)}"
+                            )
                             break
+
+                # For 0x73/0x83 packets, look for device 160 and mode configuration/status
+                if data[0] in [0x73, 0x83] and len(data) >= 20:
+                    # First check if this packet contains device 160 (0xa0 0x00)
+                    if switch_endpoint_holder.get("device_id") is None:
+                        for i in range(len(data) - 1):
+                            if data[i] == 0xA0 and data[i + 1] == 0x00:
+                                # Found device 160! Extract the switch endpoint
+                                packet_endpoint = data[5:9]  # Switch endpoint ID
+                                switch_endpoint_holder["endpoint"] = packet_endpoint
+                                switch_endpoint_holder["device_id"] = 160
+                                switch_endpoint_holder["device_addr"] = device_addr
+                                log(
+                                    f"🎯 FOUND TARGET SWITCH! Device ID: 160 (Hallway 4way Switch)"
+                                )
+                                log(
+                                    f"   Switch Endpoint: {' '.join(f'{b:02x}' for b in packet_endpoint)}"
+                                )
+                                break
+
+                    # Also look for mode configuration packets (fa 8e 14 pattern) or mode status (a0 81 pattern)
+                    # This indicates a switch with smart bulb mode capability
+                    if len(data) >= 35:
+                        for i in range(len(data) - 3):
+                            if data[i : i + 3] == bytes([0xFA, 0x8E, 0x14]) or data[
+                                i : i + 2
+                            ] == bytes([0xA0, 0x81]):
+                                # Found mode packet! Extract device IDs
+                                # Device IDs are at positions 24-25 and 26-27 (little-endian)
+                                if i >= 8 and len(data) >= i + 20:
+                                    # Look for device ID bytes near the mode pattern
+                                    # Pattern: a0 00 4c 00 ... a0 81 [MODE]
+                                    # The device IDs are encoded as little-endian shorts before the mode bytes
+                                    device_id_offset = (
+                                        i - 8
+                                    )  # Approximate offset to device IDs
+                                    if (
+                                        device_id_offset >= 0
+                                        and device_id_offset + 4 <= len(data)
+                                    ):
+                                        # Try to extract device ID (looking for 0xa0 0x00 = 160)
+                                        for j in range(
+                                            max(0, i - 15), min(i, len(data) - 1)
+                                        ):
+                                            if data[j] == 0xA0 and data[j + 1] == 0x00:
+                                                device_id = int.from_bytes(
+                                                    data[j : j + 2], "little"
+                                                )
+                                                if device_id == 160:
+                                                    if (
+                                                        switch_endpoint_holder.get(
+                                                            "device_id"
+                                                        )
+                                                        is None
+                                                    ):
+                                                        switch_endpoint_holder[
+                                                            "endpoint"
+                                                        ] = packet_endpoint
+                                                        switch_endpoint_holder[
+                                                            "device_id"
+                                                        ] = device_id
+                                                        switch_endpoint_holder[
+                                                            "device_addr"
+                                                        ] = device_addr
+                                                        log(
+                                                            f"🎯 FOUND TARGET SWITCH! Device ID: {device_id} (Hallway 4way Switch)"
+                                                        )
+                                                        log(
+                                                            f"   Home/User Endpoint: {' '.join(f'{b:02x}' for b in packet_endpoint)}"
+                                                        )
+
+                                                    # Also log the mode if we see a0 81 pattern
+                                                    if data[i : i + 2] == bytes(
+                                                        [0xA0, 0x81]
+                                                    ) and i + 2 < len(data):
+                                                        mode_byte = data[i + 2]
+                                                        mode_name = (
+                                                            "SMART (Dimmable)"
+                                                            if mode_byte == 0xB0
+                                                            else (
+                                                                "TRADITIONAL"
+                                                                if mode_byte == 0x50
+                                                                else f"UNKNOWN(0x{mode_byte:02x})"
+                                                            )
+                                                        )
+                                                        log(
+                                                            f"[MODE STATUS] Device 160: {mode_name}"
+                                                        )
+                                                break
+                                break
 
             # Parse and log packet with structure
             parsed = parse_cync_packet(data, direction)
@@ -274,7 +299,9 @@ def forward_data(
                         if status["device_id"] == 160:
                             update_device_160_status(status)
 
-                log(format_packet_log(parsed, verbose=True))
+                # Skip logging for KEEPALIVE packets (0x78) to reduce clutter
+                if parsed.get("packet_type") != "0x78":
+                    log(format_packet_log(parsed, verbose=True))
             else:
                 # Fallback for unparseable packets
                 log(f"{direction}: {' '.join(f'{b:02x}' for b in data[:100])}")
@@ -333,8 +360,8 @@ def send_mode_query(cloud_ssl, counter_holder):
 
     endpoint = bytes([0x1B, 0xDC, 0xDA, 0x3E])
 
-    inner_counter = 0x0D + counter
-    inner_counter2 = 0x0E + counter
+    inner_counter = (0x0D + counter) & 0xFF  # Keep in byte range
+    inner_counter2 = (0x0E + counter) & 0xFF  # Keep in byte range
 
     packet = bytearray(
         [
@@ -382,25 +409,22 @@ def send_mode_query(cloud_ssl, counter_holder):
 
 
 def check_injection_periodically(
-    device_ssl, cloud_ssl, counter_holder, device_endpoint
+    device_ssl,
+    cloud_ssl,
+    counter_holder,
+    device_endpoint,
+    switch_endpoint_holder,
+    device_addr,
 ):
     """Periodically check for injection command and send packet directly"""
     script_dir = os.path.dirname(os.path.abspath(__file__))
     inject_file = os.path.join(script_dir, "inject_command.txt")
 
-    # Only process injections on the connection for device 64 57 e7 f2 (the one that talks to device 160)
-    # This is the endpoint we've seen device 160 communicate through
-    target_endpoint = bytes([0x64, 0x57, 0xE7, 0xF2])
-    is_target_connection = device_endpoint == target_endpoint
-
-    if is_target_connection:
-        log(
-            f"[INJECT] This connection (EP:{' '.join(f'{b:02x}' for b in device_endpoint)}) handles device 160 - injection enabled"
-        )
-    else:
-        log(
-            f"[INJECT] This connection (EP:{' '.join(f'{b:02x}' for b in device_endpoint)}) is not for device 160 - injection disabled"
-        )
+    # Initially unknown - will check dynamically once device 160 is discovered
+    is_target_connection = False
+    log(
+        f"[INJECT] Connection {device_addr} (EP:{' '.join(f'{b:02x}' for b in device_endpoint)}) - waiting for device 160 discovery..."
+    )
 
     # Wait for connection to stabilize and counters to be detected
     time.sleep(3)
@@ -411,6 +435,15 @@ def check_injection_periodically(
     while True:
         try:
             time.sleep(1)  # Check every second
+
+            # Check if device 160 has been discovered and if this is the right connection
+            if not is_target_connection and switch_endpoint_holder.get("device_addr"):
+                target_addr = switch_endpoint_holder["device_addr"]
+                if device_addr == target_addr:
+                    is_target_connection = True
+                    log(
+                        f"✓ [INJECT] This connection ({device_addr}) handles device 160 - INJECTION ENABLED"
+                    )
 
             # Send mode query every 5 seconds
             query_counter += 1
@@ -542,6 +575,8 @@ def handle_device_connection(device_socket, device_addr):
                 cloud_ssl,  # For queries that go to cloud
                 counter_holder,
                 endpoint if endpoint else b"\x00\x00\x00\x00",
+                switch_endpoint_holder,  # Track which connection handles device 160
+                device_addr,  # Connection address to identify this thread
             ),
             daemon=True,
         )
@@ -588,7 +623,9 @@ def handle_device_connection(device_socket, device_addr):
         except OSError as e:
             print(f"WARNING: Failed to close device socket: {e}", file=sys.stderr)
         except Exception as e:
-            print(f"ERROR: Unexpected error closing device socket: {e}", file=sys.stderr)
+            print(
+                f"ERROR: Unexpected error closing device socket: {e}", file=sys.stderr
+            )
         try:
             cloud_socket.close()
         except OSError as e:

@@ -194,6 +194,7 @@ venv.bak/
 .secrets
 secrets.yaml
 configuration.yaml.bak
+hass-credentials.env
 
 # Backup files (security risk - never commit)
 *.backup

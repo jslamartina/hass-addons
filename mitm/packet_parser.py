@@ -100,12 +100,20 @@ def parse_cync_packet(packet_bytes, direction="UNKNOWN"):
                 }
                 result["command"] = cmd_names.get(cmd_hex, f"CMD_{cmd_hex}")
 
-                # Parse device IDs in payload
+                # Parse device IDs in payload (skip command header bytes)
                 device_ids = []
-                for i in range(data_start, data_end - 1):
+                # Command header is at offsets 5-7, device ID typically at offset 14+
+                # Skip at least 10 bytes from data_start to avoid command header bytes
+                search_start = (
+                    data_start + 10 if data_start + 10 < data_end else data_start + 8
+                )
+                for i in range(search_start, data_end - 1):
                     # Look for device ID pattern (2 bytes forming valid ID)
+                    # Device IDs are typically followed by 0x00 and not part of command header
                     if 10 <= packet_bytes[i] <= 255 and packet_bytes[i + 1] == 0x00:
-                        device_ids.append(packet_bytes[i])
+                        # Avoid duplicates
+                        if packet_bytes[i] not in device_ids:
+                            device_ids.append(packet_bytes[i])
                 if device_ids:
                     result["contains_devices"] = [f"{d} ({hex(d)})" for d in device_ids]
 

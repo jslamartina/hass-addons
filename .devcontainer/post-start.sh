@@ -9,23 +9,29 @@ echo "========================================="
 echo "Running devcontainer bootstrap..."
 bash /usr/bin/devcontainer_bootstrap
 
-# Step 1: Start Docker service
-echo "Starting Docker service..."
-sudo service docker start || echo "  Docker already running or start attempted"
+# Note: supervisor_run will start Docker itself, so we skip that step here
 
-# Step 2: Wait for Docker to be ready
-echo "Waiting for Docker to be ready..."
+# Step 4: Start Home Assistant Supervisor (this will start Docker internally)
+echo "Starting Home Assistant Supervisor..."
+# Start supervisor_run with script to provide TTY, logs to file only (no console output)
+sudo script -qefc 'sudo supervisor_run' /tmp/supervisor_run.log > /dev/null 2>&1 &
+# Tail the log file and filter out DEBUG lines for console display
+sleep 1
+tail -f /tmp/supervisor_run.log 2> /dev/null | grep --line-buffered -v "DEBUG" &
+
+echo "Waiting for Supervisor to be ready..."
+sleep 5
 RETRY_DELAY=1
 MAX_DELAY=30
-until docker info > /dev/null 2>&1; do
-  echo "  Still waiting for Docker... (sleep ${RETRY_DELAY}s)"
+until ha supervisor info 2> /dev/null; do
+  echo "  Still waiting for Supervisor... (sleep ${RETRY_DELAY}s)"
   sleep $RETRY_DELAY
   RETRY_DELAY=$((RETRY_DELAY * 2))
   [ $RETRY_DELAY -gt $MAX_DELAY ] && RETRY_DELAY=$MAX_DELAY
 done
-echo "Docker is ready!"
+echo "Supervisor is ready!"
 
-# Step 3: Pin Docker CLI version (if not already present)
+# Step 5: Pin Docker CLI version (now that Docker is running from supervisor_run)
 echo "Checking Docker CLI version..."
 DOCKER_VERSION=$(docker version --format '{{.Server.Version}}' 2> /dev/null || echo '0.0.0')
 DOCKER_MAJOR=$(echo "$DOCKER_VERSION" | cut -d. -f1)
@@ -49,23 +55,7 @@ else
   echo "  WARNING: Failed to get docker version"
 fi
 
-# Step 4: Start Home Assistant Supervisor
-echo "Starting Home Assistant Supervisor..."
-sudo script -q -c 'sudo supervisor_run' /tmp/supervisor_run.log &
-
-echo "Waiting for Supervisor to be ready..."
-sleep 5
-RETRY_DELAY=1
-MAX_DELAY=30
-until ha supervisor info 2> /dev/null; do
-  echo "  Still waiting for Supervisor... (sleep ${RETRY_DELAY}s)"
-  sleep $RETRY_DELAY
-  RETRY_DELAY=$((RETRY_DELAY * 2))
-  [ $RETRY_DELAY -gt $MAX_DELAY ] && RETRY_DELAY=$MAX_DELAY
-done
-echo "Supervisor is ready!"
-
-# Step 5: Extract API token (with retry logic)
+# Step 6: Extract API token (with retry logic)
 echo "Extracting API token..."
 TOKEN=""
 RETRY_COUNT=0
@@ -93,7 +83,7 @@ fi
 
 echo "  Token extracted successfully!"
 
-# Wait for all supervisor components to be ready
+# Step 7: Wait for all supervisor components to be ready
 echo "Waiting for all supervisor components to be ready..."
 MAX_WAIT_SECONDS=240
 TOTAL_WAIT=0
@@ -138,7 +128,7 @@ if [ $TOTAL_WAIT -ge $MAX_WAIT_SECONDS ]; then
   echo "  WARNING: Timeout waiting for supervisor components after ${TOTAL_WAIT}s"
 fi
 
-# Step 6: Restore full backup (includes addons, configuration, and all data)
+# Step 8: Restore full backup (includes addons, configuration, and all data)
 echo "Restoring full backup..."
 BACKUP_FILE="/mnt/supervisor/addons/local/hass-addons/full_test_backup_20251004_005214.tar"
 BACKUP_DEST="/mnt/supervisor/backup/"
@@ -223,7 +213,7 @@ else
   echo "  ⚠️  Backup file not found: $BACKUP_FILE"
 fi
 
-# Step 7: Add shell aliases
+# Step 9: Add shell aliases
 echo "Adding shell aliases..."
 cat >> ~/.zshrc << 'EOF'
 

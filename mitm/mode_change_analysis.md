@@ -1,6 +1,54 @@
 # Smart Bulb Mode Configuration Analysis
 
-## Test: Smart (Dimmable) → Traditional Mode
+## ✅ SUCCESS: Mode Switching Commands Reverse Engineered
+
+**Date:** October 11, 2025
+
+We have successfully reverse engineered the Cync protocol commands to switch a switch between Smart (Dimmable) and Traditional modes!
+
+### Working Commands for Device 160 (Hallway 4-Way Switch)
+
+#### Switch to TRADITIONAL Mode
+```
+73 00 00 00 1e 1b dc da 3e 00 3a 00 7e 3d 01 00 00 f8 8e 0c 00 3e 01 00 00 00 a0 00 f7 11 02 01 01 85 7e
+```
+
+#### Switch to SMART (Dimmable) Mode
+```
+73 00 00 00 1e 1b dc da 3e 00 29 00 7e 30 01 00 00 f8 8e 0c 00 31 01 00 00 00 a0 00 f7 11 02 01 02 79 7e
+```
+
+### Packet Structure Breakdown
+
+**Packet Type:** 0x73 (DATA_CHANNEL - Cloud to Device)
+
+**Key Components:**
+- **Endpoint:** `1b dc da 3e` (User/Home ID)
+- **Counter:** Variable (0x3a, 0x29, etc.) - increments with each command
+- **Command:** `f8 8e 0c` (SET_MODE)
+- **Device ID:** `a0 00` (160 in little-endian)
+- **Mode Byte:**
+  - `01` = Traditional (relay only)
+  - `02` = Smart/Dimmable (PWM control enabled)
+- **Checksum:** Last byte before closing `7e` marker
+
+### Testing Method
+
+Commands can be injected using the MITM proxy:
+
+```bash
+# Switch to Traditional mode
+./inject_raw.sh '73 00 00 00 1e 1b dc da 3e 00 3a 00 7e 3d 01 00 00 f8 8e 0c 00 3e 01 00 00 00 a0 00 f7 11 02 01 01 85 7e'
+
+# Switch to Smart mode
+./inject_raw.sh '73 00 00 00 1e 1b dc da 3e 00 29 00 7e 30 01 00 00 f8 8e 0c 00 31 01 00 00 00 a0 00 f7 11 02 01 02 79 7e'
+```
+
+The switch responds with a STATUS_BROADCAST (0x83) confirming the mode change.
+
+---
+
+## Historical Analysis: Test: Smart (Dimmable) → Traditional Mode
 
 ### Configuration Packets Captured (Bluetooth OFF)
 

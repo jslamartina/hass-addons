@@ -1,9 +1,34 @@
 # Cync Switch Mode Configuration - Reverse Engineering Results
 
-**Date:** October 7, 2025  
+**Initial Date:** October 7, 2025
+**Completed:** October 11, 2025
 **Objective:** Reverse engineer TCP-based smart bulb mode configuration for Cync wired switches
 
-## Key Discovery
+## 🎉 SUCCESS: Full Mode Control Achieved!
+
+✅ **We have successfully reverse engineered the complete mode switching protocol!**
+
+Smart bulb mode can now be controlled programmatically via TCP/cloud protocol when Bluetooth is disabled. Working injection commands have been tested and confirmed functional.
+
+### Quick Reference: Mode Switch Commands
+
+For device 160 (adapt device ID and counter for other devices):
+
+**Traditional Mode:**
+```
+73 00 00 00 1e 1b dc da 3e 00 3a 00 7e 3d 01 00 00 f8 8e 0c 00 3e 01 00 00 00 a0 00 f7 11 02 01 01 85 7e
+```
+
+**Smart (Dimmable) Mode:**
+```
+73 00 00 00 1e 1b dc da 3e 00 29 00 7e 30 01 00 00 f8 8e 0c 00 31 01 00 00 00 a0 00 f7 11 02 01 02 79 7e
+```
+
+See [mode_change_analysis.md](./mode_change_analysis.md) for complete details and testing methodology.
+
+---
+
+## Initial Discovery
 
 ✅ **Smart bulb mode CAN be controlled via TCP/cloud protocol when Bluetooth is disabled!**
 

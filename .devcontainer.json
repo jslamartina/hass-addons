@@ -60,7 +60,8 @@
         "docker.docker",
         "bodil.file-browser",
         "ms-azuretools.vscode-containers",
-        "yzhang.markdown-all-in-one"
+        "yzhang.markdown-all-in-one",
+        "shd101wyy.markdown-preview-enhanced"
       ],
       "settings": {
         "terminal.integrated.scrollback": 10000,
