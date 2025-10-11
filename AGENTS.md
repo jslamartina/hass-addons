@@ -50,12 +50,40 @@ This project uses a devcontainer based on the Home Assistant add-on development 
 
 ## Key Concepts
 
+### Cloud Relay Mode
+
+**New in v0.0.4.0**: The add-on can optionally act as a Man-in-the-Middle (MITM) proxy between devices and Cync cloud, enabling:
+- Real-time packet inspection and logging
+- Protocol analysis and debugging
+- Cloud backup (devices still work if relay goes down)
+- LAN-only operation (no cloud forwarding)
+
+**Configuration** (`config.yaml`):
+```yaml
+cloud_relay:
+  enabled: false                      # Enable relay mode
+  forward_to_cloud: true              # Forward packets to cloud (false = LAN-only)
+  cloud_server: "35.196.85.236"       # Cync cloud server IP
+  cloud_port: 23779                   # Cync cloud port
+  debug_packet_logging: false         # Log parsed packets (verbose)
+  disable_ssl_verification: false     # Disable SSL verify (debug only)
+```
+
+**Use Cases:**
+- **Protocol Analysis**: Enable `debug_packet_logging` to see all packet structures
+- **Debugging**: Test device behavior while observing cloud interactions
+- **LAN-only with inspection**: Set `forward_to_cloud: false` to block cloud access while logging packets
+- **Cloud backup**: Keep `forward_to_cloud: true` so devices work even if relay fails
+
+**Security Warning**: If `disable_ssl_verification: true`, the add-on operates in DEBUG MODE with no SSL security. Only use on trusted local networks for development.
+
 ### Architecture
 
 The CyncLAN add-on has three main components:
 
 1. **Exporter** - FastAPI web server for exporting device configuration from Cync cloud (2FA via emailed OTP)
 2. **nCync** - Async TCP server that masquerades as Cync cloud (requires DNS redirection)
+   - **Optional Cloud Relay Mode** - Can act as MITM proxy to forward traffic to/from real cloud while inspecting packets
 3. **MQTT Client** - Bridges device states to Home Assistant using MQTT discovery
 
 ### DNS Requirement
@@ -124,10 +152,20 @@ tail -f /tmp/supervisor_run.log
 # Access add-on container
 docker exec -it addon_local_cync-lan /bin/bash
 
-# MITM testing (protocol analysis)
+# Cloud relay packet injection (when relay mode enabled)
+# Inject raw packet bytes
+echo "73 00 00 00 1e ..." > /tmp/cync_inject_raw_bytes.txt
+
+# Inject mode change for switches
+echo "smart" > /tmp/cync_inject_command.txt
+# or
+echo "traditional" > /tmp/cync_inject_command.txt
+
+# MITM testing (legacy standalone tool for protocol analysis)
 cd mitm
 ./run_mitm.sh
 # See mitm/README.md for detailed usage
+# Note: Cloud relay mode is now the recommended approach
 ```
 
 ## Important Rules
