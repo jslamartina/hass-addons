@@ -1,31 +1,199 @@
-# Repository Guidelines
-## Project Structure & Module Organization
-- `cync-lan/` packages the Home Assistant add-on (Dockerfile, run.sh, static/ assets, translations/) and ships the supervisor metadata.
-- `cync-lan/cync-lan-python/` contains the installable Python stack under `src/cync_lan` plus sample configs and docs for DNS, install, and troubleshooting workflows.
-- `docs/` hosts add-on level references; `mitm/` holds packet-analysis utilities; top-level `package.json` manages repository-wide formatting tooling.
+# AGENTS.md
 
-## Build, Test, and Development Commands
-- `pip install -e cync-lan/cync-lan-python[dev]`: set up the local library with optional developer extras.
-- `python -m cync_lan.main --export-server --env config/.env.local`: run the stack from source using a checked-in config export.
-- `docker build -t hass-cync-lan ./cync-lan`: produce an add-on image identical to what Home Assistant Supervisor expects.
-- `npm run format:check` (or `npm run format`) ensures Prettier normalizes YAML, JSON, and shell scripts before submission.
+This file provides guidance for AI coding agents working with the Home Assistant CyncLAN Add-on repository.
 
-## Coding Style & Naming Conventions
-- Python follows Ruff (`pyproject.toml`): 4-space indentation, 120-character soft limit, snake_case modules, PascalCase classes, and explicit type hints on async boundaries.
-- Keep shell scripts Bash-compatible, favor uppercase log prefixes (`LP=`) and `bashio::config` accessors when reading add-on settings.
-- Name exported assets and translation files with lowercase-kebab names to match Home Assistant conventions.
+## Project Overview
 
-## Testing Guidelines
-- Add future unit tests beside the library code (e.g., `cync-lan/cync-lan-python/tests/test_mqtt_client.py`) and execute them with `python -m pytest` after installing the dev extras.
-- Use fixture YAML produced by the exporter to simulate devices and assert MQTT payload shapes; avoid hardcoding secrets in tests.
-- For end-to-end smoke checks, run `python -c "from cync_lan.main import main; main()" --enable-export` against a Supervisor dev instance and confirm MQTT discovery topics.
+This repository contains Home Assistant add-ons for controlling Cync/C by GE smart devices locally without cloud dependency. The main add-on intercepts device communications and bridges them to Home Assistant via MQTT.
 
-## Commit & Pull Request Guidelines
-- Mirror existing history: single-sentence, present-tense summaries that capture both change and motivation (e.g., `Refine run.sh; export MQTT credentials by default`).
-- Group related edits per commit and keep diffs focused on one feature or bug fix.
-- PRs should describe test evidence, affected Home Assistant versions, DNS or MQTT changes, and link related issues or forum threads.
-- Don't commit the files, so that they can be reviewed by me locally first.
+## Repository Structure
 
-## Security & Configuration Tips
-- Never commit credentials; rely on `.env` files referenced by `--env` or add-on secrets.
-- When altering network endpoints, refresh `config.yaml`, `cync_lan/const.py`, and the DNS guidance in `cync-lan/cync-lan-python/docs/DNS.md` to keep users aligned.
+```
+/mnt/supervisor/addons/local/hass-addons/
+├── cync-lan/                    # Main CyncLAN add-on
+│   ├── cync-lan-python/        # Embedded Python package (submodule/symlink)
+│   ├── Dockerfile              # Add-on container build
+│   ├── config.yaml             # Add-on configuration schema
+│   ├── run.sh                  # Add-on entry point
+│   └── static/                 # Web UI for device export
+├── .devcontainer/              # Development container setup
+│   ├── post-start.sh           # Devcontainer startup script
+│   ├── post-create.sh          # Initial setup script
+│   └── README.md               # Devcontainer documentation (IMPORTANT: read this!)
+├── mitm/                       # MITM testing tools for protocol analysis
+├── docs/                       # Documentation
+├── test-cync-lan.sh           # Quick test script
+└── EXPLORATION_NOTES.md       # System exploration findings (for reference)
+```
+
+## Development Environment
+
+### Devcontainer Setup
+
+This project uses a devcontainer based on the Home Assistant add-on development image. **Critical:** Read `.devcontainer/README.md` before modifying any startup scripts - it contains important quirks about Docker initialization and log filtering.
+
+### Quick Start
+
+```bash
+# The devcontainer automatically:
+# 1. Starts Home Assistant Supervisor
+# 2. Restores a test backup with sample devices
+# 3. Sets up both hass-addons and cync-lan repositories
+
+# Test the add-on
+./test-cync-lan.sh
+
+# Access Home Assistant
+# URL: http://localhost:8123
+# Credentials: dev/dev (stored in hass-credentials.env)
+```
+
+## Key Concepts
+
+### Architecture
+
+The CyncLAN add-on has three main components:
+
+1. **Exporter** - FastAPI web server for exporting device configuration from Cync cloud (2FA via emailed OTP)
+2. **nCync** - Async TCP server that masquerades as Cync cloud (requires DNS redirection)
+3. **MQTT Client** - Bridges device states to Home Assistant using MQTT discovery
+
+### DNS Requirement
+
+**Critical:** The add-on requires DNS redirection to intercept device traffic. See `docs/cync-lan/DNS.md` for setup instructions. Without this, devices will still communicate with Cync cloud.
+
+## Coding Conventions
+
+### Shell Scripts
+
+- Use `bashio::` functions for add-on scripts (provided by Home Assistant base image)
+- Always use `set -e` for error handling
+- Use descriptive variable names in SCREAMING_SNAKE_CASE for environment variables
+- Comment complex logic, especially protocol-specific code
+
+### Python (cync-lan package)
+
+- Follow Black formatter style (configured in pyproject.toml)
+- Use type hints for function signatures
+- Async/await for all I/O operations (TCP, MQTT, HTTP)
+- Logging prefix format: `lp = "ClassName:method_name:"`
+- Use dataclasses or Pydantic models for structured data
+
+### Configuration Files
+
+- Add-on config: `cync-lan/config.yaml` (JSON Schema format)
+- Environment variables: Prefix with `CYNC_` for add-on settings
+- MQTT topics: Follow Home Assistant MQTT discovery schema
+
+## Common Tasks
+
+### Building the Add-on
+
+```bash
+# Rebuild from scratch (useful after Python package changes)
+cd cync-lan
+./rebuild.sh
+
+# Or use Home Assistant CLI
+ha addons rebuild local_cync-lan
+```
+
+### Testing
+
+```bash
+# Quick functional test
+./test-cync-lan.sh
+
+# Manual testing
+ha addons start local_cync-lan
+ha addons logs local_cync-lan --follow
+
+# Check entity states in Home Assistant
+# Developer Tools → States → Filter for "cync"
+```
+
+### Debugging
+
+```bash
+# View add-on logs
+ha addons logs local_cync-lan
+
+# View supervisor logs (includes add-on lifecycle)
+tail -f /tmp/supervisor_run.log
+
+# Access add-on container
+docker exec -it addon_local_cync-lan /bin/bash
+
+# MITM testing (protocol analysis)
+cd mitm
+./run_mitm.sh
+# See mitm/README.md for detailed usage
+```
+
+## Important Rules
+
+### DO
+
+- ✅ Read `.devcontainer/README.md` before modifying startup scripts
+- ✅ Test changes with `./test-cync-lan.sh` before committing
+- ✅ Use the embedded `cync-lan-python` package (don't duplicate code)
+- ✅ Follow Home Assistant add-on best practices (see https://developers.home-assistant.io/)
+- ✅ Document protocol findings in `mitm/` when discovering new packet structures
+- ✅ Update `CHANGELOG.md` when making user-facing changes
+- ✅ Preserve DNS redirection warnings in documentation (users MUST do this)
+
+### DON'T
+
+- ❌ Don't start Docker manually in `post-start.sh` (supervisor_run handles this)
+- ❌ Don't remove Docker CLI version pinning (prevents version mismatch issues)
+- ❌ Don't modify the backup restore logic without testing thoroughly
+- ❌ Don't hardcode IP addresses or credentials (use config options)
+- ❌ Don't bypass the MQTT discovery schema (breaks Home Assistant integration)
+- ❌ Don't commit `hass-credentials.env` (contains dev credentials)
+
+## File Naming Conventions
+
+- **Shell scripts**: `kebab-case.sh` (e.g., `test-cync-lan.sh`)
+- **Python files**: `snake_case.py` (e.g., `mqtt_client.py`)
+- **Documentation**: `SCREAMING_CAPS.md` for top-level, `kebab-case.md` for docs/ folder
+- **Directories**: `kebab-case/` preferred
+
+## Testing Checklist
+
+Before submitting changes:
+
+1. [ ] Add-on builds successfully (`./rebuild.sh` or `ha addons rebuild`)
+2. [ ] Add-on starts without errors (`ha addons start local_cync-lan`)
+3. [ ] Entities appear in Home Assistant (check Developer Tools → States)
+4. [ ] Device commands work (toggle lights, adjust brightness)
+5. [ ] MQTT messages are valid (check EMQX logs or `mosquitto_sub`)
+6. [ ] No Python exceptions in logs (`ha addons logs local_cync-lan`)
+7. [ ] Devcontainer still starts cleanly (test in fresh container)
+8. [ ] Changes documented in CHANGELOG.md if user-facing
+
+## External Resources
+
+- [Home Assistant Add-on Documentation](https://developers.home-assistant.io/docs/add-ons/)
+- [Cync Protocol Research](mitm/FINDINGS_SUMMARY.md) - Our protocol reverse engineering notes
+- [MQTT Discovery Schema](https://www.home-assistant.io/integrations/mqtt/#mqtt-discovery)
+- [DNS Redirection Setup](docs/cync-lan/DNS.md)
+
+## Getting Help
+
+- Check `EXPLORATION_NOTES.md` for UI navigation and system state reference
+- Review `mitm/FINDINGS_SUMMARY.md` for protocol details
+- Read `.devcontainer/README.md` for devcontainer quirks
+- See `docs/cync-lan/troubleshooting.md` for common issues
+
+## Version Information
+
+- **Python**: 3.12+ (configured in `.devcontainer.json`)
+- **Home Assistant**: 2025.10+ (dev branch)
+- **Node.js**: LTS (for Prettier formatting)
+- **Docker**: Managed by supervisor_run (see devcontainer README)
+
+---
+
+*Last Updated: October 2025*
+*For exploration findings from UI testing, see `EXPLORATION_NOTES.md`*
+

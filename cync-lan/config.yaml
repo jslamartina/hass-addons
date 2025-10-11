@@ -1,5 +1,5 @@
 name: "CyncLAN Bridge"
-version: "0.0.3.1"
+version: "0.0.4.0"
 slug: "cync-lan"
 description: "Local controller for Cync/C by GE smart devices (DNS redirection required)"
 arch:
@@ -48,6 +48,13 @@ options:
     tcp_whitelist: ""
     command_targets: 2
     max_clients: 8
+  cloud_relay:
+    enabled: false
+    forward_to_cloud: true
+    cloud_server: "35.196.85.236"
+    cloud_port: 23779
+    debug_packet_logging: false
+    disable_ssl_verification: false
 
 schema:
   account_username: email
@@ -62,6 +69,13 @@ schema:
     tcp_whitelist: str?
     command_targets: int(1,)
     max_clients: int(1,)
+  cloud_relay:
+    enabled: bool
+    forward_to_cloud: bool?
+    cloud_server: str?
+    cloud_port: port?
+    debug_packet_logging: bool?
+    disable_ssl_verification: bool?
 
 map:
   # FAIL TO START if 'addon_config' and/or 'homeassistant_config' are defined while 'config' is included.
