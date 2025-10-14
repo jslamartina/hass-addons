@@ -1,9 +1,58 @@
 {
   "mcpServers": {
+    "web_fetch": {
+      "command": "python",
+      "args": ["-m", "mcp_server_fetch"]
+    },
+    "docker": {
+      "command": "uvx",
+      "args": ["mcp-server-docker"]
+    },
+    "git": {
+      "command": "python",
+      "args": ["-m", "mcp_server_git"]
+    },
     "brave": {
-      "type": "http",
-      "url": "https://server.smithery.ai/brave/mcp",
-      "headers": {}
+      "command": "/mnt/supervisor/addons/local/hass-addons/scripts/run-mcp-with-env.sh",
+      "args": [
+        "npx",
+        "-y",
+        "@brave/brave-search-mcp-server",
+        "--transport",
+        "stdio"
+      ]
+    },
+    "sequential-thinking": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-sequential-thinking"]
+    },
+    "python": {
+      "command": "uvx",
+      "args": ["mcp-run-python", "stdio"]
+    },
+    "time": {
+      "command": "python",
+      "args": ["-m", "mcp_server_time", "--local-timezone=America/Chicago"]
+    },
+    "filesystem": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-filesystem",
+        "/mnt",
+        "/bin",
+        "/etc",
+        "/run",
+        "/var",
+        "/usr",
+        "/lib",
+        "/sbin",
+        "/opt",
+        "/home",
+        "/root",
+        "/tmp",
+        "/media"
+      ]
     }
   }
 }

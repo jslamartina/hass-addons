@@ -1,3 +1,38 @@
+## 0.0.4.3
+**Enhancement: Smart Area Grouping for Devices**
+
+### Added
+- **Automatic area detection**: Devices now automatically suggest their room/area based on name
+  - Feature: Extracts area name from device names (e.g., "Hallway Front Switch" → suggests "Hallway" area)
+  - Benefit: Devices with similar names are now grouped together on the Home Assistant dashboard
+  - Impact: Switches like "Hallway 4way Switch", "Hallway Counter Switch", and "Hallway Front Switch" now appear in a single "Hallway" card instead of separate cards
+  - Implementation: Adds `suggested_area` field to MQTT discovery payload
+  - Location: `/src/cync_lan/mqtt_client.py` - `register_device_to_homeassistant()` method (lines 855-894)
+
+## 0.0.4.2
+**Critical Bug Fix: Group State Updates**
+
+### Fixed
+- **Fixed group entity state updates**: Group entities now update in Home Assistant when controlled
+  - Bug: Group entities appeared "non-functional" - commands were sent but entity state didn't update
+  - Root cause: `publish_group_state()` method existed but was never called after group commands
+  - Fix: Added `publish_group_state()` calls to all group command methods (set_power, set_brightness, set_temperature)
+  - Impact: Group entities now show correct state immediately when controlled from Home Assistant
+  - Related: Groups (subgroups) like "Hallway Lights" now work properly on the dashboard
+  - Location: `/src/cync_lan/devices.py` - `CyncGroup` class methods (lines 1413, 1506, 1599)
+
+## 0.0.4.1
+**Critical Bug Fix: Device State Synchronization**
+
+### Fixed
+- **Fixed device state sync issue**: Device status updates now correctly reflect actual device states
+  - Bug: Status packets (0x83) were publishing the **old** device state instead of the **new** state
+  - Root cause: Device attributes were updated **after** creating the status object for MQTT publishing
+  - Fix: Device attributes are now updated **before** creating the status object
+  - Impact: Lights and switches now properly sync with their real-world state
+  - Related: "Refresh Device Status" button now works correctly
+  - Location: `/src/cync_lan/server.py` - `parse_status()` method (lines 540-574)
+
 ## 0.0.4.0**Major Feature: Cloud Relay Mode**
 
 ### New Features

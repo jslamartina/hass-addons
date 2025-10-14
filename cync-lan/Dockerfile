@@ -20,7 +20,7 @@ RUN set -x \
   && rm -rf /var/cache/apk/*
 
 # Copy local cync-lan source
-COPY cync-lan-python /tmp/cync-lan-python
+COPY .cache-cync-lan-python /tmp/cync-lan-python
 
 ARG BUILD_ARCH
 ARG BUILD_VERSION
