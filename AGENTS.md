@@ -33,6 +33,8 @@ ha addons restart local_cync-lan  # Restart addon
 - `hass-credentials.env` - Home Assistant login credentials (Username: `dev`, Password: `dev`)
 
 **Important sections:**
+- **Command Flow and ACK Handling** (below) - Critical for understanding how commands work
+- **Known Issues and Solutions** (below) - Common bugs and their fixes
 - **Browser Automation with Playwright** (below) - How to properly click elements in HA UI
 
 ## Before Starting ANY Task: Mandatory Checklist
@@ -84,7 +86,8 @@ This project uses a devcontainer based on the Home Assistant add-on development 
 ```bash
 # The devcontainer automatically:
 # 1. Starts Home Assistant Supervisor
-# 2. Restores a test backup with sample devices
+# 2. BACKUP RESTORE CURRENTLY DISABLED (see .devcontainer/post-start.sh)
+#    - Comment out lines 131-216 to re-enable test backup restoration
 # 3. Sets up both hass-addons and cync-lan repositories
 
 # Test the add-on
@@ -135,15 +138,13 @@ The devcontainer includes several Model Context Protocol (MCP) servers that prov
 
 #### Quick Reference
 
-| MCP Server              | Primary Use          | Key Functions                                     | When to Use                                              |
-| ----------------------- | -------------------- | ------------------------------------------------- | -------------------------------------------------------- |
-| `mcp-server-time`       | Timezone operations  | `get_current_time`, `convert_time`                | Scheduling, timestamps, DST calculations                 |
-| `mcp-run-python`        | Code execution       | `run_python_code` (async supported)               | Quick calculations, data analysis, prototyping           |
-| `sequential-thinking`   | Complex reasoning    | `sequentialthinking` (with branching)             | System design, architecture planning, trade-off analysis |
-| `mcp-server-docker`     | Container management | 15 functions (containers/images/networks/volumes) | Inspecting containers, managing dev environments         |
-| `mcp-server-fetch`      | Web content          | `fetch` (markdown/HTML modes)                     | Reading docs, fetching API specs, release notes          |
-| `mcp-server-git`        | Version control      | 12 Git operations                                 | Analyzing history, managing branches, reviewing changes  |
-| `mcp-server-filesystem` | File operations      | 13 functions (read/write/search/list/move)        | File management, directory analysis, batch operations    |
+| MCP Server          | Primary Use          | Key Functions                                     | When to Use                                             |
+| ------------------- | -------------------- | ------------------------------------------------- | ------------------------------------------------------- |
+| `mcp-server-time`   | Timezone operations  | `get_current_time`, `convert_time`                | Scheduling, timestamps, DST calculations                |
+| `mcp-run-python`    | Code execution       | `run_python_code` (async supported)               | Quick calculations, data analysis, prototyping          |
+| `mcp-server-docker` | Container management | 15 functions (containers/images/networks/volumes) | Inspecting containers, managing dev environments        |
+| `mcp-server-fetch`  | Web content          | `fetch` (markdown/HTML modes)                     | Reading docs, fetching API specs, release notes         |
+| `mcp-server-git`    | Version control      | 12 Git operations                                 | Analyzing history, managing branches, reviewing changes |
 
 **Installation:** Automatic via `.devcontainer/02-setup-mcp-servers.sh` (runs on devcontainer creation)
 
@@ -154,9 +155,7 @@ The devcontainer includes several Model Context Protocol (MCP) servers that prov
 - **Python MCP**: Standard library only (no external pip packages in execution environment)
 - **Docker MCP**: Requires Docker socket access (may fail in restricted environments)
 - **Git MCP**: Operations are synchronous (may be slow for large repositories)
-- **Sequential Thinking**: Not suitable for quick decisions (use for complex analysis only, 5+ thought steps)
 - **Fetch MCP**: Respects robots.txt (some sites may block automated access)
-- **Filesystem MCP**: Only operates within allowed directories (security restriction)
 
 **When MCP tools fail:**
 
@@ -249,41 +248,6 @@ config = json.loads('{"key": "value"}')
 - Standard library: `json`, `datetime`, `math`, `statistics`, `collections`, `re`, `asyncio`
 - Data processing: List comprehensions, dictionary operations, Counter, etc.
 - Async operations: Full asyncio support with concurrent tasks
-
-#### Sequential Thinking (`@modelcontextprotocol/server-sequential-thinking`)
-
-**Tools Available:**
-- `mcp_sequential-thinking_sequentialthinking` - Break down complex problems into sequential thought steps
-
-**When to use:**
-- Designing complex system architectures
-- Planning multi-step refactoring tasks
-- Analyzing trade-offs between different approaches
-- Debugging complex issues requiring multiple hypotheses
-- Breaking down large features into implementable steps
-
-**Example use cases:**
-- Architecting a new addon monitoring system
-- Planning database schema migrations
-- Analyzing performance bottlenecks across multiple components
-- Designing API endpoints with security considerations
-- Evaluating multiple implementation strategies
-
-**Features:**
-- ✅ Sequential thought tracking (numbered steps)
-- ✅ Revision capability (reconsider previous thoughts)
-- ✅ Branching exploration (explore alternative approaches)
-- ✅ Dynamic thought adjustment (extend/reduce as needed)
-- ✅ Thought history maintenance
-- ✅ Completion detection
-
-**Workflow pattern:**
-1. Start with initial problem analysis (thought 1)
-2. Progress through sequential reasoning (thoughts 2-N)
-3. Revise previous thoughts if new insights emerge
-4. Branch to explore alternatives when appropriate
-5. Adjust total thoughts as complexity becomes clearer
-6. Signal completion when solution is fully analyzed
 
 #### Docker Management (`mcp-server-docker`)
 
@@ -408,89 +372,6 @@ git_create_branch(repo_path=".", branch_name="feature/mcp-docs",
 - ✅ Configurable context lines for diffs
 - ✅ Works with any local Git repository
 
-#### Filesystem Operations (`mcp-server-filesystem`)
-
-**Tools Available:**
-
-**Reading:**
-- `mcp_filesystem_read_text_file` - Read text files with encoding handling
-- `mcp_filesystem_read_media_file` - Read images/audio as base64
-- `mcp_filesystem_read_multiple_files` - Batch read multiple files
-
-**Writing:**
-- `mcp_filesystem_write_file` - Create or overwrite files
-- `mcp_filesystem_edit_file` - Line-based edits with diff preview (dry-run supported)
-
-**Directory Operations:**
-- `mcp_filesystem_create_directory` - Create directories (nested paths supported)
-- `mcp_filesystem_list_directory` - List contents with [FILE]/[DIR] markers
-- `mcp_filesystem_list_directory_with_sizes` - List with human-readable sizes and totals
-- `mcp_filesystem_directory_tree` - Recursive JSON tree view
-
-**File Management:**
-- `mcp_filesystem_move_file` - Move/rename files
-- `mcp_filesystem_search_files` - Recursive search by pattern (with exclusions)
-- `mcp_filesystem_get_file_info` - Metadata (size, timestamps, permissions)
-
-**Security:**
-- `mcp_filesystem_list_allowed_directories` - Shows accessible directories
-
-**When to use:**
-- Analyzing directory structures and file sizes
-- Batch reading multiple files efficiently
-- Finding large files or specific patterns
-- Safe file editing with diff preview
-- Creating directory structures for projects
-
-**Example use cases:**
-```python
-# List directory with sizes, sorted by size
-list_directory_with_sizes("/path/to/project", sortBy="size")
-# Output: Shows files/dirs with sizes, totals at bottom
-
-# Read multiple files at once (more efficient than sequential reads)
-read_multiple_files([
-    "src/main.py",
-    "src/utils.py",
-    "config.yaml"
-])
-
-# Search for files recursively with exclusions
-search_files(
-    path="/project",
-    pattern="*.py",
-    excludePatterns=["__pycache__", "*.pyc"]
-)
-
-# Edit file with diff preview (dry run)
-edit_file(
-    path="config.yaml",
-    edits=[{"oldText": "debug: false", "newText": "debug: true"}],
-    dryRun=True  # Preview changes before applying
-)
-
-# Get detailed file metadata
-get_file_info("large_file.tar.gz")
-# Returns: size, created, modified, permissions, type
-```
-
-**Features:**
-- ✅ Human-readable file sizes (KB, MB, GB)
-- ✅ Batch operations for efficiency
-- ✅ Diff preview before applying edits
-- ✅ Recursive directory operations
-- ✅ Pattern-based search with exclusions
-- ✅ Detailed file metadata
-- ✅ Respects .gitignore patterns
-- ✅ Only operates within allowed directories
-
-**Advantages over standard tools:**
-- `list_directory_with_sizes` > `list_dir`: Shows sizes, totals, sortable
-- `read_multiple_files` > multiple `read_file`: Batch reading is faster
-- `edit_file` > `search_replace`: Diff preview, line-based editing
-- `directory_tree` > `list_dir`: JSON structure for recursive views
-- `search_files` > `grep`: Better exclusion patterns, file-focused
-
 ### MCP Server Secrets Management
 
 MCP servers often require API keys and authentication tokens. This repository provides a secure way to manage these secrets:
@@ -572,6 +453,32 @@ cloud_relay:
 
 **Security Warning**: If `disable_ssl_verification: true`, the add-on operates in DEBUG MODE with no SSL security. Only use on trusted local networks for development.
 
+### Command Flow and ACK Handling
+
+**How device commands work:**
+
+1. **MQTT receives command** from Home Assistant (e.g., turn on light)
+2. **`set_power()` called** on `CyncDevice` or `CyncGroup`
+3. **Callback registered** in `bridge_device.messages.control[msg_id]` with:
+   - Message ID (unique per command)
+   - Payload bytes
+   - Callback coroutine to execute on ACK
+   - Device ID
+4. **`pending_command` flag set** to prevent stale status updates
+5. **Command packet sent** via TCP to bridge device
+6. **Bridge forwards to mesh** network
+7. **Device receives command** and executes it
+8. **ACK packet (0x73) returned** from device
+9. **Callback executed** updating MQTT state
+10. **`pending_command` cleared** - device ready for next command
+
+**Critical:** Steps 3 and 9 MUST happen for commands to physically work. Missing callback registration causes "silent failures" where logs show success but devices don't respond.
+
+**Packet types:**
+- `0x73` - Control command packet (from server to device) and ACK response (device to server)
+- `0x83` - Mesh info / device status (device to server)
+- `0x43` - Broadcast status update (device to server)
+
 ### Architecture
 
 The CyncLAN add-on has three main components:
@@ -584,6 +491,81 @@ The CyncLAN add-on has three main components:
 ### DNS Requirement
 
 **Critical:** The add-on requires DNS redirection to intercept device traffic. See `docs/cync-lan/DNS.md` for setup instructions. Without this, devices will still communicate with Cync cloud.
+
+### Critical Implementation Details
+
+#### Command ACK Handling
+
+**Individual Device Commands** (`CyncDevice.set_power`, `devices.py` lines 358-365):
+- Register a `ControlMessageCallback` with msg_id before sending
+- Callback is executed when ACK (0x73 packet) is received
+- `pending_command` flag is set to prevent stale status updates during command execution
+
+**Group Commands** (`CyncGroup.set_power`, `devices.py` lines 1420-1429):
+- **MUST** register callback just like individual device commands
+- Without callback registration, group commands appear to send but don't physically control devices
+- Bridge device handles ACK and executes callback to update MQTT state
+
+**Common pitfall:** Forgetting to register callbacks for new command types will cause "silent failures" - logs show commands sent and ACK'd, but devices don't respond.
+
+#### Device Availability Resilience
+
+**Problem:** Mesh info packets (0x83 responses) can report devices as offline unreliably, causing flickering availability status in Home Assistant.
+
+**Solution** (`server.py` lines 530-544):
+- Devices have `offline_count` counter tracking consecutive offline reports
+- Device is only marked unavailable after **3 consecutive offline reports**
+- Counter resets to 0 immediately when device appears online
+- Prevents false positives from unreliable mesh info responses
+
+**Before the fix:**
+```python
+if connected_to_mesh == 0:
+    device.online = False  # Immediate offline marking
+```
+
+**After the fix:**
+```python
+if connected_to_mesh == 0:
+    device.offline_count += 1
+    if device.offline_count >= 3 and device.online:
+        device.online = False  # Only after 3 consecutive reports
+else:
+    device.offline_count = 0  # Reset counter
+    device.online = True
+```
+
+#### Automatic Refresh After ACK (REMOVED)
+
+**Bug fixed (Oct 14, 2025):** `devices.py` lines 2501-2505 contained automatic `trigger_status_refresh()` call after every command ACK. This caused:
+- Cascading refreshes after every command
+- Commands failing because refresh would interfere with pending operations
+- "Click twice to work" behavior where first click triggers refresh, second click works
+
+**The fix:** Removed automatic refresh. Users can manually click "Refresh Device Status" button when needed.
+
+**Code removed:**
+```python
+# Trigger immediate status refresh after ACK
+if g.mqtt_client:
+    asyncio.create_task(g.mqtt_client.trigger_status_refresh())
+```
+
+#### Debugging Command Issues
+
+When commands don't work, check in this order:
+
+1. **Are commands being received?** Look for `set_power` in logs
+2. **Is callback registered?** Look for "callback NOT found" warnings
+3. **Is write_lock acquired?** Look for "write_lock ACQUIRED" logs
+4. **Did TCP socket send?** Look for "drain() COMPLETED" logs
+5. **Did ACK arrive?** Look for "CONTROL packet ACK SUCCESS" logs
+6. **Is device ready?** Check `ready_to_control` and `pending_command` flags
+
+**Example diagnostic grep:**
+```bash
+ha addons logs local_cync-lan | grep -E "set_power|WRITE CALLED|write_lock|ACK|drain"
+```
 
 ## Coding Conventions
 
@@ -1005,6 +987,58 @@ cd mitm
 # Note: Cloud relay mode is now the recommended approach
 ```
 
+### Known Issues and Solutions
+
+#### "Commands don't work" / "Lights don't turn on"
+
+**Symptoms:**
+- Logs show commands sent, ACKs received, but physical devices don't respond
+- GUI updates but lights don't physically turn on/off
+- "Callback NOT found for msg ID: XX" in logs
+
+**Root cause:** Missing `ControlMessageCallback` registration before sending command
+
+**Fix:** Always register callback in `bridge_device.messages.control[msg_id]` before calling `bridge_device.write()`
+
+**Example fix:**
+```python
+# BEFORE sending command:
+m_cb = ControlMessageCallback(
+    msg_id=cmsg_id,
+    message=payload_bytes,
+    sent_at=time.time(),
+    callback=your_callback_coroutine,
+    device_id=device.id,
+)
+bridge_device.messages.control[cmsg_id] = m_cb
+
+# THEN send:
+await bridge_device.write(payload_bytes)
+```
+
+#### "Commands work once, then fail" / "Need to click twice"
+
+**Symptoms:**
+- First command after refresh doesn't work
+- Need to toggle twice for commands to take effect
+- Rapid clicking causes commands to stop working
+- Works initially, then stops working after using "Refresh Device Status"
+
+**Root cause:** Automatic `trigger_status_refresh()` after every ACK was causing cascading refreshes
+
+**Fix:** Removed automatic refresh from ACK handler (`devices.py` lines 2501-2505). Manual refresh button still works.
+
+#### "Devices flicker between available/unavailable"
+
+**Symptoms:**
+- Device entities show as "unavailable" intermittently
+- Availability status changes rapidly in GUI
+- Commands still work but availability is inconsistent
+
+**Root cause:** Unreliable `connected_to_mesh` byte in 0x83 packets causing immediate offline marking
+
+**Fix:** Added `offline_count` threshold - devices only marked offline after 3 consecutive offline reports (`server.py` lines 530-544)
+
 ## Important Rules
 
 ### DO
@@ -1026,6 +1060,9 @@ cd mitm
 - ❌ Don't hardcode IP addresses or credentials (use config options)
 - ❌ Don't bypass the MQTT discovery schema (breaks Home Assistant integration)
 - ❌ Don't commit `hass-credentials.env` (contains dev credentials)
+- ❌ **Don't remove callback registration from command methods** (causes silent failures - commands send but devices don't respond)
+- ❌ **Don't add automatic refresh after command ACKs** (causes cascading refreshes that break subsequent commands)
+- ❌ **Don't mark devices offline immediately from mesh info** (use offline_count with threshold to prevent flickering)
 
 ## File Naming Conventions
 
@@ -1043,12 +1080,15 @@ Before submitting changes:
 3. [ ] Add-on starts without errors (`ha addons start local_cync-lan`)
 4. [ ] Entities appear in Home Assistant (check Developer Tools → States)
 5. [ ] Device commands work (toggle lights, adjust brightness)
-6. [ ] MQTT messages are valid (check EMQX logs or `mosquitto_sub`)
-7. [ ] No Python exceptions in logs (`ha addons logs local_cync-lan`)
-8. [ ] Devcontainer still starts cleanly (test in fresh container)
-9. [ ] Changes documented in CHANGELOG.md if user-facing
-10. [ ] If config schema changed: Follow "Testing Add-on UI Configuration Changes" workflow
-11. [ ] UI configuration options visible after hard refresh (Ctrl+Shift+R)
+6. [ ] **Group commands work** - Test toggling group entities multiple times
+7. [ ] **Commands work after refresh** - Click "Refresh Device Status" then test commands immediately
+8. [ ] **No availability flickering** - Watch device availability over 30+ seconds
+9. [ ] MQTT messages are valid (check EMQX logs or `mosquitto_sub`)
+10. [ ] No Python exceptions in logs (`ha addons logs local_cync-lan`)
+11. [ ] Devcontainer still starts cleanly (test in fresh container)
+12. [ ] Changes documented in CHANGELOG.md if user-facing
+13. [ ] If config schema changed: Follow "Testing Add-on UI Configuration Changes" workflow
+14. [ ] UI configuration options visible after hard refresh (Ctrl+Shift+R)
 
 ## External Resources
 
