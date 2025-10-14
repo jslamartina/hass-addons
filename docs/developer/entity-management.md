@@ -33,47 +33,36 @@ When developing the CyncLAN Add-on, you often need to:
 
 ## Quick Start
 
-### Option 1: Shell Wrapper (Recommended)
+### Primary Method: Python Script (Recommended)
 
 ```bash
-# Preview first
-./scripts/delete-mqtt-entities-except-bridge.sh --dry-run
+# Preview what will be deleted (dry run)
+sudo python3 scripts/delete-mqtt-safe.py --dry-run
 
-# Actually delete
-./scripts/delete-mqtt-entities-except-bridge.sh
+# Actually delete entities (preserves bridge, cleans registries)
+sudo python3 scripts/delete-mqtt-safe.py
 
-# Delete and restart addon
-./scripts/delete-mqtt-entities-except-bridge.sh --restart
+# Delete and automatically restart addon
+sudo python3 scripts/delete-mqtt-safe.py --restart
 ```
 
-### Option 2: npm Scripts
-
-```bash
-# Preview
-npm run playwright:delete-all-except-bridge:dry-run
-
-# Delete
-npm run playwright:delete-all-except-bridge
-```
-
-### Option 3: Direct TypeScript
-
-```bash
-# Full control with environment variables
-DRY_RUN=true HEADED=1 \
-npx ts-node scripts/playwright/delete-all-mqtt-entities-except-bridge.ts
-```
+**Features:**
+- ✅ Preserves CyncLAN Bridge entities
+- ✅ Cleans entity and device registries
+- ✅ Clears restore state (removes history memory)
+- ✅ Safe dry-run mode for preview
+- ✅ Comprehensive logging and backup creation
 
 ## Common Workflows
 
 ### Workflow: Test Entity Rediscovery
 
 ```bash
-# 1. Preview what will be deleted
-./scripts/delete-mqtt-entities-except-bridge.sh --dry-run
+# 1. Preview what will be deleted (dry run)
+sudo python3 scripts/delete-mqtt-safe.py --dry-run
 
-# 2. Delete all entities (keep bridge)
-./scripts/delete-mqtt-entities-except-bridge.sh
+# 2. Delete all entities (keep bridge, clean registries)
+sudo python3 scripts/delete-mqtt-safe.py
 
 # 3. Restart addon to republish
 ha addons restart local_cync-lan
@@ -90,8 +79,8 @@ ha addons logs local_cync-lan | grep "Publishing MQTT discovery"
 # 1. Rebuild addon (Python changes require rebuild)
 cd cync-lan && ./rebuild.sh
 
-# 2. Delete all entities except bridge
-./scripts/delete-mqtt-entities-except-bridge.sh
+# 2. Delete all entities except bridge (clean deletion)
+sudo python3 scripts/delete-mqtt-safe.py
 
 # 3. Restart addon
 ha addons restart local_cync-lan

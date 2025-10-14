@@ -1,5 +1,0 @@
-Smart Mode (0xb0):
-[22:40:27] DEV->CLOUD: 73 00 00 00 26 1b dc da 3e 01 9b 00 7e 09 01 00 00 fa 8e 14 00 b3 04 00 a0 00 4c 00 ea 11 02 a0 81 b0 00 00 00 00 00 00 14 27 7e
-
-Traditional Mode from earlier:
-Need to check earlier log

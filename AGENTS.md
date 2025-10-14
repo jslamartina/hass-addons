@@ -1,4 +1,4 @@
-# docs/developer/agents-guide.md
+# AGENTS.md
 
 This file provides guidance for AI coding agents working with the Home Assistant CyncLAN Add-on repository.
 
@@ -18,7 +18,6 @@ This repository contains Home Assistant add-ons for controlling Cync/C by GE sma
 **Most used commands:**
 
 ```bash
-./test-cync-lan.sh                # Test the addon
 ha addons logs local_cync-lan     # View logs
 ./scripts/configure-addon.sh      # Configure addon
 ha addons restart local_cync-lan  # Restart addon
@@ -71,7 +70,6 @@ ha addons restart local_cync-lan  # Restart addon
 │   └── README.md               # Devcontainer documentation (IMPORTANT: read this!)
 ├── mitm/                       # MITM testing tools for protocol analysis
 ├── docs/                       # Documentation
-├── test-cync-lan.sh           # Quick test script
 └── docs/developer/exploration-notes.md       # System exploration findings (for reference)
 ```
 
@@ -89,9 +87,6 @@ This project uses a devcontainer based on the Home Assistant add-on development 
 # 2. BACKUP RESTORE CURRENTLY DISABLED (see .devcontainer/post-start.sh)
 #    - Comment out lines 131-216 to re-enable test backup restoration
 # 3. Sets up both hass-addons and cync-lan repositories
-
-# Test the add-on
-./test-cync-lan.sh
 
 # Access Home Assistant
 # URL: http://localhost:8123
@@ -625,9 +620,6 @@ ha addons rebuild local_cync-lan
 ### Testing
 
 ```bash
-# Quick functional test
-./test-cync-lan.sh
-
 # Manual testing
 ha addons start local_cync-lan
 ha addons logs local_cync-lan --follow
@@ -636,10 +628,18 @@ ha addons logs local_cync-lan --follow
 # Developer Tools → States → Filter for "cync"
 ```
 
-### Deleting stale entities via Home Assistant UI (for MQTT discovery changes)
+### Deleting stale entities for MQTT discovery changes
 
 Use when you changed `suggested_area` or other discovery fields and need HA to recreate entities.
 
+**Automated approach (recommended):**
+```bash
+# Clean deletion preserving bridge, with optional restart
+sudo python3 scripts/delete-mqtt-safe.py [--dry-run]
+# Then restart addon: ha addons restart local_cync-lan
+```
+
+**Manual UI approach (fallback):**
 1. Navigate to Settings → Devices & Services → Entities (`/config/entities`)
 2. Click "Enter selection mode"
 3. Search or scroll to locate entities (e.g., `Hallway Front Switch`, `Hallway Counter Switch`, `Hallway 4way Switch`)
@@ -980,11 +980,8 @@ echo "smart" > /tmp/cync_inject_command.txt
 # or
 echo "traditional" > /tmp/cync_inject_command.txt
 
-# MITM testing (legacy standalone tool for protocol analysis)
-cd mitm
-./run_mitm.sh
-# See mitm/README.md for detailed usage
-# Note: Cloud relay mode is now the recommended approach
+# Note: MITM tools have been archived - see docs/archive/mitm/ for historical reference
+# Cloud relay mode is the current recommended approach for protocol analysis
 ```
 
 ### Known Issues and Solutions
@@ -1044,7 +1041,6 @@ await bridge_device.write(payload_bytes)
 ### DO
 
 - ✅ Read `.devcontainer/README.md` before modifying startup scripts
-- ✅ Test changes with `./test-cync-lan.sh` before committing
 - ✅ Use the embedded `cync-lan-python` package (don't duplicate code)
 - ✅ Follow Home Assistant add-on best practices (see https://developers.home-assistant.io/)
 - ✅ Document protocol findings in `mitm/` when discovering new packet structures
@@ -1066,10 +1062,11 @@ await bridge_device.write(payload_bytes)
 
 ## File Naming Conventions
 
-- **Shell scripts**: `kebab-case.sh` (e.g., `test-cync-lan.sh`)
+- **Shell scripts**: `kebab-case.sh` (e.g., `configure-addon.sh`)
 - **Python files**: `snake_case.py` (e.g., `mqtt_client.py`)
 - **Documentation**: `SCREAMING_CAPS.md` for top-level, `kebab-case.md` for docs/ folder
 - **Directories**: `kebab-case/` preferred
+- **Archived documentation**: `YYYY-MM-DDTHH-MM-SS-category-description.md` (e.g., `2025-10-14T17-00-00-MITM-CLEANUP_SUMMARY.md`)
 
 ## Testing Checklist
 
@@ -1119,4 +1116,3 @@ Before submitting changes:
 *For exploration findings from UI testing, see `docs/developer/exploration-notes.md`*
 *For automated testing tools and API usage, see `docs/developer/limitations-lifted.md` and `scripts/README.md`*
 *For MCP server installation script, see `.devcontainer/02-setup-mcp-servers.sh`*
-

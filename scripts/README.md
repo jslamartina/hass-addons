@@ -101,44 +101,6 @@ Comprehensive automated test suite for all cloud relay operating modes.
    - Verifies return to normal operation
    - Confirms clean state transition
 
-**Output:**
-
-```
-═══════════════════════════════════════════════════════════
-  Cloud Relay Mode - Automated Testing
-═══════════════════════════════════════════════════════════
-
-═══════════════════════════════════════════════════════════
-  Phase 1: Baseline LAN-only Mode
-═══════════════════════════════════════════════════════════
-✅ PASS - Configuration applied
-✅ PASS - Baseline: No relay mode
-
-═══════════════════════════════════════════════════════════
-  Phase 2: Cloud Relay with Forwarding
-═══════════════════════════════════════════════════════════
-✅ PASS - Configuration applied
-✅ PASS - Cloud relay enabled
-✅ PASS - Device connected in relay mode
-✅ PASS - Cloud connection established
-
-[... more tests ...]
-
-═══════════════════════════════════════════════════════════
-  Test Summary
-═══════════════════════════════════════════════════════════
-
-Total Tests:  18
-Passed:       17
-Failed:       1
-
-╔═══════════════════════════════════════════════════════╗
-║                                                       ║
-║  ✅  ALL TESTS PASSED - CLOUD RELAY WORKING! ✅      ║
-║                                                       ║
-╚═══════════════════════════════════════════════════════╝
-```
-
 **Exit Codes:**
 - `0` - All tests passed
 - `1` - Some tests failed
@@ -184,11 +146,35 @@ Cursor's `mcp.json` doesn't support environment variable expansion (like `${ENV_
 
 ---
 
+### `delete-mqtt-safe.py`
+
+Safe MQTT entity deletion script for development and testing.
+
+**Purpose:** Cleanly removes MQTT entities while preserving the CyncLAN Bridge configuration.
+
+**Usage:**
+```bash
+# Dry run (preview what will be deleted)
+sudo python3 scripts/delete-mqtt-safe.py --dry-run
+
+# Actually delete (preserves bridge, cleans registries and restore state)
+sudo python3 scripts/delete-mqtt-safe.py
+```
+
+**Features:**
+- ✅ Preserves CyncLAN Bridge entities
+- ✅ Cleans entity and device registries
+- ✅ Clears restore state (removes history memory)
+- ✅ Safe dry-run mode for preview
+- ✅ Comprehensive logging and backup creation
+
+---
+
 ## Technical Details
 
 ### Supervisor API Authentication
 
-Both scripts use the Supervisor API token for authentication:
+All scripts use the Supervisor API token for authentication:
 
 ```bash
 # Token is extracted from hassio_cli container
@@ -252,18 +238,6 @@ ha supervisor restart
 - Manually restart: `ha addons restart local_cync-lan`
 - Check for errors in supervisor logs: `tail -f /tmp/supervisor_run.log`
 
-### Test fails with "No such container"
-
-**Cause:** Add-on container name mismatch.
-
-**Solution:**
-```bash
-# Find correct container name
-docker ps | grep addon
-
-# Update script if needed (unlikely, should auto-detect)
-```
-
 ---
 
 ## Development
@@ -309,6 +283,6 @@ wait_for_log "Pattern to wait for" 15 "Wait description"
 
 ---
 
-*Last Updated: October 11, 2025*
+*Last Updated: October 14, 2025*
 *Status: Production Ready* ✅
 
