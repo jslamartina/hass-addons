@@ -9,14 +9,9 @@ if [ -d "$PYTHON_BIN_DIR" ]; then
   export PATH="$PYTHON_BIN_DIR:$PATH"
 fi
 
-# Get workspace parent directory
-WORKSPACE_PARENT="$(dirname "${WORKSPACE_DIRECTORY}")"
-CYNC_LAN_DIR="${WORKSPACE_PARENT}/cync-lan"
-
 echo "Workspace structure:"
-echo "  ${WORKSPACE_DIRECTORY}/     - Home Assistant addon repository"
-echo "  ${CYNC_LAN_DIR}/             - Python package repository"
-echo "  ${WORKSPACE_PARENT}/.vscode/ - Global VS Code settings"
+echo "  ${WORKSPACE_DIRECTORY}/     - Home Assistant addon repository (with integrated cync_lan package)"
+echo "  ${WORKSPACE_DIRECTORY}/src/cync_lan/ - Python package source (integrated)"
 
 # Make all scripts executable
 chmod +x "${WORKSPACE_DIRECTORY}/.devcontainer"/*.sh
@@ -24,33 +19,23 @@ chmod +x "${WORKSPACE_DIRECTORY}/.devcontainer"/*.sh
 # Run setup scripts in order
 echo "Running setup scripts in order..."
 
-echo "1/5: Setting up Python environment..."
+echo "1/4: Setting up Python environment..."
 bash "${WORKSPACE_DIRECTORY}/.devcontainer/01-01-python-env-setup.sh"
 
-echo "2/5: Cloning cync-lan repository..."
-bash "${WORKSPACE_DIRECTORY}/.devcontainer/01-02-python-clone-repo.sh"
-
-echo "3/5: Setting up workspace..."
+echo "2/4: Setting up workspace..."
 bash "${WORKSPACE_DIRECTORY}/.devcontainer/01-03-python-workspace-setup.sh"
 
-echo "4/5: Configuring VS Code..."
+echo "3/4: Configuring VS Code..."
 bash "${WORKSPACE_DIRECTORY}/.devcontainer/01-04-python-vscode-configure.sh"
 
-echo "5/5: Setting up Python virtual environments..."
-bash "${WORKSPACE_DIRECTORY}/.devcontainer/01-05-python-venv-setup.sh" "${WORKSPACE_DIRECTORY}" "${CYNC_LAN_DIR}"
+echo "4/4: Setting up Python virtual environments..."
+bash "${WORKSPACE_DIRECTORY}/.devcontainer/01-05-python-venv-setup.sh" "${WORKSPACE_DIRECTORY}"
 
 echo "✅ Complete devcontainer setup finished!"
 echo ""
-echo "📦 NEXT STEP: Load the multi-repository workspace"
-echo "   Run this command in your terminal:"
-echo "   cursor hass-cync-dev.code-workspace"
-echo ""
-echo "   Or manually: File → Open Workspace from File → hass-cync-dev.code-workspace"
-echo ""
-echo "   This will give you both repositories:"
-echo "   - hass-addons (Home Assistant addon)"
-echo "   - cync-lan (Python package)"
+echo "Workspace ready with integrated cync-lan package:"
+echo "   - hass-addons (Home Assistant addon with integrated Python package)"
+echo "   - Source code: ${WORKSPACE_DIRECTORY}/src/cync_lan/"
 echo ""
 echo "Available commands:"
-echo "  - test-cync-lan.sh: Test the cync-lan package"
-echo "  - cync-lan-source: Symlink to the cync-lan repository"
+echo "  - ha addons rebuild local_cync-lan: Rebuild the add-on"

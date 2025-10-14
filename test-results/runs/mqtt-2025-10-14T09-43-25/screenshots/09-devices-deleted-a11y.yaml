@@ -1,0 +1,577 @@
+{
+  "role": "WebArea",
+  "name": "Settings – Home Assistant",
+  "children": [
+    {
+      "role": "button",
+      "name": "Sidebar toggle"
+    },
+    {
+      "role": "text",
+      "name": "Home Assistant"
+    },
+    {
+      "role": "listitem",
+      "name": "",
+      "level": 1,
+      "children": [
+        {
+          "role": "text",
+          "name": "Overview"
+        }
+      ]
+    },
+    {
+      "role": "listitem",
+      "name": "",
+      "level": 1,
+      "children": [
+        {
+          "role": "text",
+          "name": "Map"
+        }
+      ]
+    },
+    {
+      "role": "listitem",
+      "name": "",
+      "level": 1,
+      "children": [
+        {
+          "role": "text",
+          "name": "Energy"
+        }
+      ]
+    },
+    {
+      "role": "listitem",
+      "name": "",
+      "level": 1,
+      "children": [
+        {
+          "role": "text",
+          "name": "Activity"
+        }
+      ]
+    },
+    {
+      "role": "listitem",
+      "name": "",
+      "level": 1,
+      "children": [
+        {
+          "role": "text",
+          "name": "History"
+        }
+      ]
+    },
+    {
+      "role": "listitem",
+      "name": "",
+      "level": 1,
+      "children": [
+        {
+          "role": "text",
+          "name": "CyncLAN"
+        }
+      ]
+    },
+    {
+      "role": "listitem",
+      "name": "",
+      "level": 1,
+      "children": [
+        {
+          "role": "text",
+          "name": "EMQX"
+        }
+      ]
+    },
+    {
+      "role": "listitem",
+      "name": "",
+      "level": 1,
+      "children": [
+        {
+          "role": "text",
+          "name": "Media"
+        }
+      ]
+    },
+    {
+      "role": "listitem",
+      "name": "",
+      "level": 1,
+      "children": [
+        {
+          "role": "text",
+          "name": "To-do lists"
+        }
+      ]
+    },
+    {
+      "role": "listitem",
+      "name": "",
+      "level": 1,
+      "children": [
+        {
+          "role": "text",
+          "name": "Developer tools"
+        }
+      ]
+    },
+    {
+      "role": "listitem",
+      "name": "",
+      "level": 1,
+      "children": [
+        {
+          "role": "text",
+          "name": "Settings"
+        },
+        {
+          "role": "text",
+          "name": "8"
+        }
+      ]
+    },
+    {
+      "role": "listitem",
+      "name": "",
+      "level": 1,
+      "children": [
+        {
+          "role": "text",
+          "name": "Notifications"
+        },
+        {
+          "role": "text",
+          "name": "1"
+        }
+      ]
+    },
+    {
+      "role": "listitem",
+      "name": "",
+      "level": 1,
+      "children": [
+        {
+          "role": "text",
+          "name": "d"
+        },
+        {
+          "role": "text",
+          "name": "dev"
+        }
+      ]
+    },
+    {
+      "role": "link",
+      "name": "Back",
+      "children": [
+        {
+          "role": "button",
+          "name": "Back"
+        }
+      ]
+    },
+    {
+      "role": "link",
+      "name": "Integrations",
+      "children": [
+        {
+          "role": "tab",
+          "name": "Integrations"
+        }
+      ]
+    },
+    {
+      "role": "link",
+      "name": "Devices",
+      "children": [
+        {
+          "role": "tab",
+          "name": "Devices",
+          "selected": true
+        }
+      ]
+    },
+    {
+      "role": "link",
+      "name": "Entities",
+      "children": [
+        {
+          "role": "tab",
+          "name": "Entities"
+        }
+      ]
+    },
+    {
+      "role": "link",
+      "name": "Helpers",
+      "children": [
+        {
+          "role": "tab",
+          "name": "Helpers"
+        }
+      ]
+    },
+    {
+      "role": "button",
+      "name": "Menu",
+      "haspopup": "menu"
+    },
+    {
+      "role": "button",
+      "name": "Filters"
+    },
+    {
+      "role": "text",
+      "name": "2"
+    },
+    {
+      "role": "button",
+      "name": ""
+    },
+    {
+      "role": "generic",
+      "name": ""
+    },
+    {
+      "role": "textbox",
+      "name": "Search 12 devices"
+    },
+    {
+      "role": "button",
+      "name": "Group by"
+    },
+    {
+      "role": "button",
+      "name": "Sort by Device"
+    },
+    {
+      "role": "button",
+      "name": ""
+    },
+    {
+      "role": "columnheader",
+      "name": "Icon"
+    },
+    {
+      "role": "text",
+      "name": "Device"
+    },
+    {
+      "role": "text",
+      "name": "Area"
+    },
+    {
+      "role": "text",
+      "name": "Integration"
+    },
+    {
+      "role": "text",
+      "name": "Manufacturer"
+    },
+    {
+      "role": "text",
+      "name": "Model"
+    },
+    {
+      "role": "text",
+      "name": "Battery"
+    },
+    {
+      "role": "text",
+      "name": "CyncLAN Bridge"
+    },
+    {
+      "role": "text",
+      "name": "—"
+    },
+    {
+      "role": "text",
+      "name": "MQTT"
+    },
+    {
+      "role": "text",
+      "name": "baudneo"
+    },
+    {
+      "role": "text",
+      "name": "Local Push Controller"
+    },
+    {
+      "role": "text",
+      "name": "—"
+    },
+    {
+      "role": "text",
+      "name": "Kitchen Floodlight 1"
+    },
+    {
+      "role": "text",
+      "name": "—"
+    },
+    {
+      "role": "text",
+      "name": "MQTT"
+    },
+    {
+      "role": "text",
+      "name": "Savant"
+    },
+    {
+      "role": "text",
+      "name": "C by GE Tunable White BR30 Bulb (BTLE only) [CLEDR309S2 800 lum 2000-7000K]"
+    },
+    {
+      "role": "text",
+      "name": "—"
+    },
+    {
+      "role": "text",
+      "name": "Kitchen Floodlight 2"
+    },
+    {
+      "role": "text",
+      "name": "—"
+    },
+    {
+      "role": "text",
+      "name": "MQTT"
+    },
+    {
+      "role": "text",
+      "name": "Savant"
+    },
+    {
+      "role": "text",
+      "name": "C by GE Tunable White BR30 Bulb (BTLE only) [CLEDR309S2 800 lum 2000-7000K]"
+    },
+    {
+      "role": "text",
+      "name": "—"
+    },
+    {
+      "role": "text",
+      "name": "Kitchen Floodlight 3"
+    },
+    {
+      "role": "text",
+      "name": "—"
+    },
+    {
+      "role": "text",
+      "name": "MQTT"
+    },
+    {
+      "role": "text",
+      "name": "Savant"
+    },
+    {
+      "role": "text",
+      "name": "C by GE Tunable White BR30 Bulb (BTLE only) [CLEDR309S2 800 lum 2000-7000K]"
+    },
+    {
+      "role": "text",
+      "name": "—"
+    },
+    {
+      "role": "text",
+      "name": "Living Room Floodlight 1"
+    },
+    {
+      "role": "text",
+      "name": "—"
+    },
+    {
+      "role": "text",
+      "name": "MQTT"
+    },
+    {
+      "role": "text",
+      "name": "Savant"
+    },
+    {
+      "role": "text",
+      "name": "C by GE Tunable White BR30 Bulb (BTLE only) [CLEDR309S2 800 lum 2000-7000K]"
+    },
+    {
+      "role": "text",
+      "name": "—"
+    },
+    {
+      "role": "text",
+      "name": "Living Room Floodlight 2"
+    },
+    {
+      "role": "text",
+      "name": "—"
+    },
+    {
+      "role": "text",
+      "name": "MQTT"
+    },
+    {
+      "role": "text",
+      "name": "Savant"
+    },
+    {
+      "role": "text",
+      "name": "C by GE Tunable White BR30 Bulb (BTLE only) [CLEDR309S2 800 lum 2000-7000K]"
+    },
+    {
+      "role": "text",
+      "name": "—"
+    },
+    {
+      "role": "text",
+      "name": "Living Room Floodlight 3"
+    },
+    {
+      "role": "text",
+      "name": "—"
+    },
+    {
+      "role": "text",
+      "name": "MQTT"
+    },
+    {
+      "role": "text",
+      "name": "Savant"
+    },
+    {
+      "role": "text",
+      "name": "C by GE Tunable White BR30 Bulb (BTLE only) [CLEDR309S2 800 lum 2000-7000K]"
+    },
+    {
+      "role": "text",
+      "name": "—"
+    },
+    {
+      "role": "text",
+      "name": "Living Room Floodlight 4"
+    },
+    {
+      "role": "text",
+      "name": "—"
+    },
+    {
+      "role": "text",
+      "name": "MQTT"
+    },
+    {
+      "role": "text",
+      "name": "Savant"
+    },
+    {
+      "role": "text",
+      "name": "C by GE Tunable White BR30 Bulb (BTLE only) [CLEDR309S2 800 lum 2000-7000K]"
+    },
+    {
+      "role": "text",
+      "name": "—"
+    },
+    {
+      "role": "text",
+      "name": "Living Room Floodlight 5"
+    },
+    {
+      "role": "text",
+      "name": "—"
+    },
+    {
+      "role": "text",
+      "name": "MQTT"
+    },
+    {
+      "role": "text",
+      "name": "Savant"
+    },
+    {
+      "role": "text",
+      "name": "C by GE Tunable White BR30 Bulb (BTLE only) [CLEDR309S2 800 lum 2000-7000K]"
+    },
+    {
+      "role": "text",
+      "name": "—"
+    },
+    {
+      "role": "text",
+      "name": "Living Room Floodlight 6"
+    },
+    {
+      "role": "text",
+      "name": "—"
+    },
+    {
+      "role": "text",
+      "name": "MQTT"
+    },
+    {
+      "role": "text",
+      "name": "Savant"
+    },
+    {
+      "role": "text",
+      "name": "C by GE Tunable White BR30 Bulb (BTLE only) [CLEDR309S2 800 lum 2000-7000K]"
+    },
+    {
+      "role": "text",
+      "name": "—"
+    },
+    {
+      "role": "text",
+      "name": "Master Bedroom Keypad Dimmer"
+    },
+    {
+      "role": "text",
+      "name": "—"
+    },
+    {
+      "role": "text",
+      "name": "MQTT"
+    },
+    {
+      "role": "text",
+      "name": "Savant"
+    },
+    {
+      "role": "text",
+      "name": "Unknown"
+    },
+    {
+      "role": "text",
+      "name": "—"
+    },
+    {
+      "role": "text",
+      "name": "Master Bedroom Fan Switch"
+    },
+    {
+      "role": "text",
+      "name": "—"
+    },
+    {
+      "role": "text",
+      "name": "MQTT"
+    },
+    {
+      "role": "text",
+      "name": "Savant"
+    },
+    {
+      "role": "text",
+      "name": "Fan Controller [CSWFSBLBWF1/ST-1P]"
+    },
+    {
+      "role": "text",
+      "name": "—"
+    },
+    {
+      "role": "button",
+      "name": "Add device"
+    }
+  ]
+}

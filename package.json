@@ -24,8 +24,8 @@
     "url": "git+https://github.com/jslamartina/hass-addons.git"
   },
   "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "author": "Joseph LaMartina",
+  "license": "MIT",
   "bugs": {
     "url": "https://github.com/jslamartina/hass-addons/issues"
   },

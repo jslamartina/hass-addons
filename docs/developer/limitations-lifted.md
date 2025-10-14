@@ -245,7 +245,7 @@ The cloud relay implementation is now fully documented in:
 
 - `docs/developer/agents-guide.md` - Comprehensive guide for AI agents and developers
 - `scripts/README.md` - Automated testing tools and configuration
-- `cync-lan/docs/CLOUD_RELAY.md` - User-facing documentation
+- `docs/user/cloud-relay.md` - User-facing documentation
 
 **Note:** Automated testing via Supervisor API is now the preferred approach.
 
@@ -327,7 +327,7 @@ The cloud relay mode implementation is now **fully testable** in the devcontaine
 **For detailed usage:**
 - API tool: `./scripts/configure-addon.sh --help`
 - Test suite: `./scripts/test-cloud-relay.sh`
-- Implementation docs: `/mnt/supervisor/addons/local/cync-lan/docs/CLOUD_RELAY.md`
+- Implementation docs: `/mnt/supervisor/addons/local/hass-addons/docs/developer/cloud-relay-implementation.md`
 - Agent guidance: `docs/developer/agents-guide.md`
 
 ---

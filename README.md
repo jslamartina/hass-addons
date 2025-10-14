@@ -14,17 +14,20 @@ docs/
 │   ├── cloud-relay.md
 │   └── assets/
 ├── developer/         # Developer & AI agent documentation
-│   ├── agents-guide.md
-│   ├── limitations-lifted.md
-│   ├── exploration-notes.md
+│   ├── cli-reference.md
+│   ├── cloud-relay-implementation.md
 │   ├── entity-management.md
+│   ├── exploration-notes.md
+│   ├── limitations-lifted.md
 │   └── test-results.md
-├── protocol/          # Protocol research & MITM testing
+├── protocol/          # Protocol research & reverse engineering
 │   ├── findings.md
+│   ├── packet_structure.md
+│   ├── debugging_sessions/
 │   ├── mitm-testing.md
-│   └── mode-change-analysis.md
+│   ├── mode-change-analysis.md
+│   └── cleanup-summary.md
 └── archive/          # Historical documentation
-    └── cleanup-summary.md
 ```
 
 ---
@@ -38,7 +41,7 @@ docs/
 4. **[Troubleshooting](user/troubleshooting.md)** - Common issues
 
 ### For Developers & AI Agents
-1. **[Developer Guide](developer/agents-guide.md)** - **START HERE** - Comprehensive development guide
+1. **[Developer Guide](AGENTS.md)** - **START HERE** - Comprehensive development guide
 2. **[Testing Tools](../scripts/README.md)** - Automated testing and configuration
 3. **[Entity Management](developer/entity-management.md)** - Entity deletion workflows
 
@@ -62,19 +65,22 @@ docs/
 
 ### Developer Documentation (`docs/developer/`)
 
-| Document                                                     | Description                                                         |
-| ------------------------------------------------------------ | ------------------------------------------------------------------- |
-| **[agents-guide.md](developer/agents-guide.md)**             | **Primary reference** - Complete guide for developers and AI agents |
-| **[limitations-lifted.md](developer/limitations-lifted.md)** | Documentation of resolved testing limitations                       |
-| **[exploration-notes.md](developer/exploration-notes.md)**   | UI navigation and system state reference                            |
-| **[entity-management.md](developer/entity-management.md)**   | Guide for managing MQTT entities                                    |
-| **[test-results.md](developer/test-results.md)**             | Comprehensive test execution results                                |
+| Document                                                                     | Description                                   |
+| ---------------------------------------------------------------------------- | --------------------------------------------- |
+| **[cli-reference.md](developer/cli-reference.md)**                           | CLI command reference for cync-lan package    |
+| **[cloud-relay-implementation.md](developer/cloud-relay-implementation.md)** | Cloud relay mode implementation details       |
+| **[entity-management.md](developer/entity-management.md)**                   | Guide for managing MQTT entities              |
+| **[exploration-notes.md](developer/exploration-notes.md)**                   | UI navigation and system state reference      |
+| **[limitations-lifted.md](developer/limitations-lifted.md)**                 | Documentation of resolved testing limitations |
+| **[test-results.md](developer/test-results.md)**                             | Comprehensive test execution results          |
 
 ### Protocol Research (`docs/protocol/`)
 
 | Document                                                        | Description                             |
 | --------------------------------------------------------------- | --------------------------------------- |
 | **[findings.md](protocol/findings.md)**                         | Cync protocol reverse engineering notes |
+| **[packet_structure.md](protocol/packet_structure.md)**         | Complete protocol packet structures     |
+| **[debugging_sessions/](protocol/debugging_sessions/)**         | Protocol debugging session notes        |
 | **[mitm-testing.md](protocol/mitm-testing.md)**                 | MITM testing procedures and tools       |
 | **[mode-change-analysis.md](protocol/mode-change-analysis.md)** | Analysis of switch mode changes         |
 | **[cleanup-summary.md](protocol/cleanup-summary.md)**           | MITM code cleanup notes                 |
@@ -83,16 +89,19 @@ docs/
 
 Historical documentation and completed testing artifacts.
 
-| Document                                                                                                       | Description                                              |
-| -------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------- |
-| **[2025-10-14T15-39-00-cleanup-summary.md](archive/2025-10-14T15-39-00-cleanup-summary.md)**                   | Documentation cleanup (October 2025)                     |
-| **[2025-10-11T10-00-00-cloud-relay-testing-plan.md](archive/2025-10-11T10-00-00-cloud-relay-testing-plan.md)** | Complete cloud relay testing plan (8/8 phases completed) |
-| **[2025-10-13T14-00-00-refresh-solution.md](archive/2025-10-13T14-00-00-refresh-solution.md)**                 | Manual refresh button implementation                     |
-| **[2025-10-13T15-00-00-throttling-solution.md](archive/2025-10-13T15-00-00-throttling-solution.md)**           | Command throttling solution                              |
-| **[2025-10-14T16-00-00-gui-validation-results.md](archive/2025-10-14T16-00-00-gui-validation-results.md)**     | GUI validation test results                              |
-| **[2025-10-13T13-00-00-gui-validation-phase.md](archive/2025-10-13T13-00-00-gui-validation-phase.md)**         | Phase 8 GUI testing plan                                 |
-| **[2025-10-08T14-00-00-baseline-review.md](archive/2025-10-08T14-00-00-baseline-review.md)**                   | Historical code review (October 2025)                    |
-| **[2025-10-08T15-00-00-pr-comments.md](archive/2025-10-08T15-00-00-pr-comments.md)**                           | Historical PR review comments                            |
+| Document                                                                                                                       | Description                                                    |
+| ------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------- |
+| **[2025-10-14T18-40-00-absorb-cync-lan-repo-plan.md](archive/2025-10-14T18-40-00-absorb-cync-lan-repo-plan.md)**               | Plan: Consolidate cync-lan repo into hass-addons (✅ completed) |
+| **[2025-10-14T18-40-01-remove-symlink-architecture-plan.md](archive/2025-10-14T18-40-01-remove-symlink-architecture-plan.md)** | Plan: Remove symlink to fix semantic search (✅ completed)      |
+| **[2025-10-14T16-13-43-cleanup-unused-scripts-plan.md](archive/2025-10-14T16-13-43-cleanup-unused-scripts-plan.md)**           | Plan: Cleanup unused scripts                                   |
+| **[2025-10-14T15-39-00-cleanup-summary.md](archive/2025-10-14T15-39-00-cleanup-summary.md)**                                   | Documentation cleanup (October 2025)                           |
+| **[2025-10-14T16-00-00-gui-validation-results.md](archive/2025-10-14T16-00-00-gui-validation-results.md)**                     | GUI validation test results                                    |
+| **[2025-10-13T14-00-00-refresh-solution.md](archive/2025-10-13T14-00-00-refresh-solution.md)**                                 | Manual refresh button implementation                           |
+| **[2025-10-13T15-00-00-throttling-solution.md](archive/2025-10-13T15-00-00-throttling-solution.md)**                           | Command throttling solution                                    |
+| **[2025-10-13T13-00-00-gui-validation-phase.md](archive/2025-10-13T13-00-00-gui-validation-phase.md)**                         | Phase 8 GUI testing plan                                       |
+| **[2025-10-11T10-00-00-cloud-relay-testing-plan.md](archive/2025-10-11T10-00-00-cloud-relay-testing-plan.md)**                 | Complete cloud relay testing plan (8/8 phases completed)       |
+| **[2025-10-08T14-00-00-baseline-review.md](archive/2025-10-08T14-00-00-baseline-review.md)**                                   | Historical code review (October 2025)                          |
+| **[2025-10-08T15-00-00-pr-comments.md](archive/2025-10-08T15-00-00-pr-comments.md)**                                           | Historical PR review comments                                  |
 
 ### Additional Resources
 
@@ -111,7 +120,7 @@ Historical documentation and completed testing artifacts.
 → [../README.md](../README.md) + [user/dns-setup.md](user/dns-setup.md) + [../cync-lan/README.md](../cync-lan/README.md)
 
 ### "I'm developing the add-on"
-→ [developer/agents-guide.md](developer/agents-guide.md) - **Complete development guide**
+→ [AGENTS.md](AGENTS.md) - **Complete development guide**
 
 ### "I need to configure cloud relay mode"
 → [../scripts/README.md](../scripts/README.md) (automated tools) or [user/cloud-relay.md](user/cloud-relay.md) (manual)
@@ -129,13 +138,13 @@ Historical documentation and completed testing artifacts.
 → [developer/entity-management.md](developer/entity-management.md)
 
 ### "I'm using AI agents to work on this project"
-→ [developer/agents-guide.md](developer/agents-guide.md) - **Mandatory first read!**
+→ [AGENTS.md](AGENTS.md) - **Mandatory first read!**
 
 ---
 
 ## 🤖 For AI Agents
 
-**Always read [developer/agents-guide.md](developer/agents-guide.md) first!**
+**Always read [AGENTS.md](AGENTS.md) first!**
 
 It contains:
 - ✅ Mandatory pre-task checklist
@@ -151,7 +160,7 @@ It contains:
 ha addons logs local_cync-lan     # View logs
 ./scripts/configure-addon.sh      # Configure addon
 ha addons restart local_cync-lan  # Restart addon
-cd cync-lan && ./rebuild.sh       # Rebuild after Python changes
+ha addons rebuild local_cync-lan  # Rebuild after Python changes
 ```
 
 ---
@@ -235,7 +244,7 @@ When adding or updating documentation:
 ## 🆘 Need Help?
 
 - **For usage questions**: See [user/troubleshooting.md](user/troubleshooting.md)
-- **For development questions**: See [developer/agents-guide.md](developer/agents-guide.md)
+- **For development questions**: See [AGENTS.md](AGENTS.md)
 - **For protocol questions**: See [protocol/findings.md](protocol/findings.md)
 - **Can't find something?**: Check this index or search the repository
 

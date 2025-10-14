@@ -1,32 +1,55 @@
 {
   "folders": [
     {
-      "name": "hass-addons",
-      "path": "/mnt/supervisor/addons/local/hass-addons",
-    },
-    {
-      "name": "cync-lan-python",
-      "path": "/mnt/supervisor/addons/local/cync-lan",
+      "name": "addons-local",
+      "path": "/mnt/supervisor/addons/local",
     },
   ],
   "settings": {
     "editor.formatOnSave": true,
-    "[python]": {
-      "editor.defaultFormatter": "ms-python.black-formatter",
-    },
-    "[shellscript]": {
-      "editor.defaultFormatter": "esbenp.prettier-vscode",
-    },
-    "[markdown]": {
-      "editor.defaultFormatter": "yzhang.markdown-all-in-one",
-    },
+
+    // Formatters
+    "[python]": { "editor.defaultFormatter": "ms-python.black-formatter" },
+    "[shellscript]": { "editor.defaultFormatter": "esbenp.prettier-vscode" },
+    "[markdown]": { "editor.defaultFormatter": "yzhang.markdown-all-in-one" },
     "[markdown-math]": {
       "editor.defaultFormatter": "yzhang.markdown-all-in-one",
     },
     "[markdown_latex_combined]": {
       "editor.defaultFormatter": "yzhang.markdown-all-in-one",
     },
+
+    // Python
     "ruff.organizeImports": true,
+    "python.defaultInterpreterPath": "/usr/local/bin/python",
+    "python.analysis.extraPaths": [
+      "/mnt/supervisor/addons/local/hass-addons/src",
+    ],
+
+    // Cursor indexing — index hass-addons (with integrated cync-lan) and common source/doc types
+    "cursor.indexing.enableSemanticSearch": true,
+    "cursor.indexing.scanAllFiles": false,
+    "cursor.indexing.includePatterns": [
+      "hass-addons/**",
+      "**/*.py",
+      "**/*.js",
+      "**/*.ts",
+      "**/*.md",
+      "**/*.yaml",
+      "**/*.yml",
+      "**/*.json",
+      "**/*.sh",
+    ],
+    "cursor.indexing.excludePatterns": [
+      "**/node_modules/**",
+      "**/__pycache__/**",
+      "**/.pytest_cache/**",
+      "**/.mypy_cache/**",
+      "**/test-results/**",
+      "**/.git/**",
+    ],
+
+    // VS Code/Cursor housekeeping
     "files.exclude": {
       "**/node_modules": true,
       "**/__pycache__": true,
@@ -40,10 +63,8 @@
       "**/.pytest_cache": true,
       "**/.mypy_cache": true,
     },
-    "cursorpyright.analysis.extraPaths": [
-      "/mnt/supervisor/addons/local/cync-lan",
-      "/mnt/supervisor/addons/local/hass-addons",
-    ],
+
+    // Terminal
     "terminal.integrated.allowChords": false,
     "terminal.integrated.sendKeybindingsToShell": true,
     "terminal.integrated.scrollback": 10000,

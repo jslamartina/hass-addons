@@ -1,0 +1,285 @@
+{
+  "role": "WebArea",
+  "name": "Settings – Home Assistant",
+  "children": [
+    {
+      "role": "button",
+      "name": "Sidebar toggle"
+    },
+    {
+      "role": "text",
+      "name": "Home Assistant"
+    },
+    {
+      "role": "listitem",
+      "name": "",
+      "level": 1,
+      "children": [
+        {
+          "role": "text",
+          "name": "Overview"
+        }
+      ]
+    },
+    {
+      "role": "listitem",
+      "name": "",
+      "level": 1,
+      "children": [
+        {
+          "role": "text",
+          "name": "Map"
+        }
+      ]
+    },
+    {
+      "role": "listitem",
+      "name": "",
+      "level": 1,
+      "children": [
+        {
+          "role": "text",
+          "name": "Energy"
+        }
+      ]
+    },
+    {
+      "role": "listitem",
+      "name": "",
+      "level": 1,
+      "children": [
+        {
+          "role": "text",
+          "name": "Activity"
+        }
+      ]
+    },
+    {
+      "role": "listitem",
+      "name": "",
+      "level": 1,
+      "children": [
+        {
+          "role": "text",
+          "name": "History"
+        }
+      ]
+    },
+    {
+      "role": "listitem",
+      "name": "",
+      "level": 1,
+      "children": [
+        {
+          "role": "text",
+          "name": "CyncLAN"
+        }
+      ]
+    },
+    {
+      "role": "listitem",
+      "name": "",
+      "level": 1,
+      "children": [
+        {
+          "role": "text",
+          "name": "EMQX"
+        }
+      ]
+    },
+    {
+      "role": "listitem",
+      "name": "",
+      "level": 1,
+      "children": [
+        {
+          "role": "text",
+          "name": "Media"
+        }
+      ]
+    },
+    {
+      "role": "listitem",
+      "name": "",
+      "level": 1,
+      "children": [
+        {
+          "role": "text",
+          "name": "To-do lists"
+        }
+      ]
+    },
+    {
+      "role": "listitem",
+      "name": "",
+      "level": 1,
+      "children": [
+        {
+          "role": "text",
+          "name": "Developer tools"
+        }
+      ]
+    },
+    {
+      "role": "listitem",
+      "name": "",
+      "level": 1,
+      "children": [
+        {
+          "role": "text",
+          "name": "Settings"
+        },
+        {
+          "role": "text",
+          "name": "8"
+        }
+      ]
+    },
+    {
+      "role": "listitem",
+      "name": "",
+      "level": 1,
+      "children": [
+        {
+          "role": "text",
+          "name": "Notifications"
+        },
+        {
+          "role": "text",
+          "name": "1"
+        }
+      ]
+    },
+    {
+      "role": "listitem",
+      "name": "",
+      "level": 1,
+      "children": [
+        {
+          "role": "text",
+          "name": "d"
+        },
+        {
+          "role": "text",
+          "name": "dev"
+        }
+      ]
+    },
+    {
+      "role": "link",
+      "name": "Back",
+      "children": [
+        {
+          "role": "button",
+          "name": "Back"
+        }
+      ]
+    },
+    {
+      "role": "link",
+      "name": "Integrations",
+      "children": [
+        {
+          "role": "tab",
+          "name": "Integrations"
+        }
+      ]
+    },
+    {
+      "role": "link",
+      "name": "Devices",
+      "children": [
+        {
+          "role": "tab",
+          "name": "Devices"
+        }
+      ]
+    },
+    {
+      "role": "link",
+      "name": "Entities",
+      "children": [
+        {
+          "role": "tab",
+          "name": "Entities",
+          "selected": true
+        }
+      ]
+    },
+    {
+      "role": "link",
+      "name": "Helpers",
+      "children": [
+        {
+          "role": "tab",
+          "name": "Helpers"
+        }
+      ]
+    },
+    {
+      "role": "button",
+      "name": "Menu",
+      "haspopup": "menu"
+    },
+    {
+      "role": "button",
+      "name": "Filters"
+    },
+    {
+      "role": "text",
+      "name": "1"
+    },
+    {
+      "role": "button",
+      "name": ""
+    },
+    {
+      "role": "generic",
+      "name": ""
+    },
+    {
+      "role": "textbox",
+      "name": "Search 56 entities"
+    },
+    {
+      "role": "button",
+      "name": "Group by Device"
+    },
+    {
+      "role": "button",
+      "name": "Sort by Entity"
+    },
+    {
+      "role": "button",
+      "name": ""
+    },
+    {
+      "role": "columnheader",
+      "name": "State icon"
+    },
+    {
+      "role": "text",
+      "name": "Entity"
+    },
+    {
+      "role": "text",
+      "name": "Device"
+    },
+    {
+      "role": "text",
+      "name": "Area"
+    },
+    {
+      "role": "text",
+      "name": "Integration"
+    },
+    {
+      "role": "text",
+      "name": "Status"
+    },
+    {
+      "role": "text",
+      "name": "No data"
+    }
+  ]
+}

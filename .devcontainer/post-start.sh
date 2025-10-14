@@ -229,6 +229,27 @@ alias cync-start='ha addon start local_cync-lan'
 EOF
 echo "  Aliases added to ~/.zshrc"
 
+# Step 10: Clean up old test results (older than 3 days)
+echo "Cleaning up old test results..."
+TEST_RESULTS_DIR="/mnt/supervisor/addons/local/hass-addons/test-results"
+if [ -d "$TEST_RESULTS_DIR" ]; then
+  echo "  Searching for test result folders older than 3 days..."
+
+  # Find and remove folders older than 3 days in test-results/runs/
+  find "$TEST_RESULTS_DIR/runs" -type d -mtime +3 -exec rm -rf {} \; 2> /dev/null || true
+
+  # Find and remove folders older than 3 days in test-results/screenshots/
+  find "$TEST_RESULTS_DIR/screenshots" -type f -mtime +3 -delete 2> /dev/null || true
+
+  # Count remaining items
+  REMAINING_RUNS=$(find "$TEST_RESULTS_DIR/runs" -mindepth 1 -maxdepth 1 -type d 2> /dev/null | wc -l)
+  REMAINING_SCREENSHOTS=$(find "$TEST_RESULTS_DIR/screenshots" -type f 2> /dev/null | wc -l)
+
+  echo "  ✅ Cleanup complete: $REMAINING_RUNS test run folders, $REMAINING_SCREENSHOTS screenshot files remaining"
+else
+  echo "  ⚠️  Test results directory not found: $TEST_RESULTS_DIR"
+fi
+
 echo "========================================="
 echo "Post-Start Configuration Complete!"
 echo "========================================="

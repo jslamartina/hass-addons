@@ -49,12 +49,12 @@ sudo tee "${VSCODE_CONFIG_DIR}/launch.json" > /dev/null << 'EOF'
       "name": "Debug cync-lan",
       "type": "python",
       "request": "launch",
-      "program": "${workspaceFolder}/cync-lan-source/cync_lan/main.py",
+      "program": "${workspaceFolder:cync-lan}/cync_lan/main.py",
       "args": ["--enable-export"],
       "console": "integratedTerminal",
-      "cwd": "${workspaceFolder}/cync-lan-source",
+      "cwd": "${workspaceFolder:cync-lan}",
       "env": {
-        "PYTHONPATH": "${workspaceFolder}/cync-lan-source:${workspaceFolder}"
+        "PYTHONPATH": "${workspaceFolder:cync-lan}:${workspaceFolder}"
       }
     }
   ]

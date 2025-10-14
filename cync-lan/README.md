@@ -1,35 +1,41 @@
->[!IMPORTANT]
-> DNS redirection is REQUIRED, please see [here](https://github.com/baudneo/hass-addons/tree/dev/docs/user/dns-setup.md) for documentation and examples
-
 ![Local Push Polling][polling-shield]
 
-CyncLAN is a software stack 'bridge' for Cync / C by GE smart devices, allowing you to control **supported** smart devices directly from Home Assistant.
+# CyncLAN Bridge
 
-This add-on provides:
-- __exporter__: An async `fastapi` server that hosts a static ingress page and an API to export a device list from a Cync cloud account using 2FA (emailed OTP) [Token caching supported!]
+**Local control for Cync/C by GE smart devices** - Control your lights, switches, and plugs via MQTT without cloud dependency.
 
-- __nCync__: An async TCP socket server that *masquerades as the __Cync cloud controller__*
+## ⚠️ DNS Redirection Required
 
-- __comms__: An async `aiomqtt` MQTT client for communication to HASS using the HASS MQTT JSON schema
+You **must** configure DNS redirection to route these domains to your Home Assistant server:
+- `cm-sec.gelighting.com`
+- `cm.gelighting.com`
+- `cm-ge.xlink.cn`
 
-# Supported devices
-See [known devices](https://github.com/baudneo/hass-addons/tree/dev/docs/user/known-devices.md)
+**[📖 Complete DNS Setup Guide →](https://github.com/jslamartina/hass-addons/blob/dev/docs/user/dns-setup.md)**
 
-#### MOSTLY SUPPORTED
-- lights
-- plugs
-- switches
+Without DNS redirection, your devices will continue using the cloud and this add-on won't work.
 
-#### NOT SUPPORTED
-- Any **battery** powered devices
-    - motion sensors
-    - *wire free* devices
+## What This Add-on Provides
 
-#### UNTESTED
-- Cameras
-- Thermostat and temp sensors
-- Dynamic functions (the lights should still work, just dont know about dynamic functions)
+- **Device Exporter** - Web UI to export your device list from Cync cloud (2FA supported)
+- **nCync Server** - TCP server that masquerades as the Cync cloud controller
+- **MQTT Bridge** - Automatic Home Assistant MQTT discovery integration
 
+## Supported Devices
 
+**Working:** Lights, plugs, switches
+**Not Supported:** Battery-powered devices (motion sensors, wire-free devices)
+**Untested:** Cameras, thermostats
 
-[polling-shield]: https://img.shields.io/badge/Polling-Local_Push-blue.svg
+**[📖 Full Device Compatibility List →](https://github.com/jslamartina/hass-addons/blob/dev/docs/user/known-devices.md)**
+
+## Quick Start
+
+See the **Documentation** tab above for first-run steps and detailed instructions.
+
+## 📚 Documentation
+
+- **[DNS Setup Guide](https://github.com/jslamartina/hass-addons/blob/dev/docs/user/dns-setup.md)** - Required setup
+- **[Troubleshooting](https://github.com/jslamartina/hass-addons/blob/dev/docs/user/troubleshooting.md)** - Common issues
+- **[Tips & Best Practices](https://github.com/jslamartina/hass-addons/blob/dev/docs/user/tips.md)** - Optimize your setup
+- **[Cloud Relay Mode](https://github.com/jslamartina/hass-addons/blob/dev/docs/user/cloud-relay.md)** - Advanced features
