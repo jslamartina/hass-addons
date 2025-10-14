@@ -194,7 +194,7 @@ The CyncLAN Bridge is installed and the add-on container is running, but the int
 ### DNS Requirement
 
 A prominent alert on the add-on info page states:
-> "DNS redirection is REQUIRED, please see [here](https://github.com/baudneo/cync-lan-addon/tree/dev/docs/DNS.md) for documentation and examples"
+> "DNS redirection is REQUIRED, please see [here](https://github.com/jslamartina/hass-addons/tree/dev/docs/user/dns-setup.md) for documentation and examples"
 
 This is critical for the nCync TCP server to intercept device communications.
 

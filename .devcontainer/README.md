@@ -71,7 +71,6 @@ npm run playwright:delete-entities switch.hallway_front_switch switch.hallway_co
 ```
 /mnt/supervisor/addons/local/
 ├── hass-addons/           # Home Assistant addon repository
-│   ├── cync-lan-source/   # Symlink to cync-lan repo
 │   ├── hass-cync-dev.code-workspace  # Multi-repo workspace file
 │   └── test-cync-lan.sh   # Test script
 ├── cync-lan/              # Python package repository

@@ -35,13 +35,14 @@ ha addons restart local_cync-lan  # Restart addon
 - **Command Flow and ACK Handling** (below) - Critical for understanding how commands work
 - **Known Issues and Solutions** (below) - Common bugs and their fixes
 - **Browser Automation with Playwright** (below) - How to properly click elements in HA UI
+- **PR Instructions** (below) - Guidelines for submitting pull requests
 
 ## Before Starting ANY Task: Mandatory Checklist
 
 **🛑 STOP. Before writing ANY code or making changes, answer these questions:**
 
 1. **What type of files am I about to modify?**
-   - [ ] Python files (`.py`) → You MUST rebuild after (`./rebuild.sh`)
+   - [ ] Python files (`.py`) → You MUST rebuild after (`ha addons rebuild local_cync-lan`)
    - [ ] Config/shell scripts (`config.yaml`, `run.sh`) → You only need to restart after
    - [ ] Documentation/static files → No rebuild needed
 
@@ -54,23 +55,76 @@ ha addons restart local_cync-lan  # Restart addon
 
 **⚠️ If you skip this checklist, you WILL waste time with changes that don't take effect.**
 
+## Task Planning and Tracking
+
+### Using Plan Files
+
+When working on complex multi-step tasks, you may create plan files in `.cursor/plans/`. These are static markdown documents with checkboxes that outline the implementation strategy.
+
+**Important:** Plan files do NOT automatically update when you complete tasks. You must manually update them.
+
+**When to update plan files:**
+
+1. **At major milestones** - After completing a significant phase
+2. **At task completion** - Mark all checkboxes complete and add summary
+3. **When blocked** - Document blockers or changes to approach
+
+**How to update a plan file:**
+
+```markdown
+### To-dos
+
+- [x] Task 1 description (✅ completed with notes)
+- [x] Task 2 description
+- [ ] Task 3 description (⚠️ blocked: reason)
+
+## ✅ Implementation Complete (or "In Progress" or "Blocked")
+
+Brief summary of current state and any notes.
+```
+
+**Best practice:** Update the plan file **after completing each step**, not just at the end. This provides real-time progress visibility and demonstrates the incremental update workflow.
+
+**Example workflow:**
+1. Complete a task (e.g., update .gitignore)
+2. Immediately update the plan file: `- [x] Update .gitignore ✅`
+3. Move to next task
+4. Repeat
+
+This approach helps track progress during long-running tasks and makes it clear what's done vs pending.
+
 ## Repository Structure
 
 ```
 /mnt/supervisor/addons/local/hass-addons/
-├── cync-lan/                    # Main CyncLAN add-on
-│   ├── cync-lan-python/        # Embedded Python package (submodule/symlink)
-│   ├── Dockerfile              # Add-on container build
-│   ├── config.yaml             # Add-on configuration schema
-│   ├── run.sh                  # Add-on entry point
-│   └── static/                 # Web UI for device export
-├── .devcontainer/              # Development container setup
-│   ├── post-start.sh           # Devcontainer startup script
-│   ├── post-create.sh          # Initial setup script
-│   └── README.md               # Devcontainer documentation (IMPORTANT: read this!)
-├── mitm/                       # MITM testing tools for protocol analysis
-├── docs/                       # Documentation
-└── docs/developer/exploration-notes.md       # System exploration findings (for reference)
+├── cync-lan/                   # Main CyncLAN add-on directory
+│   ├── src/cync_lan/          # Python package source code
+│   │   ├── __init__.py
+│   │   ├── main.py            # CLI entry point
+│   │   ├── server.py          # TCP server (masquerades as Cync cloud)
+│   │   ├── devices.py         # Device classes and command handling
+│   │   ├── mqtt_client.py     # MQTT integration for Home Assistant
+│   │   ├── exporter.py        # Web interface for device export
+│   │   ├── cloud_api.py       # Cync cloud API integration
+│   │   └── metadata/          # Device metadata and model info
+│   ├── pyproject.toml         # Package configuration and dependencies
+│   ├── README-DEV.md          # Developer workflow guide
+│   ├── Dockerfile             # Add-on container build
+│   ├── config.yaml            # Add-on configuration schema
+│   ├── run.sh                 # Add-on entry point
+│   ├── rebuild.sh             # Rebuilds and restarts add-on
+│   └── static/                # Web UI for device export
+├── .devcontainer/             # Development container setup
+│   ├── post-start.sh          # Devcontainer startup script
+│   ├── post-create.sh         # Initial setup script
+│   └── README.md              # Devcontainer documentation (IMPORTANT: read this!)
+├── mitm/                      # MITM testing tools for protocol analysis
+├── docs/                      # Documentation
+│   ├── user/                  # User-facing documentation (DNS setup, troubleshooting, tips)
+│   ├── developer/             # Developer documentation (CLI reference, entity management, cloud relay)
+│   ├── protocol/              # Protocol research (packet structure, debugging sessions, findings)
+│   └── archive/               # Historical documentation and archived research
+└── scripts/                   # Development and testing scripts
 ```
 
 ## Development Environment
@@ -86,7 +140,7 @@ This project uses a devcontainer based on the Home Assistant add-on development 
 # 1. Starts Home Assistant Supervisor
 # 2. BACKUP RESTORE CURRENTLY DISABLED (see .devcontainer/post-start.sh)
 #    - Comment out lines 131-216 to re-enable test backup restoration
-# 3. Sets up both hass-addons and cync-lan repositories
+# 3. Sets up the hass-addons repository
 
 # Access Home Assistant
 # URL: http://localhost:8123
@@ -126,6 +180,18 @@ When working with this codebase, AI agents should use web search tools to stay c
 - Understanding DNS/networking concepts for device interception
 - Researching protocol standards (TCP, SSL/TLS, packet structures)
 - Checking for security best practices when dealing with MITM proxies
+
+### Tool Usage Guidelines
+
+#### Tool Policy — Codebase Search First
+- Use `codebase_search` to find definitions, call sites, and related files before taking any action.
+- Prefer ranked slices from the index over shell greps. Do **not** paste large grep outputs.
+- Only use `grep`/`ripgrep` for exact string matches or unindexed/new files.
+- For every result, include `file:path:line` and a one-line rationale ("why this matters").
+- If results look sparse or noisy, ask a clarifying question rather than broadening to repo-wide grep.
+
+**Rationale:** This keeps the prompt focused on the most relevant code via the editor's codebase indexing and planning flow, reducing errors from noisy context.
+
 
 ### MCP Development Tools
 
@@ -599,7 +665,8 @@ cd cync-lan
 **Just restarting the add-on (`ha addons restart`) is NOT enough** - the Python package is baked into the Docker image during build time. Changes to Python files won't take effect until you rebuild.
 
 **Files that require rebuild:**
-- Anything in `src/cync_lan/*.py` (the Python package)
+- Anything in `cync-lan/src/cync_lan/*.py` (the Python package)
+- `cync-lan/pyproject.toml` (package configuration)
 
 **Files that only need restart:**
 - `cync-lan/config.yaml` (add-on configuration schema)
@@ -667,6 +734,19 @@ sudo python3 scripts/delete-mqtt-safe.py [--dry-run]
 
 ### When In Doubt
 **Always rebuild** - it's safer and only takes ~30 seconds more than restart.
+
+## Useful Commands
+
+| Command                                          | Purpose                                                 |
+| ------------------------------------------------ | ------------------------------------------------------- |
+| `ha addons logs local_cync-lan`                  | View add-on logs for debugging                          |
+| `./scripts/configure-addon.sh`                   | Configure add-on settings programmatically              |
+| `ha addons restart local_cync-lan`               | Restart the add-on (for non-Python changes)             |
+| `cd cync-lan && ./rebuild.sh`                    | **Rebuild add-on** (REQUIRED after Python code changes) |
+| `ha addons rebuild local_cync-lan`               | Alternative rebuild command using HA CLI                |
+| `docker exec -it addon_local_cync-lan /bin/bash` | Access add-on container shell for debugging             |
+| `./scripts/test-cloud-relay.sh`                  | Run comprehensive cloud relay test suite                |
+| `sudo python3 scripts/delete-mqtt-safe.py`       | Clean up stale MQTT entities safely                     |
 
 ### Testing Add-on Configuration Changes
 
@@ -1067,6 +1147,26 @@ await bridge_device.write(payload_bytes)
 - **Documentation**: `SCREAMING_CAPS.md` for top-level, `kebab-case.md` for docs/ folder
 - **Directories**: `kebab-case/` preferred
 - **Archived documentation**: `YYYY-MM-DDTHH-MM-SS-category-description.md` (e.g., `2025-10-14T17-00-00-MITM-CLEANUP_SUMMARY.md`)
+
+## PR Instructions
+
+**Before submitting a pull request:**
+
+1. **Title Format:** Use clear, descriptive titles in the format: `[component] Brief description`
+   - Examples: `[cync-lan] Fix device availability flickering`, `[docs] Update AGENTS.md standard compliance`
+
+2. **Pre-submission Checklist:**
+   - [ ] Run `pnpm lint` and `pnpm test` (or equivalent for your setup)
+   - [ ] All tests pass and no linting errors
+   - [ ] Update CHANGELOG.md for user-facing changes
+   - [ ] Test in devcontainer environment
+   - [ ] Verify add-on rebuilds successfully if Python code changed
+
+3. **Review Expectations:**
+   - Changes should follow existing coding conventions
+   - Include testing verification in PR description
+   - Reference related issues or discussions
+   - Be prepared to address review feedback promptly
 
 ## Testing Checklist
 

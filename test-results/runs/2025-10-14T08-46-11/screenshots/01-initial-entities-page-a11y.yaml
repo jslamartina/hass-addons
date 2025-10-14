@@ -1,0 +1,169 @@
+{
+  "role": "WebArea",
+  "name": "Settings – Home Assistant",
+  "children": [
+    {
+      "role": "button",
+      "name": "Sidebar toggle"
+    },
+    {
+      "role": "text",
+      "name": "Home Assistant"
+    },
+    {
+      "role": "listitem",
+      "name": "",
+      "level": 1,
+      "children": [
+        {
+          "role": "text",
+          "name": "Overview"
+        }
+      ]
+    },
+    {
+      "role": "listitem",
+      "name": "",
+      "level": 1,
+      "children": [
+        {
+          "role": "text",
+          "name": "Map"
+        }
+      ]
+    },
+    {
+      "role": "listitem",
+      "name": "",
+      "level": 1,
+      "children": [
+        {
+          "role": "text",
+          "name": "Energy"
+        }
+      ]
+    },
+    {
+      "role": "listitem",
+      "name": "",
+      "level": 1,
+      "children": [
+        {
+          "role": "text",
+          "name": "Activity"
+        }
+      ]
+    },
+    {
+      "role": "listitem",
+      "name": "",
+      "level": 1,
+      "children": [
+        {
+          "role": "text",
+          "name": "History"
+        }
+      ]
+    },
+    {
+      "role": "listitem",
+      "name": "",
+      "level": 1,
+      "children": [
+        {
+          "role": "text",
+          "name": "CyncLAN"
+        }
+      ]
+    },
+    {
+      "role": "listitem",
+      "name": "",
+      "level": 1,
+      "children": [
+        {
+          "role": "text",
+          "name": "EMQX"
+        }
+      ]
+    },
+    {
+      "role": "listitem",
+      "name": "",
+      "level": 1,
+      "children": [
+        {
+          "role": "text",
+          "name": "Media"
+        }
+      ]
+    },
+    {
+      "role": "listitem",
+      "name": "",
+      "level": 1,
+      "children": [
+        {
+          "role": "text",
+          "name": "To-do lists"
+        }
+      ]
+    },
+    {
+      "role": "listitem",
+      "name": "",
+      "level": 1,
+      "children": [
+        {
+          "role": "text",
+          "name": "Developer tools"
+        }
+      ]
+    },
+    {
+      "role": "listitem",
+      "name": "",
+      "level": 1,
+      "children": [
+        {
+          "role": "text",
+          "name": "Settings"
+        },
+        {
+          "role": "text",
+          "name": "8"
+        }
+      ]
+    },
+    {
+      "role": "listitem",
+      "name": "",
+      "level": 1,
+      "children": [
+        {
+          "role": "text",
+          "name": "Notifications"
+        },
+        {
+          "role": "text",
+          "name": "1"
+        }
+      ]
+    },
+    {
+      "role": "listitem",
+      "name": "",
+      "level": 1,
+      "children": [
+        {
+          "role": "text",
+          "name": "d"
+        },
+        {
+          "role": "text",
+          "name": "dev"
+        }
+      ]
+    }
+  ]
+}

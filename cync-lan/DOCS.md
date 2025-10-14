@@ -1,19 +1,17 @@
-# CyncLAN Bridge
-CyncLAN bridge is a software stack that allows Home Assistant to communicate with Cync (formerly C by GE) 
-smart devices over a local network connection, bypassing the need for cloud services.
-This add-on uses MQTT for communication and supports auto-discovery of devices in Home Assistant.
+# CyncLAN Bridge - Setup Guide
 
-You must use [DNS redirection](https://github.com/baudneo/hass-addons/tree/dev/docs/user/dns-setup.md) to forward: 
+CyncLAN enables **local control** of Cync (C by GE) smart devices via MQTT, bypassing the cloud completely.
+
+## ⚠️ Prerequisites
+
+Before starting, you must set up **DNS redirection** to route these domains to your Home Assistant IP:
 - `cm-sec.gelighting.com`
 - `cm.gelighting.com`
 - `cm-ge.xlink.cn`
 
-to your Home Assistant server's local IP address. This will trick Cync devices into connecting to the `nCync` 
-(say: _bye, bye, bye_ to Cloud only) TCP socket server running in this add-on, enabling you to control your devices locally.
+**[📖 Complete DNS Setup Guide](https://github.com/jslamartina/hass-addons/blob/dev/docs/user/dns-setup.md)** - Required reading
 
->[!NOTE]
-> You will still need to use the Cync app to add new devices to your Cync account. 
-> Once added and a new config is exported, you can control the newly added devices locally
+> **Note:** You'll still use the Cync app to add new devices. After adding devices, export a new config and restart this add-on.
 
 
 ## First Run Steps
@@ -43,17 +41,21 @@ To perform a seamless migration from the old monolithic, non add-on setup:
 ## Exporting Device Configuration
 Visit the CyncLAN 'ingress' webpage (from the sidebar, or from the add-on page `Open Web UI` button). You will be greeted with a simple form that has provisions for being sent an OTP and to enter and submit the OTP.
 
-- The `Start Export` button will check for a cached access token and use it to export your device config, removing the need for an OTP email to be sent
-- The `Submit OTP` button will evaluate the OTP textbox and send the OTP to the backend export server
-    - You can also request an OTP from the Cync app and then use the Submit OTP button, bypassing the `Start Export` button.
-    - After submitting an OTP, the backend will use the OTP and Cync account creds to generate a new access token
-    - The access token and metadata are stored on disk in a cache for future operations (Cync sets a 24 hr expiration on new access tokens)
-    - Cync cloud API supplies a refresh token, but I need to figure out the endpoint and data structure to use it for renewing access tokens 
-- The `Request OTP` button is for manually requesting an OTP to be sent to your Cync account email address, you should never really need to use this button
-- After a successful export, the `cync_mesh.yaml` contents will be displayed in a text-box with syntax highlighting (via PRISM) and a `Download Config File` button will be available to allow downloading the newly exported config
+**Using the Exporter:**
+
+- **Start Export** - Automatically checks for cached credentials and exports without needing a new OTP
+- **Submit OTP** - Enter the OTP code from your email and click to complete the export
+- **Request OTP** - Manually request a new OTP email (rarely needed)
+
+**After Export:**
+- The config file contents will appear in a highlighted text box
+- Click **Download Config File** to save it
+- Restart the add-on to load the new configuration
 
 
-## Tips / Troubleshooting
-See the [tips documentation](https://github.com/baudneo/hass-addons/tree/dev/docs/user/tips.md) for tips on how to have a better experience with the add-on.
+## 📚 Additional Documentation
 
-See the [troubleshooting documentation](https://github.com/baudneo/hass-addons/tree/dev/docs/user/troubleshooting.md) for common issues and how to resolve them.
+- **[Tips & Best Practices](https://github.com/jslamartina/hass-addons/blob/dev/docs/user/tips.md)** - Optimize your setup
+- **[Troubleshooting Guide](https://github.com/jslamartina/hass-addons/blob/dev/docs/user/troubleshooting.md)** - Common issues and solutions
+- **[Known Devices](https://github.com/jslamartina/hass-addons/blob/dev/docs/user/known-devices.md)** - Device compatibility list
+- **[Cloud Relay Mode](https://github.com/jslamartina/hass-addons/blob/dev/docs/user/cloud-relay.md)** - Advanced packet inspection features

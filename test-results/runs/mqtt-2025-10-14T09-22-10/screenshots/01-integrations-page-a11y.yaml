@@ -1,0 +1,298 @@
+{
+  "role": "WebArea",
+  "name": "Settings – Home Assistant",
+  "children": [
+    {
+      "role": "button",
+      "name": "Sidebar toggle"
+    },
+    {
+      "role": "text",
+      "name": "Home Assistant"
+    },
+    {
+      "role": "listitem",
+      "name": "",
+      "level": 1,
+      "children": [
+        {
+          "role": "text",
+          "name": "Overview"
+        }
+      ]
+    },
+    {
+      "role": "listitem",
+      "name": "",
+      "level": 1,
+      "children": [
+        {
+          "role": "text",
+          "name": "Map"
+        }
+      ]
+    },
+    {
+      "role": "listitem",
+      "name": "",
+      "level": 1,
+      "children": [
+        {
+          "role": "text",
+          "name": "Energy"
+        }
+      ]
+    },
+    {
+      "role": "listitem",
+      "name": "",
+      "level": 1,
+      "children": [
+        {
+          "role": "text",
+          "name": "Activity"
+        }
+      ]
+    },
+    {
+      "role": "listitem",
+      "name": "",
+      "level": 1,
+      "children": [
+        {
+          "role": "text",
+          "name": "History"
+        }
+      ]
+    },
+    {
+      "role": "listitem",
+      "name": "",
+      "level": 1,
+      "children": [
+        {
+          "role": "text",
+          "name": "CyncLAN"
+        }
+      ]
+    },
+    {
+      "role": "listitem",
+      "name": "",
+      "level": 1,
+      "children": [
+        {
+          "role": "text",
+          "name": "EMQX"
+        }
+      ]
+    },
+    {
+      "role": "listitem",
+      "name": "",
+      "level": 1,
+      "children": [
+        {
+          "role": "text",
+          "name": "Media"
+        }
+      ]
+    },
+    {
+      "role": "listitem",
+      "name": "",
+      "level": 1,
+      "children": [
+        {
+          "role": "text",
+          "name": "To-do lists"
+        }
+      ]
+    },
+    {
+      "role": "listitem",
+      "name": "",
+      "level": 1,
+      "children": [
+        {
+          "role": "text",
+          "name": "Developer tools"
+        }
+      ]
+    },
+    {
+      "role": "listitem",
+      "name": "",
+      "level": 1,
+      "children": [
+        {
+          "role": "text",
+          "name": "Settings"
+        },
+        {
+          "role": "text",
+          "name": "9"
+        }
+      ]
+    },
+    {
+      "role": "listitem",
+      "name": "",
+      "level": 1,
+      "children": [
+        {
+          "role": "text",
+          "name": "Notifications"
+        },
+        {
+          "role": "text",
+          "name": "1"
+        }
+      ]
+    },
+    {
+      "role": "listitem",
+      "name": "",
+      "level": 1,
+      "children": [
+        {
+          "role": "text",
+          "name": "d"
+        },
+        {
+          "role": "text",
+          "name": "dev"
+        }
+      ]
+    },
+    {
+      "role": "link",
+      "name": "Back",
+      "children": [
+        {
+          "role": "button",
+          "name": "Back"
+        }
+      ]
+    },
+    {
+      "role": "link",
+      "name": "Integrations",
+      "children": [
+        {
+          "role": "tab",
+          "name": "Integrations",
+          "selected": true
+        }
+      ]
+    },
+    {
+      "role": "link",
+      "name": "Devices",
+      "children": [
+        {
+          "role": "tab",
+          "name": "Devices"
+        }
+      ]
+    },
+    {
+      "role": "link",
+      "name": "Entities",
+      "children": [
+        {
+          "role": "tab",
+          "name": "Entities"
+        }
+      ]
+    },
+    {
+      "role": "link",
+      "name": "Helpers",
+      "children": [
+        {
+          "role": "tab",
+          "name": "Helpers"
+        }
+      ]
+    },
+    {
+      "role": "button",
+      "name": "Menu",
+      "haspopup": "menu"
+    },
+    {
+      "role": "generic",
+      "name": ""
+    },
+    {
+      "role": "textbox",
+      "name": "Search"
+    },
+    {
+      "role": "button",
+      "name": "Menu",
+      "haspopup": "menu"
+    },
+    {
+      "role": "link",
+      "name": "Backup"
+    },
+    {
+      "role": "link",
+      "name": "1 service"
+    },
+    {
+      "role": "link",
+      "name": "Google Translate text-to-speech"
+    },
+    {
+      "role": "link",
+      "name": "1 entity"
+    },
+    {
+      "role": "link",
+      "name": "Home Assistant Supervisor"
+    },
+    {
+      "role": "link",
+      "name": "5 services"
+    },
+    {
+      "role": "link",
+      "name": "MQTT"
+    },
+    {
+      "role": "link",
+      "name": "23 devices"
+    },
+    {
+      "role": "link",
+      "name": "Radio Browser"
+    },
+    {
+      "role": "link",
+      "name": "1 entry"
+    },
+    {
+      "role": "link",
+      "name": "Shopping List"
+    },
+    {
+      "role": "link",
+      "name": "1 entity"
+    },
+    {
+      "role": "link",
+      "name": "Sun"
+    },
+    {
+      "role": "link",
+      "name": "1 service"
+    },
+    {
+      "role": "button",
+      "name": "Add integration"
+    }
+  ]
+}

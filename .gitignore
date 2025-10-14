@@ -90,10 +90,6 @@ tmp/
 temp/
 mcp-server.log
 
-# Test results
-test-results/
-playwright-report/
-
 # Logs
 logs
 *.log
@@ -216,6 +212,5 @@ config.yaml.backup
 build/
 dist/
 
-cync-lan/.cache-cync-lan-python/**
 code-reviews/**
 .ruff_cache/

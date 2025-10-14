@@ -8,26 +8,27 @@ ARG BUILD_ARCH
 ARG BUILD_VERSION
 RUN set -x \
   && apk add --no-cache --no-interactive \
-    openssl \
-    nano \
-    tree \
+  openssl \
+  nano \
+  tree \
   && pip install --no-cache-dir -U pip \
   && pip install --no-cache-dir debugpy==1.8.0 \
   && mkdir -p /root/cync-lan/certs \
   && openssl req -x509 -newkey rsa:4096 \
-    -keyout '/root/cync-lan/certs/key.pem' -out '/root/cync-lan/certs/cert.pem' \
-    -subj '/CN=*.xlink.cn' -sha256 -days 3650 -nodes \
+  -keyout '/root/cync-lan/certs/key.pem' -out '/root/cync-lan/certs/cert.pem' \
+  -subj '/CN=*.xlink.cn' -sha256 -days 3650 -nodes \
   && rm -rf /var/cache/apk/*
 
-# Copy local cync-lan source
-COPY .cache-cync-lan-python /tmp/cync-lan-python
+# Copy local cync-lan Python package source
+COPY src/cync_lan /tmp/src/cync_lan
+COPY pyproject.toml /tmp/pyproject.toml
 
 ARG BUILD_ARCH
 ARG BUILD_VERSION
 RUN set -x \
   && pip install --no-cache-dir -U pip \
-  && pip install --no-cache-dir /tmp/cync-lan-python \
-  && rm -rf /tmp/cync-lan-python
+  && pip install --no-cache-dir /tmp \
+  && rm -rf /tmp/src /tmp/pyproject.toml
 
 ENV CYNC_HOST="0.0.0.0" \
   CYNC_DEBUG=1 \
