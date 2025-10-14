@@ -1,26 +1,28 @@
 /**
- * Playwright script to delete MQTT entities from Home Assistant via MQTT Integration page
+ * Playwright script to delete ALL MQTT entities except CyncLAN Bridge
  *
- * MQTT entities must be deleted from Settings -> Devices & Integrations -> MQTT
- * They cannot be deleted from the main Entities page while the integration is running.
+ * This script intelligently discovers and deletes all MQTT entities while
+ * preserving the CyncLAN Bridge device and its entities.
  *
- * This script:
+ * Workflow:
  *   1. Navigates to MQTT integration page
- *   2. Selects and deletes the entities
- *   3. Optionally restarts addon to republish entities
+ *   2. Discovers all MQTT devices/entities
+ *   3. Filters out CyncLAN Bridge and its entities
+ *   4. Deletes all remaining entities
+ *   5. Optionally restarts addon to republish entities
  *
  * Usage:
- *   HA_BASE_URL=http://localhost:8123 HA_USERNAME=dev HA_PASSWORD=dev \
- *   ADDON_SLUG=local_cync-lan RESTART_ADDON=true \
- *   npx ts-node scripts/playwright/delete-mqtt-entities.ts "Entity Name 1" "Entity Name 2"
+ *   npx ts-node scripts/playwright/delete-all-mqtt-entities-except-bridge.ts
  *
  * Environment variables:
- *   HA_BASE_URL   - Home Assistant URL (default: http://localhost:8123)
- *   HA_USERNAME   - Username (default: dev)
- *   HA_PASSWORD   - Password (default: dev)
- *   ADDON_SLUG    - Addon slug to restart (default: local_cync-lan)
- *   RESTART_ADDON - Set to "true" to restart addon after deletion (default: false)
- *   HEADED        - Set to any value to run in headed mode (visible browser)
+ *   HA_BASE_URL     - Home Assistant URL (default: http://localhost:8123)
+ *   HA_USERNAME     - Username (default: dev)
+ *   HA_PASSWORD     - Password (default: dev)
+ *   ADDON_SLUG      - Addon slug to restart (default: local_cync-lan)
+ *   RESTART_ADDON   - Set to "true" to restart addon after deletion (default: false)
+ *   HEADED          - Set to any value to run in headed mode (visible browser)
+ *   BRIDGE_NAME     - Name of bridge to preserve (default: "CyncLAN Bridge")
+ *   DRY_RUN         - Set to "true" to preview what would be deleted without actually deleting
  */
 
 import { chromium, Locator, Page } from "playwright";
@@ -36,7 +38,7 @@ const RUN_TIMESTAMP = new Date()
 const RUN_DIR = path.join(
   __dirname,
   "../../test-results/runs",
-  `mqtt-${RUN_TIMESTAMP}`,
+  `delete-mqtt-${RUN_TIMESTAMP}`,
 );
 const SCREENSHOTS_DIR = path.join(RUN_DIR, "screenshots");
 const LOG_FILE = path.join(RUN_DIR, "run.log");
@@ -93,13 +95,16 @@ async function clickReliably(locator: Locator) {
 async function loginIfNeeded(page: Page, username: string, password: string) {
   const usernameField = page.getByRole("textbox", { name: /username/i });
   if ((await usernameField.count()) === 0) {
+    log("Already logged in, skipping login", "INFO");
     return;
   }
 
+  log("Logging in to Home Assistant", "INFO");
   await usernameField.fill(username);
   await page.getByRole("textbox", { name: /password/i }).fill(password);
   await clickReliably(page.getByRole("button", { name: /log in/i }));
   await page.waitForTimeout(3000);
+  log("Login successful", "SUCCESS");
 }
 
 function restartAddon(addonSlug: string) {
@@ -132,6 +137,7 @@ async function navigateToMQTTIntegration(page: Page, baseUrl: string) {
   await clickReliably(mqttCard);
   await page.waitForTimeout(3000);
 
+  log("MQTT integration card clicked", "SUCCESS");
   await takeScreenshot(page, "02-mqtt-integration-opened");
 
   // Click on "N devices" link to see entities
@@ -151,11 +157,114 @@ async function navigateToMQTTIntegration(page: Page, baseUrl: string) {
   await takeScreenshot(page, "03-mqtt-entities-list");
 }
 
+interface EntityInfo {
+  name: string;
+  rowElement: Locator;
+  isFromBridge: boolean;
+}
+
+async function discoverAllEntities(
+  page: Page,
+  bridgeName: string,
+): Promise<{ toDelete: EntityInfo[]; toPreserve: EntityInfo[] }> {
+  log("Discovering all MQTT entities", "INFO");
+
+  const toDelete: EntityInfo[] = [];
+  const toPreserve: EntityInfo[] = [];
+
+  // Get all rows in the data table
+  const allRows = page.getByRole("row");
+  const rowCount = await allRows.count();
+  log(`Found ${rowCount} total rows in the table`, "INFO");
+
+  // Track seen entity names to avoid duplicates
+  const seenEntities = new Set<string>();
+
+  // Skip header row (index 0)
+  for (let i = 1; i < rowCount; i++) {
+    const row = allRows.nth(i);
+    const rowText = await row.textContent();
+
+    if (!rowText) continue;
+
+    // Try multiple approaches to extract entity name
+    let entityName = "";
+
+    // Approach 1: Look for the first text node in the row
+    const firstText = row.locator("div, span, a").first();
+    const firstTextContent = (await firstText.textContent())?.trim();
+
+    if (
+      firstTextContent &&
+      firstTextContent !== "—" &&
+      firstTextContent !== "MQTT"
+    ) {
+      entityName = firstTextContent;
+    }
+
+    // Approach 2: If that didn't work, try to parse from row text
+    if (!entityName) {
+      // Row text format is typically: "EntityName — MQTT DeviceName Model —"
+      // Extract the first meaningful part
+      const parts = rowText
+        .split(/—|\n/)
+        .map((p) => p.trim())
+        .filter((p) => p && p !== "MQTT");
+      if (parts.length > 0) {
+        entityName = parts[0];
+      }
+    }
+
+    if (!entityName || seenEntities.has(entityName)) continue;
+    seenEntities.add(entityName);
+
+    // Check if this entity belongs to the bridge
+    const isFromBridge =
+      rowText.includes(bridgeName) || entityName.includes(bridgeName);
+
+    const entityInfo: EntityInfo = {
+      name: entityName,
+      rowElement: row,
+      isFromBridge,
+    };
+
+    if (isFromBridge) {
+      toPreserve.push(entityInfo);
+      log(`PRESERVE: ${entityName} (part of ${bridgeName})`, "INFO");
+    } else {
+      toDelete.push(entityInfo);
+      log(`DELETE: ${entityName}`, "INFO");
+    }
+  }
+
+  log(
+    `Total entities discovered: ${toDelete.length + toPreserve.length}`,
+    "INFO",
+  );
+  log(`To delete: ${toDelete.length}`, "WARN");
+  log(`To preserve: ${toPreserve.length}`, "SUCCESS");
+
+  return { toDelete, toPreserve };
+}
+
 async function selectAndDeleteEntities(
   page: Page,
-  entityNames: string[],
+  entitiesToDelete: EntityInfo[],
+  dryRun: boolean,
 ): Promise<string[]> {
-  log("Entering selection mode on MQTT page", "INFO");
+  if (entitiesToDelete.length === 0) {
+    log("No entities to delete", "WARN");
+    return [];
+  }
+
+  if (dryRun) {
+    log("DRY RUN MODE - No entities will be actually deleted", "WARN");
+    log("Entities that WOULD be deleted:", "INFO");
+    entitiesToDelete.forEach((e) => log(`  - ${e.name}`, "INFO"));
+    return [];
+  }
+
+  log("Entering selection mode", "INFO");
 
   // Enter selection mode
   const selectionButton = page.getByTitle("Enter selection mode");
@@ -168,37 +277,27 @@ async function selectAndDeleteEntities(
   await takeScreenshot(page, "04-selection-mode-enabled");
 
   let selectedCount = 0;
-  const matchedDeviceNames: string[] = [];
+  const deletedDeviceNames: string[] = [];
 
   // Select each entity
-  for (const entityName of entityNames) {
+  for (const entity of entitiesToDelete) {
     try {
-      const rows = page.getByRole("row").filter({ hasText: entityName });
-      const count = await rows.count();
+      const checkbox = entity.rowElement
+        .locator(".mdc-checkbox__native-control")
+        .first();
+      const checkboxExists = (await checkbox.count()) > 0;
 
-      log(
-        `Found ${count} rows for "${entityName}"`,
-        count > 0 ? "INFO" : "WARN",
-      );
-
-      if (count > 0) {
-        matchedDeviceNames.push(entityName);
-      }
-
-      for (let i = 0; i < count; i++) {
-        const row = rows.nth(i);
-        const checkbox = row.locator(".mdc-checkbox__native-control").first();
-        const checkboxExists = (await checkbox.count()) > 0;
-
-        if (checkboxExists && (await checkbox.isVisible())) {
-          await clickReliably(checkbox);
-          selectedCount++;
-          log(`Selected entity row for "${entityName}"`, "SUCCESS");
-        }
+      if (checkboxExists && (await checkbox.isVisible())) {
+        await clickReliably(checkbox);
+        selectedCount++;
+        deletedDeviceNames.push(entity.name);
+        log(`Selected: ${entity.name}`, "SUCCESS");
+      } else {
+        log(`Could not find checkbox for: ${entity.name}`, "WARN");
       }
     } catch (err) {
       log(
-        `Failed to select "${entityName}": ${(err as Error).message}`,
+        `Failed to select "${entity.name}": ${(err as Error).message}`,
         "WARN",
       );
     }
@@ -211,7 +310,7 @@ async function selectAndDeleteEntities(
     return [];
   }
 
-  log(`Selected ${selectedCount} entity rows, proceeding to delete`, "INFO");
+  log(`Selected ${selectedCount} entities, proceeding to delete`, "INFO");
 
   // Click Action -> Delete selected
   const actionButton = page.getByRole("button", { name: /^Action$/i }).first();
@@ -222,19 +321,21 @@ async function selectAndDeleteEntities(
   await page.waitForTimeout(1000);
 
   // Confirm deletion
-  await clickReliably(page.getByRole("button", { name: "Delete" }).last());
+  const deleteButton = page.getByRole("button", { name: "Delete" }).last();
+  await clickReliably(deleteButton);
   await page.waitForTimeout(2000);
 
   log("Deletion confirmed", "SUCCESS");
   await takeScreenshot(page, "06-after-deletion");
 
-  return matchedDeviceNames;
+  return deletedDeviceNames;
 }
 
 async function deleteDevicesFromRegistry(
   page: Page,
   baseUrl: string,
   deviceNames: string[],
+  bridgeName: string,
 ) {
   log("Navigating to devices page to delete device registry entries", "INFO");
 
@@ -245,6 +346,12 @@ async function deleteDevicesFromRegistry(
   await takeScreenshot(page, "07-devices-page");
 
   for (const deviceName of deviceNames) {
+    // Skip bridge device
+    if (deviceName.includes(bridgeName)) {
+      log(`Skipping bridge device: ${deviceName}`, "INFO");
+      continue;
+    }
+
     try {
       // Find and click the device row
       const deviceRow = page.getByRole("row", {
@@ -259,7 +366,7 @@ async function deleteDevicesFromRegistry(
       await page.waitForTimeout(2000);
       await takeScreenshot(
         page,
-        `08-device-${deviceName.replace(/\s+/g, "-")}`,
+        `08-device-${deviceName.replace(/[^a-z0-9]/gi, "-")}`,
       );
 
       // Click Menu -> Delete
@@ -298,34 +405,24 @@ async function main() {
   const password = process.env.HA_PASSWORD ?? "dev";
   const addonSlug = process.env.ADDON_SLUG ?? "local_cync-lan";
   const shouldRestart = process.env.RESTART_ADDON === "true";
-  const entityNames = process.argv.slice(2);
-
-  if (entityNames.length === 0) {
-    console.error(
-      "Usage: node delete-mqtt-entities.ts entity_name1 entity_name2 ...",
-    );
-    console.error("");
-    console.error("Example:");
-    console.error(
-      '  npx ts-node scripts/playwright/delete-mqtt-entities.ts "Hallway Front Switch" "Hallway Counter Switch"',
-    );
-    process.exit(1);
-  }
+  const bridgeName = process.env.BRIDGE_NAME ?? "CyncLAN Bridge";
+  const dryRun = process.env.DRY_RUN === "true";
 
   console.log(
     "╔═══════════════════════════════════════════════════════════════════════╗",
   );
   console.log(
-    "║          MQTT Entity Deletion - Via Integration Page               ║",
+    "║     Delete All MQTT Entities (Except Bridge)                        ║",
   );
   console.log(
     "╚═══════════════════════════════════════════════════════════════════════╝",
   );
   console.log("");
   log(`Run directory: ${RUN_DIR}`, "INFO");
-  log(`Target entities: ${entityNames.join(", ")}`, "INFO");
+  log(`Bridge to preserve: ${bridgeName}`, "INFO");
   log(`Addon: ${addonSlug}`, "INFO");
   log(`Will restart addon: ${shouldRestart}`, "INFO");
+  log(`Dry run mode: ${dryRun}`, dryRun ? "WARN" : "INFO");
   console.log("");
 
   const browser = await chromium.launch({
@@ -343,16 +440,50 @@ async function main() {
     // Step 1: Navigate to MQTT integration
     await navigateToMQTTIntegration(page, baseUrl);
 
-    // Step 2: Select and delete entities
-    const deletedDeviceNames = await selectAndDeleteEntities(page, entityNames);
+    // Step 2: Discover all entities
+    const { toDelete, toPreserve } = await discoverAllEntities(
+      page,
+      bridgeName,
+    );
+
+    await takeScreenshot(page, "03b-entities-discovered");
+
+    console.log("");
+    console.log("═════════════════ DISCOVERY SUMMARY ═════════════════");
+    console.log(`Total entities found: ${toDelete.length + toPreserve.length}`);
+    console.log(`✅ To preserve (${bridgeName}): ${toPreserve.length}`);
+    toPreserve.forEach((e) => console.log(`   - ${e.name}`));
+    console.log(`❌ To delete: ${toDelete.length}`);
+    toDelete.forEach((e) => console.log(`   - ${e.name}`));
+    console.log("═════════════════════════════════════════════════════");
+    console.log("");
+
+    // Step 3: Select and delete entities
+    const deletedDeviceNames = await selectAndDeleteEntities(
+      page,
+      toDelete,
+      dryRun,
+    );
 
     if (deletedDeviceNames.length > 0) {
-      log("MQTT entity deletion completed successfully", "SUCCESS");
+      log(
+        `Successfully deleted ${deletedDeviceNames.length} entities`,
+        "SUCCESS",
+      );
       deletionSuccessful = true;
 
-      // Step 3: Delete devices from device registry to allow fresh recreation
-      await deleteDevicesFromRegistry(page, baseUrl, deletedDeviceNames);
-      log("Device registry cleanup completed", "SUCCESS");
+      // Step 4: Delete devices from device registry to allow fresh recreation
+      if (!dryRun) {
+        await deleteDevicesFromRegistry(
+          page,
+          baseUrl,
+          deletedDeviceNames,
+          bridgeName,
+        );
+        log("Device registry cleanup completed", "SUCCESS");
+      }
+    } else if (dryRun) {
+      log("Dry run completed - no actual deletion performed", "INFO");
     } else {
       log("No entities were deleted", "WARN");
     }
@@ -362,16 +493,18 @@ async function main() {
 
     // Optionally restart addon (only if deletion was successful)
     console.log("");
-    if (deletionSuccessful && shouldRestart) {
+    if (deletionSuccessful && shouldRestart && !dryRun) {
       restartAddon(addonSlug);
-    } else if (deletionSuccessful) {
+    } else if (deletionSuccessful && !dryRun) {
       log(
         `Entities deleted but addon not restarted (set RESTART_ADDON=true to enable)`,
         "INFO",
       );
       console.log(`To restart manually: ha addons restart ${addonSlug}`);
+    } else if (dryRun) {
+      log("Dry run completed - no restart needed", "INFO");
     } else {
-      log(`No entities were deleted`, "WARN");
+      log(`No entities were deleted - no restart needed`, "WARN");
     }
 
     console.log("");

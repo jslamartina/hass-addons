@@ -14,6 +14,9 @@
     "format:json": "npx prettier --write '**/*.{json,yaml,yml}'",
     "playwright:install": "npx playwright install chromium --with-deps",
     "playwright:delete-entities": "ts-node scripts/playwright/delete-entities.ts",
+    "playwright:delete-mqtt-entities": "ts-node scripts/playwright/delete-mqtt-entities.ts",
+    "playwright:delete-all-except-bridge": "ts-node scripts/playwright/delete-all-mqtt-entities-except-bridge.ts",
+    "playwright:delete-all-except-bridge:dry-run": "DRY_RUN=true ts-node scripts/playwright/delete-all-mqtt-entities-except-bridge.ts",
     "playwright:test": "npx playwright test"
   },
   "repository": {

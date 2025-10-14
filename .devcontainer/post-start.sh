@@ -129,89 +129,91 @@ if [ $TOTAL_WAIT -ge $MAX_WAIT_SECONDS ]; then
 fi
 
 # Step 8: Restore full backup (includes addons, configuration, and all data)
-echo "Restoring full backup..."
-BACKUP_FILE="/mnt/supervisor/addons/local/hass-addons/full_test_backup_20251004_005214.tar"
-BACKUP_DEST="/mnt/supervisor/backup/"
-
-if [ -f "$BACKUP_FILE" ]; then
-  echo "  Copying backup file to $BACKUP_DEST..."
-  sudo cp "$BACKUP_FILE" "$BACKUP_DEST"
-
-  echo "  Reloading backups..."
-  ha backups reload
-
-  echo "  Finding backup slug..."
-  # Find the backup by matching the backup name or by checksum
-  BACKUP_SLUG=$(ha backups --raw-json | jq -r '.data.backups[] | select(.name | contains("Full-Test-Backup")) | .slug' | head -1)
-
-  if [ -z "$BACKUP_SLUG" ]; then
-    # Fallback: find by matching file checksum
-    BACKUP_CHECKSUM=$(md5sum "$BACKUP_FILE" | cut -d' ' -f1)
-    for backup_file in /mnt/supervisor/backup/*.tar; do
-      if [ "$(md5sum "$backup_file" | cut -d' ' -f1)" = "$BACKUP_CHECKSUM" ]; then
-        BACKUP_SLUG=$(basename "$backup_file" .tar)
-        break
-      fi
-    done
-  fi
-
-  if [ -n "$BACKUP_SLUG" ]; then
-    echo "  ✅ Backup uploaded successfully! (slug: $BACKUP_SLUG)"
-
-    # Wait for Home Assistant core to be running (check if stats are available)
-    echo "  Waiting for Home Assistant core to be running..."
-    MAX_HA_WAIT=60
-    HA_WAIT_COUNT=0
-    while [ $HA_WAIT_COUNT -lt $MAX_HA_WAIT ]; do
-      if ha core stats --raw-json 2> /dev/null | jq -e '.result == "ok"' > /dev/null 2>&1; then
-        echo "    ✅ Home Assistant core is running"
-        break
-      else
-        echo "    ⏳ Home Assistant core not running yet..."
-        HA_WAIT_COUNT=$((HA_WAIT_COUNT + 1))
-        sleep 5
-      fi
-    done
-
-    if [ $HA_WAIT_COUNT -ge $MAX_HA_WAIT ]; then
-      echo "    ⚠️  Timeout waiting for HA core, attempting restore anyway..."
-    fi
-
-    # Wait for any running jobs to complete before restoring
-    echo "  Waiting for system to be idle before restore..."
-    MAX_JOB_WAIT=60
-    JOB_WAIT_COUNT=0
-    while [ $JOB_WAIT_COUNT -lt $MAX_JOB_WAIT ]; do
-      ACTIVE_JOBS=$(ha jobs info --raw-json | jq '[.data.jobs[] | select(.done == false)] | length')
-
-      if [ "$ACTIVE_JOBS" = "0" ]; then
-        echo "    ✅ System idle, ready to restore"
-        break
-      else
-        echo "    ⏳ Waiting for $ACTIVE_JOBS job(s) to complete..."
-        JOB_WAIT_COUNT=$((JOB_WAIT_COUNT + 1))
-        sleep 5
-      fi
-    done
-
-    if [ $JOB_WAIT_COUNT -ge $MAX_JOB_WAIT ]; then
-      echo "    ⚠️  Timeout waiting for jobs, attempting restore anyway..."
-    fi
-
-    echo "  Restoring backup (excluding addons/local folder to preserve dev environment)..."
-    # Get all folders from backup except addons/local and build flags
-    FOLDER_FLAGS=$(ha backups info "$BACKUP_SLUG" --raw-json | jq -r '.data.folders[] | select(. != "addons/local") | "--folders " + .' | tr '\n' ' ')
-    ADDON_FLAGS=$(ha backups info "$BACKUP_SLUG" --raw-json | jq -r '.data.addons[] | "--addons " + .slug' | tr '\n' ' ')
-
-    echo "    Restoring: Home Assistant core + addons + folders (excluding addons/local)"
-    ha backups restore "$BACKUP_SLUG" --homeassistant "$FOLDER_FLAGS" "$ADDON_FLAGS"
-    echo "  ✅ Backup restored successfully!"
-  else
-    echo "  ⚠️  Could not find backup slug after upload"
-  fi
-else
-  echo "  ⚠️  Backup file not found: $BACKUP_FILE"
-fi
+# COMMENTED OUT FOR TESTING: Start from fresh install instead of restoring backup
+# echo "Restoring full backup..."
+# BACKUP_FILE="/mnt/supervisor/addons/local/hass-addons/full_test_backup_20251004_005214.tar"
+# BACKUP_DEST="/mnt/supervisor/backup/"
+#
+# if [ -f "$BACKUP_FILE" ]; then
+#   echo "  Copying backup file to $BACKUP_DEST..."
+#   sudo cp "$BACKUP_FILE" "$BACKUP_DEST"
+#
+#   echo "  Reloading backups..."
+#   ha backups reload
+#
+#   echo "  Finding backup slug..."
+#   # Find the backup by matching the backup name or by checksum
+#   BACKUP_SLUG=$(ha backups --raw-json | jq -r '.data.backups[] | select(.name | contains("Full-Test-Backup")) | .slug' | head -1)
+#
+#   if [ -z "$BACKUP_SLUG" ]; then
+#     # Fallback: find by matching file checksum
+#     BACKUP_CHECKSUM=$(md5sum "$BACKUP_FILE" | cut -d' ' -f1)
+#     for backup_file in /mnt/supervisor/backup/*.tar; do
+#       if [ "$(md5sum "$backup_file" | cut -d' ' -f1)" = "$BACKUP_CHECKSUM" ]; then
+#         BACKUP_SLUG=$(basename "$backup_file" .tar)
+#         break
+#       fi
+#     done
+#   fi
+#
+#   if [ -n "$BACKUP_SLUG" ]; then
+#     echo "  ✅ Backup uploaded successfully! (slug: $BACKUP_SLUG)"
+#
+#     # Wait for Home Assistant core to be running (check if stats are available)
+#     echo "  Waiting for Home Assistant core to be running..."
+#     MAX_HA_WAIT=60
+#     HA_WAIT_COUNT=0
+#     while [ $HA_WAIT_COUNT -lt $MAX_HA_WAIT ]; do
+#       if ha core stats --raw-json 2> /dev/null | jq -e '.result == "ok"' > /dev/null 2>&1; then
+#         echo "    ✅ Home Assistant core is running"
+#         break
+#       else
+#         echo "    ⏳ Home Assistant core not running yet..."
+#         HA_WAIT_COUNT=$((HA_WAIT_COUNT + 1))
+#         sleep 5
+#       fi
+#     done
+#
+#     if [ $HA_WAIT_COUNT -ge $MAX_HA_WAIT ]; then
+#       echo "    ⚠️  Timeout waiting for HA core, attempting restore anyway..."
+#     fi
+#
+#     # Wait for any running jobs to complete before restoring
+#     echo "  Waiting for system to be idle before restore..."
+#     MAX_JOB_WAIT=60
+#     JOB_WAIT_COUNT=0
+#     while [ $JOB_WAIT_COUNT -lt $MAX_JOB_WAIT ]; do
+#       ACTIVE_JOBS=$(ha jobs info --raw-json | jq '[.data.jobs[] | select(.done == false)] | length')
+#
+#       if [ "$ACTIVE_JOBS" = "0" ]; then
+#         echo "    ✅ System idle, ready to restore"
+#         break
+#       else
+#         echo "    ⏳ Waiting for $ACTIVE_JOBS job(s) to complete..."
+#         JOB_WAIT_COUNT=$((JOB_WAIT_COUNT + 1))
+#         sleep 5
+#       fi
+#     done
+#
+#     if [ $JOB_WAIT_COUNT -ge $MAX_JOB_WAIT ]; then
+#       echo "    ⚠️  Timeout waiting for jobs, attempting restore anyway..."
+#     fi
+#
+#     echo "  Restoring backup (excluding addons/local folder to preserve dev environment)..."
+#     # Get all folders from backup except addons/local and build flags
+#     FOLDER_FLAGS=$(ha backups info "$BACKUP_SLUG" --raw-json | jq -r '.data.folders[] | select(. != "addons/local") | "--folders " + .' | tr '\n' ' ')
+#     ADDON_FLAGS=$(ha backups info "$BACKUP_SLUG" --raw-json | jq -r '.data.addons[] | "--addons " + .slug' | tr '\n' ' ')
+#
+#     echo "    Restoring: Home Assistant core + addons + folders (excluding addons/local)"
+#     ha backups restore "$BACKUP_SLUG" --homeassistant "$FOLDER_FLAGS" "$ADDON_FLAGS"
+#     echo "  ✅ Backup restored successfully!"
+#   else
+#     echo "  ⚠️  Could not find backup slug after upload"
+#   fi
+# else
+#   echo "  ⚠️  Backup file not found: $BACKUP_FILE"
+# fi
+echo "  ⚠️  Backup restore is DISABLED - starting from fresh install"
 
 # Step 9: Add shell aliases
 echo "Adding shell aliases..."
