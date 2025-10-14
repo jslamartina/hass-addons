@@ -1,9 +1,0 @@
-# Ignore all certificate files (sensitive/local)
-*.pem
-*.key
-*.crt
-*.cert
-
-# But keep the directory
-!.gitignore
-

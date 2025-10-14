@@ -62,7 +62,8 @@
         "bodil.file-browser",
         "ms-azuretools.vscode-containers",
         "yzhang.markdown-all-in-one",
-        "shd101wyy.markdown-preview-enhanced"
+        "shd101wyy.markdown-preview-enhanced",
+        "ms-playwright.playwright"
       ],
       "settings": {
         "terminal.integrated.scrollback": 10000,

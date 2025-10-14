@@ -218,3 +218,4 @@ dist/
 
 cync-lan/.cache-cync-lan-python/**
 code-reviews/**
+.ruff_cache/
