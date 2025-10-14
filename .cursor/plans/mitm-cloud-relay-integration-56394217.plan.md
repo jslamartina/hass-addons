@@ -8,8 +8,20 @@ Systematic validation of all Cloud Relay operating modes with real devices in de
 Before testing, verify:
 
 - Git repo changes are committed: `/mnt/supervisor/addons/local/cync-lan/`
+  ```bash
+  # Use Git MCP tool to check status
+  mcp_git_git_status("/mnt/supervisor/addons/local/cync-lan/")
+  # Should show clean working tree, or use: git status
+  ```
+
 - DNS redirection is active for `cm.gelighting.com`
 - MQTT broker (EMQX) is running and accessible
+  ```bash
+  # Use Docker MCP to verify EMQX container
+  mcp_docker_list_containers(filters={"name": ["emqx"]})
+  # Or use: docker ps | grep emqx
+  ```
+
 - At least one Cync device is powered on and can connect
 
 ## Test Structure
@@ -22,6 +34,44 @@ Each test follows this pattern:
 4. Validate MQTT messages in Home Assistant
 5. Test device control (on/off, brightness if applicable)
 6. Document results
+
+### MCP Tools for Testing
+
+**Docker MCP** - Container and log inspection:
+
+```python
+# Check addon container status
+mcp_docker_list_containers(all=True, filters={"name": ["addon_local_cync-lan"]})
+
+# Fetch logs with specific tail count
+mcp_docker_fetch_container_logs("addon_local_cync-lan", tail=100)
+```
+
+**Python MCP** - Log analysis and packet validation:
+
+```python
+# Parse and analyze log entries
+import re
+logs = "... log content ..."
+packet_types = re.findall(r'Type: (0x[0-9a-f]+)', logs)
+print(f"Found {len(packet_types)} packets: {set(packet_types)}")
+
+# Validate packet structure
+expected_fields = ['Type', 'Seq', 'Device', 'RSSI']
+for field in expected_fields:
+    count = logs.count(field)
+    print(f"{field}: {count} occurrences")
+```
+
+**Git MCP** - Track test changes:
+
+```python
+# Check for uncommitted test configs
+mcp_git_git_status("/mnt/supervisor/addons/local/cync-lan/")
+
+# Review changes made during testing
+mcp_git_git_diff_unstaged("/mnt/supervisor/addons/local/cync-lan/", context_lines=3)
+```
 
 ## Phase 1: Baseline - Normal LAN-only Mode
 
@@ -40,6 +90,9 @@ cloud_relay:
 cd /mnt/supervisor/addons/local/cync-lan
 ./rebuild.sh
 ha addons logs local_cync-lan --follow
+
+# Alternative: Use Docker MCP for log retrieval
+mcp_docker_fetch_container_logs("addon_local_cync-lan", tail=100)
 ```
 
 **Validation:**
@@ -117,6 +170,33 @@ cloud_relay:
 ```
 [RELAY Device→Cloud] Type: 0x73, Seq: 42, Device: 1234567890, RSSI: -45
 [RELAY Cloud→Device] Type: 0x73, Seq: 43, Status update...
+```
+
+**Log Analysis with Python MCP:**
+
+```python
+# Analyze packet statistics from logs
+import re
+from collections import Counter
+
+logs = mcp_docker_fetch_container_logs("addon_local_cync-lan", tail=500)
+
+# Count packet directions
+device_to_cloud = logs.count("[RELAY Device→Cloud]")
+cloud_to_device = logs.count("[RELAY Cloud→Device]")
+
+# Extract and count packet types
+packet_types = re.findall(r'Type: (0x[0-9a-f]+)', logs)
+type_counts = Counter(packet_types)
+
+# Calculate average RSSI
+rssi_values = [int(x) for x in re.findall(r'RSSI: (-?\d+)', logs)]
+avg_rssi = sum(rssi_values) / len(rssi_values) if rssi_values else 0
+
+print(f"Packets Device→Cloud: {device_to_cloud}")
+print(f"Packets Cloud→Device: {cloud_to_device}")
+print(f"Packet types: {dict(type_counts)}")
+print(f"Average RSSI: {avg_rssi:.1f} dBm")
 ```
 
 **Success Criteria:** Detailed packet inspection works without breaking functionality.
@@ -260,6 +340,34 @@ cloud_relay:
    - [ ] No memory leaks or connection drops
    - [ ] Devices stay responsive
 
+**Performance Monitoring with Python MCP:**
+
+   ```python
+   import time
+   from datetime import datetime
+   
+   # Record start time
+   start_time = datetime.now()
+   print(f"Stability test started: {start_time}")
+   
+   # After 1+ hour, analyze metrics
+   logs = mcp_docker_fetch_container_logs("addon_local_cync-lan", tail=1000)
+   
+   # Count errors/warnings
+   errors = logs.count("ERROR")
+   warnings = logs.count("WARNING")
+   reconnects = logs.count("Device reconnected") + logs.count("Connection reset")
+   
+   # Check for memory issues
+   oom_indicators = ["out of memory", "MemoryError", "killed"]
+   memory_issues = sum(logs.count(indicator) for indicator in oom_indicators)
+   
+   print(f"Test duration: {datetime.now() - start_time}")
+   print(f"Errors: {errors}, Warnings: {warnings}")
+   print(f"Reconnections: {reconnects}")
+   print(f"Memory issues: {memory_issues}")
+   ```
+
 **Success Criteria:** Graceful error handling, no crashes, stable operation.
 
 ---
@@ -293,6 +401,54 @@ For each phase, document:
 - **Issues Found**: List any problems
 - **Logs**: Save relevant log excerpts
 - **Notes**: Performance, behavior observations
+
+### Automated Test Result Collection
+
+**Use Python MCP to generate comprehensive test reports:**
+
+```python
+from datetime import datetime
+from collections import defaultdict
+
+# Collect test data
+test_results = {
+    "timestamp": datetime.now().isoformat(),
+    "phases": []
+}
+
+# For each test phase
+phases = ["Baseline", "Cloud Relay", "Debug Logging", "LAN-only", "Packet Injection", "SSL Modes", "Edge Cases"]
+
+for phase in phases:
+    # Fetch and analyze logs for this phase
+    logs = mcp_docker_fetch_container_logs("addon_local_cync-lan", tail=200)
+
+    result = {
+        "name": phase,
+        "error_count": logs.count("ERROR"),
+        "warning_count": logs.count("WARNING"),
+        "device_connections": logs.count("Device connected") + logs.count("registered"),
+        "mqtt_publishes": logs.count("Publishing to MQTT"),
+        "status": "Pass" if logs.count("ERROR") == 0 else "Fail"
+    }
+
+    test_results["phases"].append(result)
+
+# Generate summary
+print("\n" + "="*70)
+print("TEST EXECUTION SUMMARY")
+print("="*70)
+for phase in test_results["phases"]:
+    status_emoji = "✅" if phase["status"] == "Pass" else "❌"
+    print(f"{status_emoji} {phase['name']}: {phase['status']}")
+    print(f"   Errors: {phase['error_count']}, Warnings: {phase['warning_count']}")
+    print(f"   Connections: {phase['device_connections']}, MQTT: {phase['mqtt_publishes']}")
+
+# Calculate overall pass rate
+passed = sum(1 for p in test_results["phases"] if p["status"] == "Pass")
+total = len(test_results["phases"])
+print(f"\nOverall: {passed}/{total} phases passed ({passed/total*100:.1f}%)")
+```
 
 ## Rollback Plan
 

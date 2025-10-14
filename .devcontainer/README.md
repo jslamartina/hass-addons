@@ -7,17 +7,22 @@ This directory contains setup scripts for the CyncLAN development environment.
 ### Setup Scripts (in execution order)
 
 #### Addon Development (Node.js/Prettier)
-- **`00-addon-setup-nodejs.sh`** - Sets up Node.js and Prettier for addon development
+- **`00-setup-prettier.sh`** - Sets up Node.js and Prettier for addon development
 - **`addon-format-code.sh`** - Formats code with Prettier (utility script)
 
-#### Python Package Development (cync-lan)
-- **`01-python-setup-env.sh`** - Sets up Python development environment
-- **`02-python-clone-repo.sh`** - Clones the cync-lan repository
-- **`03-python-setup-workspace.sh`** - Sets up development workspace
-- **`04-python-configure-vscode.sh`** - Configures VS Code for Python development
+#### MCP (Model Context Protocol) Servers
+- **`02-setup-mcp-servers.sh`** - Installs MCP server packages for AI assistant integration
 
-#### Master Scripts
-- **`99-python-setup-all.sh`** - Runs all Python development scripts in order (01-04)
+#### Browser Automation (Playwright)
+- **`03-setup-playwright.sh`** - Installs Playwright browsers and configures testing environment
+
+#### Python Package Development (cync-lan)
+- **`01-00-python-setup-all.sh`** - Master script that runs all Python development scripts in order
+- **`01-01-python-env-setup.sh`** - Sets up Python development environment
+- **`01-02-python-clone-repo.sh`** - Clones the cync-lan repository
+- **`01-03-python-workspace-setup.sh`** - Sets up development workspace
+- **`01-04-python-vscode-configure.sh`** - Configures VS Code for Python development
+- **`01-05-python-venv-setup.sh`** - Sets up Python virtual environment
 
 ### Workspace Files
 - **`hass-cync-dev.code-workspace`** - Multi-root workspace configuration (in repo root)
@@ -29,8 +34,10 @@ The main `.devcontainer.json` file (in the root directory) is configured to:
 2. Install Python 3.12 with development tools
 3. Mount your local `cync-lan` repository for live editing
 4. Automatically run setup scripts on container creation:
-   - `00-addon-setup-nodejs.sh` (Node.js/Prettier)
-   - `99-python-setup-all.sh` (Python environment & cync-lan repo)
+   - `00-setup-prettier.sh` (Node.js/Prettier)
+   - `02-setup-mcp-servers.sh` (MCP server packages)
+   - `03-setup-playwright.sh` (Playwright browser automation)
+   - `01-00-python-setup-all.sh` (Python environment & cync-lan repo)
 
 ## Usage
 
@@ -40,17 +47,23 @@ The scripts run automatically when the devcontainer is created.
 ### Manual
 ```bash
 # Run all Python development setup
-bash .devcontainer/99-python-setup-all.sh
+bash .devcontainer/01-00-python-setup-all.sh
 
 # Run individual scripts in order
-bash .devcontainer/00-addon-setup-nodejs.sh    # Addon setup first
-bash .devcontainer/01-python-setup-env.sh      # Then Python env
-bash .devcontainer/02-python-clone-repo.sh     # Clone repo
-bash .devcontainer/03-python-setup-workspace.sh # Setup workspace
-bash .devcontainer/04-python-configure-vscode.sh # Configure IDE
+bash .devcontainer/00-setup-prettier.sh        # Addon setup first
+bash .devcontainer/02-setup-mcp-servers.sh     # MCP server packages
+bash .devcontainer/03-setup-playwright.sh      # Playwright browsers
+bash .devcontainer/01-01-python-env-setup.sh   # Then Python env
+bash .devcontainer/01-02-python-clone-repo.sh  # Clone repo
+bash .devcontainer/01-03-python-workspace-setup.sh # Setup workspace
+bash .devcontainer/01-04-python-vscode-configure.sh # Configure IDE
+bash .devcontainer/01-05-python-venv-setup.sh  # Virtual environment
 
 # Format code (utility)
 bash .devcontainer/addon-format-code.sh
+
+# Delete entities via Playwright
+npm run playwright:delete-entities switch.hallway_front_switch switch.hallway_counter_switch
 ```
 
 ## Directory Structure After Setup

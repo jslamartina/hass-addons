@@ -11,6 +11,7 @@
       "nodeGypDependencies": true,
       "installYarnUsingApt": true
     },
+    "ghcr.io/devcontainers-community/features/deno": {},
     "ghcr.io/devcontainers/features/common-utils:2": {
       "installZsh": false,
       "installOhMyZsh": false,

@@ -88,6 +88,11 @@ public
 # Temporary folders
 tmp/
 temp/
+mcp-server.log
+
+# Test results
+test-results/
+playwright-report/
 
 # Logs
 logs
@@ -195,6 +200,10 @@ venv.bak/
 secrets.yaml
 configuration.yaml.bak
 hass-credentials.env
+.mcp-secrets.env
+
+# MCP Configuration (contains absolute paths, user-specific)
+mcp.json
 
 # Backup files (security risk - never commit)
 *.backup
@@ -207,5 +216,5 @@ config.yaml.backup
 build/
 dist/
 
-cync-lan/cync-lan-python/**
+cync-lan/.cache-cync-lan-python/**
 code-reviews/**
