@@ -276,7 +276,7 @@ echo "traditional" > /tmp/cync_inject_command.txt
 
 ## Packet Format
 
-The relay uses the packet parser from the MITM research tools. See `mitm/FINDINGS_SUMMARY.md` for detailed packet structure documentation.
+The relay uses the packet parser from the MITM research tools. See `docs/protocol/findings.md` for detailed packet structure documentation.
 
 ### Common Packet Types
 
@@ -491,7 +491,7 @@ A: No. Authentication happens during device setup via the cloud API (not the TCP
 ## References
 
 - [Cync Protocol Documentation](packet_structure.md)
-- [MITM Testing Guide](../../mitm/MITM_TESTING_GUIDE.md)
+- [MITM Testing Guide](../../docs/protocol/mitm-testing.md)
 - [DNS Redirection Setup](DNS.md)
 - [Troubleshooting Guide](troubleshooting.md)
 

@@ -1,4 +1,4 @@
-# AGENTS.md
+# docs/developer/agents-guide.md
 
 This file provides guidance for AI coding agents working with the Home Assistant CyncLAN Add-on repository.
 
@@ -27,8 +27,8 @@ ha addons restart local_cync-lan  # Restart addon
 **Critical files to know:**
 
 - `.devcontainer/README.md` - Docker quirks and devcontainer gotchas
-- `mitm/FINDINGS_SUMMARY.md` - Protocol reverse engineering documentation
-- `docs/cync-lan/DNS.md` - DNS redirection setup (required for addon to work)
+- `docs/protocol/findings.md` - Protocol reverse engineering documentation
+- `docs/user/dns-setup.md` - DNS redirection setup (required for addon to work)
 - `CHANGELOG.md` - Version history and breaking changes
 - `hass-credentials.env` - Home Assistant login credentials (Username: `dev`, Password: `dev`)
 
@@ -72,7 +72,7 @@ ha addons restart local_cync-lan  # Restart addon
 ├── mitm/                       # MITM testing tools for protocol analysis
 ├── docs/                       # Documentation
 ├── test-cync-lan.sh           # Quick test script
-└── EXPLORATION_NOTES.md       # System exploration findings (for reference)
+└── docs/developer/exploration-notes.md       # System exploration findings (for reference)
 ```
 
 ## Development Environment
@@ -490,7 +490,7 @@ The CyncLAN add-on has three main components:
 
 ### DNS Requirement
 
-**Critical:** The add-on requires DNS redirection to intercept device traffic. See `docs/cync-lan/DNS.md` for setup instructions. Without this, devices will still communicate with Cync cloud.
+**Critical:** The add-on requires DNS redirection to intercept device traffic. See `docs/user/dns-setup.md` for setup instructions. Without this, devices will still communicate with Cync cloud.
 
 ### Critical Implementation Details
 
@@ -1093,18 +1093,18 @@ Before submitting changes:
 ## External Resources
 
 - [Home Assistant Add-on Documentation](https://developers.home-assistant.io/docs/add-ons/)
-- [Cync Protocol Research](mitm/FINDINGS_SUMMARY.md) - Our protocol reverse engineering notes
+- [Cync Protocol Research](docs/protocol/findings.md) - Our protocol reverse engineering notes
 - [MQTT Discovery Schema](https://www.home-assistant.io/integrations/mqtt/#mqtt-discovery)
-- [DNS Redirection Setup](docs/cync-lan/DNS.md)
+- [DNS Redirection Setup](docs/user/dns-setup.md)
 
 ## Getting Help
 
-- Check `EXPLORATION_NOTES.md` for UI navigation and system state reference
-- Review `mitm/FINDINGS_SUMMARY.md` for protocol details
+- Check `docs/developer/exploration-notes.md` for UI navigation and system state reference
+- Review `docs/protocol/findings.md` for protocol details
 - Read `.devcontainer/README.md` for devcontainer quirks
-- See `docs/cync-lan/troubleshooting.md` for common issues
-- See `LIMITATIONS_LIFTED.md` for automated testing tools and resolved blockers
-- See `CLOUD_RELAY_UI_TEST_SUCCESS.md` for UI configuration testing procedures (manual)
+- See `docs/user/troubleshooting.md` for common issues
+- See `docs/developer/limitations-lifted.md` for automated testing tools and resolved blockers
+- See `scripts/README.md` for automated testing and configuration tools
 
 ## Version Information
 
@@ -1116,8 +1116,7 @@ Before submitting changes:
 ---
 
 *Last Updated: October 14, 2025*
-*For exploration findings from UI testing, see `EXPLORATION_NOTES.md`*
-*For automated testing tools and API usage, see `LIMITATIONS_LIFTED.md`*
-*For manual UI configuration testing procedures, see `CLOUD_RELAY_UI_TEST_SUCCESS.md`*
+*For exploration findings from UI testing, see `docs/developer/exploration-notes.md`*
+*For automated testing tools and API usage, see `docs/developer/limitations-lifted.md` and `scripts/README.md`*
 *For MCP server installation script, see `.devcontainer/02-setup-mcp-servers.sh`*
 

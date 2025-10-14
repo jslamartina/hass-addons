@@ -258,10 +258,10 @@ ls -la test-results/runs/*/screenshots/
 
 ## Related Documentation
 
-- **AGENTS.md** - Browser automation best practices, Playwright patterns
-- **EXPLORATION_NOTES.md** - UI navigation findings
-- **LIMITATIONS_LIFTED.md** - Automated testing tools
-- **CLOUD_RELAY_UI_TEST_SUCCESS.md** - Manual UI testing procedures
+- **../../docs/developer/agents-guide.md** - Browser automation best practices, Playwright patterns, Shadow DOM handling
+- **../../docs/developer/exploration-notes.md** - UI navigation findings and system state reference
+- **../../docs/developer/limitations-lifted.md** - Automated testing tools and resolved blockers
+- **../../docs/developer/entity-management.md** - User guide for entity deletion workflows
 
 ## Credits
 

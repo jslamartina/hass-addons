@@ -56,7 +56,7 @@
 - `packet_checksum.py`: Checksum calculation for crafted packets
 - `CloudRelayConnection` class in `server.py`: Manages relay connections
 - Comprehensive documentation in `docs/CLOUD_RELAY.md`
-- Updated `AGENTS.md` with relay mode documentation
+- Updated `docs/developer/agents-guide.md` with relay mode documentation
 
 ### Changed
 - `NCyncServer` now branches to `CloudRelayConnection` when relay mode enabled

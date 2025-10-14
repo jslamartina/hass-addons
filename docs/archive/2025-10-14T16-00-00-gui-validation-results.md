@@ -71,7 +71,7 @@ Sent power state command to TCP devices: {} in 0.00000 seconds - waiting for ACK
 
 #### Why DNS Redirection is Required
 
-From `docs/cync-lan/DNS.md`:
+From `docs/user/dns-setup.md`:
 > You need to override the cloud server domain to a local IP on your network. This server masquerades as the cloud TCP server.
 
 **Newer Firmware Requires:**

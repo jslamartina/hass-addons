@@ -179,7 +179,7 @@ Cursor's `mcp.json` doesn't support environment variable expansion (like `${ENV_
 - MCP servers inherit environment variables from loaded `.mcp-secrets.env`
 
 **See also:**
-- `AGENTS.md` - Full MCP secrets management documentation
+- `docs/developer/agents-guide.md` - Full MCP secrets management documentation
 - `.mcp-secrets.env.example` - Template with placeholder values
 
 ---
@@ -303,10 +303,9 @@ wait_for_log "Pattern to wait for" 15 "Wait description"
 
 ## Related Documentation
 
-- **LIMITATIONS_LIFTED.md** - Full documentation of lifted limitations
-- **AGENTS.md** - AI agent guidance (includes testing section)
-- **CLOUD_RELAY_UI_TEST_SUCCESS.md** - Manual UI testing procedures
-- **CLOUD_RELAY_TEST_RESULTS.md** - Historical test results (before automation)
+- **../docs/developer/limitations-lifted.md** - Full documentation of resolved testing limitations
+- **../docs/developer/agents-guide.md** - AI agent guidance (includes testing and configuration section)
+- **../docs/developer/test-results.md** - Comprehensive test execution results
 
 ---
 
