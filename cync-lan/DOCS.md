@@ -3,7 +3,7 @@ CyncLAN bridge is a software stack that allows Home Assistant to communicate wit
 smart devices over a local network connection, bypassing the need for cloud services.
 This add-on uses MQTT for communication and supports auto-discovery of devices in Home Assistant.
 
-You must use [DNS redirection](https://github.com/baudneo/hass-addons/tree/dev/docs/cync-lan/DNS.md) to forward: 
+You must use [DNS redirection](https://github.com/baudneo/hass-addons/tree/dev/docs/user/dns-setup.md) to forward: 
 - `cm-sec.gelighting.com`
 - `cm.gelighting.com`
 - `cm-ge.xlink.cn`
@@ -54,6 +54,6 @@ Visit the CyncLAN 'ingress' webpage (from the sidebar, or from the add-on page `
 
 
 ## Tips / Troubleshooting
-See the [tips documentation](https://github.com/baudneo/hass-addons/tree/dev/docs/cync-lan/tips.md) for tips on how to have a better experience with the add-on.
+See the [tips documentation](https://github.com/baudneo/hass-addons/tree/dev/docs/user/tips.md) for tips on how to have a better experience with the add-on.
 
-See the [troubleshooting documentation](https://github.com/baudneo/hass-addons/tree/dev/docs/cync-lan/troubleshooting.md) for common issues and how to resolve them.
+See the [troubleshooting documentation](https://github.com/baudneo/hass-addons/tree/dev/docs/user/troubleshooting.md) for common issues and how to resolve them.

@@ -1,5 +1,5 @@
 >[!IMPORTANT]
-> DNS redirection is REQUIRED, please see [here](https://github.com/baudneo/cync-lan-addon/tree/dev/docs/DNS.md) for documentation and examples
+> DNS redirection is REQUIRED, please see [here](https://github.com/baudneo/hass-addons/tree/dev/docs/user/dns-setup.md) for documentation and examples
 
 ![Local Push Polling][polling-shield]
 
@@ -13,7 +13,7 @@ This add-on provides:
 - __comms__: An async `aiomqtt` MQTT client for communication to HASS using the HASS MQTT JSON schema
 
 # Supported devices
-See [known devices](https://github.com/baudneo/cync-lan-addon/tree/dev/docs/known_devices.md)
+See [known devices](https://github.com/baudneo/hass-addons/tree/dev/docs/user/known-devices.md)
 
 #### MOSTLY SUPPORTED
 - lights

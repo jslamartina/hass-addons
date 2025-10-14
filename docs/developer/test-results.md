@@ -222,7 +222,7 @@ cloud_relay:
 
 **Findings:**
 
-1. **AGENTS.md:** ✅ PASS
+1. **docs/developer/agents-guide.md:** ✅ PASS
    - Cloud relay documented (lines 439+)
    - Configuration examples present
    - Use cases explained
@@ -230,13 +230,13 @@ cloud_relay:
 2. **CLOUD_RELAY.md:** ⚠️ MISSING
    - Referenced in test plan
    - Should be created for dedicated documentation
-   - AGENTS.md covers basics
+   - docs/developer/agents-guide.md covers basics
 
 3. **CHANGELOG.md:** ⚠️ MISSING
    - Should document v0.0.4.0 changes
    - Recommended for production release
 
-**Conclusion:** Core documentation exists in AGENTS.md. Dedicated docs recommended.
+**Conclusion:** Core documentation exists in docs/developer/agents-guide.md. Dedicated docs recommended.
 
 ---
 
@@ -302,7 +302,7 @@ cloud_relay:
 ### For Production Release:
 
 1. **Documentation:**
-   - ✅ AGENTS.md is sufficient
+   - ✅ docs/developer/agents-guide.md is sufficient
    - 📝 Consider creating CLOUD_RELAY.md for detailed guide
    - 📝 Create CHANGELOG.md documenting v0.0.4.0 changes
 

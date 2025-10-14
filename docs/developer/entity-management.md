@@ -290,10 +290,8 @@ Home Assistant UI uses Web Components with Shadow DOM. The script:
 
 ## See Also
 
-- **scripts/playwright/README.md** - Complete documentation
-- **scripts/playwright/EXAMPLES.md** - Real-world usage examples
-- **scripts/playwright/QUICKSTART.md** - This quick start guide
-- **AGENTS.md** - Browser automation best practices
+- **scripts/playwright/README.md** - Complete Playwright automation documentation
+- **docs/developer/agents-guide.md** - Browser automation best practices and patterns
 
 ## Support
 

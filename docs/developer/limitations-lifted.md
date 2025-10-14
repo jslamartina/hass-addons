@@ -7,7 +7,7 @@
 
 ## Executive Summary
 
-All limitations documented in `CLOUD_RELAY_TEST_RESULTS.md`, `CLOUD_RELAY_UI_TEST_SUCCESS.md`, and `AGENTS.md` have been successfully resolved. The devcontainer environment now supports **full automated testing** of cloud relay functionality via the **Home Assistant Supervisor API**.
+All limitations related to cloud relay mode testing have been successfully resolved. The devcontainer environment now supports **full automated testing** of cloud relay functionality via the **Home Assistant Supervisor API**.
 
 ---
 
@@ -227,7 +227,7 @@ $ ./scripts/configure-addon.sh preset-relay-with-forward
 
 ### Files Updated
 
-1. **AGENTS.md** (Already documented)
+1. **docs/developer/agents-guide.md** (Already documented)
    - Cloud relay mode section
    - Configuration examples
    - Use cases and security warnings
@@ -239,14 +239,15 @@ $ ./scripts/configure-addon.sh preset-relay-with-forward
    - Test results
    - API usage examples
 
-### Files That Can Be Archived
+### Documentation Status
 
-These documents are now **historical references** only:
+The cloud relay implementation is now fully documented in:
 
-- `CLOUD_RELAY_TEST_RESULTS.md` - Documented the original blocking issues
-- `CLOUD_RELAY_UI_TEST_SUCCESS.md` - Documented UI visibility (still valid for manual testing)
+- `docs/developer/agents-guide.md` - Comprehensive guide for AI agents and developers
+- `scripts/README.md` - Automated testing tools and configuration
+- `cync-lan/docs/CLOUD_RELAY.md` - User-facing documentation
 
-**Recommendation:** Keep these files as historical context, but note that automated testing is now the preferred approach.
+**Note:** Automated testing via Supervisor API is now the preferred approach.
 
 ---
 
@@ -327,7 +328,7 @@ The cloud relay mode implementation is now **fully testable** in the devcontaine
 - API tool: `./scripts/configure-addon.sh --help`
 - Test suite: `./scripts/test-cloud-relay.sh`
 - Implementation docs: `/mnt/supervisor/addons/local/cync-lan/docs/CLOUD_RELAY.md`
-- Agent guidance: `AGENTS.md`
+- Agent guidance: `docs/developer/agents-guide.md`
 
 ---
 
