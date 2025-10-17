@@ -1,4 +1,58 @@
+# Dependencies
 node_modules/
-.git/
-*.md
+jspm_packages/
 
+# Build outputs
+build/
+dist/
+.next/
+.nuxt/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+env/
+ENV/
+*.egg-info/
+
+# Caches
+.cache/
+.parcel-cache/
+.ruff_cache/
+.npm/
+.eslintcache
+
+# Logs and temp
+logs/
+*.log
+tmp/
+temp/
+mcp-server.log
+
+# Git
+.git/
+
+# IDE
+.idea/
+
+# OS
+.DS_Store
+
+# Home Assistant
+*.db
+*.db-journal
+hass-credentials.env
+.mcp-secrets.env
+*.backup
+
+# Code reviews
+code-reviews/
+
+# Test results
+test-results/
+playwright-report/
+
+# Keep markdown as-is for now (custom formatting)
+*.md

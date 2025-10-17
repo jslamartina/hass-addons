@@ -11,7 +11,7 @@ Usage:
 import json
 import sys
 from pathlib import Path
-from typing import List, Dict, Any
+from typing import Any, Dict, List
 
 # Home Assistant config directory
 HA_CONFIG_DIR = Path("/mnt/supervisor/homeassistant")
@@ -28,7 +28,7 @@ def load_json_file(filepath: Path) -> Dict[str, Any]:
         print(f"❌ File not found: {filepath}")
         sys.exit(1)
 
-    with open(filepath, "r") as f:
+    with filepath.open("r") as f:
         return json.load(f)
 
 
@@ -36,11 +36,11 @@ def save_json_file(filepath: Path, data: Dict[str, Any], backup: bool = True):
     """Save a JSON file with optional backup."""
     if backup:
         backup_file = filepath.with_suffix(filepath.suffix + ".safe_backup")
-        with open(backup_file, "w") as f:
+        with backup_file.open("w") as f:
             json.dump(data, f, indent=2)
         print(f"📦 Backup: {backup_file}")
 
-    with open(filepath, "w") as f:
+    with filepath.open("w") as f:
         json.dump(data, f, indent=2)
     print(f"💾 Saved: {filepath.name}")
 
@@ -163,21 +163,21 @@ def main():
     # STEP 5: Summary
     # ============================================================================
     print("═════════════════ SUMMARY ═════════════════")
-    print(f"📊 ENTITIES:")
+    print("📊 ENTITIES:")
     print(
         f"   Total MQTT: {len(mqtt_entities_to_delete) + len(mqtt_entities_to_preserve)}"
     )
     print(f"   ✅ Preserve: {len(mqtt_entities_to_preserve)}")
     print(f"   ❌ Delete: {len(mqtt_entities_to_delete)}")
     print("")
-    print(f"📊 DEVICES:")
+    print("📊 DEVICES:")
     print(
         f"   Total MQTT: {len(mqtt_devices_to_delete) + len(mqtt_devices_to_preserve)}"
     )
     print(f"   ✅ Preserve: {len(mqtt_devices_to_preserve)}")
     print(f"   ❌ Delete: {len(mqtt_devices_to_delete)}")
     print("")
-    print(f"📊 RESTORE STATES:")
+    print("📊 RESTORE STATES:")
     print(f"   ❌ Delete: {len(states_to_delete)}")
     print("═════════════════════════════════════════════")
     print("")
@@ -254,7 +254,7 @@ def main():
     print("")
 
     print("═════════════════════════════════════════════")
-    print(f"✅ Successfully deleted:")
+    print("✅ Successfully deleted:")
     print(f"   {len(mqtt_entities_to_delete)} entities")
     print(f"   {len(mqtt_devices_to_delete)} devices")
     print(f"   {len(states_to_delete)} restore states")

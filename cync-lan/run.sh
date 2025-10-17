@@ -1,5 +1,34 @@
 #!/usr/bin/with-contenv bashio
 # shellcheck shell=bash
+#
+# run.sh - Home Assistant Add-on Entry Point
+#
+# This script is the entry point for the CyncLAN Home Assistant add-on.
+# It is automatically executed by the Home Assistant Supervisor when the add-on starts.
+#
+# What this script does:
+# 1. Reads configuration values from the add-on's config.yaml via bashio:: functions
+# 2. Exports configuration as CYNC_* environment variables for the Python application
+# 3. Launches the cync-lan Python package with --enable-export flag
+#
+# Configuration sources:
+# - User configuration: Set via Home Assistant UI (Settings → Add-ons → CyncLAN → Configuration)
+# - Default values: Defined in config.yaml schema
+# - Runtime config: Stored in /data/options.json by Supervisor
+#
+# Environment variables exported:
+# - CYNC_ACCOUNT_USERNAME/PASSWORD: Cync cloud credentials for device export
+# - CYNC_MQTT_*: MQTT broker connection settings
+# - CYNC_TOPIC: Base MQTT topic for Home Assistant discovery
+# - CYNC_DEBUG: Enable debug logging (true/false)
+# - CYNC_TCP_WHITELIST: Allowed bridge device MAC addresses
+# - CYNC_CMD_BROADCASTS: Device IDs for broadcast commands
+# - CYNC_MAX_TCP_CONN: Maximum concurrent TCP connections
+# - CYNC_CLOUD_*: Cloud relay mode settings (MITM proxy configuration)
+#
+# Note: This file must remain in the add-on root directory (cync-lan/run.sh).
+# Home Assistant Supervisor expects run.sh at this location for add-on lifecycle management.
+#
 LP='[run.sh]'
 
 bashio::log.info "${LP} Starting CyncLAN Bridge Add-On"

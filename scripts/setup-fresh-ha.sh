@@ -96,7 +96,8 @@ check_onboarding_status() {
   log_info "Checking onboarding status..."
 
   # Try to access onboarding endpoint
-  local response=$(curl -sf "$HA_URL/api/onboarding" 2> /dev/null || echo "")
+  local response
+  response=$(curl -sf "$HA_URL/api/onboarding" 2> /dev/null || echo "")
 
   if [ -z "$response" ]; then
     log_info "Onboarding API not available, checking if users exist..."
@@ -105,7 +106,8 @@ check_onboarding_status() {
   fi
 
   # Check if user step is done
-  local user_done=$(echo "$response" | jq -r '.[] | select(.step == "user") | .done' 2> /dev/null)
+  local user_done
+  user_done=$(echo "$response" | jq -r '.[] | select(.step == "user") | .done' 2> /dev/null)
 
   if [ "$user_done" = "true" ]; then
     log_info "User already created (onboarding in progress or complete)"
@@ -120,7 +122,8 @@ check_onboarding_status() {
 create_first_user() {
   log_info "Creating first user: $HASS_USERNAME..."
 
-  local response=$(curl -sf -w "\n%{http_code}" -X POST \
+  local response
+  response=$(curl -sf -w "\n%{http_code}" -X POST \
     "$HA_URL/api/onboarding/users" \
     -H "Content-Type: application/json" \
     -d "{
@@ -131,14 +134,17 @@ create_first_user() {
             \"client_id\": \"$HA_URL/\"
         }" 2>&1)
 
-  local http_code=$(echo "$response" | tail -n1)
-  local body=$(echo "$response" | sed '$d')
+  local http_code
+  http_code=$(echo "$response" | tail -n1)
+  local body
+  body=$(echo "$response" | sed '$d')
 
   if [ "$http_code" = "200" ] || [ "$http_code" = "201" ]; then
     log_success "User created successfully"
 
     # Try to extract auth token from response
-    local auth_token=$(echo "$body" | jq -r '.access_token // empty' 2> /dev/null)
+    local auth_token
+    auth_token=$(echo "$body" | jq -r '.access_token // empty' 2> /dev/null)
     if [ -n "$auth_token" ]; then
       log_info "Auth token received from user creation"
       echo "$auth_token"
@@ -155,12 +161,14 @@ create_first_user() {
 complete_onboarding() {
   log_info "Completing onboarding (core config)..."
 
-  local response=$(curl -sf -w "\n%{http_code}" -X POST \
+  local response
+  response=$(curl -sf -w "\n%{http_code}" -X POST \
     "$HA_URL/api/onboarding/core_config" \
     -H "Content-Type: application/json" \
     -d "{}" 2>&1)
 
-  local http_code=$(echo "$response" | tail -n1)
+  local http_code
+  http_code=$(echo "$response" | tail -n1)
 
   if [ "$http_code" = "200" ] || [ "$http_code" = "201" ]; then
     log_success "Onboarding completed"
@@ -194,7 +202,8 @@ wait_for_supervisor() {
   local retry_delay=5
 
   while [ $retry_count -lt $max_retries ]; do
-    local healthy=$(curl -sf -H "Authorization: Bearer ${SUPERVISOR_TOKEN}" \
+    local healthy
+    healthy=$(curl -sf -H "Authorization: Bearer ${SUPERVISOR_TOKEN}" \
       "http://supervisor/supervisor/info" 2> /dev/null \
       | jq -r '.data.healthy // false' 2> /dev/null)
 
@@ -217,7 +226,8 @@ add_emqx_repository() {
   log_info "Checking if hassio-addons repository is already added..."
 
   # Get list of repositories
-  local repos=$(curl -sf -H "Authorization: Bearer ${SUPERVISOR_TOKEN}" \
+  local repos
+  repos=$(curl -sf -H "Authorization: Bearer ${SUPERVISOR_TOKEN}" \
     "http://supervisor/store/repositories" 2> /dev/null \
     | jq -r '.data.repositories[]' 2> /dev/null || echo "")
 
@@ -228,14 +238,17 @@ add_emqx_repository() {
 
   log_info "Adding hassio-addons repository..."
 
-  local response=$(curl -sf -w "\n%{http_code}" -X POST \
+  local response
+  response=$(curl -sf -w "\n%{http_code}" -X POST \
     -H "Authorization: Bearer ${SUPERVISOR_TOKEN}" \
     -H "Content-Type: application/json" \
     "http://supervisor/store/repositories" \
     -d "{\"repository\": \"$HASSIO_ADDONS_REPO\"}" 2>&1)
 
-  local http_code=$(echo "$response" | tail -n1)
-  local body=$(echo "$response" | sed '$d')
+  local http_code
+  http_code=$(echo "$response" | tail -n1)
+  local body
+  body=$(echo "$response" | sed '$d')
 
   if [ "$http_code" = "200" ]; then
     log_success "Repository added successfully"
@@ -263,7 +276,8 @@ install_emqx() {
   log_info "Checking if EMQX add-on is already installed..."
 
   # Check if already installed
-  local state=$(curl -sf -H "Authorization: Bearer ${SUPERVISOR_TOKEN}" \
+  local state
+  state=$(curl -sf -H "Authorization: Bearer ${SUPERVISOR_TOKEN}" \
     "http://supervisor/addons/$EMQX_SLUG/info" 2> /dev/null \
     | jq -r '.data.state // "not_installed"' 2> /dev/null)
 
@@ -274,11 +288,13 @@ install_emqx() {
 
   log_info "Installing EMQX add-on..."
 
-  local response=$(curl -sf -w "\n%{http_code}" -X POST \
+  local response
+  response=$(curl -sf -w "\n%{http_code}" -X POST \
     -H "Authorization: Bearer ${SUPERVISOR_TOKEN}" \
     "http://supervisor/addons/$EMQX_SLUG/install" 2>&1)
 
-  local http_code=$(echo "$response" | tail -n1)
+  local http_code
+  http_code=$(echo "$response" | tail -n1)
 
   if [ "$http_code" = "200" ]; then
     log_info "EMQX installation started, waiting for completion..."
@@ -288,7 +304,7 @@ install_emqx() {
     local max_retries=60
 
     while [ $retry_count -lt $max_retries ]; do
-      local state=$(curl -sf -H "Authorization: Bearer ${SUPERVISOR_TOKEN}" \
+      state=$(curl -sf -H "Authorization: Bearer ${SUPERVISOR_TOKEN}" \
         "http://supervisor/addons/$EMQX_SLUG/info" 2> /dev/null \
         | jq -r '.data.state // "unknown"' 2> /dev/null)
 
@@ -316,7 +332,8 @@ configure_emqx() {
   log_info "Configuring EMQX with credentials..."
 
   # EMQX configuration with MQTT credentials
-  local config=$(
+  local config
+  config=$(
     cat << EOF
 {
     "options": {
@@ -326,13 +343,15 @@ configure_emqx() {
 EOF
   )
 
-  local response=$(curl -sf -w "\n%{http_code}" -X POST \
+  local response
+  response=$(curl -sf -w "\n%{http_code}" -X POST \
     -H "Authorization: Bearer ${SUPERVISOR_TOKEN}" \
     -H "Content-Type: application/json" \
     "http://supervisor/addons/$EMQX_SLUG/options" \
     -d "$config" 2>&1)
 
-  local http_code=$(echo "$response" | tail -n1)
+  local http_code
+  http_code=$(echo "$response" | tail -n1)
 
   if [ "$http_code" = "200" ]; then
     log_success "EMQX configured successfully"
@@ -347,11 +366,13 @@ EOF
 start_emqx() {
   log_info "Starting EMQX add-on..."
 
-  local response=$(curl -sf -w "\n%{http_code}" -X POST \
+  local response
+  response=$(curl -sf -w "\n%{http_code}" -X POST \
     -H "Authorization: Bearer ${SUPERVISOR_TOKEN}" \
     "http://supervisor/addons/$EMQX_SLUG/start" 2>&1)
 
-  local http_code=$(echo "$response" | tail -n1)
+  local http_code
+  http_code=$(echo "$response" | tail -n1)
 
   if [ "$http_code" = "200" ]; then
     log_info "EMQX start initiated, waiting for it to be running..."
@@ -361,7 +382,8 @@ start_emqx() {
     local max_retries=30
 
     while [ $retry_count -lt $max_retries ]; do
-      local state=$(curl -sf -H "Authorization: Bearer ${SUPERVISOR_TOKEN}" \
+      local state
+      state=$(curl -sf -H "Authorization: Bearer ${SUPERVISOR_TOKEN}" \
         "http://supervisor/addons/$EMQX_SLUG/info" 2> /dev/null \
         | jq -r '.data.state // "unknown"' 2> /dev/null)
 
@@ -389,7 +411,8 @@ install_cync_lan() {
   log_info "Checking if CyncLAN add-on is already installed..."
 
   # Check if already installed
-  local state=$(curl -sf -H "Authorization: Bearer ${SUPERVISOR_TOKEN}" \
+  local state
+  state=$(curl -sf -H "Authorization: Bearer ${SUPERVISOR_TOKEN}" \
     "http://supervisor/addons/$CYNC_SLUG/info" 2> /dev/null \
     | jq -r '.data.state // "not_installed"' 2> /dev/null)
 
@@ -400,11 +423,13 @@ install_cync_lan() {
 
   log_info "Installing CyncLAN add-on..."
 
-  local response=$(curl -sf -w "\n%{http_code}" -X POST \
+  local response
+  response=$(curl -sf -w "\n%{http_code}" -X POST \
     -H "Authorization: Bearer ${SUPERVISOR_TOKEN}" \
     "http://supervisor/addons/$CYNC_SLUG/install" 2>&1)
 
-  local http_code=$(echo "$response" | tail -n1)
+  local http_code
+  http_code=$(echo "$response" | tail -n1)
 
   if [ "$http_code" = "200" ]; then
     log_info "CyncLAN installation started, waiting for completion..."
@@ -414,7 +439,7 @@ install_cync_lan() {
     local max_retries=60
 
     while [ $retry_count -lt $max_retries ]; do
-      local state=$(curl -sf -H "Authorization: Bearer ${SUPERVISOR_TOKEN}" \
+      state=$(curl -sf -H "Authorization: Bearer ${SUPERVISOR_TOKEN}" \
         "http://supervisor/addons/$CYNC_SLUG/info" 2> /dev/null \
         | jq -r '.data.state // "unknown"' 2> /dev/null)
 
@@ -442,7 +467,8 @@ configure_cync_lan() {
   log_info "Configuring CyncLAN with test credentials..."
 
   # CyncLAN configuration with test Cync credentials and EMQX connection
-  local config=$(
+  local config
+  config=$(
     cat << EOF
 {
     "options": {
@@ -472,13 +498,15 @@ configure_cync_lan() {
 EOF
   )
 
-  local response=$(curl -sf -w "\n%{http_code}" -X POST \
+  local response
+  response=$(curl -sf -w "\n%{http_code}" -X POST \
     -H "Authorization: Bearer ${SUPERVISOR_TOKEN}" \
     -H "Content-Type: application/json" \
     "http://supervisor/addons/$CYNC_SLUG/options" \
     -d "$config" 2>&1)
 
-  local http_code=$(echo "$response" | tail -n1)
+  local http_code
+  http_code=$(echo "$response" | tail -n1)
 
   if [ "$http_code" = "200" ]; then
     log_success "CyncLAN configured successfully"
@@ -495,11 +523,13 @@ EOF
 start_cync_lan() {
   log_info "Starting CyncLAN add-on..."
 
-  local response=$(curl -sf -w "\n%{http_code}" -X POST \
+  local response
+  response=$(curl -sf -w "\n%{http_code}" -X POST \
     -H "Authorization: Bearer ${SUPERVISOR_TOKEN}" \
     "http://supervisor/addons/$CYNC_SLUG/start" 2>&1)
 
-  local http_code=$(echo "$response" | tail -n1)
+  local http_code
+  http_code=$(echo "$response" | tail -n1)
 
   if [ "$http_code" = "200" ]; then
     log_info "CyncLAN start initiated, waiting for it to be running..."
@@ -509,7 +539,8 @@ start_cync_lan() {
     local max_retries=30
 
     while [ $retry_count -lt $max_retries ]; do
-      local state=$(curl -sf -H "Authorization: Bearer ${SUPERVISOR_TOKEN}" \
+      local state
+      state=$(curl -sf -H "Authorization: Bearer ${SUPERVISOR_TOKEN}" \
         "http://supervisor/addons/$CYNC_SLUG/info" 2> /dev/null \
         | jq -r '.data.state // "unknown"' 2> /dev/null)
 
@@ -539,7 +570,8 @@ verify_setup() {
   local all_good=true
 
   # Check EMQX status
-  local emqx_state=$(curl -sf -H "Authorization: Bearer ${SUPERVISOR_TOKEN}" \
+  local emqx_state
+  emqx_state=$(curl -sf -H "Authorization: Bearer ${SUPERVISOR_TOKEN}" \
     "http://supervisor/addons/$EMQX_SLUG/info" 2> /dev/null \
     | jq -r '.data.state // "unknown"' 2> /dev/null)
 
@@ -551,7 +583,8 @@ verify_setup() {
   fi
 
   # Check CyncLAN status
-  local cync_state=$(curl -sf -H "Authorization: Bearer ${SUPERVISOR_TOKEN}" \
+  local cync_state
+  cync_state=$(curl -sf -H "Authorization: Bearer ${SUPERVISOR_TOKEN}" \
     "http://supervisor/addons/$CYNC_SLUG/info" 2> /dev/null \
     | jq -r '.data.state // "unknown"' 2> /dev/null)
 

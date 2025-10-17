@@ -18,9 +18,7 @@ sudo tee "${VSCODE_CONFIG_DIR}/settings.json" > /dev/null << EOF
     "${WORKSPACE_DIRECTORY}"
   ],
   "python.linting.enabled": true,
-  "python.linting.pylintEnabled": true,
-  "python.formatting.provider": "black",
-  "python.sortImports.args": ["--profile", "black"],
+  "python.linting.pylintEnabled": false,
   "files.exclude": {
     "**/node_modules": true,
     "**/__pycache__": true,

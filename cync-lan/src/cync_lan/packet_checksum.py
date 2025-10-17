@@ -13,13 +13,10 @@ from __future__ import annotations
 
 from typing import Final
 
-
 DEFAULT_OFFSET_AFTER_START: Final[int] = 6
 
 
-def calculate_checksum_between_markers(
-    packet: bytes, *, offset_after_start: int = DEFAULT_OFFSET_AFTER_START
-) -> int:
+def calculate_checksum_between_markers(packet: bytes, *, offset_after_start: int = DEFAULT_OFFSET_AFTER_START) -> int:
     """
     Compute checksum for a packet with 0x7E-delimited inner structure.
 
@@ -40,7 +37,8 @@ def calculate_checksum_between_markers(
     end = len(packet) - 1  # index of trailing 0x7E
 
     if end <= start + offset_after_start:
-        raise ValueError("Packet too short to compute checksum with given offset")
+        msg = "Packet too short to compute checksum with given offset"
+        raise ValueError(msg)
 
     # Exclude checksum byte at position end-1 and trailing 0x7E at position end
     data_to_sum = packet[start + offset_after_start : end - 1]
@@ -61,7 +59,5 @@ def insert_checksum_in_place(
         checksum_index: Index where checksum byte should be written
         offset_after_start: Offset after 0x7E start marker used in calculation
     """
-    checksum = calculate_checksum_between_markers(
-        bytes(packet), offset_after_start=offset_after_start
-    )
+    checksum = calculate_checksum_between_markers(bytes(packet), offset_after_start=offset_after_start)
     packet[checksum_index] = checksum

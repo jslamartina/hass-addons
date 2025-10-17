@@ -16,17 +16,12 @@ echo "Setting up Prettier..."
 bash "${CONTAINER_WORKSPACE_FOLDER}"/.devcontainer/00-setup-prettier.sh
 echo "  Prettier setup complete!"
 
-# Step 3: Setup MCP servers
-echo "Setting up MCP servers..."
-bash "${CONTAINER_WORKSPACE_FOLDER}"/.devcontainer/02-setup-mcp-servers.sh
-echo "  MCP server setup complete!"
-
-# Step 4: Setup Playwright
+# Step 3: Setup Playwright
 echo "Setting up Playwright..."
 bash "${CONTAINER_WORKSPACE_FOLDER}"/.devcontainer/03-setup-playwright.sh
 echo "  Playwright setup complete!"
 
-# Step 5: Setup Python environment
+# Step 4: Setup Python environment
 echo "Setting up Python environment..."
 bash "${CONTAINER_WORKSPACE_FOLDER}"/.devcontainer/01-00-python-setup-all.sh
 echo "  Python setup complete!"

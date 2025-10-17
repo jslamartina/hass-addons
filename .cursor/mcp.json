@@ -1,24 +1,43 @@
 {
   "mcpServers": {
     "web_fetch": {
-      "command": "python",
-      "args": ["-m", "mcp_server_fetch"]
+      "command": "uvx",
+      "args": ["--refresh", "mcp-server-fetch"]
     },
     "docker": {
       "command": "uvx",
-      "args": ["mcp-server-docker"]
+      "args": ["--refresh", "mcp-server-docker"]
     },
     "git": {
-      "command": "python",
-      "args": ["-m", "mcp_server_git"]
+      "command": "uvx",
+      "args": ["--refresh", "mcp-server-git"]
     },
     "python": {
       "command": "uvx",
-      "args": ["mcp-run-python", "stdio"]
+      "args": [
+        "--refresh",
+        "mcp-python-interpreter",
+        "--dir",
+        "/mnt/supervisor/addons/local/hass-addons",
+        "--python-path",
+        "/usr/local/bin/python3"
+      ]
     },
     "time": {
-      "command": "python",
-      "args": ["-m", "mcp_server_time", "--local-timezone=America/Chicago"]
+      "command": "uvx",
+      "args": [
+        "--refresh",
+        "mcp-server-time",
+        "--local-timezone=America/Chicago"
+      ]
+    },
+    "filesystem": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-filesystem",
+        "/mnt/supervisor/addons/local/hass-addons"
+      ]
     }
   }
 }

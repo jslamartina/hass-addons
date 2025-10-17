@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import asyncio
 import datetime
 import logging
@@ -7,7 +9,6 @@ import struct
 import sys
 import uuid
 from pathlib import Path
-from typing import Optional
 
 import yaml
 
@@ -33,9 +34,9 @@ def send_signal(signal_num: int):
     """
     try:
         os.kill(os.getpid(), signal_num)
-    except OSError as e:
-        logger.error(f"Failed to send signal {signal_num}: {e}")
-        raise e
+    except OSError:
+        logger.exception("Failed to send signal %s", signal_num)
+        raise
 
 
 def send_sigint():
@@ -67,15 +68,15 @@ async def _async_signal_cleanup():
         for task in g.tasks:
             if not task.done():
                 logger.debug(
-                    f"CyncLAN: Cancelling task: {task.get_name()} // {task.get_coro()=}"
+                    "CyncLAN: Cancelling task: %s // task.get_coro()=%s",
+                    task.get_name(),
+                    task.get_coro(),
                 )
                 task.cancel()
 
 
 def signal_handler(signum):
-    logger.info(
-        f"CyncLAN: Intercepted signal: {signal.Signals(signum).name} ({signum})"
-    )
+    logger.info("CyncLAN: Intercepted signal: %s (%s)", signal.Signals(signum).name, signum)
     if g:
         loop = g.loop or asyncio.get_event_loop()
         loop.create_task(_async_signal_cleanup())
@@ -104,16 +105,16 @@ def ints2bytes(ints: list[int]) -> bytes:
     return bytes(ints)
 
 
-def parse_unbound_firmware_version(
-    data_struct: bytes, lp: str
-) -> Optional[tuple[str, int, str]]:
+def parse_unbound_firmware_version(data_struct: bytes, lp: str) -> tuple[str, int, str] | None:
     """Parse the firmware version from binary hex data. Unbound means not bound by 0x7E boundaries"""
     # LED controller sends this data after cync app connects via BTLE
     # 1f 00 00 00 fa 8e 14 00 50 22 33 08 00 ff ff ea 11 02 08 a1 [01 03 01 00 00 00 00 00 f8
     lp = f"{lp}firmware_version:"
     if data_struct[0] != 0x00:
         logger.error(
-            f"{lp} Invalid first byte value: {data_struct[0]} should be 0x00 for firmware version data"
+            "%s Invalid first byte value: %s should be 0x00 for firmware version data",
+            lp,
+            data_struct[0],
         )
 
     n_idx = 20  # Starting index for firmware information
@@ -126,16 +127,14 @@ def parse_unbound_firmware_version(
             firmware_version.append(int(chr(data_struct[n_idx])))
             n_idx += 1
         if not firmware_version:
-            logger.warning(
-                f"{lp} No firmware version found in packet: {data_struct.hex(' ')}"
-            )
+            logger.warning("%s No firmware version found in packet: %s", lp, data_struct.hex(" "))
             return None
             # network firmware (this one is set to ascii 0 (0x30))
             # 00 00 00 00 00 fa 00 20 00 00 00 00 00 00 00 00
             # ea 00 00 00 86 01 00 30 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 c1 7e
 
-    except (IndexError, ValueError) as e:
-        logger.error(f"{lp} Exception occurred while parsing firmware version: {e}")
+    except (IndexError, ValueError):
+        logger.exception("%s Exception occurred while parsing firmware version", lp)
         return None
 
     else:
@@ -145,7 +144,11 @@ def parse_unbound_firmware_version(
             firmware_str = "".join(map(str, firmware_version))
         firmware_version_int = int("".join(map(str, firmware_version)))
         logger.debug(
-            f"{lp} {firmware_type} firmware VERSION: {firmware_version_int} ({firmware_str})"
+            "%s %s firmware VERSION: %s (%s)",
+            lp,
+            firmware_type,
+            firmware_version_int,
+            firmware_str,
         )
 
     return firmware_type, firmware_version_int, firmware_str
@@ -153,11 +156,14 @@ def parse_unbound_firmware_version(
 
 async def parse_config(cfg_file: Path):
     """Parse the exported Cync device config file and create devices and groups from it."""
-    from cync_lan.devices import CyncDevice, CyncGroup
+    # Import here to avoid circular dependency
+    from cync_lan.devices import CyncDevice, CyncGroup  # noqa: PLC0415
 
     lp = "parse_config:"
     logger.debug(
-        f"{lp} reading devices and groups from Cync config file: {cfg_file.as_posix()}"
+        "%s reading devices and groups from Cync config file: %s",
+        lp,
+        cfg_file.as_posix(),
     )
     try:
         # wrap synchronous yaml reading in an async function to avoid blocking the event loop
@@ -167,9 +173,9 @@ async def parse_config(cfg_file: Path):
             None, yaml.safe_load, cfg_file.read_text(encoding="utf-8")
         )
 
-    except Exception as e:
-        logger.error(f"{lp} Error reading config file: {e}", exc_info=True)
-        raise e
+    except Exception:
+        logger.exception("%s Error reading config file", lp)
+        raise
 
     devices = {}
     groups = {}
@@ -178,55 +184,60 @@ async def parse_config(cfg_file: Path):
         home_id = home_cfg["id"]
         if "devices" not in home_cfg:
             logger.warning(
-                f"{lp} No devices found in config for: {cync_home_name} (ID: {home_id}), skipping..."
+                "%s No devices found in config for: %s (ID: %s), skipping...",
+                lp,
+                cync_home_name,
+                home_id,
             )
             continue
         # Create devices
         for cync_id, cync_device in home_cfg["devices"].items():
             cync_device: dict
-            device_name = (
-                cync_device["name"] if "name" in cync_device else f"device_{cync_id}"
-            )
+            device_name = cync_device.get("name", f"device_{cync_id}")
             if "enabled" in cync_device:
                 enabled = cync_device["enabled"]
                 if isinstance(enabled, str):
                     enabled = enabled.casefold()
                     if enabled not in YES_ANSWER:
                         logger.debug(
-                            f"{lp} Device '{device_name}' (ID: {cync_id}) is disabled in config, skipping..."
+                            "%s Device '%s' (ID: %s) is disabled in config, skipping...",
+                            lp,
+                            device_name,
+                            cync_id,
                         )
                         continue
                 if isinstance(enabled, bool) and enabled is False:
                     logger.debug(
-                        f"{lp} Device '{device_name}' (ID: {cync_id}) is disabled in config, skipping..."
+                        "%s Device '%s' (ID: %s) is disabled in config, skipping...",
+                        lp,
+                        device_name,
+                        cync_id,
                     )
                     continue
-            fw_version = (
-                cync_device["fw"] if "fw" in cync_device and cync_device["fw"] else None
-            )
+            fw_version = cync_device["fw"] if cync_device.get("fw") else None
             wmac = None
             btmac = None
-            dev_type = (
-                cync_device["type"]
-                if "type" in cync_device and cync_device["type"]
-                else None
-            )
+            dev_type = cync_device["type"] if cync_device.get("type") else None
             # 'mac': 26616350814, 'wifi_mac': 26616350815
             if "mac" in cync_device:
                 btmac = cync_device["mac"]
-                if btmac:
-                    if isinstance(btmac, int):
-                        logger.warning(
-                            f"IMPORTANT>>> cync device '{device_name}' (ID: {cync_id}) 'mac' is somehow an int -> {btmac}, please quote the mac address to force it to a string in the config file"
-                        )
+                if btmac and isinstance(btmac, int):
+                    logger.warning(
+                        "IMPORTANT>>> cync device '%s' (ID: %s) 'mac' is somehow an int -> %s, please quote the mac address to force it to a string in the config file",
+                        device_name,
+                        cync_id,
+                        btmac,
+                    )
 
             if "wifi_mac" in cync_device:
                 wmac = cync_device["wifi_mac"]
-                if wmac:
-                    if isinstance(wmac, int):
-                        logger.debug(
-                            f"IMPORTANT>>> cync device '{device_name}' (ID: {cync_id}) 'wifi_mac' is somehow an int -> {wmac}, please quote the mac address to force it to a string in the config file"
-                        )
+                if wmac and isinstance(wmac, int):
+                    logger.debug(
+                        "IMPORTANT>>> cync device '%s' (ID: %s) 'wifi_mac' is somehow an int -> %s, please quote the mac address to force it to a string in the config file",
+                        device_name,
+                        cync_id,
+                        wmac,
+                    )
 
             new_device = CyncDevice(
                 name=device_name,
@@ -238,13 +249,11 @@ async def parse_config(cfg_file: Path):
                 cync_type=dev_type,
             )
             devices[cync_id] = new_device
-            # logger.debug(f"{lp} Created device (hass_id: {new_device.hass_id}) (home_id: {new_device.home_id}) (device_id: {new_device.id}): {new_device}")
+            # logger.debug("%s Created device (hass_id: %s) (home_id: %s) (device_id: %s): %s", lp, new_device.hass_id, new_device.home_id, new_device.id, new_device)
 
         # Parse groups
         if "groups" in home_cfg:
-            logger.debug(
-                f"{lp} Found {len(home_cfg['groups'])} groups in {cync_home_name}"
-            )
+            logger.debug("%s Found %s groups in %s", lp, len(home_cfg["groups"]), cync_home_name)
             for group_id, group_cfg in home_cfg["groups"].items():
                 group_name = group_cfg.get("name", f"Group {group_id}")
                 member_ids = group_cfg.get("members", [])
@@ -259,7 +268,11 @@ async def parse_config(cfg_file: Path):
                 )
                 groups[group_id] = new_group
                 logger.debug(
-                    f"{lp} Created group '{group_name}' (ID: {group_id}) with {len(member_ids)} devices"
+                    "%s Created group '%s' (ID: %s) with %s devices",
+                    lp,
+                    group_name,
+                    group_id,
+                    len(member_ids),
                 )
 
     return devices, groups
@@ -277,12 +290,12 @@ def check_for_uuid():
     if not persistent_dir.exists():
         try:
             persistent_dir.mkdir(parents=True, exist_ok=True)
-            logger.info(
-                f"{lp} Created persistent directory: {persistent_dir.as_posix()}"
-            )
-        except Exception as e:
-            logger.error(
-                f"{lp} Failed to create persistent directory: {e} - Exiting..."
+            logger.info("%s Created persistent directory: %s", lp, persistent_dir.as_posix())
+        except Exception:
+            logger.exception(
+                "%s Failed to create persistent directory: %s - Exiting...",
+                lp,
+                PERSISTENT_BASE_DIR,
             )
             sys.exit(1)
     uuid_file = Path(CYNC_UUID_PATH).expanduser().resolve()
@@ -298,35 +311,41 @@ def check_for_uuid():
                 uuid_obj = uuid.UUID(uuid_from_disk)
                 if uuid_obj.version != 4:
                     logger.warning(
-                        f"{lp} Invalid UUID version in uuid.txt: {uuid_from_disk}"
+                        "%s Invalid UUID version in uuid.txt: %s",
+                        lp,
+                        uuid_from_disk,
                     )
                     create_uuid = True
                 else:
                     logger.info(
-                        f"{lp} UUID found in {uuid_file.as_posix()} for the 'CyncLAN Bridge' MQTT device"
+                        "%s UUID found in %s for the 'CyncLAN Bridge' MQTT device",
+                        lp,
+                        uuid_file.as_posix(),
                     )
                     g.uuid = uuid_obj
 
         else:
-            logger.info(f"{lp} No uuid.txt found in {uuid_file.parent.as_posix()}")
+            logger.info("%s No uuid.txt found in %s", lp, uuid_file.parent.as_posix())
             create_uuid = True
     except PermissionError:
-        logger.error(
-            f"{lp} PermissionError: Unable to read/write {CYNC_UUID_PATH}. Please check permissions."
+        logger.exception(
+            "%s PermissionError: Unable to read/write %s. Please check permissions.",
+            lp,
+            CYNC_UUID_PATH,
         )
         create_uuid = True
     if create_uuid:
         logger.debug(
-            f"{lp} Creating and caching a new UUID to be used for the 'CyncLAN Bridge' MQTT device"
+            "%s Creating and caching a new UUID to be used for the 'CyncLAN Bridge' MQTT device",
+            lp,
         )
         g.uuid = uuid.uuid4()
-        with open(uuid_file, "w") as f:
+        with uuid_file.open("w") as f:
             f.write(str(g.uuid))
-            logger.info(f"{lp} UUID written to disk: {uuid_file.as_posix()}")
+            logger.info("%s UUID written to disk: %s", lp, uuid_file.as_posix())
 
 
 def utc_to_local(utc_dt: datetime.datetime) -> datetime.datetime:
     # local_tz = zoneinfo.ZoneInfo(str(tzlocal.get_localzone()))
     # utc_time = datetime.datetime.now(datetime.UTC)
-    local_time = utc_dt.astimezone(LOCAL_TZ)
-    return local_time
+    return utc_dt.astimezone(LOCAL_TZ)

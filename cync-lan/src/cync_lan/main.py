@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import argparse
 import asyncio
 import logging
@@ -5,7 +7,6 @@ import signal
 import sys
 from functools import partial
 from pathlib import Path
-from typing import Optional
 
 import uvloop
 
@@ -32,6 +33,14 @@ from cync_lan.utils import (
     send_sigterm,
     signal_handler,
 )
+
+# Optional dependency for .env file support
+try:
+    import dotenv
+
+    HAS_DOTENV = True
+except ImportError:
+    HAS_DOTENV = False
 
 logger = logging.getLogger(CYNC_LOG_NAME)
 stdout_handler = logging.StreamHandler(sys.stdout)
@@ -64,16 +73,16 @@ mqtt_logger = logging.getLogger("mqtt")
 mqtt_logger.setLevel(logging.ERROR)
 mqtt_logger.propagate = False
 mqtt_logger.addHandler(foreign_handler)
-# logger.debug(f"{lp} Logging all registered loggers: {logging.getLogger().manager.loggerDict.keys()}")
+# logger.debug("%s Logging all registered loggers: %s", lp, logging.getLogger().manager.loggerDict.keys())
 g = GlobalObject()
 
 
 class CyncLAN:
     lp: str = "CyncLAN:"
-    config_file: Optional[Path] = None
-    _instance: Optional["CyncLAN"] = None
+    config_file: Path | None = None
+    _instance: CyncLAN | None = None
 
-    def __new__(cls, *args, **kwargs):
+    def __new__(cls, *_args, **_kwargs):
         if cls._instance is None:
             cls._instance = super().__new__(cls)
         return cls._instance
@@ -85,13 +94,13 @@ class CyncLAN:
         g.loop = asyncio.new_event_loop()
         asyncio.set_event_loop(g.loop)
         logger.debug(
-            f"{lp} CyncLAN (version: {CYNC_VERSION}) stack initializing, "
-            f"setting up event loop signal handlers for SIGINT & SIGTERM..."
+            "%s CyncLAN (version: %s) stack initializing, "
+            "setting up event loop signal handlers for SIGINT & SIGTERM...",
+            lp,
+            CYNC_VERSION,
         )
         g.loop.add_signal_handler(signal.SIGINT, partial(signal_handler, signal.SIGINT))
-        g.loop.add_signal_handler(
-            signal.SIGTERM, partial(signal_handler, signal.SIGTERM)
-        )
+        g.loop.add_signal_handler(signal.SIGTERM, partial(signal_handler, signal.SIGTERM))
 
     async def start(self):
         """Start the Cync LAN server, MQTT client, and Export server."""
@@ -102,17 +111,15 @@ class CyncLAN:
             devices, groups = await parse_config(cfg_file)
             g.ncync_server = NCyncServer(devices, groups)
             g.mqtt_client = MQTTClient()
-            g.ncync_server.start_task = n_start = asyncio.Task(
-                g.mqtt_client.start(), name=MQTT_CLIENT_START_TASK_NAME
-            )
-            g.mqtt_client.start_task = m_start = asyncio.Task(
-                g.ncync_server.start(), name=NCYNC_START_TASK_NAME
-            )
+            g.ncync_server.start_task = n_start = asyncio.Task(g.ncync_server.start(), name=NCYNC_START_TASK_NAME)
+            g.mqtt_client.start_task = m_start = asyncio.Task(g.mqtt_client.start(), name=MQTT_CLIENT_START_TASK_NAME)
             tasks.extend([n_start, m_start])
         else:
             logger.error(
-                f"{lp} Cync config file not found at {cfg_file.as_posix()}. Please migrate "
-                f"an existing config file or visit the ingress page and perform a device export."
+                "%s Cync config file not found at %s. Please migrate "
+                "an existing config file or visit the ingress page and perform a device export.",
+                lp,
+                cfg_file.as_posix(),
             )
         if g.cli_args.export_server is True:
             g.cloud_api = CyncCloudAPI()
@@ -124,19 +131,19 @@ class CyncLAN:
 
         try:
             # the components start() methods have long running tasks of their own
-            # TODO: better way to control what tasks are doing what?
+            # NOTE: Future improvement - implement better task monitoring and control mechanisms
             await asyncio.gather(*tasks, return_exceptions=True)
-        except Exception as e:
-            logger.exception(f"{lp} Exception occurred while starting services: {e}")
+        except Exception:
+            logger.exception("%s Exception occurred while starting services", lp)
             # Stop all services if any service fails to start
             await self.stop()
-            raise e
+            raise
 
     async def stop(self):
         """Stop the nCync server, MQTT client, and Export server."""
         lp = f"{self.lp}stop:"
         # send sigterm
-        logger.info(f"{lp} Bringing software stack down using SIGTERM...")
+        logger.info("%s Bringing software stack down using SIGTERM...", lp)
         send_sigterm()
 
 
@@ -157,9 +164,7 @@ def parse_cli():
         action="store_true",
         help="Enable debug mode",
     )
-    parser.add_argument(
-        "--env", help="Path to the environment file", default=None, type=Path
-    )
+    parser.add_argument("--env", help="Path to the environment file", default=None, type=Path)
     g.cli_args = args = parser.parse_args()
 
     if args.debug:
@@ -170,31 +175,28 @@ def parse_cli():
     if args.env:
         env_path = args.env
         env_path = env_path.expanduser().resolve()
-        try:
-            import dotenv
-
-            loaded_any = dotenv.load_dotenv(env_path, override=True)
-        except ImportError:
-            logger.error(
-                "dotenv module is not installed. Please install it with 'pip install python-dotenv'"
-            )
-        except Exception as e:
-            logger.error(f"Failed to read environment file {env_path}: {e}")
+        if not HAS_DOTENV:
+            logger.error("dotenv module is not installed. Please install it with 'pip install python-dotenv'")
         else:
-            if not env_path.exists():
-                logger.error(f"Environment file {env_path} does not exist")
-            if loaded_any:
-                logger.info(f"Environment variables loaded from {env_path}")
-                g.reload_env()
+            try:
+                loaded_any = dotenv.load_dotenv(env_path, override=True)
+            except Exception:
+                logger.exception("Failed to read environment file %s", env_path)
             else:
-                logger.warning(f"No environment variables were loaded from {env_path}")
+                if not env_path.exists():
+                    logger.error("Environment file %s does not exist", env_path)
+                if loaded_any:
+                    logger.info("Environment variables loaded from %s", env_path)
+                    g.reload_env()
+                else:
+                    logger.warning("No environment variables were loaded from %s", env_path)
 
 
 def main():
     lp = "main:"
     parse_cli()
     if CYNC_DEBUG:
-        logger.info(f"{lp} Add-on config has set logging level to: Debug")
+        logger.info("%s Add-on config has set logging level to: Debug", lp)
         logger.setLevel(logging.DEBUG)
         for handler in logger.handlers:
             handler.setLevel(logging.DEBUG)
@@ -203,13 +205,13 @@ def main():
     try:
         asyncio.get_event_loop().run_until_complete(g.cync_lan.start())
     except asyncio.CancelledError as e:
-        logger.info(f"{lp} CyncLAN async stack cancelled: {e}")
+        logger.info("%s CyncLAN async stack cancelled: %s", lp, e)
     except KeyboardInterrupt:
-        logger.info(f"{lp} Caught KeyboardInterrupt, exiting...")
-    except Exception as e:
-        logger.exception(f"{lp} Caught exception: {e}")
+        logger.info("%s Caught KeyboardInterrupt, exiting...", lp)
+    except Exception:
+        logger.exception("%s Caught exception", lp)
     else:
-        logger.info(f"{lp} CyncLAN stack stopped gracefully, bye!")
+        logger.info("%s CyncLAN stack stopped gracefully, bye!", lp)
     finally:
         if not g.loop.is_closed():
             g.loop.close()

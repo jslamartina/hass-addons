@@ -8,15 +8,15 @@ ARG BUILD_ARCH
 ARG BUILD_VERSION
 RUN set -x \
   && apk add --no-cache --no-interactive \
-  openssl \
-  nano \
-  tree \
+    openssl \
+    nano \
+    tree \
   && pip install --no-cache-dir -U pip \
   && pip install --no-cache-dir debugpy==1.8.0 \
   && mkdir -p /root/cync-lan/certs \
   && openssl req -x509 -newkey rsa:4096 \
-  -keyout '/root/cync-lan/certs/key.pem' -out '/root/cync-lan/certs/cert.pem' \
-  -subj '/CN=*.xlink.cn' -sha256 -days 3650 -nodes \
+    -keyout '/root/cync-lan/certs/key.pem' -out '/root/cync-lan/certs/cert.pem' \
+    -subj '/CN=*.xlink.cn' -sha256 -days 3650 -nodes \
   && rm -rf /var/cache/apk/*
 
 # Copy local cync-lan Python package source

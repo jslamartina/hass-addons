@@ -8,5 +8,6 @@ echo "Setting up Python environment for cync-lan development..."
 pip install --upgrade pip
 pip install pytest-asyncio # Async testing support
 pip install pre-commit     # Git hooks
+pip install uv             # Fast Python package manager (used by MCP servers via uvx)
 
 echo "Python development environment setup complete"

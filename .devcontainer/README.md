@@ -10,9 +10,6 @@ This directory contains setup scripts for the CyncLAN development environment.
 - **`00-setup-prettier.sh`** - Sets up Node.js and Prettier for addon development
 - **`addon-format-code.sh`** - Formats code with Prettier (utility script)
 
-#### MCP (Model Context Protocol) Servers
-- **`02-setup-mcp-servers.sh`** - Installs MCP server packages for AI assistant integration
-
 #### Browser Automation (Playwright)
 - **`03-setup-playwright.sh`** - Installs Playwright browsers and configures testing environment
 
@@ -35,9 +32,9 @@ The main `.devcontainer.json` file (in the root directory) is configured to:
 3. Mount your local `cync-lan` repository for live editing
 4. Automatically run setup scripts on container creation:
    - `00-setup-prettier.sh` (Node.js/Prettier)
-   - `02-setup-mcp-servers.sh` (MCP server packages)
    - `03-setup-playwright.sh` (Playwright browser automation)
-   - `01-00-python-setup-all.sh` (Python environment & cync-lan repo)
+   - `01-00-python-setup-all.sh` (Python environment with uv & cync-lan repo)
+5. MCP servers are managed via `.cursor/mcp.json` and auto-installed by uvx/npx on first use
 
 ## Usage
 
@@ -51,9 +48,8 @@ bash .devcontainer/01-00-python-setup-all.sh
 
 # Run individual scripts in order
 bash .devcontainer/00-setup-prettier.sh        # Addon setup first
-bash .devcontainer/02-setup-mcp-servers.sh     # MCP server packages
 bash .devcontainer/03-setup-playwright.sh      # Playwright browsers
-bash .devcontainer/01-01-python-env-setup.sh   # Then Python env
+bash .devcontainer/01-01-python-env-setup.sh   # Python env (includes uv)
 bash .devcontainer/01-02-python-clone-repo.sh  # Clone repo
 bash .devcontainer/01-03-python-workspace-setup.sh # Setup workspace
 bash .devcontainer/01-04-python-vscode-configure.sh # Configure IDE

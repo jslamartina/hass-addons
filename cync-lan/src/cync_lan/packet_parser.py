@@ -57,16 +57,15 @@ def parse_cync_packet(packet_bytes, direction="UNKNOWN"):
             result["length_calc"] = f"({multiplier} * 256) + {base_len}"
 
     # Parse endpoint and counter based on packet type
-    if packet_type in [0x23, 0x73, 0x7B, 0x83, 0x88]:
-        if len(packet_bytes) >= 12:
-            result["endpoint"] = " ".join(f"{b:02x}" for b in packet_bytes[5:9])
-            result["endpoint_int"] = int.from_bytes(packet_bytes[5:9], "little")
+    if packet_type in [0x23, 0x73, 0x7B, 0x83, 0x88] and len(packet_bytes) >= 12:
+        result["endpoint"] = " ".join(f"{b:02x}" for b in packet_bytes[5:9])
+        result["endpoint_int"] = int.from_bytes(packet_bytes[5:9], "little")
 
-            # Counter/sequence at different positions for different packets
-            if packet_type == 0x23:
-                result["counter"] = f"0x{packet_bytes[9]:02x}"
-            elif packet_type in [0x73, 0x83]:
-                result["counter"] = f"0x{packet_bytes[10]:02x}"
+        # Counter/sequence at different positions for different packets
+        if packet_type == 0x23:
+            result["counter"] = f"0x{packet_bytes[9]:02x}"
+        elif packet_type in [0x73, 0x83]:
+            result["counter"] = f"0x{packet_bytes[10]:02x}"
 
     # Parse data payload for 0x73 and 0x83
     if packet_type == 0x73 and len(packet_bytes) > 12:
@@ -82,9 +81,7 @@ def parse_cync_packet(packet_bytes, direction="UNKNOWN"):
                     break
 
         if data_start and data_end:
-            result["data_payload"] = " ".join(
-                f"{b:02x}" for b in packet_bytes[data_start : data_end + 1]
-            )
+            result["data_payload"] = " ".join(f"{b:02x}" for b in packet_bytes[data_start : data_end + 1])
             result["data_length"] = data_end - data_start + 1
 
             # Parse command type for 0x73 packets
@@ -104,16 +101,17 @@ def parse_cync_packet(packet_bytes, direction="UNKNOWN"):
                 device_ids = []
                 # Command header is at offsets 5-7, device ID typically at offset 14+
                 # Skip at least 10 bytes from data_start to avoid command header bytes
-                search_start = (
-                    data_start + 10 if data_start + 10 < data_end else data_start + 8
-                )
+                search_start = data_start + 10 if data_start + 10 < data_end else data_start + 8
                 for i in range(search_start, data_end - 1):
                     # Look for device ID pattern (2 bytes forming valid ID)
                     # Device IDs are typically followed by 0x00 and not part of command header
-                    if 10 <= packet_bytes[i] <= 255 and packet_bytes[i + 1] == 0x00:
-                        # Avoid duplicates
-                        if packet_bytes[i] not in device_ids:
-                            device_ids.append(packet_bytes[i])
+                    # Avoid duplicates
+                    if (
+                        10 <= packet_bytes[i] <= 255
+                        and packet_bytes[i + 1] == 0x00
+                        and packet_bytes[i] not in device_ids
+                    ):
+                        device_ids.append(packet_bytes[i])
                 if device_ids:
                     result["contains_devices"] = [f"{d} ({hex(d)})" for d in device_ids]
 
@@ -125,18 +123,17 @@ def parse_cync_packet(packet_bytes, direction="UNKNOWN"):
         # Parse device IDs in status
         device_ids = []
         for i in range(12, len(packet_bytes) - 1):
-            if 10 <= packet_bytes[i] <= 255 and packet_bytes[i + 1] == 0x00:
-                # Check if followed by another copy (common pattern)
-                if (
-                    i + 3 < len(packet_bytes)
-                    and packet_bytes[i + 2] == packet_bytes[i]
-                    and packet_bytes[i + 3] == 0x00
-                ):
-                    device_ids.append(packet_bytes[i])
+            # Check if followed by another copy (common pattern)
+            if (
+                10 <= packet_bytes[i] <= 255
+                and packet_bytes[i + 1] == 0x00
+                and i + 3 < len(packet_bytes)
+                and packet_bytes[i + 2] == packet_bytes[i]
+                and packet_bytes[i + 3] == 0x00
+            ):
+                device_ids.append(packet_bytes[i])
         if device_ids:
-            result["contains_devices"] = [
-                f"{d} ({hex(d)})" for d in device_ids[:5]
-            ]  # Limit to first 5
+            result["contains_devices"] = [f"{d} ({hex(d)})" for d in device_ids[:5]]  # Limit to first 5
 
     elif packet_type == 0x43 and len(packet_bytes) > 12:
         # Device info packet - contains 19-byte status structures for each device
@@ -177,9 +174,7 @@ def parse_cync_packet(packet_bytes, direction="UNKNOWN"):
 
         if statuses:
             result["device_statuses"] = statuses
-            result["contains_devices"] = [
-                f"{s['device_id']} ({hex(s['device_id'])})" for s in statuses
-            ]
+            result["contains_devices"] = [f"{s['device_id']} ({hex(s['device_id'])})" for s in statuses]
 
     return result
 
@@ -192,9 +187,7 @@ def format_packet_log(parsed, verbose=True):
     lines = []
 
     # Header line with type and direction
-    header = (
-        f"[{parsed['direction']}] {parsed['packet_type']} {parsed['packet_type_name']}"
-    )
+    header = f"[{parsed['direction']}] {parsed['packet_type']} {parsed['packet_type_name']}"
     if "endpoint" in parsed:
         header += f" | EP:{parsed['endpoint']}"
     if "counter" in parsed:

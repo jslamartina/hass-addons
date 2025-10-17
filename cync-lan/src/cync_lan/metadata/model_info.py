@@ -1,5 +1,5 @@
 from enum import StrEnum
-from typing import Annotated, Optional, Union
+from typing import Annotated
 
 from pydantic import Field
 from pydantic.dataclasses import dataclass
@@ -40,19 +40,19 @@ class DeviceProtocol:
 
 @dataclass
 class LightCharacteristics:
-    min_kelvin: Optional[Annotated[int, Field(ge=2000, le=7000)]] = None
-    max_kelvin: Optional[Annotated[int, Field(ge=2000, le=7000)]] = None
-    lumens: Optional[Annotated[int, Field(ge=10)]] = None
+    min_kelvin: Annotated[int, Field(ge=2000, le=7000)] | None = None
+    max_kelvin: Annotated[int, Field(ge=2000, le=7000)] | None = None
+    lumens: Annotated[int, Field(ge=10)] | None = None
 
 
 @dataclass
 class DeviceTypeInfo:
     type: DeviceClassification = Field(default=DeviceClassification.UNKNOWN)
-    model_name: Optional[str] = "Unknown Device, See repo issue tracker"
-    model_id: Optional[str] = None
+    model_name: str | None = "Unknown Device, See repo issue tracker"
+    model_id: str | None = None
     protocol: DeviceProtocol = Field(default_factory=DeviceProtocol)
-    capabilities: Union[LightCapabilities, SwitchCapabilities, None] = None
-    characteristics: Optional[LightCharacteristics] = None
+    capabilities: LightCapabilities | SwitchCapabilities | None = None
+    characteristics: LightCharacteristics | None = None
 
     @property
     def model_string(self) -> str:
@@ -61,23 +61,19 @@ class DeviceTypeInfo:
         add_str = ""
         if self.model_id:
             add_str = self.model_id
-        if self.type == DeviceClassification.LIGHT:
-            if self.characteristics:
-                if self.characteristics.lumens:
-                    if add_str:
-                        add_str += " "
-                    add_str += f"{self.characteristics.lumens} lum"
-                if self.characteristics.min_kelvin:
-                    if (
-                        self.characteristics.min_kelvin
-                        and self.characteristics.max_kelvin
-                    ):
-                        kelvin_data = f"{self.characteristics.min_kelvin}-{self.characteristics.max_kelvin}K"
-                    else:
-                        kelvin_data = f"{self.characteristics.min_kelvin}K"
-                    if add_str:
-                        add_str += " "
-                    add_str += f"{kelvin_data}"
+        if self.type == DeviceClassification.LIGHT and self.characteristics:
+            if self.characteristics.lumens:
+                if add_str:
+                    add_str += " "
+                add_str += f"{self.characteristics.lumens} lum"
+            if self.characteristics.min_kelvin:
+                if self.characteristics.min_kelvin and self.characteristics.max_kelvin:
+                    kelvin_data = f"{self.characteristics.min_kelvin}-{self.characteristics.max_kelvin}K"
+                else:
+                    kelvin_data = f"{self.characteristics.min_kelvin}K"
+                if add_str:
+                    add_str += " "
+                add_str += f"{kelvin_data}"
         if add_str:
             add_str = f" [{add_str}]"
         return base_str + add_str
@@ -174,9 +170,7 @@ device_type_map = {
         type=DeviceClassification.LIGHT,
         model_name="C by GE Tunable White BR30 Bulb (BTLE only)",
         model_id="CLEDR309S2",
-        characteristics=LightCharacteristics(
-            lumens=800, min_kelvin=2000, max_kelvin=7000
-        ),
+        characteristics=LightCharacteristics(lumens=800, min_kelvin=2000, max_kelvin=7000),
         capabilities=LightCapabilities(tunable_white=True),
     ),
     28: DeviceTypeInfo(

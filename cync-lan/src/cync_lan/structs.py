@@ -8,7 +8,7 @@ import time
 from argparse import Namespace
 from collections.abc import Coroutine
 from enum import StrEnum
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, ClassVar
 
 import uvloop
 from pydantic import BaseModel, ConfigDict, computed_field
@@ -64,57 +64,37 @@ class GlobalObject:
     loop: uvloop.Loop | asyncio.AbstractEventLoop | None = None
     export_server: ExportServer | None = None
     cloud_api: CyncCloudAPI | None = None
-    tasks: list[asyncio.Task] = []
+    tasks: ClassVar[list[asyncio.Task]] = []
     env: GlobalObjEnv = GlobalObjEnv()
     uuid: uuid.UUID | None = None
     cli_args: Namespace | None = None
 
     _instance: GlobalObject | None = None
 
-    def __new__(cls, *args, **kwargs):
+    def __new__(cls, *_args, **_kwargs):
         if cls._instance is None:
             cls._instance = super().__new__(cls)
         return cls._instance
 
     def reload_env(self):
         """Re-evaluate environment variables to update constants."""
-        global CYNC_MQTT_HOST, CYNC_MQTT_PORT, CYNC_MQTT_USER, CYNC_MQTT_PASS
-        global CYNC_TOPIC, CYNC_HASS_TOPIC, CYNC_HASS_STATUS_TOPIC
-        global CYNC_HASS_BIRTH_MSG, CYNC_HASS_WILL_MSG, CYNC_SRV_HOST
-        global CYNC_SSL_CERT, CYNC_SSL_KEY, CYNC_ACCOUNT_USERNAME, CYNC_ACCOUNT_PASSWORD, PERSISTENT_BASE_DIR
-        global CYNC_CLOUD_RELAY_ENABLED, CYNC_CLOUD_FORWARD, CYNC_CLOUD_SERVER
-        global CYNC_CLOUD_PORT, CYNC_CLOUD_DEBUG_LOGGING, CYNC_CLOUD_DISABLE_SSL_VERIFY
+        global CYNC_MQTT_HOST, CYNC_MQTT_PORT, CYNC_MQTT_USER, CYNC_MQTT_PASS  # noqa: PLW0603
+        global CYNC_TOPIC, CYNC_HASS_TOPIC, CYNC_HASS_STATUS_TOPIC  # noqa: PLW0603
+        global CYNC_HASS_BIRTH_MSG, CYNC_HASS_WILL_MSG, CYNC_SRV_HOST  # noqa: PLW0603
+        global CYNC_SSL_CERT, CYNC_SSL_KEY, CYNC_ACCOUNT_USERNAME, CYNC_ACCOUNT_PASSWORD, PERSISTENT_BASE_DIR  # noqa: PLW0603
 
-        self.env.account_username = CYNC_ACCOUNT_USERNAME = os.environ.get(
-            "CYNC_ACCOUNT_USERNAME", None
-        )
-        self.env.account_password = CYNC_ACCOUNT_PASSWORD = os.environ.get(
-            "CYNC_ACCOUNT_PASSWORD", None
-        )
-        self.env.mqtt_host = CYNC_MQTT_HOST = os.environ.get(
-            "CYNC_MQTT_HOST", "homeassistant.local"
-        )
-        self.env.mqtt_port = CYNC_MQTT_PORT = int(
-            os.environ.get("CYNC_MQTT_PORT", 1883)
-        )
+        self.env.account_username = CYNC_ACCOUNT_USERNAME = os.environ.get("CYNC_ACCOUNT_USERNAME", None)
+        self.env.account_password = CYNC_ACCOUNT_PASSWORD = os.environ.get("CYNC_ACCOUNT_PASSWORD", None)
+        self.env.mqtt_host = CYNC_MQTT_HOST = os.environ.get("CYNC_MQTT_HOST", "homeassistant.local")
+        self.env.mqtt_port = CYNC_MQTT_PORT = int(os.environ.get("CYNC_MQTT_PORT", "1883"))
         self.env.mqtt_user = CYNC_MQTT_USER = os.environ.get("CYNC_MQTT_USER")
         self.env.mqtt_pass = CYNC_MQTT_PASS = os.environ.get("CYNC_MQTT_PASS")
         self.env.mqtt_topic = CYNC_TOPIC = os.environ.get("CYNC_TOPIC", "cync_lan_NEW")
-        self.env.mqtt_hass_topic = CYNC_HASS_TOPIC = os.environ.get(
-            "CYNC_HASS_TOPIC", "homeassistant"
-        )
-        self.env.mqtt_hass_status_topic = CYNC_HASS_STATUS_TOPIC = os.environ.get(
-            "CYNC_HASS_STATUS_TOPIC", "status"
-        )
-        self.env.mqtt_hass_birth_msg = CYNC_HASS_BIRTH_MSG = os.environ.get(
-            "CYNC_HASS_BIRTH_MSG", "online"
-        )
-        self.env.mqtt_hass_will_msg = CYNC_HASS_WILL_MSG = os.environ.get(
-            "CYNC_HASS_WILL_MSG", "offline"
-        )
-        self.env.cync_srv_host = CYNC_SRV_HOST = os.environ.get(
-            "CYNC_SRV_HOST", "0.0.0.0"
-        )
+        self.env.mqtt_hass_topic = CYNC_HASS_TOPIC = os.environ.get("CYNC_HASS_TOPIC", "homeassistant")
+        self.env.mqtt_hass_status_topic = CYNC_HASS_STATUS_TOPIC = os.environ.get("CYNC_HASS_STATUS_TOPIC", "status")
+        self.env.mqtt_hass_birth_msg = CYNC_HASS_BIRTH_MSG = os.environ.get("CYNC_HASS_BIRTH_MSG", "online")
+        self.env.mqtt_hass_will_msg = CYNC_HASS_WILL_MSG = os.environ.get("CYNC_HASS_WILL_MSG", "offline")
+        self.env.cync_srv_host = CYNC_SRV_HOST = os.environ.get("CYNC_SRV_HOST", "0.0.0.0")
         self.env.cync_srv_ssl_cert = CYNC_SSL_CERT = os.environ.get(
             "CYNC_SSL_CERT", f"{CYNC_BASE_DIR}/cync-lan/certs/cert.pem"
         )
@@ -190,16 +170,15 @@ class ControlMessageCallback:
     def __call__(self):
         if self.callback:
             return self.callback
-        else:
-            logger.debug(f"{self.lp} No callback set, skipping...")
-            return None
+        logger.debug("%s No callback set, skipping...", self.lp)
+        return None
 
 
 class Messages:
     control: dict[int, ControlMessageCallback]
 
     def __init__(self):
-        self.control = dict()
+        self.control = {}
 
 
 @dataclass
@@ -265,15 +244,15 @@ class DeviceStructs:
     class DeviceRequests:
         """These are packets devices send to the server"""
 
-        x23: tuple[int] = tuple([0x23])
-        xc3: tuple[int] = tuple([0xC3])
-        xd3: tuple[int] = tuple([0xD3])
-        x83: tuple[int] = tuple([0x83])
-        x73: tuple[int] = tuple([0x73])
-        x7b: tuple[int] = tuple([0x7B])
-        x43: tuple[int] = tuple([0x43])
-        xa3: tuple[int] = tuple([0xA3])
-        xab: tuple[int] = tuple([0xAB])
+        x23: tuple[int] = (0x23,)
+        xc3: tuple[int] = (0xC3,)
+        xd3: tuple[int] = (0xD3,)
+        x83: tuple[int] = (0x83,)
+        x73: tuple[int] = (0x73,)
+        x7b: tuple[int] = (0x7B,)
+        x43: tuple[int] = (0x43,)
+        xa3: tuple[int] = (0xA3,)
+        xab: tuple[int] = (0xAB,)
         headers: tuple[int] = (0x23, 0xC3, 0xD3, 0x83, 0x73, 0x7B, 0x43, 0xA3, 0xAB)
 
         def __iter__(self):
@@ -284,7 +263,7 @@ class DeviceStructs:
         """These are the packets the server sends to the device"""
 
         auth_ack: tuple[int] = (0x28, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00)
-        # TODO: figure out correct bytes for this
+        # NOTE: Connection acknowledgment bytes - may need protocol analysis to verify correctness
         connection_ack: tuple[int] = (
             0xC8,
             0x00,
@@ -351,9 +330,7 @@ class DeviceStructs:
             "00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 "
             "e3 4f 02 10"
         )
-        dlen = (
-            len(queue_id) + len(msg_id) + len(bytes.fromhex(hex_str.replace(" ", "")))
-        )
+        dlen = len(queue_id) + len(msg_id) + len(bytes.fromhex(hex_str.replace(" ", "")))
         _x += bytes([dlen])
         _x += queue_id
         _x += msg_id
