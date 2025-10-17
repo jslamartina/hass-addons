@@ -15,7 +15,9 @@ bash /usr/bin/devcontainer_bootstrap
 echo "Starting Home Assistant Supervisor..."
 # Start supervisor_run with script to provide TTY, logs to file only (no console output)
 # Pass WORKSPACE_DIRECTORY environment variable through sudo
-sudo WORKSPACE_DIRECTORY="${WORKSPACE_DIRECTORY}" script -qefc "sudo WORKSPACE_DIRECTORY=${WORKSPACE_DIRECTORY} ./supervisor.sh" /tmp/supervisor_run.log > /dev/null 2>&1 &
+# Use setsid to create a new session - supervisor won't be killed when post-start.sh exits
+cd "${CONTAINER_WORKSPACE_FOLDER}/.devcontainer"
+setsid sudo WORKSPACE_DIRECTORY="${WORKSPACE_DIRECTORY}" script -qefc "sudo WORKSPACE_DIRECTORY=${WORKSPACE_DIRECTORY} ${CONTAINER_WORKSPACE_FOLDER}/.devcontainer/supervisor.sh" /tmp/supervisor_run.log > /dev/null 2>&1 &
 # Tail the log file and filter out DEBUG lines for console display
 sleep 1
 tail -f /tmp/supervisor_run.log 2> /dev/null | grep --line-buffered -v "DEBUG" &
@@ -129,6 +131,9 @@ if [ $TOTAL_WAIT -ge $MAX_WAIT_SECONDS ]; then
   echo "  WARNING: Timeout waiting for supervisor components after ${TOTAL_WAIT}s"
 fi
 
+# Step 7.5: Note about add-on logging in devcontainer
+echo "Note: Add-on logs accessible via Docker commands (aliases available)"
+
 # Step 8: Restore full backup (includes addons, configuration, and all data)
 # COMMENTED OUT FOR TESTING: Start from fresh install instead of restoring backup
 # echo "Restoring full backup..."
@@ -216,19 +221,32 @@ fi
 # fi
 echo "  ⚠️  Backup restore is DISABLED - starting from fresh install"
 
-# Step 9: Add shell aliases
+# Step 9: Add shell aliases (Docker-based since journal-gatewayd unavailable)
 echo "Adding shell aliases..."
 cat >> ~/.zshrc << 'EOF'
 
-# CyncLAN addon helper aliases
-alias clear-cync-logs='docker ps --filter "name=cync" --no-trunc --format "{{.ID}}" | xargs -I {} sudo truncate -s 0 /var/lib/docker/containers/{}/{}-json.log && echo "CyncLAN logs cleared"'
-alias cync-logs='ha addon logs local_cync-lan'
-alias cync-logs-follow='ha addon logs local_cync-lan --follow'
+# Add-on log aliases (using Docker since journal-gatewayd unavailable in devcontainer)
+alias cync-logs='docker logs addon_local_cync-lan'
+alias cync-logs-follow='docker logs -f addon_local_cync-lan'
+alias cync-logs-tail='docker logs --tail 100 addon_local_cync-lan'
+alias emqx-logs='docker logs addon_a0d7b954_emqx'
+alias emqx-logs-follow='docker logs -f addon_a0d7b954_emqx'
+alias emqx-logs-tail='docker logs --tail 100 addon_a0d7b954_emqx'
+
+# Add-on control aliases
 alias cync-restart='ha addon restart local_cync-lan'
 alias cync-stop='ha addon stop local_cync-lan'
 alias cync-start='ha addon start local_cync-lan'
+alias emqx-restart='ha addon restart a0d7b954_emqx'
+alias emqx-stop='ha addon stop a0d7b954_emqx'
+alias emqx-start='ha addon start a0d7b954_emqx'
+
+# Utility aliases
+alias clear-cync-logs='docker ps --filter "name=cync" --no-trunc --format "{{.ID}}" | xargs -I {} sudo truncate -s 0 /var/lib/docker/containers/{}/{}-json.log && echo "CyncLAN logs cleared"'
+alias addon-logs='docker ps --filter "name=addon" --format "{{.Names}}" | fzf --preview "docker logs --tail 50 {}"'
 EOF
-echo "  Aliases added to ~/.zshrc"
+echo "  ✅ Aliases added to ~/.zshrc"
+echo "     Use: cync-logs, cync-logs-follow, emqx-logs, etc."
 
 # Step 10: Clean up old test results (older than 3 days)
 echo "Cleaning up old test results..."
@@ -249,6 +267,17 @@ if [ -d "$TEST_RESULTS_DIR" ]; then
   echo "  ✅ Cleanup complete: $REMAINING_RUNS test run folders, $REMAINING_SCREENSHOTS screenshot files remaining"
 else
   echo "  ⚠️  Test results directory not found: $TEST_RESULTS_DIR"
+fi
+
+# Step 11: Optional automated fresh HA setup
+# Set SETUP_FRESH_HA=true to automatically run the setup script
+if [ "${SETUP_FRESH_HA:-false}" = "true" ]; then
+  echo "Running automated fresh HA setup..."
+  bash "${CONTAINER_WORKSPACE_FOLDER}/scripts/setup-fresh-ha.sh"
+else
+  echo "  ⚠️  Automated fresh HA setup is DISABLED"
+  echo "  💡 To enable: Set SETUP_FRESH_HA=true in devcontainer.json or run manually:"
+  echo "     ./scripts/setup-fresh-ha.sh"
 fi
 
 echo "========================================="

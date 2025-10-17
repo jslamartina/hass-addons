@@ -82,7 +82,8 @@ class CyncLAN:
         lp = f"{self.lp}init:"
         check_for_uuid()
         asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
-        g.loop = asyncio.get_event_loop()
+        g.loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(g.loop)
         logger.debug(
             f"{lp} CyncLAN (version: {CYNC_VERSION}) stack initializing, "
             f"setting up event loop signal handlers for SIGINT & SIGTERM..."

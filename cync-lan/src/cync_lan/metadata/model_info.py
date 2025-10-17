@@ -546,6 +546,14 @@ device_type_map = {
         protocol=DeviceProtocol(TCP=True),
         capabilities=LightCapabilities(tunable_white=True, color=True),
     ),
+    171: DeviceTypeInfo(
+        type=DeviceClassification.LIGHT,
+        model_name="Cync Full Color Direct Connect A19 Bulb",
+        model_id="CLEDA1921C4",
+        characteristics=LightCharacteristics(lumens=800, min_kelvin=2000, max_kelvin=7000),
+        protocol=DeviceProtocol(TCP=True),
+        capabilities=LightCapabilities(tunable_white=True, color=True),
+    ),
     224: DeviceTypeInfo(
         type=DeviceClassification.THERMOSTAT,
         model_name="Thermostat",

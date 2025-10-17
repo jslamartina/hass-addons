@@ -3,6 +3,7 @@ import json
 import logging
 import random
 import re
+import unicodedata
 from collections.abc import Coroutine
 from json import JSONDecodeError
 from typing import Optional, Union
@@ -20,6 +21,25 @@ g = GlobalObject()
 bridge_device_reg_struct = CYNC_BRIDGE_DEVICE_REGISTRY_CONF
 # Log all loggers in the logger manager
 # logging.getLogger().manager.loggerDict.keys()
+
+
+def slugify(text: str) -> str:
+    """
+    Convert text to a slug suitable for entity IDs.
+    E.g., 'Hallway Lights' -> 'hallway_lights'
+    """
+    # Normalize unicode characters
+    text = unicodedata.normalize("NFKD", text)
+    # Remove non-ASCII characters
+    text = text.encode("ascii", "ignore").decode("ascii")
+    # Convert to lowercase
+    text = text.lower()
+    # Replace spaces and special characters with underscores
+    text = re.sub(r"[^\w\s-]", "", text)
+    text = re.sub(r"[-\s]+", "_", text)
+    # Remove leading/trailing underscores
+    text = text.strip("_")
+    return text
 
 
 class MQTTClient:
@@ -595,6 +615,14 @@ class MQTTClient:
         if device.is_plug:
             mqtt_dev_state = power_status.encode()  # send ON or OFF if plug
         else:
+            # Add color_mode for lights based on capabilities
+            if device.is_light or not device.is_switch:
+                if device.supports_temperature:
+                    mqtt_dev_state["color_mode"] = "color_temp"
+                elif device.supports_rgb:
+                    mqtt_dev_state["color_mode"] = "rgb"
+                else:
+                    mqtt_dev_state["color_mode"] = "brightness"
             mqtt_dev_state = json.dumps(mqtt_dev_state).encode()  # send JSON
         return await self.send_device_status(device, mqtt_dev_state)
 
@@ -606,6 +634,13 @@ class MQTTClient:
         if bri == 0:
             state = "OFF"
         mqtt_dev_state = {"state": state, "brightness": bri}
+        # Add color_mode based on device capabilities
+        if device.supports_temperature:
+            mqtt_dev_state["color_mode"] = "color_temp"
+        elif device.supports_rgb:
+            mqtt_dev_state["color_mode"] = "rgb"
+        else:
+            mqtt_dev_state["color_mode"] = "brightness"
         return await self.send_device_status(
             device, json.dumps(mqtt_dev_state).encode()
         )
@@ -709,6 +744,14 @@ class MQTTClient:
         if temperature is not None:
             group_state["color_temp"] = self.cync2kelvin(temperature)
             group_state["color_mode"] = "color_temp"
+        elif brightness is not None or state is not None:
+            # If no color temp specified, set color_mode based on group capabilities
+            if group.supports_temperature:
+                group_state["color_mode"] = "color_temp"
+            elif group.supports_rgb:
+                group_state["color_mode"] = "rgb"
+            else:
+                group_state["color_mode"] = "brightness"
 
         if not group_state:
             return
@@ -752,6 +795,8 @@ class MQTTClient:
             if device_status.brightness is not None:
                 mqtt_dev_state["brightness"] = device_status.brightness
 
+            # Determine and set color_mode
+            color_mode_set = False
             if device_status.temperature is not None:
                 if device.supports_rgb and (
                     any(
@@ -769,6 +814,7 @@ class MQTTClient:
                         "g": device_status.green,
                         "b": device_status.blue,
                     }
+                    color_mode_set = True
                 elif device.supports_temperature and (
                     0 <= device_status.temperature <= 100
                 ):
@@ -776,6 +822,17 @@ class MQTTClient:
                     mqtt_dev_state["color_temp"] = self.cync2kelvin(
                         device_status.temperature
                     )
+                    color_mode_set = True
+
+            # If color_mode not set yet, add default based on capabilities
+            if not color_mode_set:
+                if device.supports_temperature:
+                    mqtt_dev_state["color_mode"] = "color_temp"
+                elif device.supports_rgb:
+                    mqtt_dev_state["color_mode"] = "rgb"
+                else:
+                    mqtt_dev_state["color_mode"] = "brightness"
+
             mqtt_dev_state = json.dumps(mqtt_dev_state).encode()
 
         return await self.send_device_status(device, mqtt_dev_state, from_pkt=from_pkt)
@@ -834,7 +891,11 @@ class MQTTClient:
         try:
             device_uuid = device.hass_id
             unique_id = f"{device.home_id}_{device.id}"
-            obj_id = f"cync_lan_{unique_id}"
+            # Generate entity ID from device name (e.g., "Hallway Light" -> "hallway_light")
+            entity_slug = slugify(device.name) if device.name else f"device_{device.id}"
+            # Determine platform for default_entity_id
+            platform = "switch" if device.is_switch else "light"
+            default_entity_id = f"{platform}.{entity_slug}"
             dev_fw_version = str(device.version)
             ver_str = "Unknown"
             fw_len = len(dev_fw_version)
@@ -908,7 +969,7 @@ class MQTTClient:
                 device_registry_struct["suggested_area"] = suggested_area
 
             entity_registry_struct = {
-                "object_id": obj_id,
+                "default_entity_id": default_entity_id,
                 "name": None,
                 "command_topic": f"{self.topic}/set/{device_uuid}",
                 "state_topic": f"{self.topic}/status/{device_uuid}",
@@ -970,21 +1031,22 @@ class MQTTClient:
                 entity_registry_struct.update(
                     {"brightness": True, "brightness_scale": 100}
                 )
-                if device.supports_temperature or device.supports_rgb:
-                    entity_registry_struct["supported_color_modes"] = []
-                    if device.supports_temperature:
-                        entity_registry_struct["supported_color_modes"].append(
-                            "color_temp"
-                        )
-                        entity_registry_struct["color_temp_kelvin"] = True
-                        entity_registry_struct["min_kelvin"] = CYNC_MINK
-                        entity_registry_struct["max_kelvin"] = CYNC_MAXK
-                    if device.supports_rgb:
-                        entity_registry_struct["supported_color_modes"].append("rgb")
-                        entity_registry_struct["effect"] = True
-                        entity_registry_struct["effect_list"] = list(
-                            FACTORY_EFFECTS_BYTES.keys()
-                        )
+                # ALL lights with brightness must declare color modes
+                entity_registry_struct["supported_color_modes"] = []
+                if device.supports_temperature:
+                    entity_registry_struct["supported_color_modes"].append("color_temp")
+                    entity_registry_struct["color_temp_kelvin"] = True
+                    entity_registry_struct["min_kelvin"] = CYNC_MINK
+                    entity_registry_struct["max_kelvin"] = CYNC_MAXK
+                if device.supports_rgb:
+                    entity_registry_struct["supported_color_modes"].append("rgb")
+                    entity_registry_struct["effect"] = True
+                    entity_registry_struct["effect_list"] = list(
+                        FACTORY_EFFECTS_BYTES.keys()
+                    )
+                # If no color support, default to brightness-only mode
+                if not entity_registry_struct["supported_color_modes"]:
+                    entity_registry_struct["supported_color_modes"] = ["brightness"]
             elif dev_type == "switch":
                 # Switch entities don't need additional configuration beyond the base entity_registry_struct
                 # The base struct already includes command_topic, state_topic, state_on, state_off, etc.
@@ -1054,7 +1116,13 @@ class MQTTClient:
                 for device in g.ncync_server.devices.values():
                     device_uuid = device.hass_id
                     unique_id = f"{device.home_id}_{device.id}"
-                    obj_id = f"cync_lan_{unique_id}"
+                    # Generate entity ID from device name (e.g., "Hallway Light" -> "hallway_light")
+                    entity_slug = (
+                        slugify(device.name) if device.name else f"device_{device.id}"
+                    )
+                    # Determine platform for default_entity_id
+                    platform = "switch" if device.is_switch else "light"
+                    default_entity_id = f"{platform}.{entity_slug}"
                     dev_fw_version = str(device.version)
                     ver_str = "Unknown"
                     fw_len = len(dev_fw_version)
@@ -1126,7 +1194,7 @@ class MQTTClient:
                         device_registry_struct["suggested_area"] = suggested_area
 
                     entity_registry_struct = {
-                        "object_id": obj_id,
+                        "default_entity_id": default_entity_id,
                         # set to None if only device name is relevant, this sets entity name
                         "name": None,
                         "command_topic": f"{self.topic}/set/{device_uuid}",
@@ -1187,23 +1255,28 @@ class MQTTClient:
                         entity_registry_struct.update(
                             {"brightness": True, "brightness_scale": 100}
                         )
-                        if device.supports_temperature or device.supports_rgb:
-                            entity_registry_struct["supported_color_modes"] = []
-                            if device.supports_temperature:
-                                entity_registry_struct["supported_color_modes"].append(
-                                    "color_temp"
-                                )
-                                entity_registry_struct["color_temp_kelvin"] = True
-                                entity_registry_struct["min_kelvin"] = CYNC_MINK
-                                entity_registry_struct["max_kelvin"] = CYNC_MAXK
-                            if device.supports_rgb:
-                                entity_registry_struct["supported_color_modes"].append(
-                                    "rgb"
-                                )
-                                entity_registry_struct["effect"] = True
-                                entity_registry_struct["effect_list"] = list(
-                                    FACTORY_EFFECTS_BYTES.keys()
-                                )
+                        # ALL lights with brightness must declare color modes
+                        entity_registry_struct["supported_color_modes"] = []
+                        if device.supports_temperature:
+                            entity_registry_struct["supported_color_modes"].append(
+                                "color_temp"
+                            )
+                            entity_registry_struct["color_temp_kelvin"] = True
+                            entity_registry_struct["min_kelvin"] = CYNC_MINK
+                            entity_registry_struct["max_kelvin"] = CYNC_MAXK
+                        if device.supports_rgb:
+                            entity_registry_struct["supported_color_modes"].append(
+                                "rgb"
+                            )
+                            entity_registry_struct["effect"] = True
+                            entity_registry_struct["effect_list"] = list(
+                                FACTORY_EFFECTS_BYTES.keys()
+                            )
+                        # If no color support, default to brightness-only mode
+                        if not entity_registry_struct["supported_color_modes"]:
+                            entity_registry_struct["supported_color_modes"] = [
+                                "brightness"
+                            ]
                     elif dev_type == "switch":
                         # Switch entities don't need additional configuration beyond the base entity_registry_struct
                         # The base struct already includes command_topic, state_topic, state_on, state_off, etc.
@@ -1252,7 +1325,11 @@ class MQTTClient:
                 for group in subgroups:
                     group_uuid = group.hass_id
                     unique_id = f"{group.home_id}_group_{group.id}"
-                    obj_id = f"cync_lan_group_{unique_id}"
+                    # Generate entity ID from group name (e.g., "Hallway Lights" -> "light.hallway_lights")
+                    entity_slug = (
+                        slugify(group.name) if group.name else f"group_{group.id}"
+                    )
+                    default_entity_id = f"light.{entity_slug}"
 
                     device_registry_struct = {
                         "identifiers": [unique_id],
@@ -1263,7 +1340,7 @@ class MQTTClient:
                     }
 
                     entity_registry_struct = {
-                        "object_id": obj_id,
+                        "default_entity_id": default_entity_id,
                         "name": None,
                         "command_topic": f"{self.topic}/set/{group_uuid}",
                         "state_topic": f"{self.topic}/status/{group_uuid}",
@@ -1284,20 +1361,20 @@ class MQTTClient:
                         {"brightness": True, "brightness_scale": 100}
                     )
 
-                    # Add color support if any member supports it (exactly like devices)
-                    if group.supports_temperature or group.supports_rgb:
-                        entity_registry_struct["supported_color_modes"] = []
-                        if group.supports_temperature:
-                            entity_registry_struct["supported_color_modes"].append(
-                                "color_temp"
-                            )
-                            entity_registry_struct["color_temp_kelvin"] = True
-                            entity_registry_struct["min_kelvin"] = CYNC_MINK
-                            entity_registry_struct["max_kelvin"] = CYNC_MAXK
-                        if group.supports_rgb:
-                            entity_registry_struct["supported_color_modes"].append(
-                                "rgb"
-                            )
+                    # Add color support - ALL lights with brightness must declare color modes
+                    entity_registry_struct["supported_color_modes"] = []
+                    if group.supports_temperature:
+                        entity_registry_struct["supported_color_modes"].append(
+                            "color_temp"
+                        )
+                        entity_registry_struct["color_temp_kelvin"] = True
+                        entity_registry_struct["min_kelvin"] = CYNC_MINK
+                        entity_registry_struct["max_kelvin"] = CYNC_MAXK
+                    if group.supports_rgb:
+                        entity_registry_struct["supported_color_modes"].append("rgb")
+                    # If no color support, default to brightness-only mode
+                    if not entity_registry_struct["supported_color_modes"]:
+                        entity_registry_struct["supported_color_modes"] = ["brightness"]
 
                     tpc = tpc_str_template.format(self.ha_topic, "light", group_uuid)
                     try:

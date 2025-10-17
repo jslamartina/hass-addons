@@ -745,6 +745,12 @@ class NCyncServer:
         # Branch based on relay mode
         if self.cloud_relay_enabled:
             # Cloud relay mode - use CloudRelayConnection
+            # TODO: Add support for local commands in relay mode by tracking bridge devices
+            #       even when in relay mode. This would allow bidirectional control:
+            #       - Commands from HA -> intercepted and sent via relay
+            #       - Cloud commands -> forwarded to devices
+            #       - Status updates -> sent to both HA and cloud
+            #       Current limitation: tcp_devices only populated in LAN-only mode
             logger.info(f"{lp} New connection in RELAY mode")
             try:
                 relay = CloudRelayConnection(
