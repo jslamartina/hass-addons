@@ -13,11 +13,36 @@ Before starting, you must set up **DNS redirection** to route these domains to y
 
 > **Note:** You'll still use the Cync app to add new devices. After adding devices, export a new config and restart this add-on.
 
+## 🆕 New in v0.0.4.4 (WIP)
+
+### Cloud Relay Mode
+Optional MITM proxy functionality for packet inspection and debugging:
+- **Transparent proxy** between devices and cloud
+- **Packet inspection** and real-time logging
+- **Multiple operating modes** for different use cases
+- **File-based packet injection** for testing
+
+**Configuration:**
+```yaml
+cloud_relay:
+  enabled: false                      # Enable relay mode
+  forward_to_cloud: true              # Forward to cloud
+  debug_packet_logging: false         # Verbose logs
+  disable_ssl_verification: false     # Debug mode only
+```
+
+**[📖 Complete Cloud Relay Documentation →](https://github.com/jslamartina/hass-addons/blob/dev/docs/user/cloud-relay.md)**
+
+### Enhanced Features
+- **Name-based entity IDs** instead of numeric IDs
+- **Color mode compliance** for Home Assistant 2025.3+
+- **Smart area grouping** based on device names
+- **Improved device metadata** with manufacturer and model info
 
 ## First Run Steps
+
 >[!IMPORTANT]
-> Before you can manage your devices locally, you must export your Cync device list from the Cync cloud API
-> using the add-on's ingress page.
+> Before you can manage your devices locally, you must export your Cync device list from the Cync cloud API using the add-on's ingress page.
 
 1. Configure the Cync account username, account password and MQTT broker connection details in the add-on configuration.
 2. Start the add-on
@@ -52,10 +77,10 @@ Visit the CyncLAN 'ingress' webpage (from the sidebar, or from the add-on page `
 - Click **Download Config File** to save it
 - Restart the add-on to load the new configuration
 
-
 ## 📚 Additional Documentation
 
 - **[Tips & Best Practices](https://github.com/jslamartina/hass-addons/blob/dev/docs/user/tips.md)** - Optimize your setup
 - **[Troubleshooting Guide](https://github.com/jslamartina/hass-addons/blob/dev/docs/user/troubleshooting.md)** - Common issues and solutions
 - **[Known Devices](https://github.com/jslamartina/hass-addons/blob/dev/docs/user/known-devices.md)** - Device compatibility list
 - **[Cloud Relay Mode](https://github.com/jslamartina/hass-addons/blob/dev/docs/user/cloud-relay.md)** - Advanced packet inspection features
+- **[Complete Documentation Index](https://github.com/jslamartina/hass-addons/blob/dev/docs/README.md)** - All documentation
