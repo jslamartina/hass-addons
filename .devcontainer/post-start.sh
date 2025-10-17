@@ -14,7 +14,8 @@ bash /usr/bin/devcontainer_bootstrap
 # Step 4: Start Home Assistant Supervisor (this will start Docker internally)
 echo "Starting Home Assistant Supervisor..."
 # Start supervisor_run with script to provide TTY, logs to file only (no console output)
-sudo script -qefc 'sudo supervisor_run' /tmp/supervisor_run.log > /dev/null 2>&1 &
+# Pass WORKSPACE_DIRECTORY environment variable through sudo
+sudo WORKSPACE_DIRECTORY="${WORKSPACE_DIRECTORY}" script -qefc "sudo WORKSPACE_DIRECTORY=${WORKSPACE_DIRECTORY} ./supervisor.sh" /tmp/supervisor_run.log > /dev/null 2>&1 &
 # Tail the log file and filter out DEBUG lines for console display
 sleep 1
 tail -f /tmp/supervisor_run.log 2> /dev/null | grep --line-buffered -v "DEBUG" &
@@ -32,28 +33,28 @@ done
 echo "Supervisor is ready!"
 
 # Step 5: Pin Docker CLI version (now that Docker is running from supervisor_run)
-echo "Checking Docker CLI version..."
-DOCKER_VERSION=$(docker version --format '{{.Server.Version}}' 2> /dev/null || echo '0.0.0')
-DOCKER_MAJOR=$(echo "$DOCKER_VERSION" | cut -d. -f1)
+# echo "Checking Docker CLI version..."
+# DOCKER_VERSION=$(docker version --format '{{.Server.Version}}' 2> /dev/null || echo '0.0.0')
+# DOCKER_MAJOR=$(echo "$DOCKER_VERSION" | cut -d. -f1)
 
-echo "  Docker version: ${DOCKER_VERSION} (major: ${DOCKER_MAJOR})"
+# echo "  Docker version: ${DOCKER_VERSION} (major: ${DOCKER_MAJOR})"
 
-if [ "$DOCKER_MAJOR" != "0" ]; then
-  # Check if the specific version CLI image already exists
-  if docker image inspect "docker:${DOCKER_VERSION}-cli" > /dev/null 2>&1; then
-    echo "  docker:${DOCKER_VERSION}-cli already exists, skipping..."
-  else
-    echo "  Pulling docker:${DOCKER_MAJOR}-cli..."
-    docker pull "docker:${DOCKER_MAJOR}-cli"
+# if [ "$DOCKER_MAJOR" != "0" ]; then
+#   # Check if the specific version CLI image already exists
+#   if docker image inspect "docker:${DOCKER_VERSION}-cli" > /dev/null 2>&1; then
+#     echo "  docker:${DOCKER_VERSION}-cli already exists, skipping..."
+#   else
+#     echo "  Pulling docker:${DOCKER_MAJOR}-cli..."
+#     docker pull "docker:${DOCKER_MAJOR}-cli"
 
-    echo "  Tagging as docker:${DOCKER_VERSION}-cli..."
-    docker tag "docker:${DOCKER_MAJOR}-cli" "docker:${DOCKER_VERSION}-cli"
+#     echo "  Tagging as docker:${DOCKER_VERSION}-cli..."
+#     docker tag "docker:${DOCKER_MAJOR}-cli" "docker:${DOCKER_VERSION}-cli"
 
-    echo "  Successfully tagged docker:${DOCKER_VERSION}-cli"
-  fi
-else
-  echo "  WARNING: Failed to get docker version"
-fi
+#     echo "  Successfully tagged docker:${DOCKER_VERSION}-cli"
+#   fi
+# else
+#   echo "  WARNING: Failed to get docker version"
+# fi
 
 # Step 6: Extract API token (with retry logic)
 echo "Extracting API token..."

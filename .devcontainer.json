@@ -3,7 +3,7 @@
   "image": "ghcr.io/home-assistant/devcontainer:2-addons",
   "features": {
     "ghcr.io/devcontainers/features/python:1": {
-      "version": "3.12",
+      "version": "3.13",
       "installTools": true
     },
     "ghcr.io/devcontainers/features/node:1": {
@@ -23,8 +23,6 @@
   "postStartCommand": "timeout 600 bash ${containerWorkspaceFolder}/.devcontainer/post-start.sh || true",
   "postCreateCommand": "bash ${containerWorkspaceFolder}/.devcontainer/post-create.sh",
   "runArgs": [
-    "-e",
-    "GIT_EDITOR=code --wait",
     "--privileged",
     "-p",
     "8123:8123",
@@ -39,11 +37,10 @@
   "containerEnv": {
     "WORKSPACE_NAME": "hass-cync-dev",
     "WORKSPACE_DIRECTORY": "${containerWorkspaceFolder}",
-    "CONTAINER_WORKSPACE_FOLDER": "${containerWorkspaceFolder}"
+    "CONTAINER_WORKSPACE_FOLDER": "${containerWorkspaceFolder}",
+    "GIT_EDITOR": "code --wait"
   },
-
-  "workspaceFolder": "/mnt/supervisor/addons/local/${localWorkspaceFolderBasename}",
-  "workspaceMount": "source=${localWorkspaceFolder},target=${containerWorkspaceFolder},type=bind,consistency=default",
+  "remoteUser": "root",
   "customizations": {
     "vscode": {
       "extensions": [
@@ -51,6 +48,7 @@
         "esbenp.prettier-vscode",
         "ms-vscode.vscode-json",
         "ms-python.python",
+        "ms-python.pylint",
         "ms-python.vscode-pylance",
         "ms-python.black-formatter",
         "charliermarsh.ruff",
@@ -67,11 +65,12 @@
       ],
       "settings": {
         "terminal.integrated.scrollback": 10000,
-        "terminal.integrated.defaultProfile.linux": "fish",
         "terminal.integrated.profiles.linux": {
-          "fish": { "path": "/usr/bin/fish" }, // verify with `command -v fish`
-          "nu": { "path": "/usr/bin/nu" } // verify with `command -v nu`
+          "zsh": {
+            "path": "/usr/bin/zsh"
+          }
         },
+        "terminal.integrated.defaultProfile.linux": "zsh",
         "remote.autoForwardPorts": true,
         "remote.autoForwardPortsSource": "hybrid",
         "editor.formatOnPaste": false,
@@ -98,19 +97,11 @@
         "prettier.requireConfig": false,
         "prettier.documentSelectors": ["**/*.sh"],
         "prettier.enable": true,
-        "python.defaultInterpreterPath": "/usr/local/bin/python3",
-        "python.analysis.extraPaths": [
-          "/mnt/supervisor/addons/local/cync-lan",
-          "${containerWorkspaceFolder}"
-        ],
+        "python.defaultInterpreterPath": "/usr/local/python/current/bin/python",
+        "python.analysis.extraPaths": ["${containerWorkspaceFolder}"],
         "python.analysis.typeCheckingMode": "basic",
         "ruff.organizeImports": true
       }
     }
-  },
-  "mounts": [
-    "type=volume,target=/var/lib/docker",
-    "type=volume,target=/mnt/supervisor",
-    "source=${localWorkspaceFolder}/../cync-lan,target=/mnt/supervisor/addons/local/cync-lan,type=bind,consistency=cached"
-  ]
+  }
 }

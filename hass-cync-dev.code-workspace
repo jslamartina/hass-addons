@@ -1,8 +1,8 @@
 {
   "folders": [
     {
-      "name": "addons-local",
-      "path": "/mnt/supervisor/addons/local",
+      "name": "hass-addons",
+      "path": "/mnt/supervisor/addons/local/hass-addons",
     },
   ],
   "settings": {
@@ -18,36 +18,6 @@
     "[markdown_latex_combined]": {
       "editor.defaultFormatter": "yzhang.markdown-all-in-one",
     },
-
-    // Python
-    "ruff.organizeImports": true,
-    "python.defaultInterpreterPath": "/usr/local/bin/python",
-    "python.analysis.extraPaths": [
-      "/mnt/supervisor/addons/local/hass-addons/src",
-    ],
-
-    // Cursor indexing — index hass-addons (with integrated cync-lan) and common source/doc types
-    "cursor.indexing.enableSemanticSearch": true,
-    "cursor.indexing.scanAllFiles": false,
-    "cursor.indexing.includePatterns": [
-      "hass-addons/**",
-      "**/*.py",
-      "**/*.js",
-      "**/*.ts",
-      "**/*.md",
-      "**/*.yaml",
-      "**/*.yml",
-      "**/*.json",
-      "**/*.sh",
-    ],
-    "cursor.indexing.excludePatterns": [
-      "**/node_modules/**",
-      "**/__pycache__/**",
-      "**/.pytest_cache/**",
-      "**/.mypy_cache/**",
-      "**/test-results/**",
-      "**/.git/**",
-    ],
 
     // VS Code/Cursor housekeeping
     "files.exclude": {
@@ -68,24 +38,5 @@
     "terminal.integrated.allowChords": false,
     "terminal.integrated.sendKeybindingsToShell": true,
     "terminal.integrated.scrollback": 10000,
-    "terminal.integrated.defaultProfile.linux": "fish",
-    "terminal.integrated.profiles.linux": {
-      "fish": { "path": "/usr/bin/fish" },
-      "nu": { "path": "/usr/local/bin/nu" },
-    },
-  },
-  "extensions": {
-    "recommendations": [
-      "ms-python.python",
-      "ms-python.vscode-pylance",
-      "ms-python.black-formatter",
-      "charliermarsh.ruff",
-      "ms-python.isort",
-      "timonwong.shellcheck",
-      "esbenp.prettier-vscode",
-      "ms-vscode.vscode-json",
-      "redhat.vscode-yaml",
-      "ms-azuretools.vscode-docker",
-    ],
   },
 }
