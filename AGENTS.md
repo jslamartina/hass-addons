@@ -495,10 +495,12 @@ This approach puts secrets directly in `mcp.json`, which should then be gitignor
 - Cloud backup (devices still work if relay goes down)
 - LAN-only operation (no cloud forwarding)
 
+**⚠️ Current Limitation:** Cloud relay mode is **read-only** for monitoring and inspection. Commands from Home Assistant don't work in relay mode (you'll see `No TCP bridges available!` errors). Disable relay mode for local control.
+
 **Configuration** (`config.yaml`):
 ```yaml
 cloud_relay:
-  enabled: false                      # Enable relay mode
+  enabled: false                      # Enable relay mode (disables commands)
   forward_to_cloud: true              # Forward packets to cloud (false = LAN-only)
   cloud_server: "35.196.85.236"       # Cync cloud server IP
   cloud_port: 23779                   # Cync cloud port
@@ -511,6 +513,8 @@ cloud_relay:
 - **Debugging**: Test device behavior while observing cloud interactions
 - **LAN-only with inspection**: Set `forward_to_cloud: false` to block cloud access while logging packets
 - **Cloud backup**: Keep `forward_to_cloud: true` so devices work even if relay fails
+
+**Future Enhancement:** We plan to add bidirectional command support in relay mode, allowing both local control AND cloud forwarding/inspection simultaneously.
 
 **Security Warning**: If `disable_ssl_verification: true`, the add-on operates in DEBUG MODE with no SSL security. Only use on trusted local networks for development.
 

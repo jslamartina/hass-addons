@@ -75,6 +75,15 @@ function cleanup_docker() {
 
 function run_supervisor() {
   mkdir -p /tmp/supervisor_data
+
+  # Make /tmp/supervisor_data a shared mount for mount propagation
+  # First bind mount it to itself to make it a mount point
+  if ! mount | grep -q "/tmp/supervisor_data"; then
+    mount --bind /tmp/supervisor_data /tmp/supervisor_data
+    mount --make-shared /tmp/supervisor_data
+    echo "Configured /tmp/supervisor_data as shared mount"
+  fi
+
   docker run --rm --privileged \
     --name hassio_supervisor \
     --privileged \
@@ -83,13 +92,13 @@ function run_supervisor() {
     -v /run/docker.sock:/run/docker.sock:rw \
     -v /run/dbus:/run/dbus:ro \
     -v /run/udev:/run/udev:ro \
-    -v /tmp/supervisor_data:/data:rw \
+    -v /tmp/supervisor_data:/data:rw,rshared \
     -v "$WORKSPACE_DIRECTORY":/data/addons/local:rw \
     -v /etc/machine-id:/etc/machine-id:ro \
     -e SUPERVISOR_SHARE="/tmp/supervisor_data" \
     -e SUPERVISOR_NAME=hassio_supervisor \
     -e SUPERVISOR_DEV=1 \
-    -e SUPERVISOR_MACHINE="qemux86-64" \
+    -e SUPERVISOR_MACHINE="qemuarm-64" \
     "ghcr.io/home-assistant/aarch64-hassio-supervisor:${SUPERVISOR_VERSION}"
 }
 

@@ -8,6 +8,123 @@ These scripts use the **Home Assistant Supervisor API** to programmatically conf
 
 ## Scripts
 
+### `setup-fresh-ha.sh`
+
+Automated setup script for fresh Home Assistant installations.
+
+**Purpose:** Automates the complete onboarding process, including user creation, EMQX MQTT broker installation, and CyncLAN add-on setup with test credentials.
+
+**Usage:**
+```bash
+./setup-fresh-ha.sh
+```
+
+**What It Does:**
+
+1. **User Onboarding**
+   - Checks if Home Assistant needs onboarding
+   - Creates first user from `.hass-credentials` file
+   - Completes onboarding process
+
+2. **EMQX Installation**
+   - Adds hassio-addons repository
+   - Installs EMQX MQTT broker add-on
+   - Configures EMQX with credentials
+   - Starts EMQX service
+
+3. **CyncLAN Installation**
+   - Installs local CyncLAN add-on
+   - Configures with test Cync credentials (placeholder)
+   - Configures MQTT connection to EMQX
+   - Starts CyncLAN service
+
+4. **Verification**
+   - Checks all services are running
+   - Provides next steps for manual configuration
+
+**Environment Variables:**
+
+| Variable           | Description              | Default                           |
+| ------------------ | ------------------------ | --------------------------------- |
+| `HA_URL`           | Home Assistant URL       | `http://homeassistant.local:8123` |
+| `CREDENTIALS_FILE` | Path to credentials file | `../hass-credentials.env`         |
+
+**Examples:**
+
+```bash
+# Run with defaults
+./setup-fresh-ha.sh
+
+# Custom HA URL
+HA_URL=http://192.168.1.100:8123 ./setup-fresh-ha.sh
+
+# Custom credentials file
+CREDENTIALS_FILE=/path/to/creds.env ./setup-fresh-ha.sh
+```
+
+**Output Example:**
+
+```
+[setup-fresh-ha.sh] Loading credentials from /workspaces/hass-addons/hass-credentials.env...
+[setup-fresh-ha.sh] ✅ Credentials loaded (username: dev)
+[setup-fresh-ha.sh] Waiting for Home Assistant to be ready...
+[setup-fresh-ha.sh] ✅ Home Assistant API is responsive
+[setup-fresh-ha.sh] Creating first user: dev...
+[setup-fresh-ha.sh] ✅ User created successfully
+[setup-fresh-ha.sh] ✅ Onboarding completed
+[setup-fresh-ha.sh] ✅ EMQX installed successfully
+[setup-fresh-ha.sh] ✅ EMQX is running
+[setup-fresh-ha.sh] ✅ CyncLAN installed successfully
+[setup-fresh-ha.sh] ✅ CyncLAN is running
+[setup-fresh-ha.sh] ✅ Setup completed successfully!
+
+Next steps:
+  1. Log in to Home Assistant at http://homeassistant.local:8123
+     Username: dev
+     Password: (from /workspaces/hass-addons/hass-credentials.env)
+
+  2. Access EMQX WebUI via Add-ons page to test MQTT
+
+  3. Update CyncLAN configuration with your real Cync credentials:
+     - account_username: Your Cync email
+     - account_password: Your Cync password
+
+  4. Restart CyncLAN add-on after updating credentials
+```
+
+**When to Use:**
+
+- ✅ First-time devcontainer setup
+- ✅ Resetting to fresh HA install
+- ✅ CI/CD test environment initialization
+- ✅ Automated demo setups
+
+**Idempotency:**
+
+The script is safe to re-run:
+- Skips onboarding if already complete
+- Skips add-on installation if already installed
+- Updates configuration if needed
+- Always safe to run multiple times
+
+**Requirements:**
+
+- Fresh Home Assistant instance (or onboarded)
+- `.hass-credentials.env` file with `HASS_USERNAME` and `HASS_PASSWORD`
+- `jq` and `curl` installed (included in devcontainer)
+- Docker access for Supervisor token extraction
+
+**Troubleshooting:**
+
+| Issue                                 | Solution                                    |
+| ------------------------------------- | ------------------------------------------- |
+| "Credentials file not found"          | Create `.hass-credentials.env` in repo root |
+| "Could not retrieve SUPERVISOR_TOKEN" | Ensure hassio_cli container is running      |
+| "EMQX installation timed out"         | Check internet connection and retry         |
+| "CyncLAN failed to start"             | Check logs: `ha addons logs local_cync-lan` |
+
+---
+
 ### `configure-addon.sh`
 
 Programmatically configure the CyncLAN add-on via Supervisor API.

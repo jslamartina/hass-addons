@@ -24,6 +24,28 @@ This architecture provides:
 - **Debugging**: Test behavior while observing actual cloud interactions
 - **LAN-only Option**: Block cloud access while still inspecting packets locally
 
+### ⚠️ Current Limitation: Commands Not Supported in Relay Mode
+
+**Important:** Cloud relay mode is currently **read-only** for protocol inspection and debugging.
+
+**What works:**
+- ✅ Device status updates to MQTT/Home Assistant
+- ✅ Packet logging and inspection
+- ✅ Real-time monitoring of device states
+
+**What doesn't work:**
+- ❌ Sending commands from Home Assistant
+- ❌ Local control of devices
+- ❌ MQTT command messages
+
+**Error message:** `No TCP bridges available!`
+
+**Why:** In relay mode, devices connect as `CloudRelayConnection` objects for transparent proxying, not as controllable `CyncTCPDevice` objects. The command methods check `tcp_devices` which is only populated in LAN-only mode.
+
+**Workaround:** Disable cloud relay (`enabled: false`) for local control. You can re-enable it later for debugging.
+
+**Future Enhancement:** We plan to add bidirectional command support in relay mode, allowing both local control AND cloud forwarding/inspection simultaneously. Track progress in GitHub issues.
+
 ## Configuration
 
 Add the `cloud_relay` section to your add-on configuration:
@@ -82,10 +104,11 @@ cloud_relay:
 **Behavior:**
 - Devices connect to add-on, add-on forwards to real cloud
 - Transparent proxy - devices work as if connected directly to cloud
-- MQTT integration still works
+- MQTT integration shows device states (read-only)
 - Minimal logging (only non-keepalive packets at debug level)
+- **⚠️ Commands from HA don't work** (monitoring only)
 
-**Use When:** You want cloud backup while maintaining Home Assistant integration.
+**Use When:** You want to monitor device behavior and inspect cloud traffic without controlling devices.
 
 ---
 
@@ -130,9 +153,9 @@ cloud_relay:
 - Devices connect to add-on
 - Packets are parsed and logged
 - **No forwarding to cloud** - cloud connection blocked
-- Device commands still work via MQTT
+- **⚠️ Device commands don't work** (relay mode limitation)
 
-**Use When:** Maximum privacy while still enabling protocol analysis.
+**Use When:** Protocol analysis without cloud connectivity (inspection only, not control).
 
 ---
 

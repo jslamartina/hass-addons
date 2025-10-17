@@ -11,6 +11,10 @@
       "nodeGypDependencies": true,
       "installYarnUsingApt": true
     },
+    "ghcr.io/devcontainers/features/github-cli:1": {
+      "installDirectlyFromGitHubRelease": true,
+      "version": "latest"
+    },
     "ghcr.io/devcontainers-community/features/deno": {},
     "ghcr.io/devcontainers/features/common-utils:2": {
       "installZsh": false,
@@ -20,7 +24,7 @@
     "ghcr.io/meaningful-ooo/devcontainer-features/fish:2": {},
     "ghcr.io/eitsupi/devcontainer-features/nushell:0": {}
   },
-  "postStartCommand": "timeout 600 bash ${containerWorkspaceFolder}/.devcontainer/post-start.sh || true",
+  "postStartCommand": "bash ${containerWorkspaceFolder}/.devcontainer/post-start.sh",
   "postCreateCommand": "bash ${containerWorkspaceFolder}/.devcontainer/post-create.sh",
   "runArgs": [
     "--privileged",
