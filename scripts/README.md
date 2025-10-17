@@ -239,9 +239,9 @@ Cursor's `mcp.json` doesn't support environment variable expansion (like `${ENV_
 ```json
 {
   "mcpServers": {
-    "brave": {
+    "my-mcp-server": {
       "command": "/absolute/path/to/hass-addons/scripts/run-mcp-with-env.sh",
-      "args": ["npx", "-y", "@brave/brave-search-mcp-server", "--transport", "stdio"]
+      "args": ["npx", "-y", "@org/mcp-server-name", "--transport", "stdio"]
     }
   }
 }

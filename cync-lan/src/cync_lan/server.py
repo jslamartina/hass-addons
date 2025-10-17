@@ -1,16 +1,17 @@
 import asyncio
+import contextlib
 import logging
-import os
-import socket
 import ssl
-from typing import Optional, Union
+import time
+from pathlib import Path as PathLib
+from typing import ClassVar, Optional
 
 import uvloop
 
 from cync_lan.const import *
 from cync_lan.devices import CyncDevice, CyncGroup, CyncTCPDevice
-from cync_lan.packet_parser import parse_cync_packet, format_packet_log
 from cync_lan.packet_checksum import calculate_checksum_between_markers
+from cync_lan.packet_parser import format_packet_log, parse_cync_packet
 from cync_lan.structs import DeviceStatus, GlobalObject
 
 __all__ = [
@@ -45,10 +46,10 @@ class CloudRelayConnection:
         self.forward_to_cloud = forward_to_cloud
         self.debug_logging = debug_logging
         self.disable_ssl_verify = disable_ssl_verify
-        self.cloud_reader: Optional[asyncio.StreamReader] = None
-        self.cloud_writer: Optional[asyncio.StreamWriter] = None
-        self.device_endpoint: Optional[bytes] = None
-        self.injection_task: Optional[asyncio.Task] = None
+        self.cloud_reader: asyncio.StreamReader | None = None
+        self.cloud_writer: asyncio.StreamWriter | None = None
+        self.device_endpoint: bytes | None = None
+        self.injection_task: asyncio.Task | None = None
         self.forward_tasks: list[asyncio.Task] = []
         self.lp = f"CloudRelay:{client_addr}:"
 
@@ -59,14 +60,12 @@ class CloudRelayConnection:
             # Create SSL context for cloud connection
             ssl_context = ssl.create_default_context()
             if self.disable_ssl_verify:
-                logger.warning(
-                    f"{lp} SSL verification DISABLED - DEBUG MODE (use only for local testing)"
-                )
+                logger.warning("%s SSL verification DISABLED - DEBUG MODE (use only for local testing)", lp)
                 ssl_context.check_hostname = False
                 ssl_context.verify_mode = ssl.CERT_NONE
             else:
                 # Secure mode - but Cync cloud uses self-signed certs, so we still need to disable verification
-                logger.debug(f"{lp} Connecting to cloud with SSL")
+                logger.debug("%s Connecting to cloud with SSL", lp)
                 ssl_context.check_hostname = False
                 ssl_context.verify_mode = ssl.CERT_NONE
 
@@ -74,13 +73,12 @@ class CloudRelayConnection:
             self.cloud_reader, self.cloud_writer = await asyncio.open_connection(
                 self.cloud_server, self.cloud_port, ssl=ssl_context
             )
-            logger.info(
-                f"{lp} Connected to cloud server {self.cloud_server}:{self.cloud_port}"
-            )
-            return True
-        except Exception as e:
-            logger.error(f"{lp} Failed to connect to cloud: {e}")
+            logger.info("%s Connected to cloud server %s:%s", lp, self.cloud_server, self.cloud_port)
+        except Exception:
+            logger.exception("%s Failed to connect to cloud", lp)
             return False
+        else:
+            return True
 
     async def start_relay(self):
         """Start the relay process"""
@@ -98,20 +96,19 @@ class CloudRelayConnection:
         if self.forward_to_cloud:
             connected = await self.connect_to_cloud()
             if not connected:
-                logger.error(f"{lp} Cannot start relay without cloud connection")
+                logger.error("%s Cannot start relay without cloud connection", lp)
                 await self.close()
                 return
         else:
-            logger.info(f"{lp} LAN-only mode - cloud forwarding disabled")
+            logger.info("%s LAN-only mode - cloud forwarding disabled", lp)
 
         try:
             # Read first packet from device to get endpoint
             first_packet = await self.device_reader.read(1024)
             if first_packet and len(first_packet) >= 31 and first_packet[0] == 0x23:
                 self.device_endpoint = first_packet[6:10]
-                logger.info(
-                    f"{lp} Device endpoint: {' '.join(f'{b:02x}' for b in self.device_endpoint)}"
-                )
+                endpoint_hex = " ".join(f"{b:02x}" for b in self.device_endpoint)
+                logger.info("%s Device endpoint: %s", lp, endpoint_hex)
 
             # Forward first packet to cloud if enabled
             if self.forward_to_cloud and self.cloud_writer:
@@ -122,7 +119,7 @@ class CloudRelayConnection:
             if self.debug_logging:
                 parsed = parse_cync_packet(first_packet, "DEV->CLOUD")
                 if parsed:
-                    logger.debug(f"{lp}\n{format_packet_log(parsed)}")
+                    logger.debug("%s\n%s", lp, format_packet_log(parsed))
 
             # Start bidirectional forwarding
             dev_to_cloud_task = asyncio.create_task(
@@ -136,9 +133,7 @@ class CloudRelayConnection:
 
             if self.forward_to_cloud and self.cloud_reader:
                 cloud_to_dev_task = asyncio.create_task(
-                    self._forward_with_inspection(
-                        self.cloud_reader, self.device_writer, "CLOUD->DEV"
-                    )
+                    self._forward_with_inspection(self.cloud_reader, self.device_writer, "CLOUD->DEV")
                 )
                 self.forward_tasks.append(cloud_to_dev_task)
 
@@ -148,15 +143,15 @@ class CloudRelayConnection:
             # Wait for all tasks to complete
             await asyncio.gather(*self.forward_tasks, return_exceptions=True)
 
-        except Exception as e:
-            logger.error(f"{lp} Relay error: {e}")
+        except Exception:
+            logger.exception("%s Relay error", lp)
         finally:
             await self.close()
 
     async def _forward_with_inspection(
         self,
         source_reader: asyncio.StreamReader,
-        dest_writer: Optional[asyncio.StreamWriter],
+        dest_writer: asyncio.StreamWriter | None,
         direction: str,
     ):
         """Forward packets while inspecting and logging"""
@@ -165,16 +160,15 @@ class CloudRelayConnection:
             while True:
                 data = await source_reader.read(4096)
                 if not data:
-                    logger.debug(f"{lp} Connection closed")
+                    logger.debug("%s Connection closed", lp)
                     break
 
                 # Parse packet
                 parsed = parse_cync_packet(data, direction)
 
                 # Log if debug enabled (skip keepalives to reduce clutter)
-                if self.debug_logging and parsed:
-                    if parsed.get("packet_type") != "0x78":  # Skip KEEPALIVE
-                        logger.debug(f"{lp}\n{format_packet_log(parsed)}")
+                if self.debug_logging and parsed and parsed.get("packet_type") != "0x78":  # Skip KEEPALIVE
+                    logger.debug("%s\n%s", lp, format_packet_log(parsed))
 
                 # Extract status updates for MQTT (for 0x43 DEVICE_INFO packets)
                 if parsed and "device_statuses" in parsed:
@@ -184,11 +178,7 @@ class CloudRelayConnection:
                         raw_state[0] = status["device_id"]
                         raw_state[1] = 1 if status["state"] == "ON" else 0
                         raw_state[2] = status["brightness"]
-                        raw_state[3] = (
-                            status.get("temp", 0)
-                            if status.get("mode") == "WHITE"
-                            else 254
-                        )
+                        raw_state[3] = status.get("temp", 0) if status.get("mode") == "WHITE" else 254
                         # RGB values (parse from hex color if present)
                         if status.get("mode") == "RGB" and "color" in status:
                             color_hex = status["color"].lstrip("#")
@@ -200,9 +190,7 @@ class CloudRelayConnection:
                         raw_state[7] = 1 if status["online"] else 0
 
                         # Publish to MQTT using existing infrastructure
-                        await g.ncync_server.parse_status(
-                            bytes(raw_state), from_pkt="0x43"
-                        )
+                        await g.ncync_server.parse_status(bytes(raw_state), from_pkt="0x43")
 
                 # Forward to destination (if cloud forwarding enabled)
                 if dest_writer:
@@ -210,10 +198,10 @@ class CloudRelayConnection:
                     await dest_writer.drain()
 
         except asyncio.CancelledError:
-            logger.debug(f"{lp} Task cancelled")
+            logger.debug("%s Task cancelled", lp)
             raise
-        except Exception as e:
-            logger.error(f"{lp} Forward error: {e}")
+        except Exception:
+            logger.exception("%s Forward error", lp)
 
     async def _check_injection_commands(self):
         """Periodically check for packet injection commands (debug feature)"""
@@ -221,68 +209,63 @@ class CloudRelayConnection:
         inject_file = "/tmp/cync_inject_command.txt"
         raw_inject_file = "/tmp/cync_inject_raw_bytes.txt"
 
-        logger.debug(f"{lp} Injection checker started")
+        logger.debug("%s Injection checker started", lp)
 
         try:
             while True:
                 await asyncio.sleep(1)
 
                 # Check for raw bytes injection
-                if os.path.exists(raw_inject_file):
+                if PathLib(raw_inject_file).exists():
                     try:
-                        with open(raw_inject_file, "r") as f:
+                        with PathLib(raw_inject_file).open() as f:
                             raw_hex = f.read().strip()
-                        os.remove(raw_inject_file)
+                        PathLib(raw_inject_file).unlink()
 
                         hex_bytes = raw_hex.replace(" ", "").replace("\n", "")
                         packet = bytes.fromhex(hex_bytes)
 
-                        logger.info(f"{lp} Injecting raw packet ({len(packet)} bytes)")
-                        logger.debug(
-                            f"{lp} Hex: {' '.join(f'{b:02x}' for b in packet)}"
-                        )
+                        logger.info("%s Injecting raw packet (%s bytes)", lp, len(packet))
+                        packet_hex = " ".join(f"{b:02x}" for b in packet)
+                        logger.debug("%s Hex: %s", lp, packet_hex)
 
                         self.device_writer.write(packet)
                         await self.device_writer.drain()
 
-                        logger.info(f"{lp} Raw injection complete")
-                    except Exception as e:
-                        logger.error(f"{lp} Error injecting raw bytes: {e}")
+                        logger.info("%s Raw injection complete", lp)
+                    except Exception:
+                        logger.exception("%s Error injecting raw bytes", lp)
 
                 # Check for mode injection (for switches)
-                if os.path.exists(inject_file):
+                if PathLib(inject_file).exists():
                     try:
-                        with open(inject_file, "r") as f:
+                        with PathLib(inject_file).open() as f:
                             mode = f.read().strip().lower()
-                        os.remove(inject_file)
+                        PathLib(inject_file).unlink()
 
                         if mode in ["smart", "traditional"] and self.device_endpoint:
-                            logger.info(f"{lp} Injecting {mode.upper()} mode packet")
+                            logger.info("%s Injecting %s mode packet", lp, mode.upper())
 
                             # Craft mode packet (similar to MITM)
                             mode_byte = 0x02 if mode == "smart" else 0x01
                             counter = 0x10  # Fixed counter for injection
 
-                            packet = self._craft_mode_packet(
-                                self.device_endpoint, counter, mode_byte
-                            )
+                            packet = self._craft_mode_packet(self.device_endpoint, counter, mode_byte)
 
                             self.device_writer.write(packet)
                             await self.device_writer.drain()
 
-                            logger.info(f"{lp} Mode injection complete")
-                    except Exception as e:
-                        logger.error(f"{lp} Error injecting mode packet: {e}")
+                            logger.info("%s Mode injection complete", lp)
+                    except Exception:
+                        logger.exception("%s Error injecting mode packet", lp)
 
         except asyncio.CancelledError:
-            logger.debug(f"{lp} Injection checker cancelled")
+            logger.debug("%s Injection checker cancelled", lp)
             raise
-        except Exception as e:
-            logger.error(f"{lp} Injection checker error: {e}")
+        except Exception:
+            logger.exception("%s Injection checker error", lp)
 
-    def _craft_mode_packet(
-        self, endpoint: bytes, counter: int, mode_byte: int
-    ) -> bytes:
+    def _craft_mode_packet(self, endpoint: bytes, counter: int, mode_byte: int) -> bytes:
         """Craft a mode query/command packet"""
         inner_counter = (0x0D + counter) & 0xFF
         inner_counter2 = (0x0E + counter) & 0xFF
@@ -334,24 +317,20 @@ class CloudRelayConnection:
     async def close(self):
         """Clean up connections"""
         lp = f"{self.lp}close:"
-        logger.debug(f"{lp} Closing relay connection")
+        logger.debug("%s Closing relay connection", lp)
 
         # Cancel injection task
         if self.injection_task and not self.injection_task.done():
             self.injection_task.cancel()
-            try:
+            with contextlib.suppress(asyncio.CancelledError):
                 await self.injection_task
-            except asyncio.CancelledError:
-                pass
 
         # Cancel forwarding tasks
         for task in self.forward_tasks:
             if not task.done():
                 task.cancel()
-                try:
+                with contextlib.suppress(asyncio.CancelledError):
                     await task
-                except asyncio.CancelledError:
-                    pass
 
         # Close cloud connection
         if self.cloud_writer:
@@ -359,16 +338,16 @@ class CloudRelayConnection:
                 self.cloud_writer.close()
                 await self.cloud_writer.wait_closed()
             except Exception as e:
-                logger.debug(f"{lp} Error closing cloud writer: {e}")
+                logger.debug("%s Error closing cloud writer: %s", lp, e)
 
         # Close device connection
         try:
             self.device_writer.close()
             await self.device_writer.wait_closed()
         except Exception as e:
-            logger.debug(f"{lp} Error closing device writer: {e}")
+            logger.debug("%s Error closing device writer: %s", lp, e)
 
-        logger.debug(f"{lp} Relay connection closed")
+        logger.debug("%s Relay connection closed", lp)
 
 
 class NCyncServer:
@@ -377,40 +356,39 @@ class NCyncServer:
     The Wi-Fi devices translate messages, status updates and commands to/from the Cync BTLE mesh.
     """
 
-    devices: dict[int, CyncDevice] = {}
-    groups: dict[int, CyncGroup] = {}
-    tcp_devices: dict[str, Optional[CyncTCPDevice]] = {}
+    devices: ClassVar[dict[int, CyncDevice]] = {}
+    groups: ClassVar[dict[int, CyncGroup]] = {}
+    tcp_devices: ClassVar[dict[str, CyncTCPDevice | None]] = {}
     shutting_down: bool = False
     running: bool = False
     host: str
     port: int
-    cert_file: Optional[str] = None
-    key_file: Optional[str] = None
-    loop: Union[asyncio.AbstractEventLoop, uvloop.Loop]
-    _server: Optional[asyncio.Server] = None
+    cert_file: str | None = None
+    key_file: str | None = None
+    loop: asyncio.AbstractEventLoop | uvloop.Loop
+    _server: asyncio.Server | None = None
     lp: str = "nCync:"
-    start_task: Optional[asyncio.Task] = None
-    refresh_task: Optional[asyncio.Task] = None
+    start_task: asyncio.Task | None = None
+    refresh_task: asyncio.Task | None = None
+    pool_monitor_task: asyncio.Task | None = None
     _instance: Optional["NCyncServer"] = None
 
-    def __new__(cls, *args, **kwargs):
+    def __new__(cls, *_args, **_kwargs):
         if cls._instance is None:
             cls._instance = super().__new__(cls)
         return cls._instance
 
-    def __init__(self, devices: dict, groups: dict = None):
+    def __init__(self, devices: dict, groups: dict | None = None):
         self.devices = devices
         self.groups = groups if groups is not None else {}
         self.tcp_conn_attempts: dict = {}
-        self.ssl_context: Optional[ssl.SSLContext] = None
+        self.ssl_context: ssl.SSLContext | None = None
         self.host = CYNC_SRV_HOST
         self.port = CYNC_PORT
         g.reload_env()
         self.cert_file = g.env.cync_srv_ssl_cert
         self.key_file = g.env.cync_srv_ssl_key
-        self.loop: Union[asyncio.AbstractEventLoop, uvloop.Loop] = (
-            asyncio.get_event_loop()
-        )
+        self.loop: asyncio.AbstractEventLoop | uvloop.Loop = asyncio.get_event_loop()
 
         # Cloud relay configuration
         self.cloud_relay_enabled = g.env.cync_cloud_relay_enabled
@@ -422,31 +400,34 @@ class NCyncServer:
 
         if self.cloud_relay_enabled:
             logger.info(
-                f"{self.lp} Cloud relay mode ENABLED "
-                f"(forward_to_cloud={self.cloud_forward}, "
-                f"debug_logging={self.cloud_debug_logging})"
+                "%s Cloud relay mode ENABLED (forward_to_cloud=%s, debug_logging=%s)",
+                self.lp,
+                self.cloud_forward,
+                self.cloud_debug_logging,
             )
 
-    async def remove_tcp_device(
-        self, device: Union[CyncTCPDevice, str]
-    ) -> Optional[CyncTCPDevice]:
+    async def remove_tcp_device(self, device: CyncTCPDevice | str) -> CyncTCPDevice | None:
         """
         Remove a TCP device from the server's device list.
         :param device: The CyncTCPDevice to remove.
         """
         dev = None
         lp = f"{self.lp}remove_tcp_device:"
-        if isinstance(device, str):
+        if isinstance(device, str) and device in self.tcp_devices:
             # if device is a string, it is the address
-            if device in self.tcp_devices:
-                device = self.tcp_devices[device]
+            device = self.tcp_devices[device]
 
         if isinstance(device, CyncTCPDevice):
             if device.address in self.tcp_devices:
                 dev = self.tcp_devices.pop(device.address, None)
                 if dev is not None:
+                    uptime = time.time() - dev.connected_at
                     logger.debug(
-                        f"{lp} Removed TCP device {device.address} from server."
+                        "%s Removed TCP device %s from server (uptime: %.1fs, ready_to_control: %s)",
+                        lp,
+                        device.address,
+                        uptime,
+                        dev.ready_to_control,
                     )
                     # "state_topic": f"{self.topic}/status/bridge/tcp_devices/connected",
                     # TODO: publish the device removal
@@ -456,9 +437,7 @@ class NCyncServer:
                             str(len(self.tcp_devices)).encode(),
                         )
             else:
-                logger.warning(
-                    f"{lp} Device {device.address} not found in TCP devices."
-                )
+                logger.warning("%s Device %s not found in TCP devices.", lp, device.address)
         return dev
 
     async def add_tcp_device(self, device: CyncTCPDevice):
@@ -468,7 +447,7 @@ class NCyncServer:
         """
         lp = f"{self.lp}add_tcp_device:"
         self.tcp_devices[device.address] = device
-        logger.debug(f"{lp} Added TCP device {device.address} to server.")
+        logger.debug("%s Added TCP device %s to server.", lp, device.address)
         # TODO: publish updated TCP devices connected
         # "state_topic": f"{self.topic}/status/bridge/tcp_devices/connected",
         if g.mqtt_client is not None:
@@ -505,14 +484,15 @@ class NCyncServer:
         ssl_context.set_ciphers(":".join(ciphers))
         return ssl_context
 
-    async def parse_status(self, raw_state: bytes, from_pkt: Optional[str] = None):
+    async def parse_status(self, raw_state: bytes, from_pkt: str | None = None):
         """Extracted status packet parsing, handles mqtt publishing and device state changes."""
         _id = raw_state[0]
         device = g.ncync_server.devices.get(_id)
         if device is None:
             logger.warning(
-                f"Device ID: {_id} not found in devices! device may be disabled in config file or you need to "
-                f"re-export your Cync account devices!"
+                "Device ID: %s not found in devices! device may be disabled in config file or you need to "
+                "re-export your Cync account devices!",
+                _id,
             )
             return
         state = raw_state[1]
@@ -535,8 +515,11 @@ class NCyncServer:
             if device.offline_count >= 3 and device.online:
                 device.online = False
                 logger.warning(
-                    f'{self.lp} Device ID: {_id} ("{device.name}") has been offline for {device.offline_count} '
-                    f"consecutive checks, marking as unavailable..."
+                    '%s Device ID: %s ("%s") has been offline for %s consecutive checks, marking as unavailable...',
+                    self.lp,
+                    _id,
+                    device.name,
+                    device.offline_count,
                 )
         else:
             # Device is online, reset the offline counter
@@ -571,15 +554,13 @@ class NCyncServer:
 
             # Always publish status updates - don't try to detect "no changes"
             # This prevents status updates from being dropped unnecessarily
-            await g.mqtt_client.parse_device_status(
-                device.id, new_state, from_pkt=from_pkt
-            )
+            await g.mqtt_client.parse_device_status(device.id, new_state, from_pkt=from_pkt)
             g.ncync_server.devices[device.id] = device
 
     async def periodic_status_refresh(self):
         """Periodic sanity check to refresh device status and ensure sync with actual device state."""
         lp = f"{self.lp}status_refresh:"
-        logger.info(f"{lp} Starting periodic status refresh task...")
+        logger.info("%s Starting periodic status refresh task...", lp)
 
         while self.running:
             try:
@@ -588,50 +569,78 @@ class NCyncServer:
                 if not self.running:
                     break
 
-                logger.debug(f"{lp} Performing periodic status refresh...")
+                logger.debug("%s Performing periodic status refresh...", lp)
 
                 # Get active TCP bridge devices
-                bridge_devices = [
-                    dev
-                    for dev in self.tcp_devices.values()
-                    if dev and dev.ready_to_control
-                ]
+                bridge_devices = [dev for dev in self.tcp_devices.values() if dev and dev.ready_to_control]
 
                 if not bridge_devices:
-                    logger.debug(
-                        f"{lp} No active bridge devices available for status refresh"
-                    )
+                    logger.debug("%s No active bridge devices available for status refresh", lp)
                     continue
 
                 # Request mesh info from each bridge to refresh all device statuses
                 for bridge_device in bridge_devices:
                     try:
-                        logger.debug(
-                            f"{lp} Requesting mesh info from bridge {bridge_device.address}"
-                        )
-                        await bridge_device.ask_for_mesh_info(
-                            False
-                        )  # False = don't log verbose
+                        logger.debug("%s Requesting mesh info from bridge %s", lp, bridge_device.address)
+                        await bridge_device.ask_for_mesh_info(False)  # False = don't log verbose
                         await asyncio.sleep(1)  # Small delay between bridge requests
                     except Exception as e:
-                        logger.warning(
-                            f"{lp} Failed to refresh status from bridge {bridge_device.address}: {e}"
-                        )
+                        logger.warning("%s Failed to refresh status from bridge %s: %s", lp, bridge_device.address, e)
 
-                logger.debug(f"{lp} Periodic status refresh completed")
+                logger.debug("%s Periodic status refresh completed", lp)
 
             except asyncio.CancelledError:
-                logger.info(f"{lp} Periodic status refresh task cancelled")
+                logger.info("%s Periodic status refresh task cancelled", lp)
                 break
-            except Exception as e:
-                logger.error(f"{lp} Error in periodic status refresh: {e}")
+            except Exception:
+                logger.exception("%s Error in periodic status refresh", lp)
                 await asyncio.sleep(60)  # Wait a minute before retrying on error
+
+    async def periodic_pool_status_logger(self):
+        """Log TCP connection pool status every 30 seconds for debugging."""
+        lp = f"{self.lp}pool_monitor:"
+        logger.info("%s Starting connection pool monitoring task...", lp)
+
+        while self.running:
+            try:
+                await asyncio.sleep(30)  # Log every 30 seconds
+
+                if not self.running:
+                    break
+
+                total_connections = len(self.tcp_devices)
+                ready_connections = [dev for dev in self.tcp_devices.values() if dev and dev.ready_to_control]
+
+                logger.info(
+                    "%s TCP Pool Status: %d total connections, %d ready_to_control",
+                    lp,
+                    total_connections,
+                    len(ready_connections),
+                )
+
+                # Log details for each connection
+                for addr, dev in self.tcp_devices.items():
+                    if dev:
+                        uptime = time.time() - dev.connected_at
+                        logger.info(
+                            "%s   - %s: uptime=%.1fs, ready=%s, id=%s",
+                            lp,
+                            addr,
+                            uptime,
+                            dev.ready_to_control,
+                            dev.id,
+                        )
+
+            except asyncio.CancelledError:
+                logger.info("%s Pool monitoring task cancelled", lp)
+                break
+            except Exception:
+                logger.exception("%s Error in pool monitoring", lp)
+                await asyncio.sleep(30)  # Wait before retrying on error
 
     async def start(self):
         lp = f"{self.lp}start:"
-        logger.debug(
-            f"{lp} Creating SSL context - key: {self.key_file}, cert: {self.cert_file}"
-        )
+        logger.debug("%s Creating SSL context - key: %s, cert: %s", lp, self.key_file, self.cert_file)
         try:
             self.ssl_context = await self.create_ssl_context()
             self._server = await asyncio.start_server(
@@ -641,15 +650,18 @@ class NCyncServer:
                 ssl=self.ssl_context,  # Pass the SSL context to enable SSL/TLS
             )
         except asyncio.CancelledError as ce:
-            logger.debug(f"{lp} Server start cancelled: {ce}")
+            logger.debug("%s Server start cancelled: %s", lp, ce)
             # propagate the cancellation
-            raise ce
-        except Exception as e:
-            logger.exception(f"{lp} Failed to start server: {e}")
+            raise
+        except Exception:
+            logger.exception("%s Failed to start server", lp)
         else:
             logger.info(
-                f"{lp} bound to {self.host}:{self.port} - Waiting for connections from Cync devices, if you dont"
-                f" see any, check your DNS redirection, VLAN and firewall settings."
+                "%s bound to %s:%s - Waiting for connections from Cync devices, if you dont"
+                " see any, check your DNS redirection, VLAN and firewall settings.",
+                lp,
+                self.host,
+                self.port,
             )
             self.running = True
             try:
@@ -664,16 +676,17 @@ class NCyncServer:
                 # Start the periodic status refresh task
                 self.refresh_task = asyncio.create_task(self.periodic_status_refresh())
 
+                # Start the connection pool monitoring task
+                self.pool_monitor_task = asyncio.create_task(self.periodic_pool_status_logger())
+
                 async with self._server:
                     await self._server.serve_forever()
-            except asyncio.CancelledError as ce:
-                raise ce
-            except Exception as e:
-                logger.exception(f"{self.lp} Server Exception: {e}")
+            except asyncio.CancelledError:
+                raise
+            except Exception:
+                logger.exception("%s Server Exception", self.lp)
             else:
-                logger.debug(
-                    f"{lp} DEBUG>>> AFTER self._server.serve_forever() <<<DEBUG"
-                )
+                logger.debug("%s DEBUG>>> AFTER self._server.serve_forever() <<<DEBUG", lp)
 
     async def stop(self):
         try:
@@ -682,28 +695,24 @@ class NCyncServer:
             device: CyncTCPDevice
             devices = list(self.tcp_devices.values())
             if devices:
-                logger.debug(
-                    f"{lp} Shutting down, closing connections to {len(devices)} devices..."
-                )
+                logger.debug("%s Shutting down, closing connections to %s devices...", lp, len(devices))
                 for device in devices:
                     try:
                         await device.close()
                     except asyncio.CancelledError as ce:
-                        logger.debug(f"{lp} Device close cancelled: {ce}")
+                        logger.debug("%s Device close cancelled: %s", lp, ce)
                         # propagate the cancellation
-                        raise ce
-                    except Exception as e:
-                        logger.exception(
-                            f"{lp} Error closing Cync Wi-Fi device connection: {e}"
-                        )
+                        raise
+                    except Exception:
+                        logger.exception("%s Error closing Cync Wi-Fi device connection", lp)
                     else:
-                        logger.debug(f"{lp} Cync Wi-Fi device connection closed")
+                        logger.debug("%s Cync Wi-Fi device connection closed", lp)
             else:
-                logger.debug(f"{lp} No Cync Wi-Fi devices connected!")
+                logger.debug("%s No Cync Wi-Fi devices connected!", lp)
 
             if self._server:
                 if self._server.is_serving():
-                    logger.debug(f"{lp} shutting down NOW...")
+                    logger.debug("%s shutting down NOW...", lp)
                     self._server.close()
                     await self._server.wait_closed()
                     # TODO: publish the server running status
@@ -712,30 +721,35 @@ class NCyncServer:
                             f"{g.env.mqtt_topic}/status/bridge/tcp_server/running",
                             b"OFF",
                         )
-                    logger.debug(f"{lp} shut down!")
+                    logger.debug("%s shut down!", lp)
                 else:
-                    logger.debug(f"{lp} not running!")
+                    logger.debug("%s not running!", lp)
 
         except asyncio.CancelledError as ce:
-            logger.debug(f"{lp} Server stop cancelled: {ce}")
+            logger.debug("%s Server stop cancelled: %s", lp, ce)
             # propagate the cancellation
-            raise ce
-        except Exception as e:
-            logger.exception(f"{lp} Error during server shutdown: {e}")
+            raise
+        except Exception:
+            logger.exception("%s Error during server shutdown", lp)
         else:
-            logger.info(f"{lp} Server stopped successfully.")
+            logger.info("%s Server stopped successfully.", lp)
         finally:
             if self.start_task and not self.start_task.done():
-                logger.debug(f"{lp} FINISHING: Cancelling start task")
+                logger.debug("%s FINISHING: Cancelling start task", lp)
                 self.start_task.cancel()
             if self.refresh_task and not self.refresh_task.done():
-                logger.debug(f"{lp} FINISHING: Cancelling refresh task")
+                logger.debug("%s FINISHING: Cancelling refresh task", lp)
                 self.refresh_task.cancel()
+            if self.pool_monitor_task and not self.pool_monitor_task.done():
+                logger.debug("%s FINISHING: Cancelling pool monitor task", lp)
+                self.pool_monitor_task.cancel()
 
-    async def _register_new_connection(
-        self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter
-    ):
-        client_addr: str = writer.get_extra_info("peername")[0]
+    async def _register_new_connection(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter):
+        peername = writer.get_extra_info("peername")
+        client_ip: str = peername[0]
+        client_port: int = peername[1]
+        client_addr: str = f"{client_ip}:{client_port}"  # Use IP:port to allow multiple connections from same IP
+
         if client_addr in self.tcp_conn_attempts:
             self.tcp_conn_attempts[client_addr] += 1
         else:
@@ -751,7 +765,7 @@ class NCyncServer:
             #       - Cloud commands -> forwarded to devices
             #       - Status updates -> sent to both HA and cloud
             #       Current limitation: tcp_devices only populated in LAN-only mode
-            logger.info(f"{lp} New connection in RELAY mode")
+            logger.info("%s New connection in RELAY mode", lp)
             try:
                 relay = CloudRelayConnection(
                     device_reader=reader,
@@ -765,18 +779,16 @@ class NCyncServer:
                 )
                 await relay.start_relay()
             except asyncio.CancelledError as ce:
-                logger.debug(f"{lp} Relay connection cancelled: {ce}")
-                raise ce
-            except Exception as e:
-                logger.exception(f"{lp} Error in relay connection: {e}")
+                logger.debug("%s Relay connection cancelled: %s", lp, ce)
+                raise
+            except Exception:
+                logger.exception("%s Error in relay connection", lp)
         else:
             # Normal LAN-only mode - use CyncTCPDevice
             existing_device = await self.remove_tcp_device(client_addr)
             if existing_device is not None:
                 existing_device_id = id(existing_device)
-                logger.debug(
-                    f"{lp} Existing device found ({existing_device_id}), gracefully killing..."
-                )
+                logger.debug("%s Existing device found (%s), gracefully killing...", lp, existing_device_id)
                 del existing_device
             try:
                 new_device = CyncTCPDevice(reader, writer, client_addr)
@@ -787,8 +799,8 @@ class NCyncServer:
                 else:
                     del new_device
             except asyncio.CancelledError as ce:
-                logger.debug(f"{lp} Connection cancelled: {ce}")
+                logger.debug("%s Connection cancelled: %s", lp, ce)
                 # propagate the cancellation
-                raise ce
-            except Exception as e:
-                logger.exception(f"{lp} Error creating new Cync Wi-Fi device: {e}")
+                raise
+            except Exception:
+                logger.exception("%s Error creating new Cync Wi-Fi device", lp)

@@ -21,6 +21,8 @@ This repository contains Home Assistant add-ons for controlling Cync/C by GE sma
 ha addons logs local_cync-lan     # View logs
 ./scripts/configure-addon.sh      # Configure addon
 ha addons restart local_cync-lan  # Restart addon
+npm run lint                      # Run all linters
+npm run lint:python:fix           # Auto-fix Python issues
 ```
 
 **Critical files to know:**
@@ -30,6 +32,7 @@ ha addons restart local_cync-lan  # Restart addon
 - `docs/user/dns-setup.md` - DNS redirection setup (required for addon to work)
 - `CHANGELOG.md` - Version history and breaking changes
 - `hass-credentials.env` - Home Assistant login credentials (Username: `dev`, Password: `dev`)
+- `docs/developer/linting-setup.md` - Linting setup summary (Ruff configuration and npm scripts)
 
 **Important sections:**
 - **Command Flow and ACK Handling** (below) - Critical for understanding how commands work
@@ -159,21 +162,6 @@ When working with this codebase, AI agents should use web search tools to stay c
 - Protocol standards and networking concepts
 - Docker and containerization best practices
 
-**Tool Priority:**
-1. **`brave_web_search`** (preferred) - Primary Brave Search MCP tool for web searches
-2. **`web_search`** (fallback) - Use if Brave Search MCP is not available or not connected
-
-**Additional Brave Search MCP tools available:**
-- `brave_image_search` - Image search
-- `brave_news_search` - News articles search
-- `brave_local_search` - Local businesses/POI search
-- `brave_video_search` - Video search
-
-**⚠️ If Brave Search MCP tools are not available:**
-- **Automatically fall back to `web_search` tool** - This is a standard tool that should always be available
-- Do NOT skip searching - use whatever search tool is available
-- Continue with the task using web_search instead
-
 **When to search:**
 - Verifying current Home Assistant add-on APIs
 - Looking up recent changes in dependencies (asyncio, MQTT, FastAPI, etc.)
@@ -195,25 +183,27 @@ When working with this codebase, AI agents should use web search tools to stay c
 
 ### MCP Development Tools
 
-The devcontainer includes several Model Context Protocol (MCP) servers that provide specialized capabilities for development tasks. These tools are automatically installed via `.devcontainer/02-setup-mcp-servers.sh`.
+The devcontainer includes several Model Context Protocol (MCP) servers that provide specialized capabilities for development tasks. MCP servers are managed via `.cursor/mcp.json` and automatically installed by `uvx`/`npx` on first use (no manual installation required).
 
 #### Quick Reference
 
-| MCP Server          | Primary Use          | Key Functions                                     | When to Use                                             |
-| ------------------- | -------------------- | ------------------------------------------------- | ------------------------------------------------------- |
-| `mcp-server-time`   | Timezone operations  | `get_current_time`, `convert_time`                | Scheduling, timestamps, DST calculations                |
-| `mcp-run-python`    | Code execution       | `run_python_code` (async supported)               | Quick calculations, data analysis, prototyping          |
-| `mcp-server-docker` | Container management | 15 functions (containers/images/networks/volumes) | Inspecting containers, managing dev environments        |
-| `mcp-server-fetch`  | Web content          | `fetch` (markdown/HTML modes)                     | Reading docs, fetching API specs, release notes         |
-| `mcp-server-git`    | Version control      | 12 Git operations                                 | Analyzing history, managing branches, reviewing changes |
+| MCP Server               | Primary Use          | Key Functions                                          | When to Use                                                   |
+| ------------------------ | -------------------- | ------------------------------------------------------ | ------------------------------------------------------------- |
+| `mcp-server-time`        | Timezone operations  | `get_current_time`, `convert_time`                     | Scheduling, timestamps, DST calculations                      |
+| `mcp-python-interpreter` | Code execution       | `run_python_code` (native Python, filesystem access)   | Large file processing, data analysis, prototyping, automation |
+| `mcp-server-docker`      | Container management | 15 functions (containers/images/networks/volumes)      | Inspecting containers, managing dev environments              |
+| `mcp-server-fetch`       | Web content          | `fetch` (markdown/HTML modes)                          | Reading docs, fetching API specs, release notes               |
+| `mcp-server-git`         | Version control      | 12 Git operations                                      | Analyzing history, managing branches, reviewing changes       |
+| `mcp-server-filesystem`  | File operations      | `read_file`, `write_file`, `edit_file`, `search_files` | Bulk file edits, transformations, reading/writing files       |
 
-**Installation:** Automatic via `.devcontainer/02-setup-mcp-servers.sh` (runs on devcontainer creation)
+**Installation:** Automatic via `uvx`/`npx` on first use. The `uv` package manager is installed during devcontainer creation via `.devcontainer/02-setup-mcp-servers.sh`, then `uvx` automatically downloads and caches MCP servers when Cursor first connects to them (configured in `.cursor/mcp.json`).
 
 #### Tool Limitations & Error Handling
 
 **Known Limitations:**
 
-- **Python MCP**: Standard library only (no external pip packages in execution environment)
+- **Python MCP**: Native Python execution with full filesystem access. Can install packages on-demand but installations are temporary per execution.
+- **Filesystem MCP**: Only has access to directories specified in configuration (scoped access)
 - **Docker MCP**: Requires Docker socket access (may fail in restricted environments)
 - **Git MCP**: Operations are synchronous (may be slow for large repositories)
 - **Fetch MCP**: Respects robots.txt (some sites may block automated access)
@@ -268,20 +258,36 @@ convert_time("America/New_York", "14:00", "Europe/London")
 - ✅ Timezone offset information
 - ✅ Time difference calculation for conversions
 
-#### Python Code Execution (`mcp-run-python`)
+#### Python Code Execution (`mcp-python-interpreter`)
 
 **Tools Available:**
-- `mcp_python_run_python_code` - Execute Python code with return values and output
+- `mcp_python_run_python_code` - Execute native Python code with full filesystem access
 
 **When to use:**
+- **Large file processing** - Process files directly without loading into context
 - Quick Python calculations and data processing
 - Testing Python code snippets before implementation
 - Data analysis and statistical computations
 - Prototyping algorithms
+- File transformations and analysis
 - Validating JSON/YAML transformations
 
 **Example use cases:**
 ```python
+# Process large files without loading into context
+from pathlib import Path
+
+file = Path("cync-lan/src/cync_lan/mqtt_client.py")
+content = file.read_text()
+line_count = len(content.split("\n"))
+print(f"Processed {len(content)} characters in {line_count} lines")
+
+# File transformations
+import re
+source = Path("input.py").read_text()
+transformed = re.sub(r'old_pattern', 'new_pattern', source)
+Path("output.py").write_text(transformed)
+
 # Test data transformation logic
 data = {"numbers": [1, 2, 3, 4, 5]}
 result = sum(data["numbers"]) / len(data["numbers"])
@@ -298,17 +304,16 @@ config = json.loads('{"key": "value"}')
 ```
 
 **Features:**
-- ✅ Python 3.13 runtime
-- ✅ Full standard library access (json, datetime, math, statistics, etc.)
+- ✅ **Native Python 3.13** (CPython, not WebAssembly)
+- ✅ **Full filesystem access** - Use `open()`, `Path()`, etc. on host files
+- ✅ **Process large files** without context limitations
+- ✅ Full standard library access (json, datetime, math, statistics, pathlib, etc.)
 - ✅ Async/await support with asyncio
-- ✅ Return value extraction (JSON-serializable)
-- ✅ stdout/stderr capture
-- ✅ Global variable persistence between calls
+- ✅ Return value extraction and stdout/stderr capture
+- ✅ Working directory: `/mnt/supervisor/addons/local/hass-addons`
 
-**Supported libraries:**
-- Standard library: `json`, `datetime`, `math`, `statistics`, `collections`, `re`, `asyncio`
-- Data processing: List comprehensions, dictionary operations, Counter, etc.
-- Async operations: Full asyncio support with concurrent tasks
+**Key Advantage:**
+Unlike the old Pyodide-based `mcp-run-python`, this runs native Python with direct filesystem access. You can process multi-megabyte files without tokenizing them into context, making it ideal for bulk file operations and transformations.
 
 #### Docker Management (`mcp-server-docker`)
 
@@ -433,6 +438,86 @@ git_create_branch(repo_path=".", branch_name="feature/mcp-docs",
 - ✅ Configurable context lines for diffs
 - ✅ Works with any local Git repository
 
+#### Filesystem Operations (`mcp-server-filesystem`)
+
+**Tools Available:**
+- `mcp_filesystem_read_text_file` - Read file contents as text
+- `mcp_filesystem_read_media_file` - Read images/audio as base64
+- `mcp_filesystem_read_multiple_files` - Read multiple files simultaneously
+- `mcp_filesystem_write_file` - Create or overwrite files
+- `mcp_filesystem_edit_file` - Make line-based edits with diff output
+- `mcp_filesystem_create_directory` - Create directories
+- `mcp_filesystem_list_directory` - List directory contents
+- `mcp_filesystem_list_directory_with_sizes` - List with file sizes
+- `mcp_filesystem_directory_tree` - Get recursive tree structure
+- `mcp_filesystem_move_file` - Move or rename files
+- `mcp_filesystem_search_files` - Search for patterns in files
+- `mcp_filesystem_get_file_info` - Get file metadata
+- `mcp_filesystem_list_allowed_directories` - List accessible directories
+
+**When to use:**
+- **Bulk file operations** - Read, transform, and write entire files
+- **Complex transformations** - Multi-line edits, regex replacements, AST parsing
+- **Linting fixes** - Apply automated fixes across large files (e.g., G004 logging f-strings)
+- **File analysis** - Search patterns, read multiple files at once
+- **Directory operations** - List, create, organize file structures
+
+**Example use cases:**
+```python
+# Example 1: Bulk transformation with read/write
+content = read_text_file("cync-lan/src/cync_lan/mqtt_client.py")
+
+# Apply transformation using Python/regex (in terminal or MCP Python)
+# For example: convert logger.info(f"{lp} text") to logger.info("%s text", lp)
+import re
+def convert_logging_fstrings(text):
+    # Pattern to match logging with f-strings
+    pattern = r'(logger\.\w+\()\s*f"([^"]*)"([^\n]*)'
+    # ... transformation logic ...
+    return transformed_text
+
+transformed = convert_logging_fstrings(content)
+write_file("cync-lan/src/cync_lan/mqtt_client.py", transformed)
+
+# Example 2: Targeted edits with diff preview (simpler cases)
+edit_file(
+    path="config.yaml",
+    edits=[
+        {"oldText": "old_value: 123", "newText": "old_value: 456"},
+        {"oldText": "debug: false", "newText": "debug: true"}
+    ]
+)
+
+# Example 3: Search for patterns across multiple files
+search_files(path="cync-lan/src", pattern="logger\\..*f\"", excludePatterns=["__pycache__"])
+```
+
+**Features:**
+- ✅ Scoped to allowed directories (configured in `.cursor/mcp.json`)
+- ✅ Git-style diff output for edits (shows exactly what changed)
+- ✅ Supports both text and binary files
+- ✅ Batch operations (read/edit multiple files)
+- ✅ Pattern-based file search with exclusions
+- ✅ Directory tree operations
+
+**Best for:**
+- ✅ Bulk linting fixes (100+ changes across a file)
+- ✅ Complex multi-line transformations
+- ✅ File-level refactoring
+- ❌ **Not for:** Small 1-5 line edits (use `search_replace` instead)
+
+**Configuration in `.cursor/mcp.json`:**
+```json
+{
+  "mcpServers": {
+    "filesystem": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-filesystem", "/mnt/supervisor/addons/local/hass-addons"]
+    }
+  }
+}
+```
+
 ### MCP Server Secrets Management
 
 MCP servers often require API keys and authentication tokens. This repository provides a secure way to manage these secrets:
@@ -446,7 +531,7 @@ MCP servers often require API keys and authentication tokens. This repository pr
 
 2. **Fill in your actual API keys** in `.mcp-secrets.env`:
    ```bash
-   BRAVE_API_KEY=your-actual-api-key-here
+   API_KEY=your-actual-api-key-here
    # Add other MCP server credentials as needed
    ```
 
@@ -454,9 +539,9 @@ MCP servers often require API keys and authentication tokens. This repository pr
    ```json
    {
      "mcpServers": {
-       "brave": {
+       "my-mcp-server": {
          "command": "/absolute/path/to/hass-addons/scripts/run-mcp-with-env.sh",
-         "args": ["npx", "-y", "@brave/brave-search-mcp-server", "--transport", "stdio"]
+         "args": ["npx", "-y", "@org/mcp-server-name", "--transport", "stdio"]
        }
      }
    }
@@ -473,11 +558,11 @@ MCP servers often require API keys and authentication tokens. This repository pr
 ```json
 {
   "mcpServers": {
-    "brave": {
+    "my-mcp-server": {
       "command": "npx",
-      "args": ["-y", "@brave/brave-search-mcp-server", "--transport", "stdio"],
+      "args": ["-y", "@org/mcp-server-name", "--transport", "stdio"],
       "env": {
-        "BRAVE_API_KEY": "hardcoded-key-here"
+        "API_KEY": "hardcoded-key-here"
       }
     }
   }
@@ -634,6 +719,92 @@ ha addons logs local_cync-lan | grep -E "set_power|WRITE CALLED|write_lock|ACK|d
 
 ## Coding Conventions
 
+### Code Quality and Linting
+
+**⚠️ CRITICAL: Linting is MANDATORY after every file edit. Issues must be fixed before work is complete.**
+
+All code should follow linting suggestions provided by the appropriate static analysis tools:
+
+**Python Code** - Use [Ruff](https://docs.astral.sh/ruff/) for fast, comprehensive linting and formatting:
+- Modern linter and formatter written in Rust (10-100x faster than Pylint/Flake8/Black)
+- Checks for errors, enforces coding standards, and identifies code smells
+- Compatible with Pylint, Flake8, isort, and Black formatter rules
+- Follows PEP 8 style guidelines and supports modern Python features
+- Configuration in `pyproject.toml` (lines 41-101)
+- **Replaces Pylint and Black** - Both extensions removed from devcontainer
+- **VS Code Integration** - Errors appear automatically in Problems tab (no need to run commands)
+- **Auto-fix and format on save** - `source.fixAll`, `source.organizeImports`, and formatting enabled
+
+**Running Linters:**
+
+```bash
+# Run all linters (Python + Shell + Format check)
+npm run lint
+# or
+./scripts/lint-all.sh
+
+# Python only
+npm run lint:python
+# or
+ruff check .
+
+# Auto-fix Python issues
+npm run lint:python:fix
+# or
+ruff check . --fix
+
+# Shell scripts only
+npm run lint:shell
+```
+
+**Code Formatting:**
+
+```bash
+# Format all files (Python, Markdown, JSON, YAML, Shell)
+npm run format
+
+# Check formatting without modifying files
+npm run format:check
+
+# Format specific file types
+npm run format:python       # Python files only
+npm run format:python:check # Check Python formatting
+npm run format:shell        # Shell scripts only
+npm run format:json         # JSON/YAML files only
+```
+
+**Shell Scripts** - Use [ShellCheck](https://www.shellcheck.net/wiki/) for shell script analysis:
+- Provides warnings for easy-to-miss issues (quoting, variable expansion, etc.)
+- Suggests best practices for POSIX compliance
+- Address all shellcheck warnings before committing
+- Particularly important for `.devcontainer` and `scripts/` directories
+
+**Why this matters:** Linting catches bugs early, ensures consistency across the codebase, and improves maintainability. **Skipping linting leads to technical debt accumulation** - small issues compound into large problems that are harder to fix later.
+
+**Enforcement Policy:**
+1. ✅ Run linters after EVERY file edit (not just at the end)
+2. ✅ Fix ALL issues before moving to the next task
+3. ✅ Use auto-fix tools (`npm run lint:python:fix`, `npm run format`) to speed up fixes
+4. ❌ NEVER commit code with linting errors
+5. ❌ NEVER skip linting because "it's just a small change"
+
+**How to Check for NEW Linting Errors:**
+
+When you modify files, check for new errors by running `ruff check` on the specific files you edited:
+
+```bash
+# ✅ CORRECT: Check the files you modified
+ruff check cync-lan/src/cync_lan/mqtt_client.py cync-lan/src/cync_lan/devices.py
+
+# ❌ WRONG: Don't grep for specific line numbers or filter output
+ruff check cync-lan/src/cync_lan/mqtt_client.py | grep "1708"  # Misses other errors!
+
+# ✅ CORRECT: Full output shows ALL errors (pre-existing + new)
+# Compare error count before and after your changes
+```
+
+**Pre-existing technical debt** (like "too many branches") can be ignored if they existed before your changes, but **NEW errors must be fixed immediately**. The key is to see the full output to identify what you introduced.
+
 ### Shell Scripts
 
 - Use `bashio::` functions for add-on scripts (provided by Home Assistant base image)
@@ -643,7 +814,7 @@ ha addons logs local_cync-lan | grep -E "set_power|WRITE CALLED|write_lock|ACK|d
 
 ### Python (cync-lan package)
 
-- Follow Black formatter style (configured in pyproject.toml)
+- Follow Ruff formatter style (Black-compatible, configured in pyproject.toml)
 - Use type hints for function signatures
 - Async/await for all I/O operations (TCP, MQTT, HTTP)
 - Logging prefix format: `lp = "ClassName:method_name:"`
@@ -725,16 +896,34 @@ sudo python3 scripts/delete-mqtt-safe.py [--dry-run]
 
 ### Python Code Changes (`*.py` files)
 1. Edit the Python file(s)
-2. Check for linter errors: `read_lints(["path/to/file.py"])`
-3. **REBUILD the add-on**: `cd cync-lan && ./rebuild.sh`
-4. Check logs: `ha addons logs local_cync-lan`
-5. Test functionality
+2. **MANDATORY: Run linter and formatter**:
+   ```bash
+   npm run lint:python:fix    # Auto-fix linting issues
+   npm run format:python      # Auto-format code
+   ```
+3. **MANDATORY: Check for remaining errors**:
+   - View Problems tab in VS Code, OR
+   - Run `npm run lint` to see all issues
+   - **Fix ALL issues before proceeding** - no exceptions
+4. **REBUILD the add-on**: `cd cync-lan && ./rebuild.sh`
+5. Check logs: `ha addons logs local_cync-lan`
+6. Test functionality
 
 ### Configuration/Script Changes (non-Python)
 1. Edit `config.yaml`, `run.sh`, or static files
-2. **RESTART the add-on**: `ha addons restart local_cync-lan`
-3. Check logs: `ha addons logs local_cync-lan`
-4. Test functionality
+2. **MANDATORY: Run linter** (if shell script): `npm run lint:shell`
+3. **MANDATORY: Fix all ShellCheck warnings** before proceeding
+4. **RESTART the add-on**: `ha addons restart local_cync-lan`
+5. Check logs: `ha addons logs local_cync-lan`
+6. Test functionality
+
+### All File Changes (Any Type)
+**Before considering work complete:**
+```bash
+npm run lint              # Check EVERYTHING (Python, Shell, Formatting)
+npm run format           # Auto-format EVERYTHING
+```
+If any errors remain, **STOP and fix them**. Do not proceed with rebuild/restart until linting is clean.
 
 ### When In Doubt
 **Always rebuild** - it's safer and only takes ~30 seconds more than restart.
@@ -748,6 +937,10 @@ sudo python3 scripts/delete-mqtt-safe.py [--dry-run]
 | `ha addons restart local_cync-lan`               | Restart the add-on (for non-Python changes)             |
 | `cd cync-lan && ./rebuild.sh`                    | **Rebuild add-on** (REQUIRED after Python code changes) |
 | `ha addons rebuild local_cync-lan`               | Alternative rebuild command using HA CLI                |
+| `npm run lint`                                   | Run all linters (Python + Shell + Format check)         |
+| `npm run lint:python:fix`                        | Auto-fix Python linting issues with Ruff                |
+| `ruff check .`                                   | Check Python code for linting errors                    |
+| `./scripts/lint-all.sh`                          | Alternative: Run all linters via shell script           |
 | `docker exec -it addon_local_cync-lan /bin/bash` | Access add-on container shell for debugging             |
 | `./scripts/test-cloud-relay.sh`                  | Run comprehensive cloud relay test suite                |
 | `sudo python3 scripts/delete-mqtt-safe.py`       | Clean up stale MQTT entities safely                     |
@@ -1160,11 +1353,14 @@ await bridge_device.write(payload_bytes)
    - Examples: `[cync-lan] Fix device availability flickering`, `[docs] Update AGENTS.md standard compliance`
 
 2. **Pre-submission Checklist:**
-   - [ ] Run `pnpm lint` and `pnpm test` (or equivalent for your setup)
-   - [ ] All tests pass and no linting errors
+   - [ ] **MANDATORY: Zero linting errors** - Run `npm run lint` and verify all checks pass
+   - [ ] **MANDATORY: Code is formatted** - Run `npm run format:check` with no issues
+   - [ ] Used auto-fix tools: `npm run lint:python:fix` and `npm run format`
+   - [ ] All tests pass and no linting/formatting errors remain
    - [ ] Update CHANGELOG.md for user-facing changes
    - [ ] Test in devcontainer environment
    - [ ] Verify add-on rebuilds successfully if Python code changed
+   - [ ] **Double-check: No linting debt introduced** - Compare `npm run lint` output before and after changes
 
 3. **Review Expectations:**
    - Changes should follow existing coding conventions
@@ -1176,20 +1372,24 @@ await bridge_device.write(payload_bytes)
 
 Before submitting changes:
 
-1. [ ] **If you edited Python files (`.py`)**: Rebuild with `./rebuild.sh` or `ha addons rebuild`
-2. [ ] **If you only edited config/scripts**: Restart with `ha addons restart local_cync-lan`
-3. [ ] Add-on starts without errors (`ha addons start local_cync-lan`)
-4. [ ] Entities appear in Home Assistant (check Developer Tools → States)
-5. [ ] Device commands work (toggle lights, adjust brightness)
-6. [ ] **Group commands work** - Test toggling group entities multiple times
-7. [ ] **Commands work after refresh** - Click "Refresh Device Status" then test commands immediately
-8. [ ] **No availability flickering** - Watch device availability over 30+ seconds
-9. [ ] MQTT messages are valid (check EMQX logs or `mosquitto_sub`)
-10. [ ] No Python exceptions in logs (`ha addons logs local_cync-lan`)
-11. [ ] Devcontainer still starts cleanly (test in fresh container)
-12. [ ] Changes documented in CHANGELOG.md if user-facing
-13. [ ] If config schema changed: Follow "Testing Add-on UI Configuration Changes" workflow
-14. [ ] UI configuration options visible after hard refresh (Ctrl+Shift+R)
+1. [ ] **MANDATORY: All linting passes with zero errors**:
+   - Run `npm run lint` - must show all green checkmarks
+   - Run `npm run format:check` - must show no formatting issues
+   - Fix any issues before proceeding (use `npm run lint:python:fix` and `npm run format`)
+2. [ ] **If you edited Python files (`.py`)**: Rebuild with `./rebuild.sh` or `ha addons rebuild`
+3. [ ] **If you only edited config/scripts**: Restart with `ha addons restart local_cync-lan`
+4. [ ] Add-on starts without errors (`ha addons start local_cync-lan`)
+5. [ ] Entities appear in Home Assistant (check Developer Tools → States)
+6. [ ] Device commands work (toggle lights, adjust brightness)
+7. [ ] **Group commands work** - Test toggling group entities multiple times
+8. [ ] **Commands work after refresh** - Click "Refresh Device Status" then test commands immediately
+9. [ ] **No availability flickering** - Watch device availability over 30+ seconds
+10. [ ] MQTT messages are valid (check EMQX logs or `mosquitto_sub`)
+11. [ ] No Python exceptions in logs (`ha addons logs local_cync-lan`)
+12. [ ] Devcontainer still starts cleanly (test in fresh container)
+13. [ ] Changes documented in CHANGELOG.md if user-facing
+14. [ ] If config schema changed: Follow "Testing Add-on UI Configuration Changes" workflow
+15. [ ] UI configuration options visible after hard refresh (Ctrl+Shift+R)
 
 ## External Resources
 
@@ -1216,7 +1416,9 @@ Before submitting changes:
 
 ---
 
-*Last Updated: October 14, 2025*
+*Last Updated: October 17, 2025*
 *For exploration findings from UI testing, see `docs/developer/exploration-notes.md`*
 *For automated testing tools and API usage, see `docs/developer/limitations-lifted.md` and `scripts/README.md`*
-*For MCP server installation script, see `.devcontainer/02-setup-mcp-servers.sh`*
+*For uv package manager setup, see `.devcontainer/02-setup-mcp-servers.sh`*
+*For MCP server configuration, see `.cursor/mcp.json`*
+*For linting setup summary, see `docs/developer/linting-setup.md`*

@@ -6,7 +6,8 @@ set -euo pipefail
 
 setup_venv() {
   local workspace_path="$1"
-  local workspace_name=$(basename "$workspace_path")
+  local workspace_name
+  workspace_name=$(basename "$workspace_path")
 
   echo "Setting up Python venv for $workspace_name..."
 

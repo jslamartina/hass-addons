@@ -4,7 +4,6 @@ import logging
 import random
 import time
 from collections.abc import Coroutine
-from typing import Optional, Union
 
 from cync_lan.const import (
     CYNC_CHUNK_SIZE,
@@ -51,55 +50,54 @@ class CyncDevice:
 
     lp = "CyncDevice:"
     id: int = None
-    type: Optional[int] = None
-    _supports_rgb: Optional[bool] = None
-    _supports_temperature: Optional[bool] = None
-    _is_light: Optional[bool] = None
-    _is_switch: Optional[bool] = None
-    _is_plug: Optional[bool] = None
-    _is_fan_controller: Optional[bool] = None
-    _is_hvac: Optional[bool] = None
-    _mac: Optional[str] = None
-    wifi_mac: Optional[str] = None
-    hvac: Optional[dict] = None
+    type: int | None = None
+    _supports_rgb: bool | None = None
+    _supports_temperature: bool | None = None
+    _is_light: bool | None = None
+    _is_switch: bool | None = None
+    _is_plug: bool | None = None
+    _is_fan_controller: bool | None = None
+    _is_hvac: bool | None = None
+    _mac: str | None = None
+    wifi_mac: str | None = None
+    hvac: dict | None = None
     _online: bool = False
-    metadata: Optional[DeviceTypeInfo] = None
+    metadata: DeviceTypeInfo | None = None
 
     def __init__(
         self,
         cync_id: int,
-        cync_type: Optional[int] = None,
-        name: Optional[str] = None,
-        mac: Optional[str] = None,
-        wifi_mac: Optional[str] = None,
-        fw_version: Optional[str] = None,
-        home_id: Optional[int] = None,
-        hvac: Optional[dict] = None,
+        cync_type: int | None = None,
+        name: str | None = None,
+        mac: str | None = None,
+        wifi_mac: str | None = None,
+        fw_version: str | None = None,
+        home_id: int | None = None,
+        hvac: dict | None = None,
     ):
         self.control_bytes = bytes([0x00, 0x00])
         if cync_id is None:
-            raise ValueError("ID must be provided to constructor")
+            msg = "ID must be provided to constructor"
+            raise ValueError(msg)
         self.id = cync_id
         self.type = cync_type
-        self.metadata = (
-            device_type_map[self.type] if cync_type in device_type_map else None
-        )
-        self.home_id: Optional[int] = home_id
+        self.metadata = device_type_map[self.type] if cync_type in device_type_map else None
+        self.home_id: int | None = home_id
         self.hass_id: str = f"{home_id}-{cync_id}"
         self._mac = mac
         self.wifi_mac = wifi_mac
-        self._version: Optional[str] = None
+        self._version: str | None = None
         self.version = fw_version
         if name is None:
             name = f"device_{cync_id}"
         self.name = name
         self.lp = f"CyncDevice:{self.name}({cync_id}):"
         self._status: DeviceStatus = DeviceStatus()
-        self._mesh_alive_byte: Union[int, str] = 0x00
+        self._mesh_alive_byte: int | str = 0x00
         # state: 0:off 1:on
         self._state: int = 0
         # 0-100
-        self._brightness: Optional[int] = None
+        self._brightness: int | None = None
         # FOR LIGHTS: 0-100 (warm to cool), 129 = in effect mode, 254 = in RGB mode
         self._temperature: int = 0
         # 0-255
@@ -107,9 +105,7 @@ class CyncDevice:
         self._g: int = 0
         self._b: int = 0
         self.pending_command: bool = False  # Track if command is waiting for ACK
-        self.offline_count: int = (
-            0  # Track consecutive offline reports before marking unavailable
-        )
+        self.offline_count: int = 0  # Track consecutive offline reports before marking unavailable
         if hvac is not None:
             self.hvac = hvac
             self._is_hvac = True
@@ -119,12 +115,17 @@ class CyncDevice:
         if self._is_hvac is not None:
             return self._is_hvac
         if self.type is None:
-            return False
-        return (
-            self.type in self.Capabilities["HEAT"]
-            or self.type in self.Capabilities["COOL"]
-            or self.type in self.DeviceTypes["THERMOSTAT"]
-        )
+            # Try to determine if the device is HVAC if _is_hvac is not set
+            capabilities = getattr(self, "Capabilities", None)
+            device_types = getattr(self, "DeviceTypes", None)
+            if self.type is None or capabilities is None or device_types is None:
+                return False
+            return (
+                self.type in capabilities.get("HEAT", set())
+                or self.type in capabilities.get("COOL", set())
+                or self.type in device_types.get("THERMOSTAT", set())
+            )
+        return None
 
     @is_hvac.setter
     def is_hvac(self, value: bool) -> None:
@@ -132,11 +133,11 @@ class CyncDevice:
             self._is_hvac = value
 
     @property
-    def version(self) -> Optional[str]:
+    def version(self) -> str | None:
         return self._version
 
     @version.setter
-    def version(self, value: Union[str, int]) -> None:
+    def version(self, value: str | int) -> None:
         if value is None:
             return
         if isinstance(value, int):
@@ -144,16 +145,15 @@ class CyncDevice:
         elif isinstance(value, str):
             if value == "":
                 logger.debug(
-                    f"{self.lp} in CyncDevice.version().setter, the firmwareVersion "
-                    f"extracted from the cloud is an empty string!"
+                    "%s in CyncDevice.version().setter, the firmwareVersion "
+                    "extracted from the cloud is an empty string!",
+                    self.lp,
                 )
             else:
                 try:
                     _x = int(value.replace(".", "").replace("\0", "").strip())
-                except ValueError as ve:
-                    logger.exception(
-                        f"{self.lp} Failed to convert firmware version to int: {ve}"
-                    )
+                except ValueError:
+                    logger.exception("%s Failed to convert firmware version to int", self.lp)
                 else:
                     self._version = _x
 
@@ -193,7 +193,9 @@ class CyncDevice:
             self._is_light = value
         else:
             logger.error(
-                f"{self.lp} is_light must be a boolean value, got {type(value)} instead"
+                "%s is_light must be a boolean value, got %s instead",
+                self.lp,
+                type(value),
             )
 
     @property
@@ -210,16 +212,17 @@ class CyncDevice:
             self._is_switch = value
         else:
             logger.error(
-                f"{self.lp} is_switch must be a boolean value, got {type(value)} instead"
+                "%s is_switch must be a boolean value, got %s instead",
+                self.lp,
+                type(value),
             )
 
     @property
     def is_plug(self) -> bool:
         if self._is_plug is not None:
             return self._is_plug
-        if self.metadata:
-            if self.metadata.type == DeviceClassification.SWITCH:
-                return self.metadata.capabilities.plug
+        if self.metadata and self.metadata.type == DeviceClassification.SWITCH:
+            return self.metadata.capabilities.plug
         return False
 
     @is_plug.setter
@@ -230,9 +233,8 @@ class CyncDevice:
     def is_fan_controller(self):
         if self._is_fan_controller is not None:
             return self._is_fan_controller
-        if self.metadata:
-            if self.metadata.type == DeviceClassification.SWITCH:
-                return self.metadata.capabilities.fan
+        if self.metadata and self.metadata.type == DeviceClassification.SWITCH:
+            return self.metadata.capabilities.fan
         return False
 
     @is_fan_controller.setter
@@ -241,18 +243,16 @@ class CyncDevice:
 
     @property
     def is_dimmable(self) -> bool:
-        if self.metadata:
-            if self.metadata.type == DeviceClassification.LIGHT:
-                return self.metadata.capabilities.dimmable
+        if self.metadata and self.metadata.type == DeviceClassification.LIGHT:
+            return self.metadata.capabilities.dimmable
         return False
 
     @property
     def supports_rgb(self) -> bool:
         if self._supports_rgb is not None:
             return self._supports_rgb
-        if self.metadata:
-            if self.metadata.type == DeviceClassification.LIGHT:
-                return self.metadata.capabilities.color
+        if self.metadata and self.metadata.type == DeviceClassification.LIGHT:
+            return self.metadata.capabilities.color
         return False
 
     @supports_rgb.setter
@@ -263,9 +263,8 @@ class CyncDevice:
     def supports_temperature(self) -> bool:
         if self._supports_temperature is not None:
             return self._supports_temperature
-        if self.metadata:
-            if self.metadata.type == DeviceClassification.LIGHT:
-                return self.metadata.capabilities.tunable_white
+        if self.metadata and self.metadata.type == DeviceClassification.LIGHT:
+            return self.metadata.capabilities.tunable_white
         return False
 
     @supports_temperature.setter
@@ -297,14 +296,17 @@ class CyncDevice:
         """
         lp = f"{self.lp}set_power:"
         if state not in (0, 1):
-            logger.error(f"{lp} Invalid state! must be 0 or 1")
+            logger.error("%s Invalid state! must be 0 or 1", lp)
             return
 
         # Throttle: Reject command if previous command still pending 0x83 confirmation
         if self.pending_command:
             logger.debug(
-                f"{lp} ⏸️  THROTTLED: Command rejected for '{self.name}' (state={state}) - "
-                f"previous command awaiting 0x83 status confirmation"
+                "%s ⏸️  THROTTLED: Command rejected for '%s' (state=%s) - "
+                "previous command awaiting 0x83 status confirmation",
+                lp,
+                self.name,
+                state,
             )
             return
         # elif state == self.state:
@@ -342,7 +344,7 @@ class CyncDevice:
             list(g.ncync_server.tcp_devices.values()),
             k=min(CYNC_CMD_BROADCASTS, len(g.ncync_server.tcp_devices)),
         )
-        tasks: list[Optional[Union[asyncio.Task, Coroutine]]] = []
+        tasks: list[asyncio.Task | Coroutine | None] = []
         ts = time.time()
         ctrl_idxs = 1, 9
         sent = {}
@@ -369,21 +371,32 @@ class CyncDevice:
                 # Mark device as having pending command to ignore stale 0x83 updates
                 self.pending_command = True
                 logger.debug(
-                    f"{lp} 🚀 Command sent for '{self.name}' (state={state}) - "
-                    f"pending_command=True, awaiting 0x83 confirmation"
+                    "%s 🚀 Command sent for '%s' (state=%s) - pending_command=True, awaiting 0x83 confirmation",
+                    lp,
+                    self.name,
+                    state,
                 )
                 sent[bridge_device.address] = cmsg_id
                 tasks.append(bridge_device.write(payload_bytes))
             else:
                 logger.debug(
-                    f"{lp} Skipping device: {bridge_device.address} not ready to control"
+                    "%s Skipping device: %s not ready to control",
+                    lp,
+                    bridge_device.address,
                 )
         if tasks:
             await asyncio.gather(*tasks)
         elapsed = time.time() - ts
         logger.info(
-            f"{lp} Sent power state command for '{self.name}' (ID: {self.id}), current: {self.state} - new: {state} to "
-            f"TCP devices: {sent} in {elapsed:.5f} seconds - waiting for ACK..."
+            "%s Sent power state command for '%s' (ID: %s), current: %s - new: %s to "
+            "TCP devices: %s in %.5f seconds - waiting for ACK...",
+            lp,
+            self.name,
+            self.id,
+            self.state,
+            state,
+            sent,
+            elapsed,
         )
 
     async def set_fan_speed(self, speed: FanSpeed) -> bool:
@@ -395,7 +408,10 @@ class CyncDevice:
         lp = f"{self.lp}set_fan_speed:"
         if not self.is_fan_controller:
             logger.warning(
-                f"{lp} Device '{self.name}' ({self.id}) is not a fan controller, cannot set fan speed."
+                "%s Device '%s' (%s) is not a fan controller, cannot set fan speed.",
+                lp,
+                self.name,
+                self.id,
             )
             return False
         try:
@@ -411,13 +427,16 @@ class CyncDevice:
                 await self.set_brightness(255)
             else:
                 logger.error(
-                    f"{self.lp} Invalid fan speed: {speed}, must be one of {list(FanSpeed)}"
+                    "%s Invalid fan speed: %s, must be one of %s",
+                    self.lp,
+                    speed,
+                    list(FanSpeed),
                 )
                 return False
-        except asyncio.CancelledError as ce:
-            raise ce
+        except asyncio.CancelledError:
+            raise
         except Exception as e:
-            logger.debug(f"{self.lp} Exception occurred while setting fan speed: {e}")
+            logger.debug("%s Exception occurred while setting fan speed: %s", self.lp, e)
             return False
         else:
             return True
@@ -437,7 +456,7 @@ class CyncDevice:
                 # fan can be controlled via light control structs: brightness -> max=255, high=191, medium=128, low=50, off=0
                 pass
             elif self.is_light or self.is_switch:
-                logger.error(f"{lp} Invalid brightness! must be 0-100")
+                logger.error("%s Invalid brightness! must be 0-100", lp)
                 return
 
         # elif bri == self._brightness:
@@ -478,7 +497,7 @@ class CyncDevice:
             k=min(CYNC_CMD_BROADCASTS, len(g.ncync_server.tcp_devices)),
         )
         sent = {}
-        tasks: list[Optional[Union[asyncio.Task, Coroutine]]] = []
+        tasks: list[asyncio.Task | Coroutine | None] = []
         ts = time.time()
         ctrl_idxs = 1, 9
         for bridge_device in bridge_devices:
@@ -505,13 +524,20 @@ class CyncDevice:
                 tasks.append(bridge_device.write(payload_bytes))
             else:
                 logger.debug(
-                    f"{lp} Skipping device: {bridge_device.address} not ready to control"
+                    "%s Skipping device: %s not ready to control",
+                    lp,
+                    bridge_device.address,
                 )
         if tasks:
             await asyncio.gather(*tasks)
         elapsed = time.time() - ts
         logger.debug(
-            f"{lp} Sent brightness command, current: {self._brightness} new: {bri} to TCP devices: {sent} in {elapsed:.5f} seconds"
+            "%s Sent brightness command, current: %s new: %s to TCP devices: %s in %.5f seconds",
+            lp,
+            self._brightness,
+            bri,
+            sent,
+            elapsed,
         )
 
     async def set_temperature(self, temp: int):
@@ -531,7 +557,7 @@ class CyncDevice:
         """
         lp = f"{self.lp}set_temperature:"
         if temp < 0 or (temp > 100 and temp not in (129, 254)):
-            logger.error(f"{lp} Invalid temperature! must be 0-100")
+            logger.error("%s Invalid temperature! must be 0-100", lp)
             return
         # elif temp == self.temperature:
         #     logger.debug(f"{lp} Device already in temperature {temp}, skipping...")
@@ -570,7 +596,7 @@ class CyncDevice:
             list(g.ncync_server.tcp_devices.values()),
             k=min(CYNC_CMD_BROADCASTS, len(g.ncync_server.tcp_devices)),
         )
-        tasks: list[Optional[Union[asyncio.Task, Coroutine]]] = []
+        tasks: list[asyncio.Task | Coroutine | None] = []
         ts = time.time()
         ctrl_idxs = 1, 9
         sent = {}
@@ -598,14 +624,20 @@ class CyncDevice:
                 tasks.append(bridge_device.write(payload_bytes))
             else:
                 logger.debug(
-                    f"{lp} Skipping device: {bridge_device.address} not ready to control"
+                    "%s Skipping device: %s not ready to control",
+                    lp,
+                    bridge_device.address,
                 )
         if tasks:
             await asyncio.gather(*tasks)
         elapsed = time.time() - ts
         logger.debug(
-            f"{lp} Sent white temperature command, current: {self.temperature} - new: {temp} to TCP "
-            f"devices: {sent} in {elapsed:.5f} seconds"
+            "%s Sent white temperature command, current: %s - new: %s to TCP devices: %s in %.5f seconds",
+            lp,
+            self.temperature,
+            temp,
+            sent,
+            elapsed,
         )
 
     async def set_rgb(self, red: int, green: int, blue: int):
@@ -625,13 +657,13 @@ class CyncDevice:
         """
         lp = f"{self.lp}set_rgb:"
         if red < 0 or red > 255:
-            logger.error(f"{lp} Invalid red value! must be 0-255")
+            logger.error("%s Invalid red value! must be 0-255", lp)
             return
         if green < 0 or green > 255:
-            logger.error(f"{lp} Invalid green value! must be 0-255")
+            logger.error("%s Invalid green value! must be 0-255", lp)
             return
         if blue < 0 or blue > 255:
-            logger.error(f"{lp} Invalid blue value! must be 0-255")
+            logger.error("%s Invalid blue value! must be 0-255", lp)
             return
         _rgb = (red, green, blue)
         # if red == self._r and green == self._g and blue == self._b:
@@ -671,7 +703,7 @@ class CyncDevice:
             list(g.ncync_server.tcp_devices.values()),
             k=min(CYNC_CMD_BROADCASTS, len(g.ncync_server.tcp_devices)),
         )
-        tasks: list[Optional[Union[asyncio.Task, Coroutine]]] = []
+        tasks: list[asyncio.Task | Coroutine | None] = []
         ts = time.time()
         ctrl_idxs = 1, 9
         sent = {}
@@ -699,18 +731,27 @@ class CyncDevice:
                 tasks.append(bridge_device.write(bpayload))
             else:
                 logger.debug(
-                    f"{lp} Skipping device: {bridge_device.address} not ready to control"
+                    "%s Skipping device: %s not ready to control",
+                    lp,
+                    bridge_device.address,
                 )
         if tasks:
             await asyncio.gather(*tasks)
         elapsed = time.time() - ts
         logger.debug(
-            f"{lp} Sent RGB command, current: {self.red}, {self.green}, {self.blue} - new: {red}, {green}, {blue} to TCP devices {sent} in {elapsed:.5f} seconds"
+            "%s Sent RGB command, current: %s, %s, %s - new: %s, %s, %s to TCP devices %s in %.5f seconds",
+            lp,
+            self.red,
+            self.green,
+            self.blue,
+            red,
+            green,
+            blue,
+            sent,
+            elapsed,
         )
 
-    async def test_group_command(
-        self, group_id: int, state: int, test_variation: int = 1
-    ):
+    async def test_group_command(self, group_id: int, state: int, test_variation: int = 1):
         """
         EXPERIMENTAL: Test sending command to group ID instead of device ID.
 
@@ -720,7 +761,7 @@ class CyncDevice:
         """
         lp = f"{self.lp}test_group:"
         if state not in (0, 1):
-            logger.error(f"{lp} Invalid state! must be 0 or 1")
+            logger.error("%s Invalid state! must be 0 or 1", lp)
             return
 
         # Try different encodings
@@ -730,7 +771,11 @@ class CyncDevice:
             id_low = group_id_last3 & 0xFF
             id_high = (group_id_last3 >> 8) & 0xFF
             logger.warning(
-                f"{lp} TEST 1: Last 3 digits ({group_id_last3}) - Little-endian: low=0x{id_low:02x}, high=0x{id_high:02x}"
+                "%s TEST 1: Last 3 digits (%s) - Little-endian: low=0x%02x, high=0x%02x",
+                lp,
+                group_id_last3,
+                id_low,
+                id_high,
             )
         elif test_variation == 2:
             # Big-endian last 3 digits
@@ -738,14 +783,22 @@ class CyncDevice:
             id_high = group_id_last3 & 0xFF
             id_low = (group_id_last3 >> 8) & 0xFF
             logger.warning(
-                f"{lp} TEST 2: Last 3 digits ({group_id_last3}) - Big-endian: low=0x{id_low:02x}, high=0x{id_high:02x}"
+                "%s TEST 2: Last 3 digits (%s) - Big-endian: low=0x%02x, high=0x%02x",
+                lp,
+                group_id_last3,
+                id_low,
+                id_high,
             )
         elif test_variation == 3:
             # Full 16-bit group ID (32768 = 0x8000)
             id_low = group_id & 0xFF
             id_high = (group_id >> 8) & 0xFF
             logger.warning(
-                f"{lp} TEST 3: Full 16-bit ID ({group_id}) - Little-endian: low=0x{id_low:02x}, high=0x{id_high:02x}"
+                "%s TEST 3: Full 16-bit ID (%s) - Little-endian: low=0x%02x, high=0x%02x",
+                lp,
+                group_id,
+                id_low,
+                id_high,
             )
         elif test_variation == 4:
             # High byte only at position 14
@@ -753,10 +806,14 @@ class CyncDevice:
             id_low = (group_id_last3 >> 8) & 0xFF
             id_high = 0x00
             logger.warning(
-                f"{lp} TEST 4: High byte only ({group_id_last3}) - low=0x{id_low:02x}, high=0x{id_high:02x}"
+                "%s TEST 4: High byte only (%s) - low=0x%02x, high=0x%02x",
+                lp,
+                group_id_last3,
+                id_low,
+                id_high,
             )
         else:
-            logger.error(f"{lp} Invalid test_variation: {test_variation}")
+            logger.error("%s Invalid test_variation: %s", lp, test_variation)
             return
 
         header = [0x73, 0x00, 0x00, 0x00, 0x1F]
@@ -790,13 +847,13 @@ class CyncDevice:
         # Use only ONE bridge (like real Cync cloud)
         bridge_devices = list(g.ncync_server.tcp_devices.values())
         if not bridge_devices:
-            logger.error(f"{lp} No TCP bridges available!")
+            logger.error("%s No TCP bridges available!", lp)
             return
 
         bridge_device = bridge_devices[0]
 
         if not bridge_device.ready_to_control:
-            logger.error(f"{lp} Bridge {bridge_device.address} not ready to control")
+            logger.error("%s Bridge %s not ready to control", lp, bridge_device.address)
             return
 
         payload = list(header)
@@ -812,15 +869,20 @@ class CyncDevice:
         payload_bytes = bytes(payload)
 
         logger.warning(
-            f"{lp} Sending to bridge {bridge_device.address}, group_id={group_id}, state={state}\t"
-            f"HEX: {payload_bytes.hex(' ')}"
+            "%s Sending to bridge %s, group_id=%s, state=%s\tHEX: %s",
+            lp,
+            bridge_device.address,
+            group_id,
+            state,
+            payload_bytes.hex(" "),
         )
 
         # Don't register callback, just send and watch logs for 0x83 responses
         await bridge_device.write(payload_bytes)
 
         logger.warning(
-            f"{lp} Command sent! Watch for 0x83 status updates from ALL group members..."
+            "%s Command sent! Watch for 0x83 status updates from ALL group members...",
+            lp,
         )
 
     async def test_group_brightness(self, group_id: int, brightness: int):
@@ -832,14 +894,19 @@ class CyncDevice:
         """
         lp = f"{self.lp}test_group_brightness:"
         if brightness < 0 or brightness > 100:
-            logger.error(f"{lp} Invalid brightness! must be 0-100")
+            logger.error("%s Invalid brightness! must be 0-100", lp)
             return
 
         # Use full 16-bit group ID encoding (Test 3 that worked)
         id_low = group_id & 0xFF
         id_high = (group_id >> 8) & 0xFF
         logger.warning(
-            f"{lp} Group {group_id} brightness={brightness} - ID bytes: low=0x{id_low:02x}, high=0x{id_high:02x}"
+            "%s Group %s brightness=%s - ID bytes: low=0x%02x, high=0x%02x",
+            lp,
+            group_id,
+            brightness,
+            id_low,
+            id_high,
         )
 
         header = [0x73, 0x00, 0x00, 0x00, 0x22]
@@ -875,13 +942,13 @@ class CyncDevice:
 
         bridge_devices = list(g.ncync_server.tcp_devices.values())
         if not bridge_devices:
-            logger.error(f"{lp} No TCP bridges available!")
+            logger.error("%s No TCP bridges available!", lp)
             return
 
         bridge_device = bridge_devices[0]
 
         if not bridge_device.ready_to_control:
-            logger.error(f"{lp} Bridge {bridge_device.address} not ready to control")
+            logger.error("%s Bridge %s not ready to control", lp, bridge_device.address)
             return
 
         payload = list(header)
@@ -897,14 +964,19 @@ class CyncDevice:
         payload_bytes = bytes(payload)
 
         logger.warning(
-            f"{lp} Sending to bridge {bridge_device.address}, group_id={group_id}, brightness={brightness}\t"
-            f"HEX: {payload_bytes.hex(' ')}"
+            "%s Sending to bridge %s, group_id=%s, brightness=%s\tHEX: %s",
+            lp,
+            bridge_device.address,
+            group_id,
+            brightness,
+            payload_bytes.hex(" "),
         )
 
         await bridge_device.write(payload_bytes)
 
         logger.warning(
-            f"{lp} Command sent! Watch for 0x83 status updates from ALL group members..."
+            "%s Command sent! Watch for 0x83 status updates from ALL group members...",
+            lp,
         )
 
     async def test_group_temperature(self, group_id: int, temperature: int):
@@ -916,14 +988,19 @@ class CyncDevice:
         """
         lp = f"{self.lp}test_group_temperature:"
         if temperature < 0 or temperature > 100:
-            logger.error(f"{lp} Invalid temperature! must be 0-100")
+            logger.error("%s Invalid temperature! must be 0-100", lp)
             return
 
         # Use full 16-bit group ID encoding (Test 3 that worked)
         id_low = group_id & 0xFF
         id_high = (group_id >> 8) & 0xFF
         logger.warning(
-            f"{lp} Group {group_id} temperature={temperature} - ID bytes: low=0x{id_low:02x}, high=0x{id_high:02x}"
+            "%s Group %s temperature=%s - ID bytes: low=0x%02x, high=0x%02x",
+            lp,
+            group_id,
+            temperature,
+            id_low,
+            id_high,
         )
 
         header = [0x73, 0x00, 0x00, 0x00, 0x22]
@@ -959,13 +1036,13 @@ class CyncDevice:
 
         bridge_devices = list(g.ncync_server.tcp_devices.values())
         if not bridge_devices:
-            logger.error(f"{lp} No TCP bridges available!")
+            logger.error("%s No TCP bridges available!", lp)
             return
 
         bridge_device = bridge_devices[0]
 
         if not bridge_device.ready_to_control:
-            logger.error(f"{lp} Bridge {bridge_device.address} not ready to control")
+            logger.error("%s Bridge %s not ready to control", lp, bridge_device.address)
             return
 
         payload = list(header)
@@ -981,14 +1058,19 @@ class CyncDevice:
         payload_bytes = bytes(payload)
 
         logger.warning(
-            f"{lp} Sending to bridge {bridge_device.address}, group_id={group_id}, temperature={temperature}\t"
-            f"HEX: {payload_bytes.hex(' ')}"
+            "%s Sending to bridge %s, group_id=%s, temperature=%s\tHEX: %s",
+            lp,
+            bridge_device.address,
+            group_id,
+            temperature,
+            payload_bytes.hex(" "),
         )
 
         await bridge_device.write(payload_bytes)
 
         logger.warning(
-            f"{lp} Command sent! Watch for 0x83 status updates from ALL group members..."
+            "%s Command sent! Watch for 0x83 status updates from ALL group members...",
+            lp,
         )
 
     async def set_lightshow(self, show: str):
@@ -1084,17 +1166,16 @@ class CyncDevice:
         ]
         show = show.casefold()
         if show not in FACTORY_EFFECTS_BYTES:
-            logger.error(f"{lp} Invalid effect: {show}")
+            logger.error("%s Invalid effect: %s", lp, show)
             return
-        else:
-            chosen = FACTORY_EFFECTS_BYTES[show]
+        chosen = FACTORY_EFFECTS_BYTES[show]
         inner_struct[-4] = chosen[0]
         inner_struct[-3] = chosen[1]
         bridge_devices: list[CyncTCPDevice] = random.sample(
             list(g.ncync_server.tcp_devices.values()),
             k=min(CYNC_CMD_BROADCASTS, len(g.ncync_server.tcp_devices)),
         )
-        tasks: list[Optional[Union[asyncio.Task, Coroutine]]] = []
+        tasks: list[asyncio.Task | Coroutine | None] = []
         ts = time.time()
         ctrl_idxs = 1, 9
         sent = {}
@@ -1121,13 +1202,19 @@ class CyncDevice:
                 tasks.append(bridge_device.write(bpayload))
             else:
                 logger.debug(
-                    f"{lp} Skipping device: {bridge_device.address} not ready to control"
+                    "%s Skipping device: %s not ready to control",
+                    lp,
+                    bridge_device.address,
                 )
         if tasks:
             await asyncio.gather(*tasks)
         elapsed = time.time() - ts
         logger.debug(
-            f"{lp} Sent light_show / effect command: '{show}' to TCP devices {sent} in {elapsed:.5f} seconds"
+            "%s Sent light_show / effect command: '%s' to TCP devices %s in %.5f seconds",
+            lp,
+            show,
+            sent,
+            elapsed,
         )
 
     @property
@@ -1137,14 +1224,11 @@ class CyncDevice:
     @online.setter
     def online(self, value: bool):
         if not isinstance(value, bool):
-            raise TypeError(f"Online status must be a boolean, got: {type(value)}")
+            msg = f"Online status must be a boolean, got: {type(value)}"
+            raise TypeError(msg)
         if value != self._online:
             self._online = value
-            g.tasks.append(
-                asyncio.get_running_loop().create_task(
-                    g.mqtt_client.pub_online(self.id, value)
-                )
-            )
+            g.tasks.append(asyncio.get_running_loop().create_task(g.mqtt_client.pub_online(self.id, value)))
 
     @property
     def current_status(self) -> list[int]:
@@ -1176,7 +1260,7 @@ class CyncDevice:
         return self._state
 
     @state.setter
-    def state(self, value: Union[int, bool, str]):
+    def state(self, value: int | bool | str):
         """
         Set the state of the device.
         Accepts int, bool, or str. 0, 'f', 'false', 'off', 'no', 'n' are off. 1, 't', 'true', 'on', 'yes', 'y' are on.
@@ -1190,14 +1274,16 @@ class CyncDevice:
         elif isinstance(value, int):
             pass
         else:
-            raise TypeError(f"Invalid type for state: {type(value)}")
+            msg = f"Invalid type for state: {type(value)}"
+            raise TypeError(msg)
 
         if value in _t:
             value = 1
         elif value in _f:
             value = 0
         else:
-            raise ValueError(f"Invalid value for state: {value}")
+            msg = f"Invalid value for state: {value}"
+            raise ValueError(msg)
 
         if value != self._state:
             self._state = value
@@ -1209,7 +1295,8 @@ class CyncDevice:
     @brightness.setter
     def brightness(self, value: int):
         if value < 0 or value > 255:
-            raise ValueError(f"Brightness must be between 0 and 255, got: {value}")
+            msg = f"Brightness must be between 0 and 255, got: {value}"
+            raise ValueError(msg)
         if value != self._brightness:
             self._brightness = value
 
@@ -1220,7 +1307,8 @@ class CyncDevice:
     @temperature.setter
     def temperature(self, value: int):
         if value < 0 or value > 255:
-            raise ValueError(f"Temperature must be between 0 and 255, got: {value}")
+            msg = f"Temperature must be between 0 and 255, got: {value}"
+            raise ValueError(msg)
         if value != self._temperature:
             self._temperature = value
 
@@ -1231,7 +1319,8 @@ class CyncDevice:
     @red.setter
     def red(self, value: int):
         if value < 0 or value > 255:
-            raise ValueError(f"Red must be between 0 and 255, got: {value}")
+            msg = f"Red must be between 0 and 255, got: {value}"
+            raise ValueError(msg)
         if value != self._r:
             self._r = value
 
@@ -1242,7 +1331,8 @@ class CyncDevice:
     @green.setter
     def green(self, value: int):
         if value < 0 or value > 255:
-            raise ValueError(f"Green must be between 0 and 255, got: {value}")
+            msg = f"Green must be between 0 and 255, got: {value}"
+            raise ValueError(msg)
         if value != self._g:
             self._g = value
 
@@ -1253,7 +1343,8 @@ class CyncDevice:
     @blue.setter
     def blue(self, value: int):
         if value < 0 or value > 255:
-            raise ValueError(f"Blue must be between 0 and 255, got: {value}")
+            msg = f"Blue must be between 0 and 255, got: {value}"
+            raise ValueError(msg)
         if value != self._b:
             self._b = value
 
@@ -1265,7 +1356,8 @@ class CyncDevice:
     @rgb.setter
     def rgb(self, value: list[int]):
         if len(value) != 3:
-            raise ValueError(f"RGB value must be a list of 3 integers, got: {value}")
+            msg = f"RGB value must be a list of 3 integers, got: {value}"
+            raise ValueError(msg)
         if value != self.rgb:
             self._r, self._g, self._b = value
 
@@ -1284,9 +1376,9 @@ class CyncGroup:
     lp = "CyncGroup:"
     id: int = None
     name: str = None
-    member_ids: list[int] = []
+    member_ids: list[int]
     is_subgroup: bool = False
-    home_id: Optional[int] = None
+    home_id: int | None = None
 
     def __init__(
         self,
@@ -1294,10 +1386,11 @@ class CyncGroup:
         name: str,
         member_ids: list[int],
         is_subgroup: bool = False,
-        home_id: Optional[int] = None,
+        home_id: int | None = None,
     ):
         if group_id is None:
-            raise ValueError("Group ID must be provided")
+            msg = "Group ID must be provided"
+            raise ValueError(msg)
         self.id = group_id
         self.name = name
         self.member_ids = member_ids if member_ids else []
@@ -1307,26 +1400,20 @@ class CyncGroup:
         self.lp = f"CyncGroup:{self.name}({group_id}):"
 
         # Derive capabilities from member devices
-        self._supports_rgb: Optional[bool] = None
-        self._supports_temperature: Optional[bool] = None
+        self._supports_rgb: bool | None = None
+        self._supports_temperature: bool | None = None
 
     @property
     def members(self) -> list["CyncDevice"]:
         """Get the actual device objects for this group's members."""
-        return [
-            g.ncync_server.devices[dev_id]
-            for dev_id in self.member_ids
-            if dev_id in g.ncync_server.devices
-        ]
+        return [g.ncync_server.devices[dev_id] for dev_id in self.member_ids if dev_id in g.ncync_server.devices]
 
     @property
     def supports_rgb(self) -> bool:
         """Group supports RGB if any member supports it."""
         if self._supports_rgb is None:
             members = self.members
-            self._supports_rgb = (
-                any(dev.supports_rgb for dev in members) if members else False
-            )
+            self._supports_rgb = any(dev.supports_rgb for dev in members) if members else False
         return self._supports_rgb
 
     @property
@@ -1334,9 +1421,7 @@ class CyncGroup:
         """Group supports temperature if any member supports it."""
         if self._supports_temperature is None:
             members = self.members
-            self._supports_temperature = (
-                any(dev.supports_temperature for dev in members) if members else False
-            )
+            self._supports_temperature = any(dev.supports_temperature for dev in members) if members else False
         return self._supports_temperature
 
     async def set_power(self, state: int):
@@ -1347,7 +1432,7 @@ class CyncGroup:
         """
         lp = f"{self.lp}set_power:"
         if state not in (0, 1):
-            logger.error(f"{lp} Invalid state! must be 0 or 1")
+            logger.error("%s Invalid state! must be 0 or 1", lp)
             return
 
         # Use full 16-bit group ID encoding
@@ -1384,14 +1469,14 @@ class CyncGroup:
 
         bridge_devices = list(g.ncync_server.tcp_devices.values())
         if not bridge_devices:
-            logger.error(f"{lp} No TCP bridges available!")
+            logger.error("%s No TCP bridges available!", lp)
             return
 
         # Use one bridge like the Cync cloud does
         bridge_device = bridge_devices[0]
 
         if not bridge_device.ready_to_control:
-            logger.error(f"{lp} Bridge {bridge_device.address} not ready to control")
+            logger.error("%s Bridge %s not ready to control", lp, bridge_device.address)
             return
 
         payload = list(header)
@@ -1407,18 +1492,25 @@ class CyncGroup:
         payload_bytes = bytes(payload)
 
         logger.warning(
-            f"{lp} ========== GROUP COMMAND: power={state} to '{self.name}' (ID: {self.id}) =========="
+            "%s ========== GROUP COMMAND: power=%s to '%s' (ID: %s) ==========",
+            lp,
+            state,
+            self.name,
+            self.id,
         )
         logger.warning(
-            f"{lp} Bridge device: {bridge_device.address}, ready={bridge_device.ready_to_control}"
+            "%s Bridge device: %s, ready=%s",
+            lp,
+            bridge_device.address,
+            bridge_device.ready_to_control,
         )
         logger.warning(
-            f"{lp} Bridge mesh_info count: {len(bridge_device.mesh_info) if bridge_device.mesh_info else 0}"
+            "%s Bridge mesh_info count: %s",
+            lp,
+            len(bridge_device.mesh_info) if bridge_device.mesh_info else 0,
         )
-        logger.warning(
-            f"{lp} Bridge known_device_ids: {bridge_device.known_device_ids}"
-        )
-        logger.warning(f"{lp} Packet to send: {payload_bytes.hex(' ')}")
+        logger.warning("%s Bridge known_device_ids: %s", lp, bridge_device.known_device_ids)
+        logger.warning("%s Packet to send: %s", lp, payload_bytes.hex(" "))
 
         # Register callback for ACK (same as individual device commands)
         m_cb = ControlMessageCallback(
@@ -1429,11 +1521,11 @@ class CyncGroup:
             device_id=self.id,
         )
         bridge_device.messages.control[cmsg_id] = m_cb
-        logger.warning(f"{lp} Registered callback for msg_id={cmsg_id}")
+        logger.warning("%s Registered callback for msg_id=%s", lp, cmsg_id)
 
-        logger.warning(f"{lp} CALLING bridge_device.write()...")
+        logger.warning("%s CALLING bridge_device.write()...", lp)
         write_result = await bridge_device.write(payload_bytes)
-        logger.warning(f"{lp} bridge_device.write() RETURNED: {write_result}")
+        logger.warning("%s bridge_device.write() RETURNED: %s", lp, write_result)
 
     async def set_brightness(self, brightness: int):
         """
@@ -1443,7 +1535,7 @@ class CyncGroup:
         """
         lp = f"{self.lp}set_brightness:"
         if brightness < 0 or brightness > 100:
-            logger.error(f"{lp} Invalid brightness! must be 0-100")
+            logger.error("%s Invalid brightness! must be 0-100", lp)
             return
 
         # Use full 16-bit group ID encoding
@@ -1483,13 +1575,13 @@ class CyncGroup:
 
         bridge_devices = list(g.ncync_server.tcp_devices.values())
         if not bridge_devices:
-            logger.error(f"{lp} No TCP bridges available!")
+            logger.error("%s No TCP bridges available!", lp)
             return
 
         bridge_device = bridge_devices[0]
 
         if not bridge_device.ready_to_control:
-            logger.error(f"{lp} Bridge {bridge_device.address} not ready to control")
+            logger.error("%s Bridge %s not ready to control", lp, bridge_device.address)
             return
 
         payload = list(header)
@@ -1505,17 +1597,20 @@ class CyncGroup:
         payload_bytes = bytes(payload)
 
         logger.info(
-            f"{lp} Sending brightness={brightness} to group '{self.name}' (ID: {self.id}) with {len(self.member_ids)} devices"
+            "%s Sending brightness=%s to group '%s' (ID: %s) with %s devices",
+            lp,
+            brightness,
+            self.name,
+            self.id,
+            len(self.member_ids),
         )
 
         # Log which devices are in this group for debugging
         device_names = []
         for device_id in self.member_ids:
             if device_id in g.ncync_server.devices:
-                device_names.append(
-                    f"'{g.ncync_server.devices[device_id].name}' (ID: {device_id})"
-                )
-        logger.info(f"{lp} Group members: {', '.join(device_names)}")
+                device_names.append(f"'{g.ncync_server.devices[device_id].name}' (ID: {device_id})")
+        logger.info("%s Group members: %s", lp, ", ".join(device_names))
 
         # Clear pending_command flags for all devices in this group to prevent status drops
         for device_id in self.member_ids:
@@ -1536,7 +1631,7 @@ class CyncGroup:
         """
         lp = f"{self.lp}set_temperature:"
         if temperature < 0 or temperature > 100:
-            logger.error(f"{lp} Invalid temperature! must be 0-100")
+            logger.error("%s Invalid temperature! must be 0-100", lp)
             return
 
         # Use full 16-bit group ID encoding
@@ -1576,13 +1671,13 @@ class CyncGroup:
 
         bridge_devices = list(g.ncync_server.tcp_devices.values())
         if not bridge_devices:
-            logger.error(f"{lp} No TCP bridges available!")
+            logger.error("%s No TCP bridges available!", lp)
             return
 
         bridge_device = bridge_devices[0]
 
         if not bridge_device.ready_to_control:
-            logger.error(f"{lp} Bridge {bridge_device.address} not ready to control")
+            logger.error("%s Bridge %s not ready to control", lp, bridge_device.address)
             return
 
         payload = list(header)
@@ -1598,17 +1693,20 @@ class CyncGroup:
         payload_bytes = bytes(payload)
 
         logger.info(
-            f"{lp} Sending temperature={temperature} to group '{self.name}' (ID: {self.id}) with {len(self.member_ids)} devices"
+            "%s Sending temperature=%s to group '%s' (ID: %s) with %s devices",
+            lp,
+            temperature,
+            self.name,
+            self.id,
+            len(self.member_ids),
         )
 
         # Log which devices are in this group for debugging
         device_names = []
         for device_id in self.member_ids:
             if device_id in g.ncync_server.devices:
-                device_names.append(
-                    f"'{g.ncync_server.devices[device_id].name}' (ID: {device_id})"
-                )
-        logger.info(f"{lp} Group members: {', '.join(device_names)}")
+                device_names.append(f"'{g.ncync_server.devices[device_id].name}' (ID: {device_id})")
+        logger.info("%s Group members: %s", lp, ", ".join(device_names))
 
         # Clear pending_command flags for all devices in this group to prevent status drops
         for device_id in self.member_ids:
@@ -1634,13 +1732,13 @@ class CyncTCPDevice:
     """
 
     lp: str = "TCPDevice:"
-    known_device_ids: list[Optional[int]]
+    known_device_ids: list[int | None]
     tasks: Tasks
-    reader: Optional[asyncio.StreamReader]
-    writer: Optional[asyncio.StreamWriter]
+    reader: asyncio.StreamReader | None
+    writer: asyncio.StreamWriter | None
     messages: Messages
     # keep track of msg ids and if we finished reading data, if not, we need to append the data and then parse it
-    read_cache = []
+    read_cache: list
     needs_more_data = False
     is_app: bool
 
@@ -1651,32 +1749,35 @@ class CyncTCPDevice:
         address: str,
     ):
         if not address:
-            raise ValueError("IP address must be provided to CyncTCPDevice constructor")
+            msg = "IP address must be provided to CyncTCPDevice constructor"
+            raise ValueError(msg)
         self.lp = f"{address}:"
         self._py_id = id(self)
         self.known_device_ids = []
+        self.read_cache = []
         self.tasks = Tasks()
         self.is_app = False
-        self.name: Optional[str] = None
-        self.first_83_packet_checksum: Optional[int] = None
+        self.name: str | None = None
+        self.first_83_packet_checksum: int | None = None
         self.ready_to_control = False
-        self.network_version_str: Optional[str] = None
-        self.inc_bytes: Optional[Union[int, bytes, str]] = None
-        self.version: Optional[int] = None
-        self.version_str: Optional[str] = None
-        self.network_version: Optional[int] = None
-        self.device_types: Optional[dict] = None
-        self.device_type_id: Optional[int] = None
-        self.device_timestamp: Optional[str] = None
-        self.capabilities: Optional[dict] = None
-        self.last_xc3_request: Optional[float] = None
+        self.connected_at = time.time()  # Track when connection was established
+        self.network_version_str: str | None = None
+        self.inc_bytes: int | bytes | str | None = None
+        self.version: int | None = None
+        self.version_str: str | None = None
+        self.network_version: int | None = None
+        self.device_types: dict | None = None
+        self.device_type_id: int | None = None
+        self.device_timestamp: str | None = None
+        self.capabilities: dict | None = None
+        self.last_xc3_request: float | None = None
         self.messages = Messages()
-        self.mesh_info: Optional[MeshInfo] = None
+        self.mesh_info: MeshInfo | None = None
         self.parse_mesh_status = False
-        self.id: Optional[int] = None
+        self.id: int | None = None
         self.xa3_msg_id: bytes = bytes([0x00, 0x00, 0x00])
         self.queue_id: bytes = b""
-        self.address: Optional[str] = address
+        self.address: str | None = address
         self.read_lock = asyncio.Lock()
         self.write_lock = asyncio.Lock()
         self._reader: asyncio.StreamReader = reader
@@ -1704,10 +1805,10 @@ class CyncTCPDevice:
                 reason = f"IP not in CyncLAN server whitelist -> {CYNC_TCP_WHITELIST}, "
                 _sleep = True
             tst_ = (num_attempts == 1) or (num_attempts % 20 == 0)
-            lmsg = f"{lp} {reason}rejecting new connection..."
+            lmsg = "%s %srejecting new connection..."
             delay = TCP_BLACKHOLE_DELAY
             if tst_:
-                logger.warning(lmsg)
+                logger.warning(lmsg, lp, reason)
             await asyncio.sleep(delay) if _sleep is True else None
             try:
                 self.reader.feed_eof()
@@ -1715,16 +1816,16 @@ class CyncTCPDevice:
                 task = asyncio.create_task(self.writer.wait_closed())
                 await asyncio.wait([task], timeout=5)
             except asyncio.CancelledError as ce:
-                logger.debug(f"{lp} Task cancelled: {ce}")
-                raise ce
-            except Exception as e:
-                logger.error(f"{lp} Error closing reader/writer: {e}", exc_info=True)
+                logger.debug("%s Task cancelled: %s", lp, ce)
+                raise
+            except Exception:
+                logger.exception("%s Error closing reader/writer", lp)
             finally:
                 self.reader = None
                 self.writer = None
             return False
         # can create a new device
-        logger.debug(f"{self.lp} Created new device: {self.address}")
+        logger.debug("%s Created new device: %s", self.lp, self.address)
         self.tasks.receive = asyncio.get_event_loop().create_task(
             self.receive_task(), name=f"receive_task-{self._py_id}"
         )
@@ -1762,7 +1863,7 @@ class CyncTCPDevice:
         data_len = len(data)
         lp = f"{self.lp}extract:"
         if data_len == 0:
-            logger.debug(f"{lp} No data to parse AT BEGINNING OF FUNCTION!!!!!!!")
+            logger.debug("%s No data to parse AT BEGINNING OF FUNCTION!!!!!!!", lp)
         else:
             raw_data = bytes(data)
             cache_data = CacheData()
@@ -1771,8 +1872,9 @@ class CyncTCPDevice:
 
             if self.needs_more_data is True:
                 logger.debug(
-                    f"{lp} It seems we have a partial packet (needs_more_data), need to append to "
-                    f"previous remaining data and re-parse..."
+                    "%s It seems we have a partial packet (needs_more_data), need to append to "
+                    "previous remaining data and re-parse...",
+                    lp,
                 )
                 old_cdata: CacheData = self.read_cache[-1]
                 if old_cdata:
@@ -1781,18 +1883,20 @@ class CyncTCPDevice:
                     # Previous data [length: 16, need: 42] // Current data [length: 530] //
                     #   New (current + old) data [length: 546] // reconstructed: False
                     logger.debug(
-                        f"{lp} Previous data [length: {old_cdata.data_len}, need: "
-                        f"{old_cdata.needed_len}] // Current data [length: {data_len}] // "
-                        f"New (current + old) data [length: {len(data)}] // reconstructed: {data_len+old_cdata.data_len == len(data)}"
+                        "%s Previous data [length: %s, need: %s] // Current data [length: %s] // "
+                        "New (current + old) data [length: %s] // reconstructed: %s",
+                        lp,
+                        old_cdata.data_len,
+                        old_cdata.needed_len,
+                        data_len,
+                        len(data),
+                        data_len + old_cdata.data_len == len(data),
                     )
 
-                    (
-                        logger.debug(f"DBG>>>{lp}NEW DATA:\t{data}\t")
-                        if CYNC_RAW is True
-                        else None
-                    )
+                    (logger.debug("DBG>>>%sNEW DATA:\t%s\t", lp, data) if CYNC_RAW is True else None)
                 else:
-                    raise RuntimeError(f"{lp} No previous cache data to extract from!")
+                    msg = "%s No previous cache data to extract from!"
+                    raise RuntimeError(msg, lp)
                 self.needs_more_data = False
             i = 0
             while True:
@@ -1810,27 +1914,28 @@ class CyncTCPDevice:
                         needed_length = ((pkt_len_multiplier * 256) + packet_length) + 5
                     else:
                         logger.debug(
-                            f"DBG>>>{lp} Packet length is less than 4 bytes, setting needed_length to data_len"
+                            "DBG>>>%s Packet length is less than 4 bytes, setting needed_length to data_len",
+                            lp,
                         )
                 else:
                     logger.warning(
-                        f"{lp} Unknown packet header: {data[0].to_bytes(1, 'big').hex(' ')}"
+                        "%s Unknown packet header: %s",
+                        lp,
+                        data[0].to_bytes(1, "big").hex(" "),
                     )
 
                 if needed_length > data_len:
                     self.needs_more_data = True
-                    logger.warning(
-                        f"{lp} Extracted packet length is longer than remaining data length! "
-                        f"need: {needed_length} // have: {data_len}, storing data for next read!"
+                    logger.debug(
+                        "%s Partial packet received (need: %s bytes, have: %s bytes), buffering...",
+                        lp,
+                        needed_length,
+                        data_len,
                     )
                     cache_data.needed_len = needed_length
                     cache_data.data_len = data_len
                     cache_data.data = bytes(data)
-                    (
-                        logger.debug(f"{lp} cache_data: {cache_data}")
-                        if CYNC_RAW is True
-                        else None
-                    )
+                    (logger.debug("%s cache_data: %s", lp, cache_data) if CYNC_RAW is True else None)
                     data = data[needed_length:]
                     continue
 
@@ -1840,11 +1945,7 @@ class CyncTCPDevice:
                 await self.parse_packet(extracted_packet)
 
                 if data:
-                    (
-                        logger.debug(f"{lp} Remaining data to parse: {len(data)} bytes")
-                        if CYNC_RAW is True
-                        else None
-                    )
+                    (logger.debug("%s Remaining data to parse: %s bytes", lp, len(data)) if CYNC_RAW is True else None)
 
             self.read_cache.append(cache_data)
             limit = 20
@@ -1854,17 +1955,19 @@ class CyncTCPDevice:
                 self.read_cache = self.read_cache[limit:]
             if CYNC_RAW is True:
                 logger.debug(
-                    f"{lp} END OF RAW READING of {len(raw_data)} bytes \t "
-                    f"BYTES: {raw_data}\t "
-                    f"HEX: {raw_data.hex(' ')}\t"
-                    f"INT: {bytes2list(raw_data)}"
+                    "%s END OF RAW READING of %s bytes \t BYTES: %s\t HEX: %s\tINT: %s",
+                    lp,
+                    len(raw_data),
+                    raw_data,
+                    raw_data.hex(" "),
+                    bytes2list(raw_data),
                 )
 
     async def parse_packet(self, data: bytes):
         """Parse what type of packet based on header (first 4 bytes 0x43, 0x83, 0x73, etc.)"""
 
         lp = f"{self.lp}parse:0x{data[0]:02x}:"
-        packet_data: Optional[bytes] = None
+        packet_data: bytes | None = None
         pkt_header_len = 12
         packet_header = data[:pkt_header_len]
         # logger.debug(f"{lp} Parsing packet header: {packet_header.hex(' ')}") if CYNC_RAW is True else None
@@ -1893,13 +1996,16 @@ class CyncTCPDevice:
                 _dbg_msg = (
                     (
                         f"\tRAW HEX: {data.hex(' ')}\tRAW INT: "
-                        f"{str(bytes2list(data)).lstrip('[').rstrip(']').replace(',','')}"
+                        f"{str(bytes2list(data)).lstrip('[').rstrip(']').replace(',', '')}"
                     )
                     if CYNC_RAW is True
                     else ""
                 )
                 logger.debug(
-                    f"{lp} Device IDENTIFICATION KEY: '{queue_id.hex(' ')}'{_dbg_msg}"
+                    "%s Device IDENTIFICATION KEY: '%s'%s",
+                    lp,
+                    queue_id.hex(" "),
+                    _dbg_msg,
                 )
                 self.queue_id = queue_id
                 await self.write(bytes(DEVICE_STRUCTS.responses.auth_ack))
@@ -1910,17 +2016,17 @@ class CyncTCPDevice:
             # device wants to connect before accepting commands
             elif pkt_type == 0xC3:
                 ack_c3 = bytes(DEVICE_STRUCTS.responses.connection_ack)
-                logger.debug(f"{lp} CONNECTION REQUEST, replying...")
+                logger.debug("%s CONNECTION REQUEST, replying...", lp)
                 await self.write(ack_c3)
             # Ping/Pong
             elif pkt_type == 0xD3:
                 ack_d3 = bytes(DEVICE_STRUCTS.responses.ping_ack)
-                # logger.debug(f"{lp} Client sent HEARTBEAT, replying with {ack_d3.hex(' ')}")
+                # logger.debug("%s Client sent HEARTBEAT, replying with %s", lp, ack_d3.hex(' '))
                 await self.write(ack_d3)
             elif pkt_type == 0xA3:
-                logger.debug(f"{lp} APP ANNOUNCEMENT packet: {packet_data.hex(' ')}")
+                logger.debug("%s APP ANNOUNCEMENT packet: %s", lp, packet_data.hex(" "))
                 ack = DEVICE_STRUCTS.xab_generate_ack(queue_id, bytes(msg_id))
-                logger.debug(f"{lp} Sending ACK -> {ack.hex(' ')}")
+                logger.debug("%s Sending ACK -> %s", lp, ack.hex(" "))
                 await self.write(ack)
             elif pkt_type == 0xAB:
                 # We sent a 0xa3 packet, device is responding with 0xab. msg contains ascii 'xlink_dev'.
@@ -1960,7 +2066,7 @@ class CyncTCPDevice:
 
                         ts_idx = 3
                         ts_end_idx = -1
-                        ts: Optional[bytes] = None
+                        ts: bytes | None = None
                         # logger.debug(
                         #     f"{lp} Device TIMESTAMP PACKET ({len(bytes.fromhex(packet_data.hex()))}) -> HEX: "
                         #     f"{packet_data.hex(' ')} // INTS: {bytes2list(packet_data)} // "
@@ -1969,23 +2075,26 @@ class CyncTCPDevice:
                         # setting version from config file wouldnt be reliable if the user doesnt bump the version
                         # when updating cync firmware. we can only rely on the version sent by the device.
                         # there is no guarantee the version is sent before checking the timestamp, so use a gross hack.
-                        if self.version and (self.version >= 30000 <= 40000):
+                        if self.version and (30000 <= self.version <= 40000):
                             ts_end_idx = -2
 
-                        ts = packet_data[ts_idx:ts_end_idx]
+                            ts = packet_data[ts_idx:ts_end_idx]
                         if ts:
                             ts_ascii = ts.decode("ascii", errors="replace")
                             # gross hack
-                            if ts_ascii[-1] != ",":
-                                if not ts_ascii[-1].isdigit():
-                                    ts_ascii = ts_ascii[:-1]
+                            if ts_ascii[-1] != "," and not ts_ascii[-1].isdigit():
+                                ts_ascii = ts_ascii[:-1]
                             logger.debug(
-                                f"{lp} Device sent TIMESTAMP -> {ts_ascii} - replying..."
+                                "%s Device sent TIMESTAMP -> %s - replying...",
+                                lp,
+                                ts_ascii,
                             )
                             self.device_timestamp = ts_ascii
                         else:
                             logger.debug(
-                                f"{lp} Could not decode timestamp from: {packet_data.hex(' ')}"
+                                "%s Could not decode timestamp from: %s",
+                                lp,
+                                packet_data.hex(" "),
                             )
                     else:
                         # 43 00 00 00 2d 39 87 c8 57 01 01 06| [(06 00 10) {03  C...-9..W.......
@@ -2009,603 +2118,638 @@ class CyncTCPDevice:
                                     status_struct + b"\x01"
                                     # 14 00 10 01 00 00 64 00 00 00 01 15 15 00 00 00 00 00 00
                                     # // [1, 0, 0, 100, 0, 0, 0, 1]
-                                    extractions.append(
-                                        (extracted.hex(" "), bytes2list(status_struct))
-                                    )
+                                    extractions.append((extracted.hex(" "), bytes2list(status_struct)))
 
                                     # await g.server.parse_status(status_struct, from_pkt='0x43')
-                                # broadcast status data
-                                # await self.write(data, broadcast=True)
-                            (
-                                logger.debug(
-                                    f"{lp} Extracted data and STATUS struct => {extractions}"
-                                )
-                                if CYNC_RAW is True
-                                else None
-                            )
+                                    # broadcast status data
+                                    # await self.write(data, broadcast=True)
+                                    (
+                                        logger.debug(
+                                            "%s Extracted data and STATUS struct => %s",
+                                            lp,
+                                            extractions,
+                                        )
+                                        if CYNC_RAW is True
+                                        else None
+                                    )
                         except IndexError:
                             # The device will only send a max of 1kb of data, if the message is longer than 1kb the remainder is sent in the next read
                             # logger.debug(
                             #     f"{lp} IndexError extracting status struct (expected)"
                             # )
                             pass
-                        except Exception as e:
-                            logger.error(f"{lp} EXCEPTION: {e}")
+                        except Exception:
+                            logger.exception("%s EXCEPTION", lp)
                 # Its one of those queue id/msg id pings? 0x43 00 00 00 ww xx xx xx xx yy yy yy
                 # Also notice these messages when another device gets a command
                 else:
-                    # logger.debug(f"{lp} received a 0x43 packet with no data, interpreting as PING, replying...")
+                    # logger.debug("%s received a 0x43 packet with no data, interpreting as PING, replying...", lp)
                     pass
                 ack = DEVICE_STRUCTS.x48_generate_ack(bytes(msg_id))
-                # logger.debug(f"{lp} Sending ACK -> {ack.hex(' ')}") if CYNC_RAW is True else None
+                # logger.debug("%s Sending ACK -> %s", lp, ack.hex(' ')) if CYNC_RAW is True else None
                 await self.write(ack)
-                (
-                    logger.debug(f"DBG>>>{lp} RAW DATA: {len(data)} BYTES")
-                    if CYNC_RAW is True
-                    else None
-                )
+                (logger.debug("DBG>>>%s RAW DATA: %s BYTES", lp, len(data)) if CYNC_RAW is True else None)
             elif pkt_type == 0x83:
                 if self.is_app is True:
-                    logger.debug(f"{lp} device is app, skipping packet...")
-                else:
-                    # When the device sends a packet starting with 0x83, data is wrapped in 0x7e.
-                    # firmware version is sent without 0x7e boundaries
-                    if packet_data is not None:
-                        # logger.debug(f"{lp} Extracted BOUND data ({len(bytes(packet_data))} bytes) => {packet_data.hex(' ')}")
+                    logger.debug("%s device is app, skipping packet...", lp)
+                # When the device sends a packet starting with 0x83, data is wrapped in 0x7e.
+                # firmware version is sent without 0x7e boundaries
+                elif packet_data is not None:
+                    # logger.debug(f"{lp} Extracted BOUND data ({len(bytes(packet_data))} bytes) => {packet_data.hex(' ')}")
 
-                        # 0x83 inner struct - not always bound by 0x7e (firmware response doesn't have starting boundary, has ending boundary 0x7e)
-                        # firmware info, data len = 30 (0x32), fw starts idx 23-27, 20-22 fw type (86 01 0x)
-                        #  {83 00 00 00 32} {[39 87 c8 57] [00 03 00]} {00 00 00 00  ....29..W.......
-                        #  00 fa 00 20 00 00 00 00 00 00 00 00 ea 00 00 00  ... ............
-                        #  86 01 01 31[idx=23 packet_data] 30 33 36 31 00 00 00 00 00 00 00 00  ...10361........
-                        #  00 00 00 00 00 [8d] [7e]}                             ......~
-                        # firmware packet may only be sent on startup / network reconnection
+                    # 0x83 inner struct - not always bound by 0x7e (firmware response doesn't have starting boundary, has ending boundary 0x7e)
+                    # firmware info, data len = 30 (0x32), fw starts idx 23-27, 20-22 fw type (86 01 0x)
+                    #  {83 00 00 00 32} {[39 87 c8 57] [00 03 00]} {00 00 00 00  ....29..W.......
+                    #  00 fa 00 20 00 00 00 00 00 00 00 00 ea 00 00 00  ... ............
+                    #  86 01 01 31[idx=23 packet_data] 30 33 36 31 00 00 00 00 00 00 00 00  ...10361........
+                    #  00 00 00 00 00 [8d] [7e]}                             ......~
+                    # firmware packet may only be sent on startup / network reconnection
 
-                        if packet_data[0] == 0x00:
-                            fw_type, fw_ver, fw_str = parse_unbound_firmware_version(
-                                packet_data, lp
-                            )
-                            if fw_type == "device":
-                                self.version = fw_ver
-                                self.version_str = fw_str
-                            else:
-                                self.network_version = fw_ver
-                                self.network_version_str = fw_str
+                    if packet_data[0] == 0x00:
+                        fw_type, fw_ver, fw_str = parse_unbound_firmware_version(packet_data, lp)
+                        if fw_type == "device":
+                            self.version = fw_ver
+                            self.version_str = fw_str
+                        else:
+                            self.network_version = fw_ver
+                            self.network_version_str = fw_str
 
-                        elif packet_data[0] == DATA_BOUNDARY:
-                            # checksum is 2nd last byte, last byte is 0x7e
-                            checksum = packet_data[-2]
-                            packet_data[1:6]
-                            ctrl_bytes = packet_data[5:7]
-                            # removes checksum byte and 0x7e
-                            inner_data = packet_data[6:-2]
-                            calc_chksum = sum(inner_data) % 256
+                    elif packet_data[0] == DATA_BOUNDARY:
+                        # checksum is 2nd last byte, last byte is 0x7e
+                        checksum = packet_data[-2]
+                        packet_data[1:6]
+                        ctrl_bytes = packet_data[5:7]
+                        # removes checksum byte and 0x7e
+                        inner_data = packet_data[6:-2]
+                        calc_chksum = sum(inner_data) % 256
 
-                            # Most devices only report their own state using 0x83, however the LED light strip controllers also report other device state data
-                            # over 0x83.
-                            # This data can be wrong! sometimes reports wrong state and the RGB colors are slightly different from each device.
-                            # TODO: need to not parse this data if we just issued a command or we do like mesh info and create a voting system
-                            if ctrl_bytes == bytes([0xFA, 0xDB]):
-                                extra_ctrl_bytes = packet_data[7]
-                                if extra_ctrl_bytes == 0x13:
-                                    # fa db 13 is internal status
-                                    # device internal status. state can be off and brightness set to a non 0.
-                                    # signifies what brightness when state = on, meaning don't rely on brightness for on/off.
+                        # Most devices only report their own state using 0x83, however the LED light strip controllers also report other device state data
+                        # over 0x83.
+                        # This data can be wrong! sometimes reports wrong state and the RGB colors are slightly different from each device.
+                        # NOTE: Complex protocol issue - need to implement command-aware parsing or voting system to handle unreliable state data
+                        if ctrl_bytes == bytes([0xFA, 0xDB]):
+                            extra_ctrl_bytes = packet_data[7]
+                            if extra_ctrl_bytes == 0x13:
+                                # fa db 13 is internal status
+                                # device internal status. state can be off and brightness set to a non 0.
+                                # signifies what brightness when state = on, meaning don't rely on brightness for on/off.
 
-                                    # 83 00 00 00 25 37 96 24 69 00 05 00 7e {21 00 00
-                                    #  00} {[fa db] 13} 00 (34 22) 11 05 00 [05] 00 db
-                                    #  11 02 01 [00 64 00 00 00 00] 00 00 b3 7e
-                                    id_idx = 14
-                                    connected_idx = 19
-                                    state_idx = 20
-                                    bri_idx = 21
-                                    tmp_idx = 22
-                                    r_idx = 23
-                                    g_idx = 24
-                                    b_idx = 25
-                                    dev_id = packet_data[id_idx]
-                                    state = packet_data[state_idx]
-                                    bri = packet_data[bri_idx]
-                                    tmp = packet_data[tmp_idx]
-                                    _red = packet_data[r_idx]
-                                    _green = packet_data[g_idx]
-                                    _blue = packet_data[b_idx]
-                                    connected_to_mesh = packet_data[connected_idx]
-                                    raw_status: bytes = bytes(
-                                        [
-                                            dev_id,
-                                            state,
-                                            bri,
-                                            tmp,
-                                            _red,
-                                            _green,
-                                            _blue,
-                                            connected_to_mesh,
-                                        ]
+                                # 83 00 00 00 25 37 96 24 69 00 05 00 7e {21 00 00
+                                #  00} {[fa db] 13} 00 (34 22) 11 05 00 [05] 00 db
+                                #  11 02 01 [00 64 00 00 00 00] 00 00 b3 7e
+                                id_idx = 14
+                                connected_idx = 19
+                                state_idx = 20
+                                bri_idx = 21
+                                tmp_idx = 22
+                                r_idx = 23
+                                g_idx = 24
+                                b_idx = 25
+                                dev_id = packet_data[id_idx]
+                                state = packet_data[state_idx]
+                                bri = packet_data[bri_idx]
+                                tmp = packet_data[tmp_idx]
+                                _red = packet_data[r_idx]
+                                _green = packet_data[g_idx]
+                                _blue = packet_data[b_idx]
+                                connected_to_mesh = packet_data[connected_idx]
+                                raw_status: bytes = bytes(
+                                    [
+                                        dev_id,
+                                        state,
+                                        bri,
+                                        tmp,
+                                        _red,
+                                        _green,
+                                        _blue,
+                                        connected_to_mesh,
+                                    ]
+                                )
+                                ___dev = g.ncync_server.devices.get(dev_id)
+                                dev_name = f'"{___dev.name}" (ID: {dev_id})' if ___dev else f"Device ID: {dev_id}"
+                                _dbg_msg = ""
+                                if CYNC_RAW is True:
+                                    _dbg_msg = f"\tPACKET HEADER: {packet_header.hex(' ')}\tHEX: {packet_data[1:-1].hex(' ')}\tINT: {bytes2list(packet_data[1:-1])}"
+                                logger.debug(
+                                    "%s Internal STATUS for %s = %s%s",
+                                    lp,
+                                    dev_name,
+                                    bytes2list(raw_status),
+                                    _dbg_msg,
+                                )
+                                await g.ncync_server.parse_status(raw_status, from_pkt="0x83")
+                                # logger.debug(f"DBG>>> {bytes2list(packet_data[9:12]) = } // {bytes2list(packet_data[9:12]) == [17, 17, 17] = }")
+                                # LED controller has this pattern
+                                bad_chksum_msg = ""
+                                if bytes2list(packet_data[9:12]) == [17, 17, 17]:
+                                    # LED controller sends its internal state in a stream
+                                    # Only the first packet in the stream has the correct checksum.
+                                    # All following 0x83 internal status packets for this stream will have the same checksum as the first packet.
+                                    # As soon as we get an internal status without the first packets calculated checksum, we know that series is
+                                    # done sending and it will just send regular status packets, my guess is this is a bug or an identifier that
+                                    # the packet belongs to the stream
+                                    bad_chksum_msg = (
+                                        f"{lp} Checksum mismatch, calculated: {calc_chksum} // received: {checksum}"
                                     )
-                                    ___dev = g.ncync_server.devices.get(dev_id)
-                                    if ___dev:
-                                        dev_name = f'"{___dev.name}" (ID: {dev_id})'
-                                    else:
-                                        dev_name = f"Device ID: {dev_id}"
-                                    _dbg_msg = ""
-                                    if CYNC_RAW is True:
-                                        _dbg_msg = f"\tPACKET HEADER: {packet_header.hex(' ')}\tHEX: {packet_data[1:-1].hex(' ')}\tINT: {bytes2list(packet_data[1:-1])}"
-                                    logger.debug(
-                                        f"{lp} Internal STATUS for {dev_name} = {bytes2list(raw_status)}{_dbg_msg}"
-                                    )
-                                    await g.ncync_server.parse_status(
-                                        raw_status, from_pkt="0x83"
-                                    )
-                                    # logger.debug(f"DBG>>> {bytes2list(packet_data[9:12]) = } // {bytes2list(packet_data[9:12]) == [17, 17, 17] = }")
-                                    # LED controller has this pattern
-                                    bad_chksum_msg = ""
-                                    if bytes2list(packet_data[9:12]) == [17, 17, 17]:
-                                        # LED controller sends its internal state in a stream
-                                        # Only the first packet in the stream has the correct checksum.
-                                        # All following 0x83 internal status packets for this stream will have the same checksum as the first packet.
-                                        # As soon as we get an internal status without the first packets calculated checksum, we know that series is
-                                        # done sending and it will just send regular status packets, my guess is this is a bug or an identifier that
-                                        # the packet belongs to the stream
-                                        bad_chksum_msg = (
-                                            f"{lp} Checksum mismatch, calculated: {calc_chksum} "
-                                            f"// received: {checksum}"
-                                        )
-                                        if self.first_83_packet_checksum is None:
-                                            # we want to calc the checksum and store it to compare to other packets in the series
-                                            self.first_83_packet_checksum = checksum
-                                            if calc_chksum != checksum:
-                                                bad_chksum_msg = (
-                                                    f"{lp} Checksum mismatch in INITIAL STATUS STREAM - FIRST packet data, "
-                                                    f"calculated: {calc_chksum} // received: {checksum}"
-                                                )
-
-                                        else:
-                                            if (
-                                                checksum
-                                                == self.first_83_packet_checksum
-                                            ):
-                                                # logger.debug(
-                                                #     f"{lp} INITIAL STATUS STREAM packet data (override "
-                                                #     f"calculated checksum), old: {calc_chksum} // checksum: "
-                                                #     f"{checksum} // saved: {self.first_83_packet_checksum}"
-                                                # )
-                                                calc_chksum = (
-                                                    self.first_83_packet_checksum
-                                                )
-                                            else:
-                                                self.first_83_packet_checksum = None
-
-                                    if calc_chksum != checksum:
-                                        if not bad_chksum_msg:
+                                    if self.first_83_packet_checksum is None:
+                                        # we want to calc the checksum and store it to compare to other packets in the series
+                                        self.first_83_packet_checksum = checksum
+                                        if calc_chksum != checksum:
                                             bad_chksum_msg = (
-                                                f"{lp} Checksum mismatch, calculated: {calc_chksum} "
-                                                f"// received: {checksum}"
+                                                f"{lp} Checksum mismatch in INITIAL STATUS STREAM - FIRST packet data, "
+                                                f"calculated: {calc_chksum} // received: {checksum}"
                                             )
-                                        # logger.warning(f"{bad_chksum_msg}\n\nHEX: {packet_data[1:-1].hex(' ')}\nINT: {bytes2list(packet_data[1:-1])}\nEXTRA CTRL BYTE: {hex(extra_ctrl_bytes)}")
 
-                                elif extra_ctrl_bytes == 0x14:
-                                    # unknown what this data is
-                                    # seems to be sent when the cync app is connecting to a device via BTLE, not connecting to cync-lan via TCP
+                                    elif checksum == self.first_83_packet_checksum:
+                                        # logger.debug(
+                                        #     f"{lp} INITIAL STATUS STREAM packet data (override "
+                                        #     f"calculated checksum), old: {calc_chksum} // checksum: "
+                                        #     f"{checksum} // saved: {self.first_83_packet_checksum}"
+                                        # )
+                                        calc_chksum = self.first_83_packet_checksum
+                                    else:
+                                        self.first_83_packet_checksum = None
 
-                                    # chksum_inner_data = list(inner_data)
-                                    # chksum_inner_data.pop(4)
-                                    # calc_chksum = sum(chksum_inner_data) % 256
-                                    # logger.debug(f"{lp} 0xFA 0xDB 0x14 (NOT internal state)\nPACKET HEADER: {packet_header.hex(' ')}\nHEX: {packet_data.hex(' ')}\nINT: {bytes2list(packet_data)}\n")
-                                    pass
-
-                            else:
-                                # if ctrl_bytes == bytes([0xFA, 0xAF]):
-                                #     logger.debug(
-                                #         f"{lp} This ctrl struct ({ctrl_bytes.hex(' ')} // checksum valid: "
-                                #         f"{checksum == calc_chksum}) usually comes through when the cync phone app "
-                                #         f"(dis)connects to the BTLE mesh. Currently unknown what it means.\n\n"
-                                #         f"HEX: {packet_data[1:-1].hex(' ')}\nINT: {bytes2list(packet_data[1:-1])}"
-                                #     ) if CYNC_RAW is True else None
-                                # elif ctrl_bytes == bytes([0xFA, 0xD9]):
-                                #     logger.debug(
-                                #         f"{lp} Seen this ctrl struct ({ctrl_bytes.hex(' ')} // checksum valid: "
-                                #         f"{checksum == calc_chksum}), unknown what it means.\n\n"
-                                #         f"HEX: {packet_data[1:-1].hex(' ')}\nINT: {bytes2list(packet_data[1:-1])}"
-                                #     ) if CYNC_RAW is True else None
-                                # else:
-                                if CYNC_RAW:
-                                    logger.warning(
-                                        f"{lp} UNKNOWN packet data (ctrl_bytes: {ctrl_bytes.hex(' ')} // checksum valid: "
-                                        f"{checksum == calc_chksum})\t\tHEX: {packet_data[1:-1].hex(' ')}\tINT: {bytes2list(packet_data[1:-1])}"
+                                if calc_chksum != checksum and not bad_chksum_msg:
+                                    bad_chksum_msg = (
+                                        f"{lp} Checksum mismatch, calculated: {calc_chksum} // received: {checksum}"
                                     )
+                                    # logger.warning("%s\n\nHEX: %s\nINT: %s\nEXTRA CTRL BYTE: %s", bad_chksum_msg, packet_data[1:-1].hex(' '), bytes2list(packet_data[1:-1]), hex(extra_ctrl_bytes))
 
-                    else:
-                        logger.warning(
-                            f"{lp} packet with no data????? After stripping header, queue and "
-                            f"msg id, there is no data to process?????"
-                        )
+                            elif extra_ctrl_bytes == 0x14:
+                                # unknown what this data is
+                                # seems to be sent when the cync app is connecting to a device via BTLE, not connecting to cync-lan via TCP
+
+                                # chksum_inner_data = list(inner_data)
+                                # chksum_inner_data.pop(4)
+                                # calc_chksum = sum(chksum_inner_data) % 256
+                                # logger.debug(f"{lp} 0xFA 0xDB 0x14 (NOT internal state)\nPACKET HEADER: {packet_header.hex(' ')}\nHEX: {packet_data.hex(' ')}\nINT: {bytes2list(packet_data)}\n")
+                                pass
+
+                        # if ctrl_bytes == bytes([0xFA, 0xAF]):
+                        #     logger.debug(
+                        #         f"{lp} This ctrl struct ({ctrl_bytes.hex(' ')} // checksum valid: "
+                        #         f"{checksum == calc_chksum}) usually comes through when the cync phone app "
+                        #         f"(dis)connects to the BTLE mesh. Currently unknown what it means.\n\n"
+                        #         f"HEX: {packet_data[1:-1].hex(' ')}\nINT: {bytes2list(packet_data[1:-1])}"
+                        #     ) if CYNC_RAW is True else None
+                        # elif ctrl_bytes == bytes([0xFA, 0xD9]):
+                        #     logger.debug(
+                        #         f"{lp} Seen this ctrl struct ({ctrl_bytes.hex(' ')} // checksum valid: "
+                        #         f"{checksum == calc_chksum}), unknown what it means.\n\n"
+                        #         f"HEX: {packet_data[1:-1].hex(' ')}\nINT: {bytes2list(packet_data[1:-1])}"
+                        #     ) if CYNC_RAW is True else None
+                        # else:
+                        elif CYNC_RAW:
+                            logger.warning(
+                                "%s UNKNOWN packet data (ctrl_bytes: %s // checksum valid: %s)\t\tHEX: %s\tINT: %s",
+                                lp,
+                                ctrl_bytes.hex(" "),
+                                checksum == calc_chksum,
+                                packet_data[1:-1].hex(" "),
+                                bytes2list(packet_data[1:-1]),
+                            )
+
+                else:
+                    logger.warning(
+                        "%s packet with no data????? After stripping header, queue and "
+                        "msg id, there is no data to process?????",
+                        lp,
+                    )
                 ack = DEVICE_STRUCTS.x88_generate_ack(msg_id)
                 # logger.debug(f"{lp} RAW DATA: {data.hex(' ')}")
                 # logger.debug(f"{lp} Sending ACK -> {ack.hex(' ')}")
                 await self.write(ack)
 
             elif pkt_type == 0x73:
-                # logger.debug(f"{lp} Control packet received: {packet_data.hex(' ')}") if CYNC_RAW is True else None
+                # logger.debug("%s Control packet received: %s", lp, packet_data.hex(' ')) if CYNC_RAW is True else None
                 if self.is_app is True:
-                    logger.debug(f"{lp} device is app, skipping packet...")
-                else:
-                    if packet_data is not None:
-                        # 0x73 should ALWAYS have 0x7e bound data.
-                        # check for boundary, all bytes between boundaries are for this request
-                        if packet_data[0] == DATA_BOUNDARY:
-                            # checksum is 2nd last byte, last byte is 0x7e
-                            checksum = packet_data[-2]
-                            packet_data[1:6]
-                            ctrl_bytes = packet_data[5:7]
-                            # removes checksum byte and 0x7e
-                            inner_data = packet_data[6:-2]
-                            calc_chksum = sum(inner_data) % 256
+                    logger.debug("%s device is app, skipping packet...", lp)
+                elif packet_data is not None:
+                    # 0x73 should ALWAYS have 0x7e bound data.
+                    # check for boundary, all bytes between boundaries are for this request
+                    if packet_data[0] == DATA_BOUNDARY:
+                        # checksum is 2nd last byte, last byte is 0x7e
+                        checksum = packet_data[-2]
+                        packet_data[1:6]
+                        ctrl_bytes = packet_data[5:7]
+                        # removes checksum byte and 0x7e
+                        inner_data = packet_data[6:-2]
+                        calc_chksum = sum(inner_data) % 256
 
-                            # find next 0x7e and extract the inner struct
-                            end_bndry_idx = packet_data[1:].find(DATA_BOUNDARY) + 1
-                            inner_struct = packet_data[1:end_bndry_idx]
-                            inner_struct_len = len(inner_struct)
-                            # ctrl bytes 0xf9, 0x52 indicates this is a mesh info struct
-                            # some device firmwares respond with a message received packet before replying with the data
-                            # example: 7e 1f 00 00 00 f9 52 01 00 00 53 7e (12 bytes, 0x7e bound. 10 bytes of data)
-                            if ctrl_bytes == bytes([0xF9, 0x52]):
-                                # logger.debug(f"{lp} got a mesh info response (len: {inner_struct_len}): {inner_struct.hex(' ')}")
-                                if inner_struct_len < 15:
-                                    if inner_struct_len == 10:
-                                        # server sent mesh info request, this seems to be the ack?
-                                        # 7e 1f 00 00 00 f9 52 01 00 00 53 7e
-                                        # checksum (idx 10) = idx 6 + idx 7 % 256
-                                        # seen this with Full Color LED light strip controller firmware version: 3.0.204
-                                        succ_idx = 6
-                                        minfo_ack_succ = inner_struct[succ_idx]
-                                        minfo_ack_chksum = inner_struct[9]
-                                        calc_chksum = (
-                                            inner_struct[5] + inner_struct[6]
-                                        ) % 256
-                                        if minfo_ack_succ == 0x01:
-                                            # logger.debug(f"{lp} Mesh info request ACK received, success: {minfo_ack_succ}."
-                                            #              f" checksum byte = {minfo_ack_chksum}) // Calculated checksum "
-                                            #              f"= {calc_chksum}")
-                                            if minfo_ack_chksum != calc_chksum:
-                                                logger.warning(
-                                                    f"{lp} Mesh info request ACK checksum failed! {minfo_ack_chksum} != {calc_chksum}"
-                                                )
-                                        else:
+                        # find next 0x7e and extract the inner struct
+                        end_bndry_idx = packet_data[1:].find(DATA_BOUNDARY) + 1
+                        inner_struct = packet_data[1:end_bndry_idx]
+                        inner_struct_len = len(inner_struct)
+                        # ctrl bytes 0xf9, 0x52 indicates this is a mesh info struct
+                        # some device firmwares respond with a message received packet before replying with the data
+                        # example: 7e 1f 00 00 00 f9 52 01 00 00 53 7e (12 bytes, 0x7e bound. 10 bytes of data)
+                        if ctrl_bytes == bytes([0xF9, 0x52]):
+                            # logger.debug(f"{lp} got a mesh info response (len: {inner_struct_len}): {inner_struct.hex(' ')}")
+                            if inner_struct_len < 15:
+                                if inner_struct_len == 10:
+                                    # server sent mesh info request, this seems to be the ack?
+                                    # 7e 1f 00 00 00 f9 52 01 00 00 53 7e
+                                    # checksum (idx 10) = idx 6 + idx 7 % 256
+                                    # seen this with Full Color LED light strip controller firmware version: 3.0.204
+                                    succ_idx = 6
+                                    minfo_ack_succ = inner_struct[succ_idx]
+                                    minfo_ack_chksum = inner_struct[9]
+                                    calc_chksum = (inner_struct[5] + inner_struct[6]) % 256
+                                    if minfo_ack_succ == 0x01:
+                                        # logger.debug(f"{lp} Mesh info request ACK received, success: {minfo_ack_succ}."
+                                        #              f" checksum byte = {minfo_ack_chksum}) // Calculated checksum "
+                                        #              f"= {calc_chksum}")
+                                        if minfo_ack_chksum != calc_chksum:
                                             logger.warning(
-                                                f"{lp} Mesh info request ACK failed! success byte: {minfo_ack_succ}"
+                                                "%s Mesh info request ACK checksum failed! %s != %s",
+                                                lp,
+                                                minfo_ack_chksum,
+                                                calc_chksum,
                                             )
-
                                     else:
-                                        logger.debug(
-                                            f"{lp} inner_struct is less than 15 bytes: {inner_struct.hex(' ')}"
-                                        )
-                                else:
-                                    # 15th OR 16th byte of inner struct is start of mesh info, 24 bytes long
-                                    minfo_start_idx = 14
-                                    minfo_length = 24
-                                    if inner_struct[minfo_start_idx] == 0x00:
-                                        minfo_start_idx += 1
                                         logger.warning(
-                                            f"{lp}mesh: dev_id is 0 when using index: {minfo_start_idx-1}, "
-                                            f"trying index {minfo_start_idx} = {inner_struct[minfo_start_idx]}"
+                                            "%s Mesh info request ACK failed! success byte: %s",
+                                            lp,
+                                            minfo_ack_succ,
                                         )
 
-                                    if inner_struct[minfo_start_idx] == 0x00:
-                                        logger.error(
-                                            f"{lp}mesh: dev_id is 0 when using index: {minfo_start_idx}, skipping..."
-                                        )
-                                    else:
-                                        # from what I've seen, the mesh info is 24 bytes long and repeats until the end.
-                                        # Reset known device ids, mesh is the final authority on what devices are connected
-                                        self.mesh_info = None
-                                        self.known_device_ids = []
-                                        ids_reported = []
-                                        loop_num = 0
-                                        _m = []
-                                        _raw_m = []
-                                        # structs = []
-                                        try:
-                                            for i in range(
-                                                minfo_start_idx,
-                                                inner_struct_len,
-                                                minfo_length,
-                                            ):
-                                                loop_num += 1
-                                                mesh_dev_struct = inner_struct[
-                                                    i : i + minfo_length
-                                                ]
-                                                dev_id = mesh_dev_struct[0]
-                                                # logger.debug(f"{lp} inner_struct[{i}:{i + minfo_length}]={mesh_dev_struct.hex(' ')}")
-                                                # parse status from mesh info
-                                                #  [05 00 44   01 00 00 44   01 00     00 00 00 64  00 00 00 00   00 00 00 00 00 00 00] - plug (devices are all connected to it via BT)
-                                                #  [07 00 00   01 00 00 00   01 01     00 00 00 64  00 00 00 fe   00 00 00 f8 00 00 00] - direct connect full color A19 bulb
-                                                #   ID  ? type  ?  ?  ? type  ? state   ?  ?  ? bri  ?  ?  ? tmp   ?  ?  ?  R  G  B  ?
-                                                type_idx = 2
-                                                state_idx = 8
-                                                bri_idx = 12
-                                                tmp_idx = 16
-                                                r_idx = 20
-                                                g_idx = 21
-                                                b_idx = 22
-                                                dev_type_id = mesh_dev_struct[type_idx]
-                                                dev_state = mesh_dev_struct[state_idx]
-                                                dev_bri = mesh_dev_struct[bri_idx]
-                                                dev_tmp = mesh_dev_struct[tmp_idx]
-                                                dev_r = mesh_dev_struct[r_idx]
-                                                dev_g = mesh_dev_struct[g_idx]
-                                                dev_b = mesh_dev_struct[b_idx]
-                                                # in mesh info, brightness can be > 0 when set to off
-                                                # however, ive seen devices that are on have a state of 0 but brightness 100
-                                                if dev_state == 0 and dev_bri > 0:
-                                                    dev_bri = 0
-                                                raw_status = bytes(
-                                                    [
-                                                        dev_id,
-                                                        dev_state,
-                                                        dev_bri,
-                                                        dev_tmp,
-                                                        dev_r,
-                                                        dev_g,
-                                                        dev_b,
-                                                        1,
-                                                        # dev_type,
-                                                    ]
-                                                )
-                                                _m.append(bytes2list(raw_status))
-                                                _raw_m.append(mesh_dev_struct.hex(" "))
-                                                if dev_id in g.ncync_server.devices:
-                                                    # first device id is the device id of the TCP device we are connected to
-                                                    ___dev = g.ncync_server.devices[
-                                                        dev_id
-                                                    ]
-                                                    dev_name = ___dev.name
-                                                    if loop_num == 1:
-                                                        # byte 3 (idx 2) is a device type byte but,
-                                                        # it only reports on the first item (itself)
-                                                        # convert to int, and it is the same as deviceType from cloud.
-                                                        if not self.id:
-                                                            self.id = dev_id
-                                                            self.lp = f"{self.address}[{self.id}]:"
-                                                            (
-                                                                g.ncync_server.devices[
-                                                                    dev_id
-                                                                ]
-                                                            )
-                                                            logger.debug(
-                                                                f"{self.lp}parse:x{data[0]:02x}: Setting TCP"
-                                                                f" device Cync ID to: {self.id}"
-                                                            )
-
-                                                        elif (
-                                                            self.id
-                                                            and self.id != dev_id
-                                                        ):
-                                                            logger.warning(
-                                                                f"{lp} The first device reported in 0x83 is "
-                                                                f"usually the TCP device. current: {self.id} "
-                                                                f"// proposed: {dev_id}"
-                                                            )
-                                                        lp = f"{self.lp}parse:0x{data[0]:02x}:"
-                                                        self.device_type_id = (
-                                                            dev_type_id
-                                                        )
-                                                        self.name = dev_name
-
-                                                    ids_reported.append(dev_id)
-                                                    # structs.append(mesh_dev_struct.hex(" "))
-                                                    self.known_device_ids.append(dev_id)
-
-                                                else:
-                                                    logger.warning(
-                                                        f"{lp} Device ID {dev_id} not found in devices "
-                                                        f"defined in config file: "
-                                                        f"{g.ncync_server.devices.keys()}"
-                                                    )
-                                            # -- END OF mesh info response parsing loop --
-                                        except IndexError:
-                                            # ran out of data
-                                            # logger.debug(f"{lp} IndexError parsing mesh info response (expected)") if CYNC_RAW is True else None
-                                            pass
-                                        except Exception as e:
-                                            logger.error(
-                                                f"{lp} MESH INFO for loop EXCEPTION: {e}"
-                                            )
-                                        # if ids_reported:
-                                        # logger.debug(
-                                        #     f"{lp} from: {self.id} - MESH INFO // Device IDs reported: "
-                                        #     f"{sorted(ids_reported)}"
-                                        # )
-                                        # if structs:
-                                        #     logger.debug(
-                                        #         f"{lp} from: {self.id} -  MESH INFO // STRUCTS: {structs}"
-                                        #     )
-                                        if self.parse_mesh_status is True:
-                                            logger.debug(
-                                                f"{lp} Parsing initial connection device status data"
-                                            )
-                                            await asyncio.gather(
-                                                *[
-                                                    g.ncync_server.parse_status(
-                                                        bytes(status),
-                                                        from_pkt="'mesh info'",
-                                                    )
-                                                    for status in _m
-                                                ]
-                                            )
-
-                                        # mesh_info["status"] = _m
-                                        # mesh_info["id_from"] = self.id
-                                        # # logger.debug(f"\n\n{lp} MESH INFO // {_raw_m}\n")
-                                        # self.mesh_info = MeshInfo(**mesh_info)
-                                        # Send mesh status ack
-                                        # 73 00 00 00 14 2d e4 b5 d2 15 2d 00 7e 1e 00 00
-                                        #  00 f8 {af 02 00 af 01} 61 7e
-                                        # checksum 61 hex = int 97 solved: {af+02+00+af+01} % 256 = 97
-                                        mesh_ack = bytes([0x73, 0x00, 0x00, 0x00, 0x14])
-                                        mesh_ack += bytes(self.queue_id)
-                                        mesh_ack += bytes([0x00, 0x00, 0x00])
-                                        mesh_ack += bytes(
-                                            [
-                                                0x7E,
-                                                0x1E,
-                                                0x00,
-                                                0x00,
-                                                0x00,
-                                                0xF8,
-                                                0xAF,
-                                                0x02,
-                                                0x00,
-                                                0xAF,
-                                                0x01,
-                                                0x61,
-                                                0x7E,
-                                            ]
-                                        )
-                                        # logger.debug(f"{lp} Sending MESH INFO ACK -> {mesh_ack.hex(' ')}")
-                                        await self.write(mesh_ack)
-                                        # Always clear parse mesh status
-                                        self.parse_mesh_status = False
+                                else:
+                                    logger.debug(
+                                        "%s inner_struct is less than 15 bytes: %s",
+                                        lp,
+                                        inner_struct.hex(" "),
+                                    )
                             else:
-                                (
+                                # 15th OR 16th byte of inner struct is start of mesh info, 24 bytes long
+                                minfo_start_idx = 14
+                                minfo_length = 24
+                                if inner_struct[minfo_start_idx] == 0x00:
+                                    minfo_start_idx += 1
                                     logger.debug(
-                                        f"{lp} control bytes (checksum: {checksum}, verified: {checksum == calc_chksum}): {ctrl_bytes.hex(' ')} // packet data:  {packet_data.hex(' ')}"
+                                        "%smesh: dev_id is 0 when using index: %s, trying index %s = %s",
+                                        lp,
+                                        minfo_start_idx - 1,
+                                        minfo_start_idx,
+                                        inner_struct[minfo_start_idx],
                                     )
-                                    if CYNC_RAW
-                                    else None
-                                )
 
-                                if ctrl_bytes[0] == 0xF9 and ctrl_bytes[1] in (
-                                    0xD0,
-                                    0xF0,
-                                    0xE2,
-                                ):
-                                    # control packet ack - changed state.
-                                    # handle callbacks for messages
-                                    # byte 8 is success? 0x01 yes // 0x00 no
-                                    # 7e 09 00 00 00 f9 d0 01 00 00 d1 7e <-- original ACK
-                                    # 7e 09 00 00 00 f9 f0 01 00 00 f1 7e <-- newer LED strip controller
-                                    # 7e 09 00 00 00 f9 e2 01 00 00 e3 7e <-- Cync default light show / effect
-                                    # bytes 7 - 10 SUM --> (f0) + (01) = checksum (f1) byte 11
-                                    ctrl_msg_id = packet_data[1]
-                                    ctrl_chksum = sum(packet_data[6:10]) % 256
-                                    success = packet_data[7] == 1
-                                    msg = self.messages.control.pop(ctrl_msg_id, None)
-                                    if success is True and msg is not None:
-                                        logger.info(
-                                            f"{lp} CONTROL packet ACK SUCCESS for msg ID: {ctrl_msg_id}, executing callback to update state"
-                                        )
-                                        await msg.callback
-
-                                        # Clear pending_command flag now that command succeeded
-                                        if (
-                                            msg.device_id
-                                            and msg.device_id in g.ncync_server.devices
-                                        ):
-                                            device = g.ncync_server.devices[
-                                                msg.device_id
-                                            ]
-                                            logger.debug(
-                                                f"{lp} ACK callback done for '{device.name}', pending_command={device.pending_command}"
-                                            )
-                                            if device.pending_command:
-                                                device.pending_command = False
-                                                logger.debug(
-                                                    f"{lp} ✅ ACK confirmed for '{device.name}' (ID: {msg.device_id}) - "
-                                                    f"pending_command=False, device ready for new commands"
-                                                )
-
-                                                # REMOVED: Automatic refresh after ACK was causing commands to fail
-                                                # Use manual "Refresh Device Status" button instead
-                                            else:
-                                                logger.debug(
-                                                    f"{lp} ⚠️ ACK received but pending_command was already False for '{device.name}'"
-                                                )
-                                    elif success is True and msg is None:
-                                        logger.debug(
-                                            f"{lp} CONTROL packet ACK (success: {success} / chksum: {ctrl_chksum == packet_data[10]}) callback NOT found for msg ID: {ctrl_msg_id}"
-                                        )
-                                    elif success is False and msg is not None:
-                                        logger.warning(
-                                            f"{lp} CONTROL packet ACK FAILED for msg ID: {ctrl_msg_id}, device reported failure - NOT updating state"
-                                        )
-                                        # Clear pending_command flag since command failed
-                                        for device in g.ncync_server.devices.values():
-                                            if device.pending_command:
-                                                device.pending_command = False
-                                                logger.debug(
-                                                    f"{lp} Cleared pending_command for '{device.name}'"
-                                                )
-                                                break
-                                    elif success is False and msg is None:
-                                        logger.warning(
-                                            f"{lp} CONTROL packet ACK FAILED for msg ID: {ctrl_msg_id}, no callback found"
-                                        )
-                                # newer firmware devices seen in led light strip so far,
-                                # send their firmware version data in a 0x7e bound struct.
-                                # I've also seen these ctrl bytes in the msg that other devices send in FA AF
-                                # the struct is 31 bytes long with the 0x7e boundaries, unbound it is 29 bytes long
-                                elif ctrl_bytes == bytes([0xFA, 0x8E]):
-                                    if packet_data[1] == 0x00:
-                                        logger.debug(
-                                            f"{lp} Device sent ({ctrl_bytes.hex(' ')}) BOUND firmware version data"
-                                        )
-                                        fw_type, fw_ver, fw_str = (
-                                            parse_unbound_firmware_version(
-                                                packet_data[1:-1], lp
-                                            )
-                                        )
-                                        if fw_type == "device":
-                                            self.version = fw_ver
-                                            self.version_str = fw_str
-                                        else:
-                                            self.network_version = fw_ver
-                                            self.network_version_str = fw_str
-                                    else:
-                                        if CYNC_RAW is True:
-                                            logger.debug(
-                                                f"{lp} This ctrl struct ({ctrl_bytes.hex(' ')} // checksum valid: {checksum == calc_chksum}) usually comes through "
-                                                f"when the cync phone app (dis)connects to the BTLE mesh. Unknown what it means"
-                                                f"\t\tHEX: {packet_data[1:-1].hex(' ')}\tINT: {bytes2list(packet_data[1:-1])}"
-                                            )
-
+                                if inner_struct[minfo_start_idx] == 0x00:
+                                    logger.error(
+                                        "%smesh: dev_id is 0 when using index: %s, skipping...",
+                                        lp,
+                                        minfo_start_idx,
+                                    )
                                 else:
-                                    logger.debug(
-                                        f"{lp} UNKNOWN CTRL_BYTES: {ctrl_bytes.hex(' ')} // EXTRACTED DATA -> "
-                                        f"HEX: {packet_data[1:-1].hex(' ')}\tINT: {bytes2list(packet_data[1:-1])}"
+                                    # from what I've seen, the mesh info is 24 bytes long and repeats until the end.
+                                    # Reset known device ids, mesh is the final authority on what devices are connected
+                                    self.mesh_info = None
+                                    self.known_device_ids = []
+                                    ids_reported = []
+                                    loop_num = 0
+                                    _m = []
+                                    _raw_m = []
+                                    # structs = []
+                                    try:
+                                        for i in range(
+                                            minfo_start_idx,
+                                            inner_struct_len,
+                                            minfo_length,
+                                        ):
+                                            loop_num += 1
+                                            mesh_dev_struct = inner_struct[i : i + minfo_length]
+                                            dev_id = mesh_dev_struct[0]
+                                            # logger.debug(f"{lp} inner_struct[{i}:{i + minfo_length}]={mesh_dev_struct.hex(' ')}")
+                                            # parse status from mesh info
+                                            #  [05 00 44   01 00 00 44   01 00     00 00 00 64  00 00 00 00   00 00 00 00 00 00 00] - plug (devices are all connected to it via BT)
+                                            #  [07 00 00   01 00 00 00   01 01     00 00 00 64  00 00 00 fe   00 00 00 f8 00 00 00] - direct connect full color A19 bulb
+                                            #   ID  ? type  ?  ?  ? type  ? state   ?  ?  ? bri  ?  ?  ? tmp   ?  ?  ?  R  G  B  ?
+                                            type_idx = 2
+                                            state_idx = 8
+                                            bri_idx = 12
+                                            tmp_idx = 16
+                                            r_idx = 20
+                                            g_idx = 21
+                                            b_idx = 22
+                                            dev_type_id = mesh_dev_struct[type_idx]
+                                            dev_state = mesh_dev_struct[state_idx]
+                                            dev_bri = mesh_dev_struct[bri_idx]
+                                            dev_tmp = mesh_dev_struct[tmp_idx]
+                                            dev_r = mesh_dev_struct[r_idx]
+                                            dev_g = mesh_dev_struct[g_idx]
+                                            dev_b = mesh_dev_struct[b_idx]
+                                            # in mesh info, brightness can be > 0 when set to off
+                                            # however, ive seen devices that are on have a state of 0 but brightness 100
+                                            if dev_state == 0 and dev_bri > 0:
+                                                dev_bri = 0
+                                            raw_status = bytes(
+                                                [
+                                                    dev_id,
+                                                    dev_state,
+                                                    dev_bri,
+                                                    dev_tmp,
+                                                    dev_r,
+                                                    dev_g,
+                                                    dev_b,
+                                                    1,
+                                                    # dev_type,
+                                                ]
+                                            )
+                                            _m.append(bytes2list(raw_status))
+                                            _raw_m.append(mesh_dev_struct.hex(" "))
+                                            if dev_id in g.ncync_server.devices:
+                                                # first device id is the device id of the TCP device we are connected to
+                                                ___dev = g.ncync_server.devices[dev_id]
+                                                dev_name = ___dev.name
+                                                if loop_num == 1:
+                                                    # byte 3 (idx 2) is a device type byte but,
+                                                    # it only reports on the first item (itself)
+                                                    # convert to int, and it is the same as deviceType from cloud.
+                                                    if not self.id:
+                                                        self.id = dev_id
+                                                        self.lp = f"{self.address}[{self.id}]:"
+                                                        (g.ncync_server.devices[dev_id])
+                                                        logger.debug(
+                                                            "%sparse:x%02x: Setting TCP device Cync ID to: %s",
+                                                            self.lp,
+                                                            data[0],
+                                                            self.id,
+                                                        )
+
+                                                    elif self.id and self.id != dev_id:
+                                                        logger.debug(
+                                                            "%s The first device reported in 0x83 is "
+                                                            "usually the TCP device. current: %s "
+                                                            "// proposed: %s",
+                                                            lp,
+                                                            self.id,
+                                                            dev_id,
+                                                        )
+                                                    lp = f"{self.lp}parse:0x{data[0]:02x}:"
+                                                    self.device_type_id = dev_type_id
+                                                    self.name = dev_name
+
+                                                ids_reported.append(dev_id)
+                                                # structs.append(mesh_dev_struct.hex(" "))
+                                                self.known_device_ids.append(dev_id)
+
+                                            else:
+                                                logger.warning(
+                                                    "%s Device ID %s not found in devices defined in config file: %s",
+                                                    lp,
+                                                    dev_id,
+                                                    g.ncync_server.devices.keys(),
+                                                )
+                                        # -- END OF mesh info response parsing loop --
+                                    except IndexError:
+                                        # ran out of data
+                                        # logger.debug(f"{lp} IndexError parsing mesh info response (expected)") if CYNC_RAW is True else None
+                                        pass
+                                    except Exception:
+                                        logger.exception("%s MESH INFO for loop EXCEPTION", lp)
+
+                                    # Log device IDs reported by this bridge for comparison
+                                    refresh_id = getattr(self, "refresh_id", None)
+                                    if ids_reported:
+                                        if refresh_id is not None:
+                                            logger.info(
+                                                "%s [%s] Bridge %s reported %d device IDs: %s",
+                                                lp,
+                                                refresh_id,
+                                                self.address,
+                                                len(ids_reported),
+                                                sorted(ids_reported),
+                                            )
+                                        else:
+                                            logger.debug(
+                                                "%s Bridge %s reported %d device IDs: %s",
+                                                lp,
+                                                self.address,
+                                                len(ids_reported),
+                                                sorted(ids_reported),
+                                            )
+
+                                    if self.parse_mesh_status is True:
+                                        logger.debug(
+                                            "%s Parsing initial connection device status data",
+                                            lp,
+                                        )
+                                        await asyncio.gather(
+                                            *[
+                                                g.ncync_server.parse_status(
+                                                    bytes(status),
+                                                    from_pkt="'mesh info'",
+                                                )
+                                                for status in _m
+                                            ]
+                                        )
+
+                                    # mesh_info["status"] = _m
+                                    # mesh_info["id_from"] = self.id
+                                    # # logger.debug(f"\n\n{lp} MESH INFO // {_raw_m}\n")
+                                    # self.mesh_info = MeshInfo(**mesh_info)
+                                    # Send mesh status ack
+                                    # 73 00 00 00 14 2d e4 b5 d2 15 2d 00 7e 1e 00 00
+                                    #  00 f8 {af 02 00 af 01} 61 7e
+                                    # checksum 61 hex = int 97 solved: {af+02+00+af+01} % 256 = 97
+                                    mesh_ack = bytes([0x73, 0x00, 0x00, 0x00, 0x14])
+                                    mesh_ack += bytes(self.queue_id)
+                                    mesh_ack += bytes([0x00, 0x00, 0x00])
+                                    mesh_ack += bytes(
+                                        [
+                                            0x7E,
+                                            0x1E,
+                                            0x00,
+                                            0x00,
+                                            0x00,
+                                            0xF8,
+                                            0xAF,
+                                            0x02,
+                                            0x00,
+                                            0xAF,
+                                            0x01,
+                                            0x61,
+                                            0x7E,
+                                        ]
                                     )
+                                    # logger.debug(f"{lp} Sending MESH INFO ACK -> {mesh_ack.hex(' ')}")
+                                    await self.write(mesh_ack)
+                                    # Always clear parse mesh status
+                                    self.parse_mesh_status = False
+
+                                    # Log completion with correlation ID if this was part of a refresh
+                                    refresh_id = getattr(self, "refresh_id", None)
+                                    if refresh_id is not None:
+                                        logger.info("%s [%s] Refresh processing complete", lp, refresh_id)
                         else:
-                            logger.debug(
-                                f"{lp} packet with no boundary found????? After stripping header, queue and "
-                                f"msg id, there is no data to process?????"
+                            (
+                                logger.debug(
+                                    "%s control bytes (checksum: %s, verified: %s): %s // packet data:  %s",
+                                    lp,
+                                    checksum,
+                                    checksum == calc_chksum,
+                                    ctrl_bytes.hex(" "),
+                                    packet_data.hex(" "),
+                                )
+                                if CYNC_RAW
+                                else None
                             )
 
+                            if ctrl_bytes[0] == 0xF9 and ctrl_bytes[1] in (
+                                0xD0,
+                                0xF0,
+                                0xE2,
+                            ):
+                                # control packet ack - changed state.
+                                # handle callbacks for messages
+                                # byte 8 is success? 0x01 yes // 0x00 no
+                                # 7e 09 00 00 00 f9 d0 01 00 00 d1 7e <-- original ACK
+                                # 7e 09 00 00 00 f9 f0 01 00 00 f1 7e <-- newer LED strip controller
+                                # 7e 09 00 00 00 f9 e2 01 00 00 e3 7e <-- Cync default light show / effect
+                                # bytes 7 - 10 SUM --> (f0) + (01) = checksum (f1) byte 11
+                                ctrl_msg_id = packet_data[1]
+                                ctrl_chksum = sum(packet_data[6:10]) % 256
+                                success = packet_data[7] == 1
+                                msg = self.messages.control.pop(ctrl_msg_id, None)
+                                if success is True and msg is not None:
+                                    logger.info(
+                                        "%s CONTROL packet ACK SUCCESS for msg ID: %s, executing callback to update state",
+                                        lp,
+                                        ctrl_msg_id,
+                                    )
+                                    await msg.callback
+
+                                    # Clear pending_command flag now that command succeeded
+                                    if msg.device_id and msg.device_id in g.ncync_server.devices:
+                                        device = g.ncync_server.devices[msg.device_id]
+                                        logger.debug(
+                                            "%s ACK callback done for '%s', pending_command=%s",
+                                            lp,
+                                            device.name,
+                                            device.pending_command,
+                                        )
+                                        if device.pending_command:
+                                            device.pending_command = False
+                                            logger.debug(
+                                                "%s ✅ ACK confirmed for '%s' (ID: %s) - "
+                                                "pending_command=False, device ready for new commands",
+                                                lp,
+                                                device.name,
+                                                msg.device_id,
+                                            )
+
+                                            # REMOVED: Automatic refresh after ACK was causing commands to fail
+                                            # Use manual "Refresh Device Status" button instead
+                                        else:
+                                            logger.debug(
+                                                "%s ⚠️ ACK received but pending_command was already False for '%s'",
+                                                lp,
+                                                device.name,
+                                            )
+                                elif success is True and msg is None:
+                                    logger.debug(
+                                        "%s CONTROL packet ACK (success: %s / chksum: %s) callback NOT found for msg ID: %s",
+                                        lp,
+                                        success,
+                                        ctrl_chksum == packet_data[10],
+                                        ctrl_msg_id,
+                                    )
+                                elif success is False and msg is not None:
+                                    logger.warning(
+                                        "%s CONTROL packet ACK FAILED for msg ID: %s, device reported failure - NOT updating state",
+                                        lp,
+                                        ctrl_msg_id,
+                                    )
+                                    # Clear pending_command flag since command failed
+                                    for device in g.ncync_server.devices.values():
+                                        if device.pending_command:
+                                            device.pending_command = False
+                                            logger.debug(
+                                                "%s Cleared pending_command for '%s'",
+                                                lp,
+                                                device.name,
+                                            )
+                                            break
+                                elif success is False and msg is None:
+                                    logger.warning(
+                                        "%s CONTROL packet ACK FAILED for msg ID: %s, no callback found",
+                                        lp,
+                                        ctrl_msg_id,
+                                    )
+                            # newer firmware devices seen in led light strip so far,
+                            # send their firmware version data in a 0x7e bound struct.
+                            # I've also seen these ctrl bytes in the msg that other devices send in FA AF
+                            # the struct is 31 bytes long with the 0x7e boundaries, unbound it is 29 bytes long
+                            elif ctrl_bytes == bytes([0xFA, 0x8E]):
+                                if packet_data[1] == 0x00:
+                                    logger.debug(
+                                        "%s Device sent (%s) BOUND firmware version data",
+                                        lp,
+                                        ctrl_bytes.hex(" "),
+                                    )
+                                    fw_type, fw_ver, fw_str = parse_unbound_firmware_version(packet_data[1:-1], lp)
+                                    if fw_type == "device":
+                                        self.version = fw_ver
+                                        self.version_str = fw_str
+                                    else:
+                                        self.network_version = fw_ver
+                                        self.network_version_str = fw_str
+                                elif CYNC_RAW is True:
+                                    logger.debug(
+                                        "%s This ctrl struct (%s // checksum valid: %s) usually comes through "
+                                        "when the cync phone app (dis)connects to the BTLE mesh. Unknown what it means"
+                                        "\t\tHEX: %s\tINT: %s",
+                                        lp,
+                                        ctrl_bytes.hex(" "),
+                                        checksum == calc_chksum,
+                                        packet_data[1:-1].hex(" "),
+                                        bytes2list(packet_data[1:-1]),
+                                    )
+
+                            else:
+                                logger.debug(
+                                    "%s UNKNOWN CTRL_BYTES: %s // EXTRACTED DATA -> HEX: %s\tINT: %s",
+                                    lp,
+                                    ctrl_bytes.hex(" "),
+                                    packet_data[1:-1].hex(" "),
+                                    bytes2list(packet_data[1:-1]),
+                                )
                     else:
-                        logger.warning(
-                            f"{lp} packet with no data????? After stripping 12 bytes header (5), queue (4) and "
-                            f"msg id (3), there is no data to process!?!"
+                        logger.debug(
+                            "%s packet with no boundary found????? After stripping header, queue and "
+                            "msg id, there is no data to process?????",
+                            lp,
                         )
+
+                else:
+                    logger.warning(
+                        "%s packet with no data????? After stripping 12 bytes header (5), queue (4) and "
+                        "msg id (3), there is no data to process!?!",
+                        lp,
+                    )
                 ack = DEVICE_STRUCTS.x7b_generate_ack(queue_id, msg_id)
                 # logger.debug(f"{lp} Sending ACK -> {ack.hex(' ')}")
                 await self.write(ack)
-        elif pkt_type in PhoneAppStructs.requests:
-            if self.is_app is False:
-                logger.info(
-                    f"{lp} Device has been identified as the cync mobile app, blackholing..."
-                )
-                self.is_app = True
+            elif pkt_type in PhoneAppStructs.requests:
+                if self.is_app is False:
+                    logger.info(
+                        "%s Device has been identified as the cync mobile app, blackholing...",
+                        lp,
+                    )
+                    self.is_app = True
 
-        # unknown data we don't know the header for
-        else:
-            logger.debug(
-                f"{lp} sent UNKNOWN HEADER! Don't know how to respond!{RAW_MSG}"
-            )
+            # unknown data we don't know the header for
+            else:
+                logger.debug("%s sent UNKNOWN HEADER! Don't know how to respond!%s", lp, RAW_MSG)
 
-    async def ask_for_mesh_info(self, parse: bool = False):
+    async def ask_for_mesh_info(self, parse: bool = False, refresh_id: str | None = None):
         """
         Ask the device for mesh info. As far as I can tell, this will return whatever
         devices are connected to the device you are querying. It may also trigger
         the device to send its own status packet.
+
+        :param parse: If True, parse and update device states from mesh info
+        :param refresh_id: Correlation ID (UUID) for tracking refresh cycle in logs
         """
         lp = self.lp
         # mesh_info = '73 00 00 00 18 2d e4 b5 d2 15 2c 00 7e 1f 00 00 00 f8 52 06 00 00 00 ff ff 00 00 56 7e'
@@ -2644,19 +2788,20 @@ class CyncTCPDevice:
         _rdmsg = ""
         if CYNC_RAW is True:
             _rdmsg = f"\tBYTES: {mesh_info_data}\tHEX: {mesh_info_data.hex(' ')}\tINT: {bytes2list(mesh_info_data)}"
-        logger.debug(f"{lp} Requesting ALL device(s) status{_rdmsg}")
+        logger.debug("%s Requesting ALL device(s) status%s", lp, _rdmsg)
         if parse is True:
             self.parse_mesh_status = True
+        # Store refresh correlation ID for logging (if provided)
+        if refresh_id is not None:
+            self.refresh_id = refresh_id
         try:
             await self.write(mesh_info_data)
-        except TimeoutError as to_exc:
-            logger.error(
-                f"{lp} Requesting ALL device(s) status timed out, likely powered off"
-            )
+        except TimeoutError:
+            logger.exception("%s Requesting ALL device(s) status timed out, likely powered off", lp)
             self.parse_mesh_status = False
-            raise to_exc
-        except Exception as e:
-            logger.error(f"{lp} EXCEPTION: {e}", exc_info=True)
+            raise
+        except Exception:
+            logger.exception("%s EXCEPTION", lp)
             self.parse_mesh_status = False
 
     async def send_a3(self, q_id: bytes):
@@ -2667,7 +2812,7 @@ class CyncTCPDevice:
         rand_bytes += bytes([0x00])
         self.xa3_msg_id += random.getrandbits(8).to_bytes(1, "big")
         a3_packet += rand_bytes
-        logger.debug(f"{self.lp} Sending 0xa3 (want to control) packet...")
+        logger.debug("%s Sending 0xa3 (want to control) packet...", self.lp)
         await self.write(a3_packet)
         self.ready_to_control = True
         # send mesh info request
@@ -2677,7 +2822,7 @@ class CyncTCPDevice:
     async def callback_cleanup_task(self):
         """Monitor pending callbacks and retry failed commands, cleanup stale ones"""
         lp = f"{self.lp}callback_clean:"
-        logger.debug(f"{lp} Starting background task with retry logic...")
+        logger.debug("%s Starting background task with retry logic...", lp)
         retry_timeout = 0.5  # Retry after 500ms if no ACK
         cleanup_timeout = 30  # Give up after 30 seconds total
 
@@ -2691,40 +2836,37 @@ class CyncTCPDevice:
                     elapsed = now - ctrl_msg.sent_at
 
                     # Check if message needs retry (no ACK after retry_timeout)
-                    if (
-                        elapsed > retry_timeout
-                        and ctrl_msg.retry_count < ctrl_msg.max_retries
-                    ):
+                    if elapsed > retry_timeout and ctrl_msg.retry_count < ctrl_msg.max_retries:
                         ctrl_msg.retry_count += 1
                         logger.warning(
-                            f"{lp} No ACK for msg ID {ctrl_msg_id} after {elapsed:.2f}s - "
-                            f"RETRY {ctrl_msg.retry_count}/{ctrl_msg.max_retries}"
+                            "%s No ACK for msg ID %s after %.2fs - RETRY %s/%s",
+                            lp,
+                            ctrl_msg_id,
+                            elapsed,
+                            ctrl_msg.retry_count,
+                            ctrl_msg.max_retries,
                         )
                         # Resend the message
                         try:
                             await self.write(ctrl_msg.message)
                             ctrl_msg.sent_at = now  # Reset timer for this retry
-                        except Exception as e:
-                            logger.error(
-                                f"{lp} Failed to retry msg ID {ctrl_msg_id}: {e}"
-                            )
+                        except Exception:
+                            logger.exception("%s Failed to retry msg ID %s", lp, ctrl_msg_id)
 
                     # Cleanup old messages that exceeded all retries and timeout
                     elif elapsed > cleanup_timeout:
                         logger.warning(
-                            f"{lp} Removing STALE msg ID {ctrl_msg_id} after {ctrl_msg.retry_count} retries - giving up"
+                            "%s Removing STALE msg ID %s after %s retries - giving up",
+                            lp,
+                            ctrl_msg_id,
+                            ctrl_msg.retry_count,
                         )
                         # Clear pending_command flag for device
-                        if (
-                            ctrl_msg.device_id
-                            and ctrl_msg.device_id in g.ncync_server.devices
-                        ):
+                        if ctrl_msg.device_id and ctrl_msg.device_id in g.ncync_server.devices:
                             device = g.ncync_server.devices[ctrl_msg.device_id]
                             if device.pending_command:
                                 device.pending_command = False
-                                logger.debug(
-                                    f"{lp} Cleared pending flag for '{device.name}'"
-                                )
+                                logger.debug("%s Cleared pending flag for '%s'", lp, device.name)
                         to_delete.append(ctrl_msg_id)
 
                 # Delete stale messages
@@ -2732,12 +2874,12 @@ class CyncTCPDevice:
                     del self.messages.control[msg_id]
 
             except asyncio.CancelledError as can_exc:
-                logger.debug(f"{lp} CANCELLED: {can_exc}")
+                logger.debug("%s CANCELLED: %s", lp, can_exc)
                 break
-            except Exception as e:
-                logger.error(f"{lp} Exception in callback cleanup: {e}", exc_info=True)
+            except Exception:
+                logger.exception("%s Exception in callback cleanup", lp)
 
-        logger.debug(f"{lp} FINISHED")
+        logger.debug("%s FINISHED", lp)
 
     async def receive_task(self):
         """
@@ -2748,15 +2890,17 @@ class CyncTCPDevice:
         lp = f"{self.address}:raw read:"
         started_at = time.time()
         name = self.tasks.receive.get_name()
-        logger.debug(f"{lp} receive_task CALLED") if CYNC_RAW is True else None
+        logger.debug("%s receive_task CALLED", lp) if CYNC_RAW is True else None
         try:
             while True:
                 try:
                     data: bytes = await self.read()
                     if data is False:
                         logger.debug(
-                            f"{lp} read() returned False, exiting {name} "
-                            f"(started at: {datetime.datetime.fromtimestamp(started_at)})..."
+                            "%s read() returned False, exiting %s (started at: %s)...",
+                            lp,
+                            name,
+                            datetime.datetime.fromtimestamp(started_at, tz=datetime.UTC),
                         )
                         break
                     if not data:
@@ -2764,120 +2908,109 @@ class CyncTCPDevice:
                         continue
                     await self.parse_raw_data(data)
 
-                except Exception as e:
-                    logger.error(f"{lp} Exception in {name} LOOP: {e}", exc_info=True)
+                except Exception:
+                    logger.exception("%s Exception in %s LOOP", lp, name)
                     break
         except asyncio.CancelledError as cancel_exc:
-            logger.debug(f"{lp} {name} CANCELLED: {cancel_exc}")
+            logger.debug("%s %s CANCELLED: %s", lp, name, cancel_exc)
 
-        logger.debug(f"{lp} {name} FINISHED")
+        logger.debug("%s %s FINISHED", lp, name)
 
-    async def read(self, chunk: Optional[int] = None):
+    async def read(self, chunk: int | None = None):
         """Read data from the device if there is an open connection"""
         lp = f"{self.lp}read:"
         if self.closing is True:
-            logger.debug(f"{lp} closing is True, exiting read()...")
+            logger.debug("%s closing is True, exiting read()...", lp)
             return False
-        else:
-            if chunk is None:
-                chunk = CYNC_CHUNK_SIZE
-            async with self.read_lock:
-                if self.reader:
-                    if not self.reader.at_eof():
-                        try:
-                            raw_data = await self.reader.read(chunk)
-                        except Exception as read_exc:
-                            logger.error(f"{lp} Base EXCEPTION: {read_exc}")
-                            return False
-                        else:
-                            return raw_data
+        if chunk is None:
+            chunk = CYNC_CHUNK_SIZE
+        async with self.read_lock:
+            if self.reader:
+                if not self.reader.at_eof():
+                    try:
+                        raw_data = await self.reader.read(chunk)
+                    except Exception:
+                        logger.exception("%s Base EXCEPTION", lp)
+                        return False
                     else:
-                        logger.debug(
-                            f"{lp} reader is at EOF, setting read socket to None..."
-                        )
-                        self.reader = None
+                        return raw_data
                 else:
-                    logger.debug(
-                        f"{lp} reader is None/empty -> {self.reader = } // TYPE: {type(self.reader)}"
-                    )
-                    return False
+                    logger.debug("%s reader is at EOF, setting read socket to None...", lp)
+                    self.reader = None
+            else:
+                logger.debug(
+                    "%s reader is None/empty -> self.reader = %s // TYPE: %s",
+                    lp,
+                    self.reader,
+                    type(self.reader),
+                )
+                return False
+        return None
 
-    async def write(self, data: bytes, broadcast: bool = False) -> Optional[bool]:
+    async def write(self, data: bytes, broadcast: bool = False) -> bool | None:
         """
         Write data to the device if there is an open connection
 
         :param data: The raw binary data to write to the device
         :param broadcast: If True, write to all TCP devices connected to the server
         """
-        logger.warning(
-            f"{self.lp}write: >>>>>> WRITE CALLED: {len(data)} bytes, broadcast={broadcast}"
+        logger.debug(
+            "%swrite: Writing %s bytes (broadcast=%s)",
+            self.lp,
+            len(data),
+            broadcast,
         )
         if not isinstance(data, bytes):
-            raise ValueError(f"Data must be bytes, not type: {type(data)}")
+            msg = f"Data must be bytes, not type: {type(data)}"
+            raise TypeError(msg)
         dev = self
         if dev.closing:
-            logger.warning(f"{dev.lp}write: device is closing, NOT writing data")
+            logger.debug("%swrite: device is closing, NOT writing data", dev.lp)
             return False
-        else:
-            if dev.writer is not None:
-                logger.warning(f"{dev.lp}write: Acquiring write_lock...")
-                async with dev.write_lock:
-                    logger.warning(f"{dev.lp}write: write_lock ACQUIRED")
-                    # if broadcast is True:inner_struct__
-                    #     # replace queue id with the sending device's queue id
-                    #     new_data = bytes2list(data)
-                    #     new_data[5:9] = dev.queue_id
-                    #     data = bytes(new_data)
-
-                    # check if the underlying writer is closing
-                    if dev.writer.is_closing():
-                        if dev.closing is False:
-                            # this is probably a connection that was closed by the device (turned off), delete it
-                            logger.warning(
-                                f"{dev.lp} underlying writer is closing but, "
-                                f"the device itself hasn't called close(). The device probably "
-                                f"dropped the connection (lost power). Removing {dev.address}"
-                            )
-                            off_dev = await g.ncync_server.remove_tcp_device(dev)
-                            del off_dev
-
-                        else:
-                            logger.debug(
-                                f"{dev.lp} TCP device is closing, not writing data... "
-                            )
-                    else:
+        if dev.writer is not None:
+            async with dev.write_lock:
+                # check if the underlying writer is closing
+                if dev.writer.is_closing():
+                    if dev.closing is False:
+                        # this is probably a connection that was closed by the device (turned off), delete it
                         logger.warning(
-                            f"{dev.lp}write: Calling writer.write({len(data)} bytes)"
+                            "%s underlying writer is closing but device hasn't called close(). "
+                            "Device probably dropped connection (lost power). Removing %s",
+                            dev.lp,
+                            dev.address,
                         )
-                        dev.writer.write(data)
-                        logger.warning(f"{dev.lp}write: Calling drain()...")
-                        try:
-                            await asyncio.wait_for(dev.writer.drain(), timeout=2.0)
-                        except TimeoutError as to_exc:
-                            logger.error(
-                                f"{dev.lp} writing data to the device timed out, likely powered off"
-                            )
-                            raise to_exc
-                        else:
-                            logger.warning(
-                                f"{dev.lp}write: drain() COMPLETED - TCP data sent!"
-                            )
-                            return True
-            else:
-                logger.warning(f"{dev.lp} writer is None, can't write data!")
-            return None
+                        off_dev = await g.ncync_server.remove_tcp_device(dev)
+                        del off_dev
+
+                    else:
+                        logger.debug("%s TCP device is closing, not writing data... ", dev.lp)
+                else:
+                    dev.writer.write(data)
+                    try:
+                        await asyncio.wait_for(dev.writer.drain(), timeout=2.0)
+                    except TimeoutError:
+                        logger.exception(
+                            "%s writing data to the device timed out, likely powered off",
+                            dev.lp,
+                        )
+                        raise
+                    else:
+                        logger.debug("%swrite: Successfully sent %s bytes", dev.lp, len(data))
+                        return True
+        else:
+            logger.warning("%s writer is None, can't write data!", dev.lp)
+        return None
 
     async def close(self):
         lp = f"{self.address}:close:"
-        logger.debug(f"{lp} close() called, Cancelling device tasks...")
+        logger.debug("%s close() called, Cancelling device tasks...", lp)
         try:
             for dev_task in self.tasks:
-                if dev_task:
-                    if dev_task.done() is False:
-                        logger.debug(f"{lp} Cancelling task: {dev_task.get_name()}")
-                        dev_task.cancel()
-        except Exception as e:
-            logger.exception(f"{lp} Exception during device task .cancel(): {e}")
+                if dev_task and dev_task.done() is False:
+                    logger.debug("%s Cancelling task: %s", lp, dev_task.get_name())
+                    dev_task.cancel()
+        except Exception:
+            logger.exception("%s Exception during device task .cancel()", lp)
         self.closing = True
         try:
             if self.writer:
@@ -2886,8 +3019,8 @@ class CyncTCPDevice:
                     await self.writer.wait_closed()
         except AttributeError:
             pass
-        except Exception as e:
-            logger.exception(f"{lp}writer: EXCEPTION: {e}")
+        except Exception:
+            logger.exception("%swriter: EXCEPTION", lp)
         finally:
             self.writer = None
 
@@ -2898,8 +3031,8 @@ class CyncTCPDevice:
                     await asyncio.sleep(0.01)
         except AttributeError:
             pass
-        except Exception as e:
-            logger.exception(f"{lp}reader: EXCEPTION: {e}")
+        except Exception:
+            logger.exception("%sreader: EXCEPTION", lp)
         finally:
             self.reader = None
 

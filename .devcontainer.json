@@ -52,11 +52,8 @@
         "esbenp.prettier-vscode",
         "ms-vscode.vscode-json",
         "ms-python.python",
-        "ms-python.pylint",
         "ms-python.vscode-pylance",
-        "ms-python.black-formatter",
         "charliermarsh.ruff",
-        "ms-python.isort",
         "redhat.vscode-yaml",
         "ms-azuretools.vscode-docker",
         "cnshenj.vscode-task-manager",
@@ -86,7 +83,11 @@
           "editor.defaultFormatter": "esbenp.prettier-vscode"
         },
         "[python]": {
-          "editor.defaultFormatter": "ms-python.black-formatter"
+          "editor.defaultFormatter": "charliermarsh.ruff",
+          "editor.codeActionsOnSave": {
+            "source.fixAll": "explicit",
+            "source.organizeImports": "explicit"
+          }
         },
         "[markdown]": {
           "editor.defaultFormatter": "yzhang.markdown-all-in-one"
@@ -104,7 +105,8 @@
         "python.defaultInterpreterPath": "/usr/local/python/current/bin/python",
         "python.analysis.extraPaths": ["${containerWorkspaceFolder}"],
         "python.analysis.typeCheckingMode": "basic",
-        "ruff.organizeImports": true
+        "python.linting.enabled": true,
+        "python.linting.pylintEnabled": false
       }
     }
   }

@@ -16,18 +16,17 @@ mkdir -p "$LOG_DIR"
 
 # Check if secrets file exists
 if [[ ! -f "$SECRETS_FILE" ]]; then
-    echo "ERROR: Secrets file not found at: $SECRETS_FILE" >&2
-    echo "Copy .mcp-secrets.env.example to .mcp-secrets.env and fill in your values." >&2
-    exit 1
+  echo "ERROR: Secrets file not found at: $SECRETS_FILE" >&2
+  echo "Copy .mcp-secrets.env.example to .mcp-secrets.env and fill in your values." >&2
+  exit 1
 fi
 
 # Load environment variables from secrets file
+set -a # Export all variables
 # shellcheck disable=SC1090
-set -a  # Export all variables
 source "$SECRETS_FILE"
 set +a
 
 # Execute the MCP server command, redirecting stderr to log file
 # (MCP servers often output status messages to stderr which Cursor shows as errors)
-exec "$@" 2>>"$LOG_FILE"
-
+exec "$@" 2>> "$LOG_FILE"

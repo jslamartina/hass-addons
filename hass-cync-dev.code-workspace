@@ -9,7 +9,13 @@
     "editor.formatOnSave": true,
 
     // Formatters
-    "[python]": { "editor.defaultFormatter": "ms-python.black-formatter" },
+    "[python]": {
+      "editor.defaultFormatter": "charliermarsh.ruff",
+      "editor.codeActionsOnSave": {
+        "source.fixAll": "explicit",
+        "source.organizeImports": "explicit",
+      },
+    },
     "[shellscript]": { "editor.defaultFormatter": "esbenp.prettier-vscode" },
     "[markdown]": { "editor.defaultFormatter": "yzhang.markdown-all-in-one" },
     "[markdown-math]": {

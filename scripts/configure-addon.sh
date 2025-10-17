@@ -9,8 +9,8 @@ LP="[configure-addon.sh]"
 SUPERVISOR_TOKEN=$(docker exec hassio_cli env | grep SUPERVISOR_TOKEN | cut -d= -f2)
 
 if [ -z "$SUPERVISOR_TOKEN" ]; then
-    echo "$LP ERROR: Could not retrieve SUPERVISOR_TOKEN from hassio_cli container"
-    exit 1
+  echo "$LP ERROR: Could not retrieve SUPERVISOR_TOKEN from hassio_cli container"
+  exit 1
 fi
 
 ADDON_SLUG="local_cync-lan"
@@ -18,151 +18,151 @@ API_BASE="http://supervisor/addons/${ADDON_SLUG}"
 
 # Function to get current configuration
 get_config() {
-    curl -sSL \
-        -H "Authorization: Bearer ${SUPERVISOR_TOKEN}" \
-        "${API_BASE}/info" | jq '.data.options'
+  curl -sSL \
+    -H "Authorization: Bearer ${SUPERVISOR_TOKEN}" \
+    "${API_BASE}/info" | jq '.data.options'
 }
 
 # Function to update configuration
 update_config() {
-    local new_config="$1"
+  local new_config="$1"
 
-    echo "$LP Updating add-on configuration..."
+  echo "$LP Updating add-on configuration..."
 
-    response=$(curl -sSL -w "\n%{http_code}" \
-        -X POST \
-        -H "Authorization: Bearer ${SUPERVISOR_TOKEN}" \
-        -H "Content-Type: application/json" \
-        -d "$new_config" \
-        "${API_BASE}/options")
+  response=$(curl -sSL -w "\n%{http_code}" \
+    -X POST \
+    -H "Authorization: Bearer ${SUPERVISOR_TOKEN}" \
+    -H "Content-Type: application/json" \
+    -d "$new_config" \
+    "${API_BASE}/options")
 
-    http_code=$(echo "$response" | tail -n1)
-    body=$(echo "$response" | sed '$d')
+  http_code=$(echo "$response" | tail -n1)
+  body=$(echo "$response" | sed '$d')
 
-    if [ "$http_code" -eq 200 ]; then
-        echo "$LP ✅ Configuration updated successfully"
-        return 0
-    else
-        echo "$LP ❌ Configuration update failed (HTTP $http_code)"
-        echo "$body" | jq '.' 2>/dev/null || echo "$body"
-        return 1
-    fi
+  if [ "$http_code" -eq 200 ]; then
+    echo "$LP ✅ Configuration updated successfully"
+    return 0
+  else
+    echo "$LP ❌ Configuration update failed (HTTP $http_code)"
+    echo "$body" | jq '.' 2> /dev/null || echo "$body"
+    return 1
+  fi
 }
 
 # Function to restart add-on
 restart_addon() {
-    echo "$LP Restarting add-on..."
+  echo "$LP Restarting add-on..."
 
-    curl -sSL -X POST \
-        -H "Authorization: Bearer ${SUPERVISOR_TOKEN}" \
-        "${API_BASE}/restart" > /dev/null
+  curl -sSL -X POST \
+    -H "Authorization: Bearer ${SUPERVISOR_TOKEN}" \
+    "${API_BASE}/restart" > /dev/null
 
-    echo "$LP ✅ Add-on restart initiated"
-    sleep 3
+  echo "$LP ✅ Add-on restart initiated"
+  sleep 3
 }
 
 # Function to show logs
 show_logs() {
-    echo "$LP Fetching add-on logs..."
-    ha addons logs local_cync-lan
+  echo "$LP Fetching add-on logs..."
+  ha addons logs local_cync-lan
 }
 
 # Main command processing
 case "${1:-}" in
-    get)
-        echo "$LP Current configuration:"
-        get_config
-        ;;
+  get)
+    echo "$LP Current configuration:"
+    get_config
+    ;;
 
-    set-cloud-relay)
-        enabled="${2:-false}"
-        forward="${3:-true}"
-        debug_logging="${4:-false}"
+  set-cloud-relay)
+    enabled="${2:-false}"
+    forward="${3:-true}"
+    debug_logging="${4:-false}"
 
-        echo "$LP Configuring cloud relay mode:"
-        echo "  - enabled: $enabled"
-        echo "  - forward_to_cloud: $forward"
-        echo "  - debug_packet_logging: $debug_logging"
+    echo "$LP Configuring cloud relay mode:"
+    echo "  - enabled: $enabled"
+    echo "  - forward_to_cloud: $forward"
+    echo "  - debug_packet_logging: $debug_logging"
 
-        # Get current config and merge changes
-        current_config=$(get_config)
+    # Get current config and merge changes
+    current_config=$(get_config)
 
-        new_config=$(echo "$current_config" | jq \
-            --argjson enabled "$enabled" \
-            --argjson forward "$forward" \
-            --argjson debug_logging "$debug_logging" \
-            '.cloud_relay.enabled = $enabled |
+    new_config=$(echo "$current_config" | jq \
+      --argjson enabled "$enabled" \
+      --argjson forward "$forward" \
+      --argjson debug_logging "$debug_logging" \
+      '.cloud_relay.enabled = $enabled |
              .cloud_relay.forward_to_cloud = $forward |
              .cloud_relay.debug_packet_logging = $debug_logging')
 
-        update_config "$(echo "{\"options\": $new_config}" | jq -c '.')"
-        restart_addon
-        sleep 5
-        show_logs | tail -50
-        ;;
+    update_config "$(echo "{\"options\": $new_config}" | jq -c '.')"
+    restart_addon
+    sleep 5
+    show_logs | tail -50
+    ;;
 
-    preset-baseline)
-        echo "$LP Applying preset: Baseline (LAN-only, relay disabled)"
-        current_config=$(get_config)
-        new_config=$(echo "$current_config" | jq '.cloud_relay.enabled = false')
-        update_config "$(echo "{\"options\": $new_config}" | jq -c '.')"
-        restart_addon
-        sleep 5
-        show_logs | tail -50
-        ;;
+  preset-baseline)
+    echo "$LP Applying preset: Baseline (LAN-only, relay disabled)"
+    current_config=$(get_config)
+    new_config=$(echo "$current_config" | jq '.cloud_relay.enabled = false')
+    update_config "$(echo "{\"options\": $new_config}" | jq -c '.')"
+    restart_addon
+    sleep 5
+    show_logs | tail -50
+    ;;
 
-    preset-relay-with-forward)
-        echo "$LP Applying preset: Cloud Relay with Forwarding"
-        current_config=$(get_config)
-        new_config=$(echo "$current_config" | jq '
+  preset-relay-with-forward)
+    echo "$LP Applying preset: Cloud Relay with Forwarding"
+    current_config=$(get_config)
+    new_config=$(echo "$current_config" | jq '
             .cloud_relay.enabled = true |
             .cloud_relay.forward_to_cloud = true |
             .cloud_relay.debug_packet_logging = false
         ')
-        update_config "$(echo "{\"options\": $new_config}" | jq -c '.')"
-        restart_addon
-        sleep 5
-        show_logs | tail -50
-        ;;
+    update_config "$(echo "{\"options\": $new_config}" | jq -c '.')"
+    restart_addon
+    sleep 5
+    show_logs | tail -50
+    ;;
 
-    preset-relay-debug)
-        echo "$LP Applying preset: Cloud Relay with Debug Logging"
-        current_config=$(get_config)
-        new_config=$(echo "$current_config" | jq '
+  preset-relay-debug)
+    echo "$LP Applying preset: Cloud Relay with Debug Logging"
+    current_config=$(get_config)
+    new_config=$(echo "$current_config" | jq '
             .cloud_relay.enabled = true |
             .cloud_relay.forward_to_cloud = true |
             .cloud_relay.debug_packet_logging = true
         ')
-        update_config "$(echo "{\"options\": $new_config}" | jq -c '.')"
-        restart_addon
-        sleep 5
-        show_logs | tail -50
-        ;;
+    update_config "$(echo "{\"options\": $new_config}" | jq -c '.')"
+    restart_addon
+    sleep 5
+    show_logs | tail -50
+    ;;
 
-    preset-lan-only)
-        echo "$LP Applying preset: LAN-only Relay (Privacy Mode)"
-        current_config=$(get_config)
-        new_config=$(echo "$current_config" | jq '
+  preset-lan-only)
+    echo "$LP Applying preset: LAN-only Relay (Privacy Mode)"
+    current_config=$(get_config)
+    new_config=$(echo "$current_config" | jq '
             .cloud_relay.enabled = true |
             .cloud_relay.forward_to_cloud = false |
             .cloud_relay.debug_packet_logging = true
         ')
-        update_config "$(echo "{\"options\": $new_config}" | jq -c '.')"
-        restart_addon
-        sleep 5
-        show_logs | tail -50
-        ;;
+    update_config "$(echo "{\"options\": $new_config}" | jq -c '.')"
+    restart_addon
+    sleep 5
+    show_logs | tail -50
+    ;;
 
-    restart)
-        restart_addon
-        ;;
+  restart)
+    restart_addon
+    ;;
 
-    logs)
-        show_logs
-        ;;
+  logs)
+    show_logs
+    ;;
 
-    *)
-        cat <<EOF
+  *)
+    cat << EOF
 $LP Usage: $0 <command> [args...]
 
 Commands:
@@ -190,7 +190,6 @@ Examples:
   $0 preset-lan-only
 
 EOF
-        exit 1
-        ;;
+    exit 1
+    ;;
 esac
-

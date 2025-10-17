@@ -1,271 +1,417 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>CyncLAN - Device Export</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <link href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css" rel="stylesheet">
-  <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet">
-  <style>
-    .toast {
-      position: fixed;
-      top: 1rem;
-      right: 1rem;
-      z-index: 50;
-      background-color: #2d3748;
-      color: white;
-      padding: 0.75rem 1.25rem;
-      border-radius: 0.5rem;
-      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
-    }
-    #yamlPreview {
-      max-height: 300px;
-      overflow-y: auto;
-    }
-  </style>
-</head>
-<body class="bg-gray-100 dark:bg-gray-900 min-h-screen flex items-center justify-center">
-  <div class="bg-white dark:bg-gray-800 p-8 rounded-lg shadow-2xl w-full max-w-2xl animate__animated animate__fadeIn">
-    <h1 class="text-3xl font-bold text-center text-gray-800 dark:text-gray-100 mb-6">CyncLAN - Device Export</h1>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CyncLAN - Device Export</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link
+      href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"
+      rel="stylesheet"
+    />
+    <link
+      href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css"
+      rel="stylesheet"
+    />
+    <style>
+      .toast {
+        position: fixed;
+        top: 1rem;
+        right: 1rem;
+        z-index: 50;
+        background-color: #2d3748;
+        color: white;
+        padding: 0.75rem 1.25rem;
+        border-radius: 0.5rem;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+      }
+      #yamlPreview {
+        max-height: 300px;
+        overflow-y: auto;
+      }
+    </style>
+  </head>
+  <body
+    class="bg-gray-100 dark:bg-gray-900 min-h-screen flex items-center justify-center"
+  >
+    <div
+      class="bg-white dark:bg-gray-800 p-8 rounded-lg shadow-2xl w-full max-w-2xl animate__animated animate__fadeIn"
+    >
+      <h1
+        class="text-3xl font-bold text-center text-gray-800 dark:text-gray-100 mb-6"
+      >
+        CyncLAN - Device Export
+      </h1>
 
-    <div class="space-y-4">
-      <!-- Start Export Button with Help Icon -->
-      <button id="startButton" onclick="startExport()" class="w-full bg-indigo-600 text-white py-3 px-4 rounded-md hover:bg-indigo-700 flex items-center justify-center">
-        <span id="startText">Start Export</span>
-        <span class="ml-2 relative group focus:outline-none">
-          <svg class="w-5 h-5 text-white hover:text-gray-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <circle cx="12" cy="12" r="10" stroke-width="2"></circle>
-            <path stroke-width="2" d="M12 16v-4m0-4h.01"></path>
-          </svg>
-          <span class="absolute left-1/2 -translate-x-1/2 mt-2 w-64 p-2 rounded bg-gray-800 text-white text-xs opacity-0 group-hover:opacity-100 group-focus:opacity-100 transition pointer-events-none z-10">
-            When you click "Start Export", the system will first try to use any cached tokens. If needed, you will be prompted for an OTP.
-          </span>
-        </span>
-        <svg id="spinner" class="hidden animate-spin h-5 w-5 ml-2 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-        </svg>
-      </button>
-
-      <!-- OTP Section -->
-      <div id="otpSection" class="space-y-2">
-        <label for="otpInput" class="block text-sm font-medium text-gray-700 dark:text-gray-200">Enter OTP:</label>
-        <input type="text" id="otpInput" placeholder="123456" class="w-full p-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:text-gray-100" />
-        <div class="flex items-center">
-          <button id="submitOtpButton" onclick="submitOTP()" class="w-full bg-green-600 text-white p-2 rounded-md hover:bg-green-700 flex items-center justify-center">
-            <span id="submitOtpText">Submit OTP</span>
-            <span class="ml-1 relative group focus:outline-none">
-              <svg class="w-4 h-4 text-white hover:text-gray-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <circle cx="12" cy="12" r="10" stroke-width="2"></circle>
-                <path stroke-width="2" d="M12 16v-4m0-4h.01"></path>
-              </svg>
-              <span class="absolute left-1/2 -translate-x-1/2 mt-2 w-56 p-2 rounded bg-gray-800 text-white text-xs opacity-0 group-hover:opacity-100 group-focus:opacity-100 transition pointer-events-none z-10">
-                Submit an OTP. If valid, the returned token is cached and a config file is exported.
-              </span>
-            </span>
-            <svg id="submitOtpSpinner" class="hidden animate-spin h-5 w-5 ml-2 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+      <div class="space-y-4">
+        <!-- Start Export Button with Help Icon -->
+        <button
+          id="startButton"
+          onclick="startExport()"
+          class="w-full bg-indigo-600 text-white py-3 px-4 rounded-md hover:bg-indigo-700 flex items-center justify-center"
+        >
+          <span id="startText">Start Export</span>
+          <span class="ml-2 relative group focus:outline-none">
+            <svg
+              class="w-5 h-5 text-white hover:text-gray-200"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <circle cx="12" cy="12" r="10" stroke-width="2"></circle>
+              <path stroke-width="2" d="M12 16v-4m0-4h.01"></path>
             </svg>
-          </button>
-        </div>
-        <div id="restartDivider" class="hidden border-t border-gray-300 my-4"></div>
-        <button id="restartButton" onclick="restartServer()" class="hidden w-full bg-red-600 text-white p-2 rounded-md hover:bg-red-700 flex items-center justify-center mt-2">
-          <span id="restartText">Restart Server</span>
-          <svg id="restartSpinner" class="hidden animate-spin h-5 w-5 ml-2 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            <span
+              class="absolute left-1/2 -translate-x-1/2 mt-2 w-64 p-2 rounded bg-gray-800 text-white text-xs opacity-0 group-hover:opacity-100 group-focus:opacity-100 transition pointer-events-none z-10"
+            >
+              When you click "Start Export", the system will first try to use
+              any cached tokens. If needed, you will be prompted for an OTP.
+            </span>
+          </span>
+          <svg
+            id="spinner"
+            class="hidden animate-spin h-5 w-5 ml-2 text-white"
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+          >
+            <circle
+              class="opacity-25"
+              cx="12"
+              cy="12"
+              r="10"
+              stroke="currentColor"
+              stroke-width="4"
+            ></circle>
+            <path
+              class="opacity-75"
+              fill="currentColor"
+              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+            ></path>
           </svg>
         </button>
-      </div>
 
-      <!-- Result Display -->
-      <div id="successSection" class="hidden animate__animated animate__fadeIn space-y-4">
-        <p class="text-green-500 text-lg font-semibold">Export Successful, the config has been saved, the textbox is for your convenience</p>
-        <a id="downloadLink" href="#" download="cync_mesh.yaml" class="block bg-indigo-600 text-white text-center py-2 rounded hover:bg-indigo-700">Download Config File</a>
-        <div class="relative">
-          <pre id="yamlPreview" class="rounded bg-gray-900 text-white p-4 text-sm"><code class="language-yaml"></code></pre>
-          <button id="copyButton" onclick="copyConfig().catch(e => showError('Copy failed: ' + e.message))" class="absolute top-2 right-2 bg-gray-700 text-white p-2 rounded-md hover:bg-gray-600 flex items-center">
-            <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
+        <!-- OTP Section -->
+        <div id="otpSection" class="space-y-2">
+          <label
+            for="otpInput"
+            class="block text-sm font-medium text-gray-700 dark:text-gray-200"
+            >Enter OTP:</label
+          >
+          <input
+            type="text"
+            id="otpInput"
+            placeholder="123456"
+            class="w-full p-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:text-gray-100"
+          />
+          <div class="flex items-center">
+            <button
+              id="submitOtpButton"
+              onclick="submitOTP()"
+              class="w-full bg-green-600 text-white p-2 rounded-md hover:bg-green-700 flex items-center justify-center"
+            >
+              <span id="submitOtpText">Submit OTP</span>
+              <span class="ml-1 relative group focus:outline-none">
+                <svg
+                  class="w-4 h-4 text-white hover:text-gray-200"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <circle cx="12" cy="12" r="10" stroke-width="2"></circle>
+                  <path stroke-width="2" d="M12 16v-4m0-4h.01"></path>
+                </svg>
+                <span
+                  class="absolute left-1/2 -translate-x-1/2 mt-2 w-56 p-2 rounded bg-gray-800 text-white text-xs opacity-0 group-hover:opacity-100 group-focus:opacity-100 transition pointer-events-none z-10"
+                >
+                  Submit an OTP. If valid, the returned token is cached and a
+                  config file is exported.
+                </span>
+              </span>
+              <svg
+                id="submitOtpSpinner"
+                class="hidden animate-spin h-5 w-5 ml-2 text-white"
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+              >
+                <circle
+                  class="opacity-25"
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  stroke="currentColor"
+                  stroke-width="4"
+                ></circle>
+                <path
+                  class="opacity-75"
+                  fill="currentColor"
+                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                ></path>
+              </svg>
+            </button>
+          </div>
+          <div
+            id="restartDivider"
+            class="hidden border-t border-gray-300 my-4"
+          ></div>
+          <button
+            id="restartButton"
+            onclick="restartServer()"
+            class="hidden w-full bg-red-600 text-white p-2 rounded-md hover:bg-red-700 flex items-center justify-center mt-2"
+          >
+            <span id="restartText">Restart Server</span>
+            <svg
+              id="restartSpinner"
+              class="hidden animate-spin h-5 w-5 ml-2 text-white"
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+            >
+              <circle
+                class="opacity-25"
+                cx="12"
+                cy="12"
+                r="10"
+                stroke="currentColor"
+                stroke-width="4"
+              ></circle>
+              <path
+                class="opacity-75"
+                fill="currentColor"
+                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+              ></path>
             </svg>
-            Copy
           </button>
         </div>
+
+        <!-- Result Display -->
+        <div
+          id="successSection"
+          class="hidden animate__animated animate__fadeIn space-y-4"
+        >
+          <p class="text-green-500 text-lg font-semibold">
+            Export Successful, the config has been saved, the textbox is for
+            your convenience
+          </p>
+          <a
+            id="downloadLink"
+            href="#"
+            download="cync_mesh.yaml"
+            class="block bg-indigo-600 text-white text-center py-2 rounded hover:bg-indigo-700"
+            >Download Config File</a
+          >
+          <div class="relative">
+            <pre
+              id="yamlPreview"
+              class="rounded bg-gray-900 text-white p-4 text-sm"
+            ><code class="language-yaml"></code></pre>
+            <button
+              id="copyButton"
+              onclick="copyConfig().catch(e => showError('Copy failed: ' + e.message))"
+              class="absolute top-2 right-2 bg-gray-700 text-white p-2 rounded-md hover:bg-gray-600 flex items-center"
+            >
+              <svg
+                class="w-4 h-4 mr-1"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
+                ></path>
+              </svg>
+              Copy
+            </button>
+          </div>
+        </div>
+
+        <!-- Error Message -->
+        <div
+          id="error"
+          class="hidden text-red-600 font-medium text-center animate__animated animate__shakeX"
+        ></div>
       </div>
-
-      <!-- Error Message -->
-      <div id="error" class="hidden text-red-600 font-medium text-center animate__animated animate__shakeX"></div>
     </div>
-  </div>
 
-  <!-- Toast container -->
-  <div id="toast" class="toast hidden"></div>
+    <!-- Toast container -->
+    <div id="toast" class="toast hidden"></div>
 
-  <!-- Scripts -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-yaml.min.js"></script>
-  <script>
-    const BASE_PATH = window.location.pathname.replace(/\/[^\/]*$/, '');
-    const toast = document.getElementById('toast');
+    <!-- Scripts -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-yaml.min.js"></script>
+    <script>
+      const BASE_PATH = window.location.pathname.replace(/\/[^\/]*$/, "");
+      const toast = document.getElementById("toast");
 
-    function showToast(msg) {
-      toast.textContent = msg;
-      toast.classList.remove('hidden');
-      setTimeout(() => toast.classList.add('hidden'), 4000);
-    }
+      function showToast(msg) {
+        toast.textContent = msg;
+        toast.classList.remove("hidden");
+        setTimeout(() => toast.classList.add("hidden"), 4000);
+      }
 
-    function showError(message) {
-      const err = document.getElementById('error');
-      err.textContent = message;
-      err.classList.remove('hidden');
-      setTimeout(() => err.classList.add('hidden'), 3000);
-    }
+      function showError(message) {
+        const err = document.getElementById("error");
+        err.textContent = message;
+        err.classList.remove("hidden");
+        setTimeout(() => err.classList.add("hidden"), 3000);
+      }
 
-    function focusOTP() {
-      const otpField = document.getElementById('otpInput');
-      otpField.focus();
-      otpField.select();
-    }
+      function focusOTP() {
+        const otpField = document.getElementById("otpInput");
+        otpField.focus();
+        otpField.select();
+      }
 
-    async function copyConfig() {
-      const yamlText = document.querySelector('#yamlPreview code').textContent.trim();
-      const copyButton = document.getElementById('copyButton');
+      async function copyConfig() {
+        const yamlText = document
+          .querySelector("#yamlPreview code")
+          .textContent.trim();
+        const copyButton = document.getElementById("copyButton");
 
-      try {
-        // Preferred: Modern Clipboard API
-        if (navigator.clipboard && window.isSecureContext) {
-          await navigator.clipboard.writeText(yamlText);
-          showToast('Config copied to clipboard!');
-        } else {
-          // Fallback: Select text and instruct manual copy (avoids deprecated execCommand)
-          const pre = document.querySelector('#yamlPreview code');
-          const range = document.createRange();
-          range.selectNodeContents(pre);
-          const selection = window.getSelection();
-          selection.removeAllRanges();
-          selection.addRange(range);
-          showError('Press Ctrl/⌘+C to copy the selected text');
-        }
+        try {
+          // Preferred: Modern Clipboard API
+          if (navigator.clipboard && window.isSecureContext) {
+            await navigator.clipboard.writeText(yamlText);
+            showToast("Config copied to clipboard!");
+          } else {
+            // Fallback: Select text and instruct manual copy (avoids deprecated execCommand)
+            const pre = document.querySelector("#yamlPreview code");
+            const range = document.createRange();
+            range.selectNodeContents(pre);
+            const selection = window.getSelection();
+            selection.removeAllRanges();
+            selection.addRange(range);
+            showError("Press Ctrl/⌘+C to copy the selected text");
+          }
 
-        copyButton.innerHTML = `
+          copyButton.innerHTML = `
           <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
           </svg>
           Copied!
         `;
-        setTimeout(() => {
-          copyButton.innerHTML = `
+          setTimeout(() => {
+            copyButton.innerHTML = `
             <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
             </svg>
             Copy
           `;
-        }, 2000);
-      } catch (e) {
-        showError('Failed to copy config: ' + e.message);
-      }
-    }
-
-    async function startExport() {
-      const btn = document.getElementById('startButton');
-      const txt = document.getElementById('startText');
-      const spinner = document.getElementById('spinner');
-      btn.disabled = true;
-      txt.textContent = 'Exporting...';
-      spinner.classList.remove('hidden');
-
-      try {
-        const response = await fetch(`${BASE_PATH}/api/export/start`);
-        const result = await response.json();
-
-        if (response.ok && result.success) {
-          await fetchAndShowConfig();
-        } else if (response.ok && result.message?.includes("OTP")) {
-          showToast(result.message);
-          focusOTP();
-        } else {
-          showError(result.detail || 'Export failed.');
+          }, 2000);
+        } catch (e) {
+          showError("Failed to copy config: " + e.message);
         }
-      } catch (e) {
-        showError('Export error: ' + e.message);
-      } finally {
-        btn.disabled = false;
-        txt.textContent = 'Start Export';
-        spinner.classList.add('hidden');
       }
-    }
 
-    async function submitOTP() {
-      const otp = document.getElementById('otpInput').value.trim();
-      if (!/^[0-9]{4,10}$/.test(otp)) return showError("OTP must be 4–10 digits");
+      async function startExport() {
+        const btn = document.getElementById("startButton");
+        const txt = document.getElementById("startText");
+        const spinner = document.getElementById("spinner");
+        btn.disabled = true;
+        txt.textContent = "Exporting...";
+        spinner.classList.remove("hidden");
 
-      try {
-        const response = await fetch(`${BASE_PATH}/api/export/otp/submit`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ otp: parseInt(otp, 10) })
+        try {
+          const response = await fetch(`${BASE_PATH}/api/export/start`);
+          const result = await response.json();
+
+          if (response.ok && result.success) {
+            await fetchAndShowConfig();
+          } else if (response.ok && result.message?.includes("OTP")) {
+            showToast(result.message);
+            focusOTP();
+          } else {
+            showError(result.detail || "Export failed.");
+          }
+        } catch (e) {
+          showError("Export error: " + e.message);
+        } finally {
+          btn.disabled = false;
+          txt.textContent = "Start Export";
+          spinner.classList.add("hidden");
+        }
+      }
+
+      async function submitOTP() {
+        const otp = document.getElementById("otpInput").value.trim();
+        if (!/^[0-9]{4,10}$/.test(otp))
+          return showError("OTP must be 4–10 digits");
+
+        try {
+          const response = await fetch(`${BASE_PATH}/api/export/otp/submit`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ otp: parseInt(otp, 10) }),
+          });
+          const result = await response.json();
+
+          if (response.ok && result.success) {
+            showToast("OTP accepted, loading config...");
+            // Show divider and restart button
+            document
+              .getElementById("restartDivider")
+              .classList.remove("hidden");
+            document.getElementById("restartButton").classList.remove("hidden");
+            await fetchAndShowConfig();
+          } else {
+            showError(result.detail || "OTP failed.");
+          }
+        } catch (e) {
+          showError("OTP submit error: " + e.message);
+        }
+      }
+
+      async function restartServer() {
+        const btn = document.getElementById("restartButton");
+        const txt = document.getElementById("restartText");
+        const spinner = document.getElementById("restartSpinner");
+        btn.disabled = true;
+        txt.textContent = "Restarting...";
+        spinner.classList.remove("hidden");
+
+        try {
+          const response = await fetch(`${BASE_PATH}/api/restart`, {
+            method: "POST",
+          });
+          if (response.ok) {
+            showToast("Server restart requested.");
+          } else {
+            showError("Failed to restart server.");
+          }
+        } catch (e) {
+          showError("Restart error: " + e.message);
+        } finally {
+          btn.disabled = false;
+          txt.textContent = "Restart Server";
+          spinner.classList.add("hidden");
+        }
+      }
+
+      async function fetchAndShowConfig() {
+        try {
+          const response = await fetch(`${BASE_PATH}/api/export/download`);
+          const text = await response.text();
+          const pre = document.querySelector("#yamlPreview code");
+          pre.textContent = text;
+          Prism.highlightElement(pre);
+          document.getElementById("downloadLink").href =
+            `${BASE_PATH}/api/export/download`;
+          document.getElementById("successSection").classList.remove("hidden");
+        } catch (e) {
+          showError("Failed to load config: " + e.message);
+        }
+      }
+
+      document.addEventListener("DOMContentLoaded", () => {
+        document.getElementById("otpInput").addEventListener("keydown", (e) => {
+          if (e.key === "Enter") submitOTP();
         });
-        const result = await response.json();
-
-        if (response.ok && result.success) {
-          showToast("OTP accepted, loading config...");
-          // Show divider and restart button
-          document.getElementById('restartDivider').classList.remove('hidden');
-          document.getElementById('restartButton').classList.remove('hidden');
-          await fetchAndShowConfig();
-        } else {
-          showError(result.detail || 'OTP failed.');
-        }
-      } catch (e) {
-        showError('OTP submit error: ' + e.message);
-      }
-    }
-
-    async function restartServer() {
-      const btn = document.getElementById('restartButton');
-      const txt = document.getElementById('restartText');
-      const spinner = document.getElementById('restartSpinner');
-      btn.disabled = true;
-      txt.textContent = 'Restarting...';
-      spinner.classList.remove('hidden');
-
-      try {
-        const response = await fetch(`${BASE_PATH}/api/restart`, { method: 'POST' });
-        if (response.ok) {
-          showToast('Server restart requested.');
-        } else {
-          showError('Failed to restart server.');
-        }
-      } catch (e) {
-        showError('Restart error: ' + e.message);
-      } finally {
-        btn.disabled = false;
-        txt.textContent = 'Restart Server';
-        spinner.classList.add('hidden');
-      }
-    }
-
-    async function fetchAndShowConfig() {
-      try {
-        const response = await fetch(`${BASE_PATH}/api/export/download`);
-        const text = await response.text();
-        const pre = document.querySelector('#yamlPreview code');
-        pre.textContent = text;
-        Prism.highlightElement(pre);
-        document.getElementById('downloadLink').href = `${BASE_PATH}/api/export/download`;
-        document.getElementById('successSection').classList.remove('hidden');
-      } catch (e) {
-        showError("Failed to load config: " + e.message);
-      }
-    }
-
-    document.addEventListener("DOMContentLoaded", () => {
-      document.getElementById('otpInput').addEventListener('keydown', e => {
-        if (e.key === 'Enter') submitOTP();
       });
-    });
-  </script>
-</body>
+    </script>
+  </body>
 </html>
