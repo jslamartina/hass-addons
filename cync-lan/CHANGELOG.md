@@ -1,3 +1,30 @@
+## 0.0.4.4
+**Enhancement: MQTT Discovery Improvements**
+
+### Changed
+- **Name-based entity IDs**: Entities now use friendly names instead of numeric IDs
+  - Before: `light.cync_lan_467454691_119`
+  - After: `light.hallway_lights`
+  - Replaces deprecated `object_id` with `default_entity_id` (HA 2026.4 requirement)
+- **Color mode compliance**: All lights now properly declare color modes
+  - Lights with color temp/RGB: `["color_temp", "rgb"]`
+  - Basic dimmable lights: `["brightness"]`
+  - Fixes "does not report a color mode" warnings in HA 2025.3+
+- **State updates**: All state messages now include `color_mode` field
+
+### Added
+- Type 171 device mapping: Cync Full Color Direct Connect A19 Bulb (CLEDA1921C4)
+  - Full RGB color support
+  - Tunable white (2000K-7000K)
+  - 800 lumens
+- `slugify()` helper function for converting device names to entity IDs
+- Documentation: Cloud relay mode limitations (read-only, no commands)
+
+### Fixed
+- Python 3.13 compatibility: Replaced `asyncio.get_event_loop()` with `asyncio.new_event_loop()`
+- Groups without color support now properly declare `supported_color_modes: ["brightness"]`
+- Individual devices without color support now properly declare `supported_color_modes: ["brightness"]`
+
 ## 0.0.4.3
 **Enhancement: Smart Area Grouping for Devices**
 
