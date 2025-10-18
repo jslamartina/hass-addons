@@ -18,9 +18,9 @@ This repository contains Home Assistant add-ons for controlling Cync/C by GE sma
 **Most used commands:**
 
 ```bash
-ha addons logs local_cync-lan     # View logs
+ha addons logs local_cync-controller     # View logs
 ./scripts/configure-addon.sh      # Configure addon
-ha addons restart local_cync-lan  # Restart addon
+ha addons restart local_cync-controller  # Restart addon
 npm run lint                      # Run all linters
 npm run lint:python:fix           # Auto-fix Python issues
 ```
@@ -45,7 +45,7 @@ npm run lint:python:fix           # Auto-fix Python issues
 **🛑 STOP. Before writing ANY code or making changes, answer these questions:**
 
 1. **What type of files am I about to modify?**
-   - [ ] Python files (`.py`) → You MUST rebuild after (`ha addons rebuild local_cync-lan`)
+   - [ ] Python files (`.py`) → You MUST rebuild after (`ha addons rebuild local_cync-controller`)
    - [ ] Config/shell scripts (`config.yaml`, `run.sh`) → You only need to restart after
    - [ ] Documentation/static files → No rebuild needed
 
@@ -100,7 +100,7 @@ This approach helps track progress during long-running tasks and makes it clear 
 
 ```
 /mnt/supervisor/addons/local/hass-addons/
-├── cync-lan/                   # Main CyncLAN add-on directory
+├── cync-controller/                   # Main CyncLAN add-on directory
 │   ├── src/cync_lan/          # Python package source code
 │   │   ├── __init__.py
 │   │   ├── main.py            # CLI entry point
@@ -220,10 +220,10 @@ The devcontainer includes several Model Context Protocol (MCP) servers that prov
 ```python
 # Preferred: MCP Docker tool
 try:
-    logs = mcp_docker_fetch_container_logs("addon_local_cync-lan", tail=100)
+    logs = mcp_docker_fetch_container_logs("addon_local_cync-controller", tail=100)
 except:
     # Fallback: Standard terminal command
-    logs = run_terminal_cmd("docker logs addon_local_cync-lan --tail 100")
+    logs = run_terminal_cmd("docker logs addon_local_cync-controller --tail 100")
 ```
 
 ---
@@ -277,7 +277,7 @@ convert_time("America/New_York", "14:00", "Europe/London")
 # Process large files without loading into context
 from pathlib import Path
 
-file = Path("cync-lan/src/cync_lan/mqtt_client.py")
+file = Path("cync-controller/src/cync_lan/mqtt_client.py")
 content = file.read_text()
 line_count = len(content.split("\n"))
 print(f"Processed {len(content)} characters in {line_count} lines")
@@ -353,7 +353,7 @@ Unlike the old Pyodide-based `mcp-run-python`, this runs native Python with dire
 list_containers(all=True, filters={"label": ["io.hass.type=addon"]})
 
 # Inspect addon logs for debugging
-fetch_container_logs("addon_local_cync-lan", tail=100)
+fetch_container_logs("addon_local_cync-controller", tail=100)
 
 # Manage test networks for multi-container testing
 create_network("cync-test-net", driver="bridge")
@@ -465,7 +465,7 @@ git_create_branch(repo_path=".", branch_name="feature/mcp-docs",
 **Example use cases:**
 ```python
 # Example 1: Bulk transformation with read/write
-content = read_text_file("cync-lan/src/cync_lan/mqtt_client.py")
+content = read_text_file("cync-controller/src/cync_lan/mqtt_client.py")
 
 # Apply transformation using Python/regex (in terminal or MCP Python)
 # For example: convert logger.info(f"{lp} text") to logger.info("%s text", lp)
@@ -477,7 +477,7 @@ def convert_logging_fstrings(text):
     return transformed_text
 
 transformed = convert_logging_fstrings(content)
-write_file("cync-lan/src/cync_lan/mqtt_client.py", transformed)
+write_file("cync-controller/src/cync_lan/mqtt_client.py", transformed)
 
 # Example 2: Targeted edits with diff preview (simpler cases)
 edit_file(
@@ -489,7 +489,7 @@ edit_file(
 )
 
 # Example 3: Search for patterns across multiple files
-search_files(path="cync-lan/src", pattern="logger\\..*f\"", excludePatterns=["__pycache__"])
+search_files(path="cync-controller/src", pattern="logger\\..*f\"", excludePatterns=["__pycache__"])
 ```
 
 **Features:**
@@ -714,7 +714,7 @@ When commands don't work, check in this order:
 
 **Example diagnostic grep:**
 ```bash
-ha addons logs local_cync-lan | grep -E "set_power|WRITE CALLED|write_lock|ACK|drain"
+ha addons logs local_cync-controller | grep -E "set_power|WRITE CALLED|write_lock|ACK|drain"
 ```
 
 ## Coding Conventions
@@ -794,10 +794,10 @@ When you modify files, check for new errors by running `ruff check` on the speci
 
 ```bash
 # ✅ CORRECT: Check the files you modified
-ruff check cync-lan/src/cync_lan/mqtt_client.py cync-lan/src/cync_lan/devices.py
+ruff check cync-controller/src/cync_lan/mqtt_client.py cync-controller/src/cync_lan/devices.py
 
 # ❌ WRONG: Don't grep for specific line numbers or filter output
-ruff check cync-lan/src/cync_lan/mqtt_client.py | grep "1708"  # Misses other errors!
+ruff check cync-controller/src/cync_lan/mqtt_client.py | grep "1708"  # Misses other errors!
 
 # ✅ CORRECT: Full output shows ALL errors (pre-existing + new)
 # Compare error count before and after your changes
@@ -812,7 +812,7 @@ ruff check cync-lan/src/cync_lan/mqtt_client.py | grep "1708"  # Misses other er
 - Use descriptive variable names in SCREAMING_SNAKE_CASE for environment variables
 - Comment complex logic, especially protocol-specific code
 
-### Python (cync-lan package)
+### Python (cync-controller package)
 
 - Follow Ruff formatter style (Black-compatible, configured in pyproject.toml)
 - Use type hints for function signatures
@@ -822,7 +822,7 @@ ruff check cync-lan/src/cync_lan/mqtt_client.py | grep "1708"  # Misses other er
 
 ### Configuration Files
 
-- Add-on config: `cync-lan/config.yaml` (JSON Schema format)
+- Add-on config: `cync-controller/config.yaml` (JSON Schema format)
 - Environment variables: Prefix with `CYNC_` for add-on settings
 - MQTT topics: Follow Home Assistant MQTT discovery schema
 
@@ -833,38 +833,38 @@ ruff check cync-lan/src/cync_lan/mqtt_client.py | grep "1708"  # Misses other er
 **IF YOU EDIT ANY `.py` FILES**, you MUST rebuild the add-on before testing:
 
 ```bash
-cd cync-lan
+cd cync-controller
 ./rebuild.sh
 ```
 
 **Just restarting the add-on (`ha addons restart`) is NOT enough** - the Python package is baked into the Docker image during build time. Changes to Python files won't take effect until you rebuild.
 
 **Files that require rebuild:**
-- Anything in `cync-lan/src/cync_lan/*.py` (the Python package)
-- `cync-lan/pyproject.toml` (package configuration)
+- Anything in `cync-controller/src/cync_lan/*.py` (the Python package)
+- `cync-controller/pyproject.toml` (package configuration)
 
 **Files that only need restart:**
-- `cync-lan/config.yaml` (add-on configuration schema)
-- `cync-lan/run.sh` (entry point script)
-- `cync-lan/static/*` (web UI files)
+- `cync-controller/config.yaml` (add-on configuration schema)
+- `cync-controller/run.sh` (entry point script)
+- `cync-controller/static/*` (web UI files)
 
 ### Building the Add-on
 
 ```bash
 # Rebuild from scratch (REQUIRED after Python package changes)
-cd cync-lan
+cd cync-controller
 ./rebuild.sh
 
 # Or use Home Assistant CLI
-ha addons rebuild local_cync-lan
+ha addons rebuild local_cync-controller
 ```
 
 ### Testing
 
 ```bash
 # Manual testing
-ha addons start local_cync-lan
-ha addons logs local_cync-lan --follow
+ha addons start local_cync-controller
+ha addons logs local_cync-controller --follow
 
 # Check entity states in Home Assistant
 # Developer Tools → States → Filter for "cync"
@@ -878,7 +878,7 @@ Use when you changed `suggested_area` or other discovery fields and need HA to r
 ```bash
 # Clean deletion preserving bridge, with optional restart
 sudo python3 scripts/delete-mqtt-safe.py [--dry-run]
-# Then restart addon: ha addons restart local_cync-lan
+# Then restart addon: ha addons restart local_cync-controller
 ```
 
 **Manual UI approach (fallback):**
@@ -889,7 +889,7 @@ sudo python3 scripts/delete-mqtt-safe.py [--dry-run]
 5. Click "Action" → "Delete selected"
    - If the click fails due to overlay/SVG interception, click the parent container first, or use the keyboard: open Action menu, press ArrowDown until "Delete selected", then Enter
 6. Confirm deletion in the dialog
-7. Restart the add-on: `ha addons restart local_cync-lan`
+7. Restart the add-on: `ha addons restart local_cync-controller`
 8. Verify rediscovery: Entities should appear with updated area
 
 ## Workflow: Making Code Changes
@@ -905,16 +905,16 @@ sudo python3 scripts/delete-mqtt-safe.py [--dry-run]
    - View Problems tab in VS Code, OR
    - Run `npm run lint` to see all issues
    - **Fix ALL issues before proceeding** - no exceptions
-4. **REBUILD the add-on**: `cd cync-lan && ./rebuild.sh`
-5. Check logs: `ha addons logs local_cync-lan`
+4. **REBUILD the add-on**: `cd cync-controller && ./rebuild.sh`
+5. Check logs: `ha addons logs local_cync-controller`
 6. Test functionality
 
 ### Configuration/Script Changes (non-Python)
 1. Edit `config.yaml`, `run.sh`, or static files
 2. **MANDATORY: Run linter** (if shell script): `npm run lint:shell`
 3. **MANDATORY: Fix all ShellCheck warnings** before proceeding
-4. **RESTART the add-on**: `ha addons restart local_cync-lan`
-5. Check logs: `ha addons logs local_cync-lan`
+4. **RESTART the add-on**: `ha addons restart local_cync-controller`
+5. Check logs: `ha addons logs local_cync-controller`
 6. Test functionality
 
 ### All File Changes (Any Type)
@@ -932,16 +932,16 @@ If any errors remain, **STOP and fix them**. Do not proceed with rebuild/restart
 
 | Command                                          | Purpose                                                 |
 | ------------------------------------------------ | ------------------------------------------------------- |
-| `ha addons logs local_cync-lan`                  | View add-on logs for debugging                          |
+| `ha addons logs local_cync-controller`                  | View add-on logs for debugging                          |
 | `./scripts/configure-addon.sh`                   | Configure add-on settings programmatically              |
-| `ha addons restart local_cync-lan`               | Restart the add-on (for non-Python changes)             |
-| `cd cync-lan && ./rebuild.sh`                    | **Rebuild add-on** (REQUIRED after Python code changes) |
-| `ha addons rebuild local_cync-lan`               | Alternative rebuild command using HA CLI                |
+| `ha addons restart local_cync-controller`               | Restart the add-on (for non-Python changes)             |
+| `cd cync-controller && ./rebuild.sh`                    | **Rebuild add-on** (REQUIRED after Python code changes) |
+| `ha addons rebuild local_cync-controller`               | Alternative rebuild command using HA CLI                |
 | `npm run lint`                                   | Run all linters (Python + Shell + Format check)         |
 | `npm run lint:python:fix`                        | Auto-fix Python linting issues with Ruff                |
 | `ruff check .`                                   | Check Python code for linting errors                    |
 | `./scripts/lint-all.sh`                          | Alternative: Run all linters via shell script           |
-| `docker exec -it addon_local_cync-lan /bin/bash` | Access add-on container shell for debugging             |
+| `docker exec -it addon_local_cync-controller /bin/bash` | Access add-on container shell for debugging             |
 | `./scripts/test-cloud-relay.sh`                  | Run comprehensive cloud relay test suite                |
 | `sudo python3 scripts/delete-mqtt-safe.py`       | Clean up stale MQTT entities safely                     |
 
@@ -999,10 +999,10 @@ When adding new configuration options or changing the schema:
 
 ```bash
 # 1. Stop the add-on
-ha addons stop local_cync-lan
+ha addons stop local_cync-controller
 
 # 2. Remove all cached Docker images
-docker rmi -f $(docker images -q local/aarch64-addon-cync-lan)
+docker rmi -f $(docker images -q local/aarch64-addon-cync-controller)
 
 # 3. Clear Docker build cache
 docker builder prune -af
@@ -1012,13 +1012,13 @@ ha supervisor restart
 sleep 10  # Wait for supervisor to fully restart
 
 # 5. Rebuild with fresh cache
-ha addons rebuild local_cync-lan
+ha addons rebuild local_cync-controller
 
 # 6. Verify new version is detected
-ha addons info local_cync-lan | grep -E "^version"
+ha addons info local_cync-controller | grep -E "^version"
 
 # 7. Update (if version changed)
-ha addons update local_cync-lan
+ha addons update local_cync-controller
 
 # 8. Test with automated tools
 ./scripts/configure-addon.sh get
@@ -1237,16 +1237,16 @@ await page.getByLabel('Close').click();
 
 ```bash
 # View add-on logs
-ha addons logs local_cync-lan
+ha addons logs local_cync-controller
 
 # View supervisor logs (includes add-on lifecycle)
 tail -f /tmp/supervisor_run.log
 
 # Access add-on container
-docker exec -it addon_local_cync-lan /bin/bash
+docker exec -it addon_local_cync-controller /bin/bash
 
 # Verify environment variables loaded correctly
-docker exec addon_local_cync-lan env | grep CYNC_
+docker exec addon_local_cync-controller env | grep CYNC_
 
 # Cloud relay packet injection (when relay mode enabled)
 # Inject raw packet bytes
@@ -1318,7 +1318,7 @@ await bridge_device.write(payload_bytes)
 ### DO
 
 - ✅ Read `.devcontainer/README.md` before modifying startup scripts
-- ✅ Use the embedded `cync-lan-python` package (don't duplicate code)
+- ✅ Use the embedded `cync-controller-python` package (don't duplicate code)
 - ✅ Follow Home Assistant add-on best practices (see https://developers.home-assistant.io/)
 - ✅ Document protocol findings in `mitm/` when discovering new packet structures
 - ✅ Update `CHANGELOG.md` when making user-facing changes
@@ -1350,7 +1350,7 @@ await bridge_device.write(payload_bytes)
 **Before submitting a pull request:**
 
 1. **Title Format:** Use clear, descriptive titles in the format: `[component] Brief description`
-   - Examples: `[cync-lan] Fix device availability flickering`, `[docs] Update AGENTS.md standard compliance`
+   - Examples: `[cync-controller] Fix device availability flickering`, `[docs] Update AGENTS.md standard compliance`
 
 2. **Pre-submission Checklist:**
    - [ ] **MANDATORY: Zero linting errors** - Run `npm run lint` and verify all checks pass
@@ -1377,15 +1377,15 @@ Before submitting changes:
    - Run `npm run format:check` - must show no formatting issues
    - Fix any issues before proceeding (use `npm run lint:python:fix` and `npm run format`)
 2. [ ] **If you edited Python files (`.py`)**: Rebuild with `./rebuild.sh` or `ha addons rebuild`
-3. [ ] **If you only edited config/scripts**: Restart with `ha addons restart local_cync-lan`
-4. [ ] Add-on starts without errors (`ha addons start local_cync-lan`)
+3. [ ] **If you only edited config/scripts**: Restart with `ha addons restart local_cync-controller`
+4. [ ] Add-on starts without errors (`ha addons start local_cync-controller`)
 5. [ ] Entities appear in Home Assistant (check Developer Tools → States)
 6. [ ] Device commands work (toggle lights, adjust brightness)
 7. [ ] **Group commands work** - Test toggling group entities multiple times
 8. [ ] **Commands work after refresh** - Click "Refresh Device Status" then test commands immediately
 9. [ ] **No availability flickering** - Watch device availability over 30+ seconds
 10. [ ] MQTT messages are valid (check EMQX logs or `mosquitto_sub`)
-11. [ ] No Python exceptions in logs (`ha addons logs local_cync-lan`)
+11. [ ] No Python exceptions in logs (`ha addons logs local_cync-controller`)
 12. [ ] Devcontainer still starts cleanly (test in fresh container)
 13. [ ] Changes documented in CHANGELOG.md if user-facing
 14. [ ] If config schema changed: Follow "Testing Add-on UI Configuration Changes" workflow

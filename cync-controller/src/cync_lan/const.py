@@ -129,7 +129,7 @@ CYNC_DEBUG = os.environ.get("CYNC_DEBUG", "0").casefold() in YES_ANSWER
 CYNC_BASE_DIR: str = "/root"
 CYNC_STATIC_DIR: str = "/root/cync-lan/www"
 
-PERSISTENT_BASE_DIR: str = os.environ.get("CYNC_PERSISTENT_BASE_DIR", "/homeassistant/.storage/cync-lan/config")
+PERSISTENT_BASE_DIR: str = os.environ.get("CYNC_PERSISTENT_BASE_DIR", "/homeassistant/.storage/cync-controller/config")
 CYNC_CONFIG_FILE_PATH: str = f"{PERSISTENT_BASE_DIR}/cync_mesh.yaml"
 CYNC_UUID_PATH: str = f"{PERSISTENT_BASE_DIR}/uuid.txt"
 CYNC_CLOUD_AUTH_PATH: str = f"{PERSISTENT_BASE_DIR}/.cloud_auth.yaml"

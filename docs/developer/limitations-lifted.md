@@ -15,14 +15,14 @@ All limitations related to cloud relay mode testing have been successfully resol
 
 ### ❌ Previous Limitation #1: Configuration Persistence
 **Problem:**
-Manual editing of `/mnt/supervisor/addons/data/local_cync-lan/options.json` did not persist or reload correctly in the devcontainer environment. Environment variables remained unset even after file edits.
+Manual editing of `/mnt/supervisor/addons/data/local_cync-controller/options.json` did not persist or reload correctly in the devcontainer environment. Environment variables remained unset even after file edits.
 
 **✅ Solution:**
 Created `scripts/configure-addon.sh` that uses the **Supervisor API** to programmatically configure add-ons. This bypasses file-based configuration entirely and uses the same API that the Home Assistant UI uses.
 
 **Implementation:**
 - Extracts `SUPERVISOR_TOKEN` from `hassio_cli` container
-- Uses HTTP POST to `/addons/local_cync-lan/options` endpoint
+- Uses HTTP POST to `/addons/local_cync-controller/options` endpoint
 - Properly triggers add-on restart and configuration reload
 
 **Evidence:**
@@ -173,7 +173,7 @@ Failed:       1
 
 2. **API Endpoint**
    ```
-   POST http://supervisor/addons/local_cync-lan/options
+   POST http://supervisor/addons/local_cync-controller/options
    Authorization: Bearer ${SUPERVISOR_TOKEN}
    Content-Type: application/json
 
@@ -190,7 +190,7 @@ Failed:       1
 
 3. **Configuration Reload**
    - Supervisor API updates `/data/options.json` automatically
-   - Add-on restart triggered via `POST /addons/local_cync-lan/restart`
+   - Add-on restart triggered via `POST /addons/local_cync-controller/restart`
    - Environment variables properly loaded via `bashio::config`
 
 ---
@@ -263,7 +263,7 @@ The cloud relay implementation is now fully documented in:
 ./scripts/configure-addon.sh preset-relay-with-forward
 
 # 3. Watch logs for relay activity
-ha addons logs local_cync-lan --follow | grep -i "relay\|cloud"
+ha addons logs local_cync-controller --follow | grep -i "relay\|cloud"
 
 # 4. Run comprehensive test suite
 ./scripts/test-cloud-relay.sh

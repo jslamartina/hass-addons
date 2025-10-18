@@ -6,7 +6,7 @@
 
 ## Summary
 
-Successfully integrated MITM proxy functionality into the cync-lan Python package and Home Assistant add-on. The add-on can now optionally act as a transparent relay between Cync devices and the cloud, enabling packet inspection, protocol analysis, and debugging.
+Successfully integrated MITM proxy functionality into the cync-controller Python package and Home Assistant add-on. The add-on can now optionally act as a transparent relay between Cync devices and the cloud, enabling packet inspection, protocol analysis, and debugging.
 
 ## Files Modified/Created in Git Repo
 
@@ -40,7 +40,7 @@ Successfully integrated MITM proxy functionality into the cync-lan Python packag
 
 ## Files Modified in Add-on Directory
 
-Location: `/mnt/supervisor/addons/local/hass-addons/cync-lan/`
+Location: `/mnt/supervisor/addons/local/hass-addons/cync-controller/`
 
 1. **`config.yaml`**
    - Added `cloud_relay` configuration section
@@ -82,13 +82,13 @@ cloud_relay:
 
 ```bash
 # Navigate to add-on directory
-cd /mnt/supervisor/addons/local/hass-addons/cync-lan
+cd /mnt/supervisor/addons/local/hass-addons/cync-controller
 
 # Rebuild (syncs from git repo + builds container)
 ./rebuild.sh
 
 # View logs
-ha addons logs local_cync-lan --follow
+ha addons logs local_cync-controller --follow
 ```
 
 ## Testing Modes
@@ -187,15 +187,15 @@ _register_new_connection()
 ## Documentation
 
 - **User Guide:** `docs/user/cloud-relay.md`
-- **Add-on Docs:** `/mnt/supervisor/addons/local/hass-addons/cync-lan/DOCS.md`
+- **Add-on Docs:** `/mnt/supervisor/addons/local/hass-addons/cync-controller/DOCS.md`
 - **Agent Guide:** `/mnt/supervisor/addons/local/hass-addons/AGENTS.md`
-- **Changelog:** `/mnt/supervisor/addons/local/hass-addons/cync-lan/CHANGELOG.md`
+- **Changelog:** `/mnt/supervisor/addons/local/hass-addons/cync-controller/CHANGELOG.md`
 
 ## Next Steps
 
 1. **Test the build:**
    ```bash
-   cd /mnt/supervisor/addons/local/hass-addons/cync-lan
+   cd /mnt/supervisor/addons/local/hass-addons/cync-controller
    ./rebuild.sh
    ```
 

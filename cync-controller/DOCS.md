@@ -57,8 +57,8 @@ cloud_relay:
 ## Migration
 To perform a seamless migration from the old monolithic, non add-on setup:
 - SSH into HASS or get to the CLI on the device
-- create a folder to hold the config in the correct location: `mkdir -p /homeassistant/.storage/cync-lan/config`
-- copy your existing `cync_mesh.yaml` into the new dir: `cp /path/to/cync_mesh.yaml /homeassistant/.storage/cync-lan/config`
+- create a folder to hold the config in the correct location: `mkdir -p /homeassistant/.storage/cync-controller/config`
+- copy your existing `cync_mesh.yaml` into the new dir: `cp /path/to/cync_mesh.yaml /homeassistant/.storage/cync-controller/config`
 - Start the add-on, it will automatically detect the existing config and use it
 - Change your DNS redirection to point to the Home Assistant server's local IP address
 - Power cycle the Cync devices, so they perform a DNS request and get the new IP address of the Cync Controller

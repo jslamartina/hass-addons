@@ -102,7 +102,7 @@ class GlobalObject:
             "CYNC_SSL_KEY", f"{CYNC_BASE_DIR}/cync-lan/certs/key.pem"
         )
         self.env.persistent_base_dir = PERSISTENT_BASE_DIR = os.environ.get(
-            "CYNC_PERSISTENT_BASE_DIR", "/homeassistant/.storage/cync-lan/config"
+            "CYNC_PERSISTENT_BASE_DIR", "/homeassistant/.storage/cync-controller/config"
         )
 
         # Cloud relay configuration

@@ -31,7 +31,7 @@ dev = [
 ]
 
 [project.scripts]
-cync-lan = "cync_lan.main:main"
+cync-controller = "cync_lan.main:main"
 
 [project.urls]
 Homepage = "https://github.com/jslamartina/hass-addons"

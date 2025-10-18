@@ -65,10 +65,10 @@ sudo python3 scripts/delete-mqtt-safe.py --dry-run
 sudo python3 scripts/delete-mqtt-safe.py
 
 # 3. Restart addon to republish
-ha addons restart local_cync-lan
+ha addons restart local_cync-controller
 
 # 4. Verify entities republished correctly
-ha addons logs local_cync-lan | grep "Publishing MQTT discovery"
+ha addons logs local_cync-controller | grep "Publishing MQTT discovery"
 ```
 
 ### Workflow: Change suggested_area and Rediscover
@@ -77,13 +77,13 @@ ha addons logs local_cync-lan | grep "Publishing MQTT discovery"
 # Scenario: You edited mqtt_client.py to change suggested_area
 
 # 1. Rebuild addon (Python changes require rebuild)
-cd cync-lan && ./rebuild.sh
+cd cync-controller && ./rebuild.sh
 
 # 2. Delete all entities except bridge (clean deletion)
 sudo python3 scripts/delete-mqtt-safe.py
 
 # 3. Restart addon
-ha addons restart local_cync-lan
+ha addons restart local_cync-controller
 
 # 4. Entities republish with new suggested_area
 # Navigate to Settings → Devices & Services → Entities
@@ -153,7 +153,7 @@ Use `--dry-run` to verify before actual deletion.
 export HA_BASE_URL="http://localhost:8123"  # HA URL
 export HA_USERNAME="dev"                     # Username
 export HA_PASSWORD="dev"                     # Password
-export ADDON_SLUG="local_cync-lan"          # Addon to restart
+export ADDON_SLUG="local_cync-controller"          # Addon to restart
 export BRIDGE_NAME="CyncLAN Bridge"         # Bridge to preserve
 export RESTART_ADDON="true"                  # Restart after deletion
 export DRY_RUN="true"                        # Preview mode

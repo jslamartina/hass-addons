@@ -3,7 +3,7 @@
 
 ## Current Situation
 
-After consolidating the cync-lan repo, we have duplicated files in two places:
+After consolidating the cync-controller repo, we have duplicated files in two places:
 
 ### Primary Source (Authoritative):
 
@@ -20,7 +20,7 @@ hass-addons/
 ### Build-Time Copies (Synced by rebuild.sh):
 
 ```
-hass-addons/cync-lan/
+hass-addons/cync-controller/
 ├── pyproject.toml                  # DUPLICATE - synced from ../
 └── src/cync_lan/                   # DUPLICATE - synced from ../src/
     ├── __init__.py
@@ -30,7 +30,7 @@ hass-addons/cync-lan/
 
 ## Why Duplicates Exist
 
-The `rebuild.sh` script syncs files to `cync-lan/` because Docker's build context is limited to the `cync-lan/` directory. The Dockerfile can't access `../src/` directly.
+The `rebuild.sh` script syncs files to `cync-controller/` because Docker's build context is limited to the `cync-controller/` directory. The Dockerfile can't access `../src/` directly.
 
 ## The Problem
 
@@ -46,8 +46,8 @@ The `rebuild.sh` script syncs files to `cync-lan/` because Docker's build contex
 **Keep duplicates but clarify their purpose:**
 
 - Primary source: `hass-addons/src/cync_lan/` and `hass-addons/pyproject.toml`
-- Build copies: `hass-addons/cync-lan/src/` and `hass-addons/cync-lan/pyproject.toml`
-- Add to `.gitignore`: `cync-lan/src/` and `cync-lan/pyproject.toml`
+- Build copies: `hass-addons/cync-controller/src/` and `hass-addons/cync-controller/pyproject.toml`
+- Add to `.gitignore`: `cync-controller/src/` and `cync-controller/pyproject.toml`
 - Update `rebuild.sh` to explain this
 
 **Pros:**
@@ -78,12 +78,12 @@ The `rebuild.sh` script syncs files to `cync-lan/` because Docker's build contex
 - ⚠️ May break Home Assistant's add-on builder expectations
 - ⚠️ Harder to debug
 
-### Option 3: Move Source Into cync-lan/
+### Option 3: Move Source Into cync-controller/
 
-**Make cync-lan/ the primary location:**
+**Make cync-controller/ the primary location:**
 
-- Move `src/` → `cync-lan/src/`
-- Move `pyproject.toml` → `cync-lan/pyproject.toml`
+- Move `src/` → `cync-controller/src/`
+- Move `pyproject.toml` → `cync-controller/pyproject.toml`
 - Delete top-level copies
 
 **Pros:**
@@ -104,8 +104,8 @@ The `rebuild.sh` script syncs files to `cync-lan/` because Docker's build contex
 1. **Add build-time copies to .gitignore:**
    ```gitignore
    # Build-time copies (synced from ../src by rebuild.sh)
-   cync-lan/src/
-   cync-lan/pyproject.toml
+   cync-controller/src/
+   cync-controller/pyproject.toml
    ```
 
 2. **Update rebuild.sh with clear comments:**
@@ -115,18 +115,18 @@ The `rebuild.sh` script syncs files to `cync-lan/` because Docker's build contex
 
    # Sync source code from primary location (../src) to build directory
    # These are build-time copies required for Docker build context
-   echo "Syncing cync-lan source code from ../src..."
+   echo "Syncing cync-controller source code from ../src..."
    rsync -av --delete ../src/ src/ --exclude='__pycache__' --exclude='*.pyc'
    cp ../pyproject.toml pyproject.toml
 
    echo "Rebuilding addon..."
-   ha addons rebuild local_cync-lan
+   ha addons rebuild local_cync-controller
    # ... rest
    ```
 
-3. **Add README note in cync-lan/ directory:**
+3. **Add README note in cync-controller/ directory:**
 
-Create `cync-lan/README-DEV.md`:
+Create `cync-controller/README-DEV.md`:
 
    ```markdown
    # Developer Note
@@ -149,9 +149,9 @@ This would require testing and may not work with HA's builder system.
 
 ## Implementation Checklist
 
-- [x] Add `cync-lan/src/` and `cync-lan/pyproject.toml` to .gitignore ✅
+- [x] Add `cync-controller/src/` and `cync-controller/pyproject.toml` to .gitignore ✅
 - [x] Update rebuild.sh with clear comments explaining primary vs build copies ✅
-- [x] Create README-DEV.md in cync-lan/ explaining the copies ✅
+- [x] Create README-DEV.md in cync-controller/ explaining the copies ✅
 - [x] Update AGENTS.md to document the primary source vs build copies structure ✅
 - [x] Update AGENTS.md Task Planning section with instruction to update plan files after every step ✅
 - [x] Test that add-on still builds correctly ✅
@@ -163,7 +163,7 @@ This would require testing and may not work with HA's builder system.
 
 ## ✅ Complete Summary
 
-All tasks from the cync-lan repository consolidation have been successfully completed:
+All tasks from the cync-controller repository consolidation have been successfully completed:
 
 ### 1. Repository Consolidation
 - ✅ Moved Python source from separate repo to `hass-addons/src/cync_lan/`
@@ -176,7 +176,7 @@ All tasks from the cync-lan repository consolidation have been successfully comp
 - ✅ Gitignored build-time copies
 
 ### 3. Documentation
-- ✅ Fixed all file paths referencing old cync-lan repo
+- ✅ Fixed all file paths referencing old cync-controller repo
 - ✅ Cleaned up confusing documentation files
 - ✅ Each file now has clear purpose for its audience
 - ✅ Updated AGENTS.md with plan update workflow instructions
@@ -186,4 +186,4 @@ All tasks from the cync-lan repository consolidation have been successfully comp
 - ✅ Manufacturer field corrected to "Savant"
 - ✅ All repository URLs updated to jslamartina/hass-addons
 
-The separate cync-lan repository has been successfully absorbed into hass-addons!
+The separate cync-controller repository has been successfully absorbed into hass-addons!

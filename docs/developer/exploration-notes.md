@@ -38,7 +38,7 @@ The Home Assistant UI features a left sidebar with the following main sections:
 
 - **Version:** 0.0.3.1
 - **Status:** Running
-- **Hostname:** `local-cync-lan`
+- **Hostname:** `local-cync-controller`
 - **CPU Usage:** 0%
 - **RAM Usage:** 0%
 
@@ -71,7 +71,7 @@ The add-on provides three main components:
 
 ### Device Export Interface
 
-The CyncLAN sidebar link opens an ingress page (`/local_cync-lan/ingress`) with:
+The CyncLAN sidebar link opens an ingress page (`/local_cync-controller/ingress`) with:
 - **Start Export** button - Attempts to use cached tokens first, prompts for OTP if needed
 - **OTP Input Field** - For entering the emailed one-time password
 - **Submit OTP** button - Submits OTP and caches valid tokens

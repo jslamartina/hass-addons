@@ -50,15 +50,15 @@ SEVERITY │       │  SEC-2 │     │
 **Severity:** CRITICAL | **Likelihood:** HIGH | **Impact:** CRITICAL
 
 **Location:**
-- `cync-lan/config.yaml:39-45`
-- `cync-lan/config.yaml.backup:39-45`
-- `cync-lan/Dockerfile:38-39`
+- `cync-controller/config.yaml:39-45`
+- `cync-controller/config.yaml.backup:39-45`
+- `cync-controller/Dockerfile:38-39`
 
 **Issue:**
 Multiple configuration files contain hardcoded credentials that are committed to version control:
 
 ```yaml
-# cync-lan/config.yaml
+# cync-controller/config.yaml
 options:
   account_username: jslamartina@gmail.com  # ❌ Personal email exposed
   mqtt_user: "dev"                         # ❌ Default credentials
@@ -66,7 +66,7 @@ options:
 ```
 
 ```dockerfile
-# cync-lan/Dockerfile
+# cync-controller/Dockerfile
 ENV CYNC_MQTT_USER="jslamartina@gmail.com" # ❌ Hardcoded in image
     CYNC_MQTT_PASS=""                      # ❌ Empty password default
 ```
@@ -133,7 +133,7 @@ context.verify_mode = ssl.CERT_NONE  # ❌ No certificate validation
 
 **Severity:** HIGH | **Likelihood:** HIGH | **Impact:** MEDIUM
 
-**Location:** `cync-lan/config.yaml.backup`
+**Location:** `cync-controller/config.yaml.backup`
 
 **Issue:**
 Configuration backup file with credentials is tracked in git. This file should never be committed.
@@ -146,7 +146,7 @@ Configuration backup file with credentials is tracked in git. This file should n
 **Remediation (30 min):**
 ```bash
 # Immediate fix
-git rm cync-lan/config.yaml.backup
+git rm cync-controller/config.yaml.backup
 echo "*.backup" >> .gitignore
 echo "config.yaml.backup" >> .gitignore
 ```
@@ -340,13 +340,13 @@ done
 
 ### JavaScript/HTML Issues
 
-1. **Deprecated API Usage** (`cync-lan/static/index.html:142`)
+1. **Deprecated API Usage** (`cync-controller/static/index.html:142`)
    ```javascript
    document.execCommand('copy');  // ❌ Deprecated, use Clipboard API
    ```
    **Fix:** Use modern `navigator.clipboard.writeText()`
 
-2. **Missing Input Validation** (`cync-lan/static/index.html:196`)
+2. **Missing Input Validation** (`cync-controller/static/index.html:196`)
    ```javascript
    if (!/^[0-9]{4,10}$/.test(otp)) // ✅ Good, but could be stronger
    ```
@@ -396,7 +396,7 @@ done
 **Impact:** Reproducibility issues, breaking changes
 
 **Files affected:**
-- `cync-lan/Dockerfile:14, 29` - No pip version pins
+- `cync-controller/Dockerfile:14, 29` - No pip version pins
 - `.github/workflows/*.yaml` - No action version pins
 
 **Remediation:**
@@ -404,7 +404,7 @@ done
 # Dockerfile - pin versions
 RUN pip install --no-cache-dir \
     debugpy==1.8.0 \
-    cync-lan==0.0.3.1
+    cync-controller==0.0.3.1
 ```
 
 ### Outdated GitHub Actions
@@ -441,7 +441,7 @@ RUN pip install --no-cache-dir \
 
 1. **Remove sensitive files** (30 min)
    ```bash
-   git rm cync-lan/config.yaml.backup
+   git rm cync-controller/config.yaml.backup
    echo "*.backup" >> .gitignore
    ```
 
@@ -547,7 +547,7 @@ Top 5 most complex files:
 1. `mitm/mitm_with_injection.py` - 671 lines, cyclomatic complexity ~45
 2. `.devcontainer/post-start.sh` - 227 lines, 8 nested conditions
 3. `mitm/packet_parser.py` - 237 lines, complex parsing logic
-4. `cync-lan/static/index.html` - 265 lines, mixed concerns
+4. `cync-controller/static/index.html` - 265 lines, mixed concerns
 5. `mitm/checksum_analysis.py` - 145 lines, algorithmic complexity
 
 ---

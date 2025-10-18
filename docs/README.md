@@ -38,7 +38,7 @@ docs/
 ### For Users
 1. **[Installation Guide](../README.md)** - Add repository to Home Assistant
 2. **[DNS Setup](user/dns-setup.md)** - **Required** for local control
-3. **[Add-on Quick Start](../cync-lan/README.md)** - First run steps
+3. **[Add-on Quick Start](../cync-controller/README.md)** - First run steps
 4. **[Troubleshooting](user/troubleshooting.md)** - Common issues
 
 ### For Developers & AI Agents
@@ -69,7 +69,7 @@ docs/
 
 | Document                                                                     | Description                                   |
 | ---------------------------------------------------------------------------- | --------------------------------------------- |
-| **[cli-reference.md](developer/cli-reference.md)**                           | CLI command reference for cync-lan package    |
+| **[cli-reference.md](developer/cli-reference.md)**                           | CLI command reference for cync-controller package    |
 | **[cloud-relay-implementation.md](developer/cloud-relay-implementation.md)** | Cloud relay mode implementation details       |
 | **[entity-management.md](developer/entity-management.md)**                   | Guide for managing MQTT entities              |
 | **[exploration-notes.md](developer/exploration-notes.md)**                   | UI navigation and system state reference      |
@@ -93,7 +93,7 @@ Historical documentation and completed testing artifacts.
 
 | Document                                                                                                                       | Description                                                    |
 | ------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------- |
-| **[2025-10-14T18-40-00-absorb-cync-lan-repo-plan.md](archive/2025-10-14T18-40-00-absorb-cync-lan-repo-plan.md)**               | Plan: Consolidate cync-lan repo into hass-addons (✅ completed) |
+| **[2025-10-14T18-40-00-absorb-cync-controller-repo-plan.md](archive/2025-10-14T18-40-00-absorb-cync-controller-repo-plan.md)**               | Plan: Consolidate cync-controller repo into hass-addons (✅ completed) |
 | **[2025-10-14T18-40-01-remove-symlink-architecture-plan.md](archive/2025-10-14T18-40-01-remove-symlink-architecture-plan.md)** | Plan: Remove symlink to fix semantic search (✅ completed)      |
 | **[2025-10-14T16-13-43-cleanup-unused-scripts-plan.md](archive/2025-10-14T16-13-43-cleanup-unused-scripts-plan.md)**           | Plan: Cleanup unused scripts                                   |
 | **[2025-10-14T15-39-00-cleanup-summary.md](archive/2025-10-14T15-39-00-cleanup-summary.md)**                                   | Documentation cleanup (October 2025)                           |
@@ -111,8 +111,8 @@ Historical documentation and completed testing artifacts.
 | ------------------------------------------------------------ | ------------------------------------------ |
 | **[../scripts/README.md](../scripts/README.md)**             | Automated testing and configuration tools  |
 | **[developer/linting-setup.md](developer/linting-setup.md)** | Linting setup summary (Ruff configuration) |
-| **[../cync-lan/README.md](../cync-lan/README.md)**           | Add-on quick start guide                   |
-| **[../cync-lan/CHANGELOG.md](../cync-lan/CHANGELOG.md)**     | Version history and breaking changes       |
+| **[../cync-controller/README.md](../cync-controller/README.md)**           | Add-on quick start guide                   |
+| **[../cync-controller/CHANGELOG.md](../cync-controller/CHANGELOG.md)**     | Version history and breaking changes       |
 | **[../.devcontainer/README.md](../.devcontainer/README.md)** | Devcontainer setup and quirks              |
 
 ---
@@ -120,7 +120,7 @@ Historical documentation and completed testing artifacts.
 ## 🎯 Find What You Need
 
 ### "I want to install the add-on"
-→ [../README.md](../README.md) + [user/dns-setup.md](user/dns-setup.md) + [../cync-lan/README.md](../cync-lan/README.md)
+→ [../README.md](../README.md) + [user/dns-setup.md](user/dns-setup.md) + [../cync-controller/README.md](../cync-controller/README.md)
 
 ### "I'm developing the add-on"
 → [AGENTS.md](AGENTS.md) - **Complete development guide**
@@ -160,10 +160,10 @@ It contains:
 
 **Quick commands:**
 ```bash
-ha addons logs local_cync-lan     # View logs
+ha addons logs local_cync-controller     # View logs
 ./scripts/configure-addon.sh      # Configure addon
-ha addons restart local_cync-lan  # Restart addon
-ha addons rebuild local_cync-lan  # Rebuild after Python changes
+ha addons restart local_cync-controller  # Restart addon
+ha addons rebuild local_cync-controller  # Rebuild after Python changes
 npm run lint                      # Run all linters
 npm run lint:python:fix           # Auto-fix Python issues
 ```
@@ -197,7 +197,7 @@ npm run lint:python:fix           # Auto-fix Python issues
 ### By File Type
 - **Markdown docs**: This folder (`docs/`)
 - **Shell scripts**: `../scripts/`
-- **Add-on files**: `../cync-lan/`
+- **Add-on files**: `../cync-controller/`
 - **MITM tools**: `../mitm/` (with docs in `docs/protocol/`)
 
 ---

@@ -50,7 +50,7 @@ npm run lint:shell
 ## Next Steps
 
 1. **Reload VS Code Window** - Press `Ctrl+Shift+P` → "Developer: Reload Window"
-2. **Verify**: Open `cync-lan/src/cync_lan/main.py` - you should see Ruff errors in Problems tab
+2. **Verify**: Open `cync-controller/src/cync_lan/main.py` - you should see Ruff errors in Problems tab
 3. **Fix issues**: Run `npm run lint:python:fix` to auto-fix many issues
 
 ## Current Status

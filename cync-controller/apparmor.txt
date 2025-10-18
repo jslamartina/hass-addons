@@ -1,6 +1,6 @@
 #include <tunables/global>
 
-profile cync-lan flags=(attach_disconnected,mediate_deleted) {
+profile cync-controller flags=(attach_disconnected,mediate_deleted) {
   #include <abstractions/base>
 
   # Capabilities
@@ -29,9 +29,9 @@ profile cync-lan flags=(attach_disconnected,mediate_deleted) {
   /data/** rw,
 
   # Start new profile for service
-  /usr/local/bin/cync-lan cx -> cync-lan,
+  /usr/local/bin/cync-controller cx -> cync-controller,
 
-  profile cync-lan flags=(attach_disconnected,mediate_deleted) {
+  profile cync-controller flags=(attach_disconnected,mediate_deleted) {
     #include <abstractions/base>
 
     # Receive signals from S6-Overlay
@@ -49,9 +49,9 @@ profile cync-lan flags=(attach_disconnected,mediate_deleted) {
     # 2. Add `complain` as a flag to this profile temporarily and run the addon
     # 3. Review the audit log with `journalctl _TRANSPORT="audit" -g 'apparmor="ALLOWED"'` and add other access as needed
     # Remember to remove the `complain` flag when you are done
-    /usr/local/bin/cync-lan r,
-    /root/cync-lan/www/index.html r,
-    /root/cync-lan/certs/** r,
+    /usr/local/bin/cync-controller r,
+    /root/cync-controller/www/index.html r,
+    /root/cync-controller/certs/** r,
     /bin/bash rix,
     /bin/echo ix,
     /etc/passwd r,

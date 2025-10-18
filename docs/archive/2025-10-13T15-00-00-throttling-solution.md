@@ -72,12 +72,12 @@ if success:
 
 ## Files Changed
 
-- `/mnt/supervisor/addons/local/cync-lan/src/cync_lan/devices.py`
+- `/mnt/supervisor/addons/local/cync-controller/src/cync_lan/devices.py`
   - Added throttling check in `set_power()`, `set_brightness()`, `set_temperature()`
   - Added 🚀 logging when command sent
   - **TODO**: Move `pending_command = False` from 0x83 handler to ACK handler
 
-- `/mnt/supervisor/addons/local/cync-lan/src/cync_lan/server.py`
+- `/mnt/supervisor/addons/local/cync-controller/src/cync_lan/server.py`
   - Added ✅ logging in 0x83 handler (wrong location, need to move to devices.py ACK handler)
 
 ## Next Steps
