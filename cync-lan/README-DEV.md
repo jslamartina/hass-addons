@@ -1,5 +1,7 @@
 # Developer Guide
 
+> **Note:** This project is forked from [@baudneo/hass-addons](https://github.com/baudneo/hass-addons)
+
 > **This file is for developers working on the add-on code, not for end users.**
 
 ## Source Code Location
