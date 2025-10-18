@@ -6,7 +6,7 @@
 
 ## Overview
 
-Successfully logged into and explored the Home Assistant development instance. The system is running with the CyncLAN Bridge add-on and EMQX MQTT broker integrated.
+Successfully logged into and explored the Home Assistant development instance. The system is running with the Cync Controller add-on and EMQX MQTT broker integrated.
 
 ## System Architecture
 
@@ -19,7 +19,7 @@ The Home Assistant UI features a left sidebar with the following main sections:
 3. **Energy** - Energy monitoring
 4. **Activity** - Recent activity log
 5. **History** - Historical data
-6. **CyncLAN** - Custom integration for Cync device export
+6. **Cync Controller** - Custom integration for Cync device export
 7. **EMQX** - MQTT broker interface
 8. **Media** - Media controls
 9. **To-do lists** - Task management
@@ -32,7 +32,7 @@ The Home Assistant UI features a left sidebar with the following main sections:
 **Updates Available:** 1 (Home Assistant Core 2025.11.0.dev202510100235)
 **System Issues:** 8 (primarily supervisor warnings about Network Manager and Systemd-Resolved)
 
-## CyncLAN Integration
+## Cync Controller Integration
 
 ### Add-on Status
 
@@ -56,7 +56,7 @@ The Home Assistant UI features a left sidebar with the following main sections:
 - Apparmor enabled
 - Ingress enabled
 
-### CyncLAN Components
+### Cync Controller Components
 
 The add-on provides three main components:
 
@@ -71,7 +71,7 @@ The add-on provides three main components:
 
 ### Device Export Interface
 
-The CyncLAN sidebar link opens an ingress page (`/local_cync-controller/ingress`) with:
+The Cync Controller sidebar link opens an ingress page (`/local_cync-controller/ingress`) with:
 - **Start Export** button - Attempts to use cached tokens first, prompts for OTP if needed
 - **OTP Input Field** - For entering the emailed one-time password
 - **Submit OTP** button - Submits OTP and caches valid tokens
@@ -80,7 +80,7 @@ The CyncLAN sidebar link opens an ingress page (`/local_cync-controller/ingress`
 
 The following binary sensors/buttons are exposed (all currently showing "Unavailable"):
 - Cync emailed OTP (number input)
-- Restart CyncLAN Bridge (button)
+- Restart Cync Controller (button)
 - Start Export (button)
 - Submit OTP (button)
 - Cync Devices Managed (sensor)
@@ -160,7 +160,7 @@ Clicking on any active light entity opens a modal dialog with:
 
 Two add-ons are currently installed and running:
 
-1. **CyncLAN Bridge** *(running)*
+1. **Cync Controller** *(running)*
    - Local controller for Cync/C by GE smart devices
    - Requires DNS redirection
 
@@ -186,7 +186,7 @@ Two add-ons are currently installed and running:
 
 ### Integration Status
 
-The CyncLAN Bridge is installed and the add-on container is running, but the internal services (TCP server, MQTT client, export server) are showing as unavailable. This suggests either:
+The Cync Controller is installed and the add-on container is running, but the internal services (TCP server, MQTT client, export server) are showing as unavailable. This suggests either:
 1. The add-on needs to be restarted
 2. Configuration is incomplete (MQTT credentials, DNS setup)
 3. The services haven't been started yet
@@ -207,7 +207,7 @@ This is critical for the nCync TCP server to intercept device communications.
 
 ### Architecture Pattern
 
-The CyncLAN integration follows a clean architecture:
+The Cync Controller integration follows a clean architecture:
 1. Devices connect to the local TCP server (thinking they're reaching the cloud)
 2. TCP server handles device protocol
 3. MQTT client bridges device states to Home Assistant
@@ -216,10 +216,10 @@ The CyncLAN integration follows a clean architecture:
 ## Screenshots Captured
 
 1. `homeassistant-overview.png` - Main overview dashboard
-2. `cynclan-export-page.png` - CyncLAN device export interface
+2. `cynclan-export-page.png` - Cync Controller device export interface
 3. `settings-dashboard.png` - Settings main page
 4. `addons-dashboard.png` - Add-ons list
-5. `cynclan-addon-info.png` - CyncLAN Bridge detailed info
+5. `cynclan-addon-info.png` - Cync Controller detailed info
 6. `developer-tools-yaml.png` - Developer tools YAML tab
 7. `developer-tools-states.png` - Entity states viewer
 8. `light-control-dialog.png` - Light brightness control modal
@@ -230,12 +230,12 @@ The CyncLAN integration follows a clean architecture:
 
 1. Use the Developer Tools → States tab to monitor entity state changes in real-time
 2. Test device commands through the Overview UI and verify MQTT messages
-3. Check the CyncLAN Bridge logs via Settings → Add-ons → CyncLAN Bridge → Log tab
+3. Check the Cync Controller logs via Settings → Add-ons → Cync Controller → Log tab
 4. Use the Actions tab to manually trigger service calls for testing
 
 ### Integration Points
 
-The CyncLAN integration exposes entities through MQTT discovery following the Home Assistant MQTT JSON schema. Key entity types:
+The Cync Controller integration exposes entities through MQTT discovery following the Home Assistant MQTT JSON schema. Key entity types:
 - `binary_sensor.*` - Status indicators
 - `button.*` - Action triggers
 - `light.*` - Light controls with brightness
@@ -255,12 +255,12 @@ The Playwright integration allows automated testing of:
 
 When working with this Home Assistant instance:
 
-1. **Check Logs First** - Navigate to Settings → Add-ons → CyncLAN Bridge → Log to diagnose issues
+1. **Check Logs First** - Navigate to Settings → Add-ons → Cync Controller → Log to diagnose issues
 2. **Monitor MQTT** - Use EMQX interface or MQTT developer tools to inspect messages
 3. **Verify DNS** - Ensure DNS redirection is properly configured for device communication
 4. **Test Export Flow** - Walk through the device export process to ensure token caching works
 5. **State Monitoring** - Use Developer Tools → States to watch real-time entity updates
-6. **Service Testing** - Use Developer Tools → Actions to manually trigger CyncLAN services
+6. **Service Testing** - Use Developer Tools → Actions to manually trigger Cync Controller services
 
 ## Browser Automation Notes
 

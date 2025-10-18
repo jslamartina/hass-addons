@@ -6,7 +6,7 @@
 
 ## Source Code Location
 
-All Python source code for the CyncLAN add-on is located in this directory:
+All Python source code for the Cync Controller add-on is located in this directory:
 - `src/cync_lan/` - Python package source code
 - `pyproject.toml` - Package configuration and dependencies
 

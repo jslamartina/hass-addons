@@ -127,14 +127,14 @@ CYNC_RAW = os.environ.get("CYNC_RAW_DEBUG", "0").casefold() in YES_ANSWER
 CYNC_DEBUG = os.environ.get("CYNC_DEBUG", "0").casefold() in YES_ANSWER
 
 CYNC_BASE_DIR: str = "/root"
-CYNC_STATIC_DIR: str = "/root/cync-lan/www"
+CYNC_STATIC_DIR: str = "/root/cync-controller/www"
 
 PERSISTENT_BASE_DIR: str = os.environ.get("CYNC_PERSISTENT_BASE_DIR", "/homeassistant/.storage/cync-controller/config")
 CYNC_CONFIG_FILE_PATH: str = f"{PERSISTENT_BASE_DIR}/cync_mesh.yaml"
 CYNC_UUID_PATH: str = f"{PERSISTENT_BASE_DIR}/uuid.txt"
 CYNC_CLOUD_AUTH_PATH: str = f"{PERSISTENT_BASE_DIR}/.cloud_auth.yaml"
-CYNC_SSL_CERT: str = os.environ.get("CYNC_DEVICE_CERT", f"{CYNC_BASE_DIR}/cync-lan/certs/cert.pem")
-CYNC_SSL_KEY: str = os.environ.get("CYNC_DEVICE_KEY", f"{CYNC_BASE_DIR}/cync-lan/certs/key.pem")
+CYNC_SSL_CERT: str = os.environ.get("CYNC_DEVICE_CERT", f"{CYNC_BASE_DIR}/cync-controller/certs/cert.pem")
+CYNC_SSL_KEY: str = os.environ.get("CYNC_DEVICE_KEY", f"{CYNC_BASE_DIR}/cync-controller/certs/key.pem")
 
 CYNC_BRIDGE_DEVICE_REGISTRY_CONF: dict = {}
 
@@ -171,7 +171,7 @@ FACTORY_EFFECTS_BYTES: dict[str, tuple[int, int]] = {
 }
 
 ORIGIN_STRUCT = {
-    "name": "cync-lan",
+    "name": "cync-controller",
     "sw_version": CYNC_VERSION,
     "support_url": SRC_REPO_URL,
 }

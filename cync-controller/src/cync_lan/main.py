@@ -26,13 +26,7 @@ from cync_lan.exporter import ExportServer
 from cync_lan.mqtt_client import MQTTClient
 from cync_lan.server import NCyncServer
 from cync_lan.structs import GlobalObject
-from cync_lan.utils import (
-    check_for_uuid,
-    check_python_version,
-    parse_config,
-    send_sigterm,
-    signal_handler,
-)
+from cync_lan.utils import check_for_uuid, check_python_version, parse_config, send_sigterm, signal_handler
 
 # Optional dependency for .env file support
 try:
@@ -77,10 +71,10 @@ mqtt_logger.addHandler(foreign_handler)
 g = GlobalObject()
 
 
-class CyncLAN:
-    lp: str = "CyncLAN:"
+class CyncController:
+    lp: str = "CyncController:"
     config_file: Path | None = None
-    _instance: CyncLAN | None = None
+    _instance: CyncController | None = None
 
     def __new__(cls, *_args, **_kwargs):
         if cls._instance is None:
@@ -94,7 +88,7 @@ class CyncLAN:
         g.loop = asyncio.new_event_loop()
         asyncio.set_event_loop(g.loop)
         logger.debug(
-            "%s CyncLAN (version: %s) stack initializing, "
+            "%s Cync Controller (version: %s) stack initializing, "
             "setting up event loop signal handlers for SIGINT & SIGTERM...",
             lp,
             CYNC_VERSION,
@@ -103,7 +97,7 @@ class CyncLAN:
         g.loop.add_signal_handler(signal.SIGTERM, partial(signal_handler, signal.SIGTERM))
 
     async def start(self):
-        """Start the Cync LAN server, MQTT client, and Export server."""
+        """Start the Cync Controller server, MQTT client, and Export server."""
         lp = f"{self.lp}start:"
         self.config_file = cfg_file = Path(CYNC_CONFIG_FILE_PATH).expanduser().resolve()
         tasks = []
@@ -148,7 +142,7 @@ class CyncLAN:
 
 
 def parse_cli():
-    parser = argparse.ArgumentParser(description="Cync LAN Server")
+    parser = argparse.ArgumentParser(description="Cync Controller Server")
 
     parser.add_argument(
         "--export-server",
@@ -201,17 +195,17 @@ def main():
         for handler in logger.handlers:
             handler.setLevel(logging.DEBUG)
     check_python_version()
-    g.cync_lan = CyncLAN()
+    g.cync_lan = CyncController()
     try:
         asyncio.get_event_loop().run_until_complete(g.cync_lan.start())
     except asyncio.CancelledError as e:
-        logger.info("%s CyncLAN async stack cancelled: %s", lp, e)
+        logger.info("%s Cync Controller async stack cancelled: %s", lp, e)
     except KeyboardInterrupt:
         logger.info("%s Caught KeyboardInterrupt, exiting...", lp)
     except Exception:
         logger.exception("%s Caught exception", lp)
     else:
-        logger.info("%s CyncLAN stack stopped gracefully, bye!", lp)
+        logger.info("%s Cync Controller stack stopped gracefully, bye!", lp)
     finally:
         if not g.loop.is_closed():
             g.loop.close()

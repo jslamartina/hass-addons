@@ -43,7 +43,7 @@ You can use `views` to selectively route DNS requests based on the requesting de
 - Power cycle Cync devices.
 
 The following example will match the above screenshot to reroute DNS requests for `cm.gelighting.com`, `cm-sec.gelighting.com` 
-and `cm-ge.xlink.cn` to local IP `10.0.1.20` (this is where your CyncLAN bridge should be running) 
+and `cm-ge.xlink.cn` to local IP `10.0.1.20` (this is where your Cync Controller bridge should be running) 
 **only for requesting device IPs** `10.0.2.216`, `10.0.2.223`, `10.0.2.225`, and `10.0.2.245` (These should be Cync WiFi devices).
 
 
@@ -75,7 +75,7 @@ local-data: "cm-ge.xlink.cn. 90 IN A 10.0.1.20"
 >[!TIP]
 > If you have a decent (6+) number of Cync Wi-Fi devices, after you get things working correctly,
 > only DNS redirect Cync Wi-Fi devices that are mostly always on, like plugs, mains powered switches / always on bulbs.
-> I have 30+ Cync devices and only have 5 always on devices connected to my CyncLAN bridge.
+> I have 30+ Cync devices and only have 5 always on devices connected to my Cync Controller bridge.
 
 # DNSCryptProxy
 As far as I know, you can only override a domain network wide, not selectively by requesting device IP.
@@ -99,7 +99,7 @@ As far as I know, Pi-Hole does not support selective DNS routing, only network w
 ![Pi Hole Local DNS](./assets/pi-hole-local-dns-menu-items.webp)
 
 - Enter `cm.gelighting.com` / `cm-sec.gelighting.com` or `cm-ge.xlink.cn` in **Domain**.
-- Enter the IP of the machine that will be running CyncLAN bridge in **IP Address**. 
+- Enter the IP of the machine that will be running Cync Controller bridge in **IP Address**. 
 - Click the *Add* button.
 ![Pi-hole Local DNS Records Interface](./assets/pi-hole-local-dns-interface.webp)
 
@@ -129,9 +129,9 @@ cm.gelighting.com.      3600    IN      A       10.0.1.14
 ;; WHEN: Mon Apr 01 18:53:29 MDT 2024
 ;; MSG SIZE  rcvd: 62
 ```
-In the example above, `cm.gelighting.com` returns `10.0.1.20` which is the IP address of the machine running CyncLAN bridge. 
+In the example above, `cm.gelighting.com` returns `10.0.1.20` which is the IP address of the machine running Cync Controller bridge. 
 After power cycling Cync devices, the devices will ask pi-hole for the Cync cloud server IP and pi-hole will return `10.0.1.14`.
-After the device receives the IP, it will connect to the local server running CyncLAN bridge.
+After the device receives the IP, it will connect to the local server running Cync Controller bridge.
 
 >[!IMPORTANT]
 > **Don't forget to power cycle all your Wi-Fi Cync devices**
@@ -174,7 +174,7 @@ dig cm-sec.gelighting.com
 ;cm.gelighting.com.             IN      A
 
 ;; ANSWER SECTION:
-cm.gelighting.com.      3600    IN      A       10.0.1.20 <---- Overridden to a local machine running CyncLAN bridge
+cm.gelighting.com.      3600    IN      A       10.0.1.20 <---- Overridden to a local machine running Cync Controller bridge
 
 ;; Query time: 0 msec
 ;; SERVER: 10.0.1.1#53(10.0.1.1) (UDP)

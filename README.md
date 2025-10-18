@@ -1,4 +1,4 @@
-# Home Assistant CyncLAN Add-ons
+# Home Assistant Cync Controller Add-ons
 
 > **Note:** This project is forked from [@baudneo/hass-addons](https://github.com/baudneo/hass-addons)
 
@@ -12,7 +12,7 @@ Local control for Cync/C by GE smart devices without cloud dependency.
    - Settings → Add-ons → Add-on Store (bottom right ⋮ menu)
    - Add repository URL: `https://github.com/jslamartina/hass-addons`
 
-2. **Install CyncLAN Bridge add-on**
+2. **Install Cync Controller add-on**
 
 3. **⚠️ Configure DNS redirection** (Required!)
    - See **[DNS Setup Guide](docs/user/dns-setup.md)** for detailed instructions
@@ -36,7 +36,7 @@ Local control for Cync/C by GE smart devices without cloud dependency.
 
 ## 🏠 What's Included
 
-### CyncLAN Bridge Add-on
+### Cync Controller Add-on
 
 Control Cync devices locally by intercepting their cloud communications:
 - **Device Exporter** - Web UI for exporting device config from Cync cloud

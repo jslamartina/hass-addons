@@ -33,9 +33,9 @@ bash "${WORKSPACE_DIRECTORY}/.devcontainer/01-05-python-venv-setup.sh" "${WORKSP
 
 echo "✅ Complete devcontainer setup finished!"
 echo ""
-echo "Workspace ready with integrated cync-lan package:"
+echo "Workspace ready with integrated cync-controller package:"
 echo "   - hass-addons (Home Assistant addon with integrated Python package)"
 echo "   - Source code: ${WORKSPACE_DIRECTORY}/src/cync_lan/"
 echo ""
 echo "Available commands:"
-echo "  - ha addons rebuild local_cync-lan: Rebuild the add-on"
+echo "  - ha addons rebuild local_cync-controller: Rebuild the add-on"

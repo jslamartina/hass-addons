@@ -275,13 +275,13 @@ ha addons logs local_cync-controller --follow | grep -i "relay\|cloud"
 ### For End Users (Manual UI Testing)
 
 1. Open Home Assistant Web UI: http://localhost:8123
-2. Navigate: Settings → Add-ons → CyncLAN Bridge
+2. Navigate: Settings → Add-ons → Cync Controller
 3. Click "Configuration" tab
 4. Hard refresh browser (`Ctrl + Shift + R`)
 5. Expand `cloud_relay` section
 6. Enable desired options
 7. Click "Save" and restart add-on
-8. Check logs: Settings → Add-ons → CyncLAN Bridge → Logs
+8. Check logs: Settings → Add-ons → Cync Controller → Logs
 
 ---
 

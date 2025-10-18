@@ -352,7 +352,7 @@ class CloudRelayConnection:
 
 class NCyncServer:
     """
-    A class to represent a Cync LAN server that listens for connections from Cync Wi-Fi devices.
+    A class to represent a Cync Controller server that listens for connections from Cync Wi-Fi devices.
     The Wi-Fi devices translate messages, status updates and commands to/from the Cync BTLE mesh.
     """
 

@@ -223,7 +223,7 @@ The cync-controller Python package is now an internal component of the Home Assi
 All future development happens in the unified repository.
 
 ## For Users
-Use the **[CyncLAN Bridge Home Assistant Add-on](https://github.com/jslamartina/hass-addons)**
+Use the **[Cync Controller Home Assistant Add-on](https://github.com/jslamartina/hass-addons)**
 
 ## For Contributors
 Submit pull requests to: https://github.com/jslamartina/hass-addons

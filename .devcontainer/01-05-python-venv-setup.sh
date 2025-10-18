@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # 05-python-setup-venv.sh
 # When it runs: Invoked by 99-python-setup-all.sh during postCreateCommand after the container is created or rebuilt.
-# What it does: Creates venv for hass-addons (with integrated cync-lan), upgrades pip, installs requirements and common dev tools.
+# What it does: Creates venv for hass-addons (with integrated cync-controller), upgrades pip, installs requirements and common dev tools.
 set -euo pipefail
 
 setup_venv() {
@@ -44,7 +44,7 @@ setup_venv() {
   echo "  ✓ Python venv ready for $workspace_name"
 }
 
-# Setup venv for workspace (cync-lan is now integrated)
+# Setup venv for workspace (cync-controller is now integrated)
 # Arguments: $1 = WORKSPACE_DIRECTORY
 setup_venv "$1"
 

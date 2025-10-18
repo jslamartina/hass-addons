@@ -6,7 +6,7 @@ This directory contains Playwright automation scripts for testing and managing H
 
 ### 1. Delete All MQTT Entities (Except Bridge)
 
-**Purpose:** Delete all MQTT entities while preserving the CyncLAN Bridge device and its entities.
+**Purpose:** Delete all MQTT entities while preserving the Cync Controller device and its entities.
 
 **Script:** `delete-all-mqtt-entities-except-bridge.ts`
 
@@ -54,9 +54,9 @@ HEADED=1 npx ts-node scripts/playwright/delete-all-mqtt-entities-except-bridge.t
 - `HA_BASE_URL` - Home Assistant URL (default: `http://localhost:8123`)
 - `HA_USERNAME` - Username (default: `dev`)
 - `HA_PASSWORD` - Password (default: `dev`)
-- `ADDON_SLUG` - Addon to restart (default: `local_cync-lan`)
+- `ADDON_SLUG` - Addon to restart (default: `local_cync-controller`)
 - `RESTART_ADDON` - Set to `true` to restart addon after deletion (default: `false`)
-- `BRIDGE_NAME` - Bridge device name to preserve (default: `CyncLAN Bridge`)
+- `BRIDGE_NAME` - Bridge device name to preserve (default: `Cync Controller`)
 - `DRY_RUN` - Set to `true` to preview without deleting (default: `false`)
 - `HEADED` - Set to any value to show browser window (default: headless)
 
@@ -180,7 +180,7 @@ Output shows:
 ./scripts/delete-mqtt-entities-except-bridge.sh
 
 # 3. Restart addon to republish entities
-ha addons restart local_cync-lan
+ha addons restart local_cync-controller
 
 # OR combine steps 2-3
 ./scripts/delete-mqtt-entities-except-bridge.sh --restart
@@ -265,5 +265,5 @@ ls -la test-results/runs/*/screenshots/
 
 ## Credits
 
-These scripts were developed to automate MQTT entity management in the CyncLAN Add-on development workflow, following Home Assistant UI best practices for Shadow DOM interaction.
+These scripts were developed to automate MQTT entity management in the Cync Controller Add-on development workflow, following Home Assistant UI best practices for Shadow DOM interaction.
 

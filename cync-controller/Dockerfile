@@ -48,7 +48,7 @@ ENV CYNC_HOST="0.0.0.0" \
   CYNC_TCP_WHITELIST=""
 
 # Copy data for add-on
-COPY static/index.html /root/cync-controller/www/index.html
+COPY static/ /root/cync-controller/www/
 
 # Expose debug port for VS Code Python debugging
 EXPOSE 5678

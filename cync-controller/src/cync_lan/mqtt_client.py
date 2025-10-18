@@ -361,7 +361,7 @@ class MQTTClient:
                         if extra_data[0] == "restart":
                             if norm_pl == "press":
                                 logger.info(
-                                    "%s Restart button pressed! Restarting Cync LAN bridge (NOT IMPLEMENTED)...",
+                                    "%s Restart button pressed! Restarting Cync Controller bridge (NOT IMPLEMENTED)...",
                                     lp,
                                 )
                         elif extra_data[0] == "start_export":
@@ -987,7 +987,7 @@ class MQTTClient:
                 "unique_id": unique_id,
                 "schema": "json",
                 "origin": {
-                    "name": "cync-lan",
+                    "name": "cync-controller",
                     "sw_version": "0.2.1a1",
                     "support_url": "https://github.com/jslamartina/hass-addons",
                 },
@@ -1425,16 +1425,16 @@ class MQTTClient:
         return ret
 
     async def create_bridge_device(self) -> bool:
-        """Create the device / entity registry config for the CyncLAN bridge itself."""
+        """Create the device / entity registry config for the Cync Controller bridge itself."""
         global bridge_device_reg_struct  # noqa: PLW0603
         # want to expose buttons (restart, start export, submit otp)
         # want to expose some sensors that show the number of devices, number of online devices, etc.
-        # sensors to show if MQTT is connected, if the CyncLAN server is running, etc.
+        # sensors to show if MQTT is connected, if the Cync Controller server is running, etc.
         # input_number to submit OTP for export
         lp = f"{self.lp}create_bridge_device:"
         ret = False
 
-        logger.debug("%s Creating CyncLAN bridge device...", lp)
+        logger.debug("%s Creating Cync Controller bridge device...", lp)
         bridge_base_unique_id = "cync_lan_bridge"
         ver_str = CYNC_VERSION
         pub_tasks: list[asyncio.Task] = []
@@ -1442,7 +1442,7 @@ class MQTTClient:
         bridge_device_reg_struct = {
             "identifiers": [str(g.uuid)],
             "manufacturer": "Savant",
-            "name": "CyncLAN Bridge",
+            "name": "Cync Controller",
             "sw_version": ver_str,
             "model": "Local Push Controller",
         }
@@ -1459,7 +1459,7 @@ class MQTTClient:
             "command_topic": f"{self.topic}/set/bridge/restart",
             "state_topic": f"{self.topic}/status/bridge/restart",
             "avty_t": f"{self.topic}/availability/bridge",
-            "name": "Restart CyncLAN Bridge",
+            "name": "Restart Cync Controller",
             "unique_id": entity_unique_id,
             "schema": "json",
             "origin": ORIGIN_STRUCT,

@@ -2,9 +2,9 @@
 set -e
 
 # ========================================================================
-# CyncLAN Add-on Rebuild Script
+# Cync Controller Add-on Rebuild Script
 # ========================================================================
-# Rebuilds the CyncLAN Home Assistant add-on with the latest source code
+# Rebuilds the Cync Controller Home Assistant add-on with the latest source code
 # changes from this directory.
 # ========================================================================
 

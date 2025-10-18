@@ -4,7 +4,7 @@ This guide explains the automated tools available for managing MQTT entities in 
 
 ## The Problem
 
-When developing the CyncLAN Add-on, you often need to:
+When developing the Cync Controller Add-on, you often need to:
 - Clean up test entities without losing the bridge configuration
 - Test entity rediscovery after changing discovery settings
 - Verify entities appear in correct areas after `suggested_area` changes
@@ -20,7 +20,7 @@ When developing the CyncLAN Add-on, you often need to:
 
 **What it does:**
 1. ✅ Discovers all MQTT entities
-2. ✅ Preserves CyncLAN Bridge (and its entities)
+2. ✅ Preserves Cync Controller (and its entities)
 3. ✅ Deletes everything else
 4. ✅ Cleans up device registry
 5. ✅ Optionally restarts addon
@@ -47,7 +47,7 @@ sudo python3 scripts/delete-mqtt-safe.py --restart
 ```
 
 **Features:**
-- ✅ Preserves CyncLAN Bridge entities
+- ✅ Preserves Cync Controller entities
 - ✅ Cleans entity and device registries
 - ✅ Clears restore state (removes history memory)
 - ✅ Safe dry-run mode for preview
@@ -108,8 +108,8 @@ ha addons restart local_cync-controller
 ```
 ═════════════════ DISCOVERY SUMMARY ═════════════════
 Total entities found: 24
-✅ To preserve (CyncLAN Bridge): 1
-   - CyncLAN Bridge
+✅ To preserve (Cync Controller): 1
+   - Cync Controller
 ❌ To delete: 23
    - Hallway Front Switch
    - Hallway Counter Switch
@@ -154,7 +154,7 @@ export HA_BASE_URL="http://localhost:8123"  # HA URL
 export HA_USERNAME="dev"                     # Username
 export HA_PASSWORD="dev"                     # Password
 export ADDON_SLUG="local_cync-controller"          # Addon to restart
-export BRIDGE_NAME="CyncLAN Bridge"         # Bridge to preserve
+export BRIDGE_NAME="Cync Controller"         # Bridge to preserve
 export RESTART_ADDON="true"                  # Restart after deletion
 export DRY_RUN="true"                        # Preview mode
 export HEADED="1"                            # Show browser
@@ -232,7 +232,7 @@ npx ts-node scripts/playwright/delete-mqtt-entities.ts \
 
 ### What Gets Preserved
 
-- ✅ CyncLAN Bridge device
+- ✅ Cync Controller device
 - ✅ Bridge sensor entities
 - ✅ MQTT integration configuration
 - ✅ All non-MQTT entities
@@ -295,5 +295,5 @@ If you encounter issues:
 ---
 
 **Created:** October 14, 2025
-**Purpose:** Automate MQTT entity management for CyncLAN Add-on development
+**Purpose:** Automate MQTT entity management for Cync Controller Add-on development
 

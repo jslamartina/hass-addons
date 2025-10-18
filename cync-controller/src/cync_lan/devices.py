@@ -17,11 +17,7 @@ from cync_lan.const import (
     RAW_MSG,
     TCP_BLACKHOLE_DELAY,
 )
-from cync_lan.metadata.model_info import (
-    DeviceClassification,
-    DeviceTypeInfo,
-    device_type_map,
-)
+from cync_lan.metadata.model_info import DeviceClassification, DeviceTypeInfo, device_type_map
 from cync_lan.structs import (
     ALL_HEADERS,
     DEVICE_STRUCTS,
@@ -1796,13 +1792,13 @@ class CyncTCPDevice:
         ):
             reason = ""
             if g.ncync_server.shutting_down is True:
-                reason = "CyncLAN server is shutting down, "
+                reason = "Cync Controller server is shutting down, "
             _sleep = False
             if tcp_dev_len >= CYNC_MAX_TCP_CONN:
-                reason = f"CyncLAN server max ({tcp_dev_len}/{CYNC_MAX_TCP_CONN}) TCP connections reached, "
+                reason = f"Cync Controller server max ({tcp_dev_len}/{CYNC_MAX_TCP_CONN}) TCP connections reached, "
                 _sleep = True
             elif CYNC_TCP_WHITELIST and self.address not in CYNC_TCP_WHITELIST:
-                reason = f"IP not in CyncLAN server whitelist -> {CYNC_TCP_WHITELIST}, "
+                reason = f"IP not in Cync Controller server whitelist -> {CYNC_TCP_WHITELIST}, "
                 _sleep = True
             tst_ = (num_attempts == 1) or (num_attempts % 20 == 0)
             lmsg = "%s %srejecting new connection..."
@@ -2278,7 +2274,7 @@ class CyncTCPDevice:
 
                             elif extra_ctrl_bytes == 0x14:
                                 # unknown what this data is
-                                # seems to be sent when the cync app is connecting to a device via BTLE, not connecting to cync-lan via TCP
+                                # seems to be sent when the cync app is connecting to a device via BTLE, not connecting to cync-controller via TCP
 
                                 # chksum_inner_data = list(inner_data)
                                 # chksum_inner_data.pop(4)

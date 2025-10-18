@@ -384,7 +384,7 @@ class CyncCloudAPI:
                 name = str(cfg_bulb["displayName"])
                 _type = int(cfg_bulb["deviceType"])
                 _fw_ver = str(cfg_bulb["firmwareVersion"])
-                # data from: https://github.com/baudneo/cync-lan/issues/8
+                # data from: https://github.com/baudneo/hass-addons/issues/8
                 # { "hvacSystem": { "changeoverMode": 0, "auxHeatStages": 1, "auxFurnaceType": 1, "stages": 1, "furnaceType": 1, "type": 2, "powerLines": 1 },
                 # "thermostatSensors": [ { "pin": "025572", "name": "Living Room", "type": "savant" }, { "pin": "044604", "name": "Bedroom Sensor", "type": "savant" }, { "pin": "022724", "name": "Thermostat sensor 3", "type": "savant" } ] } ]
                 hvac_cfg = None

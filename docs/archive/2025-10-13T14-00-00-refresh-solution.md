@@ -13,7 +13,7 @@ When physical switches toggle Cync devices (via Bluetooth mesh), the GUI states 
 
 **Entity**: `button.cynclan_bridge_refresh_status`
 
-- Located in "CyncLAN Bridge" dashboard section
+- Located in "Cync Controller" dashboard section
 - Triggers immediate status refresh from all bridge devices
 - Requests mesh info from each connected TCP bridge
 

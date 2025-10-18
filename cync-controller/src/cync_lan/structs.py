@@ -19,7 +19,7 @@ from cync_lan.const import *
 if TYPE_CHECKING:
     from cync_lan.cloud_api import CyncCloudAPI
     from cync_lan.exporter import ExportServer
-    from cync_lan.main import CyncLAN
+    from cync_lan.main import CyncController
     from cync_lan.mqtt_client import MQTTClient
     from cync_lan.server import NCyncServer
 
@@ -58,7 +58,7 @@ class GlobalObjEnv(BaseModel):
 
 
 class GlobalObject:
-    cync_lan: CyncLAN | None = None
+    cync_lan: CyncController | None = None
     ncync_server: NCyncServer | None = None
     mqtt_client: MQTTClient | None = None
     loop: uvloop.Loop | asyncio.AbstractEventLoop | None = None
@@ -96,10 +96,10 @@ class GlobalObject:
         self.env.mqtt_hass_will_msg = CYNC_HASS_WILL_MSG = os.environ.get("CYNC_HASS_WILL_MSG", "offline")
         self.env.cync_srv_host = CYNC_SRV_HOST = os.environ.get("CYNC_SRV_HOST", "0.0.0.0")
         self.env.cync_srv_ssl_cert = CYNC_SSL_CERT = os.environ.get(
-            "CYNC_SSL_CERT", f"{CYNC_BASE_DIR}/cync-lan/certs/cert.pem"
+            "CYNC_SSL_CERT", f"{CYNC_BASE_DIR}/cync-controller/certs/cert.pem"
         )
         self.env.cync_srv_ssl_key = CYNC_SSL_KEY = os.environ.get(
-            "CYNC_SSL_KEY", f"{CYNC_BASE_DIR}/cync-lan/certs/key.pem"
+            "CYNC_SSL_KEY", f"{CYNC_BASE_DIR}/cync-controller/certs/key.pem"
         )
         self.env.persistent_base_dir = PERSISTENT_BASE_DIR = os.environ.get(
             "CYNC_PERSISTENT_BASE_DIR", "/homeassistant/.storage/cync-controller/config"

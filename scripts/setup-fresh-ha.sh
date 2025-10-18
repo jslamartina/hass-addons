@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Automated setup script for fresh Home Assistant installation
-# Creates user, installs EMQX and CyncLAN add-ons with configuration
+# Creates user, installs EMQX and Cync Controller add-ons with configuration
 set -e
 
 LP="[setup-fresh-ha.sh]"
@@ -406,9 +406,9 @@ start_emqx() {
   fi
 }
 
-# Install CyncLAN add-on
+# Install Cync Controller add-on
 install_cync_lan() {
-  log_info "Checking if CyncLAN add-on is already installed..."
+  log_info "Checking if Cync Controller add-on is already installed..."
 
   # Check if already installed
   local state
@@ -417,11 +417,11 @@ install_cync_lan() {
     | jq -r '.data.state // "not_installed"' 2> /dev/null)
 
   if [ "$state" != "not_installed" ] && [ "$state" != "null" ]; then
-    log_info "CyncLAN already installed (state: $state)"
+    log_info "Cync Controller already installed (state: $state)"
     return 0
   fi
 
-  log_info "Installing CyncLAN add-on..."
+  log_info "Installing Cync Controller add-on..."
 
   local response
   response=$(curl -sf -w "\n%{http_code}" -X POST \
@@ -432,7 +432,7 @@ install_cync_lan() {
   http_code=$(echo "$response" | tail -n1)
 
   if [ "$http_code" = "200" ]; then
-    log_info "CyncLAN installation started, waiting for completion..."
+    log_info "Cync Controller installation started, waiting for completion..."
 
     # Wait for installation to complete
     local retry_count=0
@@ -444,7 +444,7 @@ install_cync_lan() {
         | jq -r '.data.state // "unknown"' 2> /dev/null)
 
       if [ "$state" = "stopped" ] || [ "$state" = "started" ]; then
-        log_success "CyncLAN installed successfully"
+        log_success "Cync Controller installed successfully"
         return 0
       fi
 
@@ -453,20 +453,20 @@ install_cync_lan() {
       sleep 5
     done
 
-    log_error "CyncLAN installation timed out"
+    log_error "Cync Controller installation timed out"
     return 1
   else
-    log_error "Failed to install CyncLAN (HTTP $http_code)"
+    log_error "Failed to install Cync Controller (HTTP $http_code)"
     echo "$response" | sed '$d' | jq '.' 2> /dev/null || echo "$response" | sed '$d'
     return 1
   fi
 }
 
-# Configure CyncLAN add-on with test credentials
+# Configure Cync Controller add-on with test credentials
 configure_cync_lan() {
-  log_info "Configuring CyncLAN with test credentials..."
+  log_info "Configuring Cync Controller with test credentials..."
 
-  # CyncLAN configuration with test Cync credentials and EMQX connection
+  # Cync Controller configuration with test Cync credentials and EMQX connection
   local config
   config=$(
     cat << EOF
@@ -509,19 +509,19 @@ EOF
   http_code=$(echo "$response" | tail -n1)
 
   if [ "$http_code" = "200" ]; then
-    log_success "CyncLAN configured successfully"
+    log_success "Cync Controller configured successfully"
     log_info "Note: Cync account credentials are test values - update manually with real credentials"
     return 0
   else
-    log_error "Failed to configure CyncLAN (HTTP $http_code)"
+    log_error "Failed to configure Cync Controller (HTTP $http_code)"
     echo "$response" | sed '$d' | jq '.' 2> /dev/null || echo "$response" | sed '$d'
     return 1
   fi
 }
 
-# Start CyncLAN add-on
+# Start Cync Controller add-on
 start_cync_lan() {
-  log_info "Starting CyncLAN add-on..."
+  log_info "Starting Cync Controller add-on..."
 
   local response
   response=$(curl -sf -w "\n%{http_code}" -X POST \
@@ -532,9 +532,9 @@ start_cync_lan() {
   http_code=$(echo "$response" | tail -n1)
 
   if [ "$http_code" = "200" ]; then
-    log_info "CyncLAN start initiated, waiting for it to be running..."
+    log_info "Cync Controller start initiated, waiting for it to be running..."
 
-    # Wait for CyncLAN to be fully started
+    # Wait for Cync Controller to be fully started
     local retry_count=0
     local max_retries=30
 
@@ -545,19 +545,19 @@ start_cync_lan() {
         | jq -r '.data.state // "unknown"' 2> /dev/null)
 
       if [ "$state" = "started" ]; then
-        log_success "CyncLAN is running"
+        log_success "Cync Controller is running"
         return 0
       fi
 
       retry_count=$((retry_count + 1))
-      log_info "Waiting for CyncLAN to start... ($retry_count/$max_retries)"
+      log_info "Waiting for Cync Controller to start... ($retry_count/$max_retries)"
       sleep 5
     done
 
-    log_error "CyncLAN failed to start within timeout"
+    log_error "Cync Controller failed to start within timeout"
     return 1
   else
-    log_error "Failed to start CyncLAN (HTTP $http_code)"
+    log_error "Failed to start Cync Controller (HTTP $http_code)"
     echo "$response" | sed '$d' | jq '.' 2> /dev/null || echo "$response" | sed '$d'
     return 1
   fi
@@ -582,16 +582,16 @@ verify_setup() {
     all_good=false
   fi
 
-  # Check CyncLAN status
+  # Check Cync Controller status
   local cync_state
   cync_state=$(curl -sf -H "Authorization: Bearer ${SUPERVISOR_TOKEN}" \
     "http://supervisor/addons/$CYNC_SLUG/info" 2> /dev/null \
     | jq -r '.data.state // "unknown"' 2> /dev/null)
 
   if [ "$cync_state" = "started" ]; then
-    log_success "CyncLAN: Running"
+    log_success "Cync Controller: Running"
   else
-    log_error "CyncLAN: Not running (state: $cync_state)"
+    log_error "Cync Controller: Not running (state: $cync_state)"
     all_good=false
   fi
 
@@ -638,7 +638,7 @@ main() {
   configure_emqx
   start_emqx
 
-  # Step 7: Install and configure CyncLAN
+  # Step 7: Install and configure Cync Controller
   install_cync_lan
   configure_cync_lan
   start_cync_lan
@@ -657,11 +657,11 @@ main() {
   echo ""
   echo "  2. Access EMQX WebUI via Add-ons page to test MQTT"
   echo ""
-  echo "  3. Update CyncLAN configuration with your real Cync credentials:"
+  echo "  3. Update Cync Controller configuration with your real Cync credentials:"
   echo "     - account_username: Your Cync email"
   echo "     - account_password: Your Cync password"
   echo ""
-  echo "  4. Restart CyncLAN add-on after updating credentials"
+  echo "  4. Restart Cync Controller add-on after updating credentials"
   echo ""
 }
 

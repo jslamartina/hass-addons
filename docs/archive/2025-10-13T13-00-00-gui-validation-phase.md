@@ -104,7 +104,7 @@ Validate end-user experience through Home Assistant GUI to ensure cloud relay mo
 ### 5. Addon Configuration UI
 
 **Test 5.1: Cloud Relay Configuration Visibility**
-- [ ] Navigate to Settings → Add-ons → CyncLAN Bridge
+- [ ] Navigate to Settings → Add-ons → Cync Controller
 - [ ] Click "Configuration" tab
 - [ ] Verify cloud_relay section appears
 - [ ] Check all options are visible:
@@ -135,7 +135,7 @@ Validate end-user experience through Home Assistant GUI to ensure cloud relay mo
 ### 6. Addon Management UI
 
 **Test 6.1: Addon Information Display**
-- [ ] Navigate to Settings → Add-ons → CyncLAN Bridge
+- [ ] Navigate to Settings → Add-ons → Cync Controller
 - [ ] Verify "Info" tab shows:
   - [ ] Version: 0.0.4.0
   - [ ] State: Running
@@ -266,7 +266,7 @@ Validate end-user experience through Home Assistant GUI to ensure cloud relay mo
 
 **Test 10.3: Device Page Layout**
 - [ ] Navigate to Settings → Devices & Services
-- [ ] Locate CyncLAN bridge device
+- [ ] Locate Cync Controller bridge device
 - [ ] Click to open device page
 - [ ] Verify all linked entities appear
 - [ ] Check device information is complete

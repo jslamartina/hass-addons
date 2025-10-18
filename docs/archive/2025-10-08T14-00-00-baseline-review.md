@@ -1,4 +1,4 @@
-# Baseline Code Review - CyncLAN Home Assistant Add-on Repository
+# Baseline Code Review - Cync Controller Home Assistant Add-on Repository
 
 **Review Date:** 2025-10-08
 **Branch:** `baseline-review/2025-10-08`
