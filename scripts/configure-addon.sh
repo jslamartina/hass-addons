@@ -13,7 +13,7 @@ if [ -z "$SUPERVISOR_TOKEN" ]; then
   exit 1
 fi
 
-ADDON_SLUG="local_cync-lan"
+ADDON_SLUG="local_cync-controller"
 API_BASE="http://supervisor/addons/${ADDON_SLUG}"
 
 # Function to get current configuration
@@ -64,7 +64,7 @@ restart_addon() {
 # Function to show logs
 show_logs() {
   echo "$LP Fetching add-on logs..."
-  ha addons logs local_cync-lan
+  ha addons logs local_cync-controller
 }
 
 # Main command processing

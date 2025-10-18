@@ -9,11 +9,11 @@ set -e
 # ========================================================================
 
 echo "Rebuilding addon..."
-ha addons rebuild local_cync-lan
+ha addons rebuild local_cync-controller
 
 echo "Restarting addon..."
-ha addons restart local_cync-lan
+ha addons restart local_cync-controller
 
-ha addons info local_cync-lan
+ha addons info local_cync-controller
 
 echo "✓ Addon rebuilt and restarted successfully!"

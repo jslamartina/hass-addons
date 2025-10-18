@@ -53,7 +53,7 @@ check_log() {
   local description="$2"
   local max_lines="${3:-100}"
 
-  if ha addons logs local_cync-lan 2>&1 | tail -n "$max_lines" | grep -q "$pattern"; then
+  if ha addons logs local_cync-controller 2>&1 | tail -n "$max_lines" | grep -q "$pattern"; then
     test_result "$description" true "Found: $pattern"
     return 0
   else
@@ -72,7 +72,7 @@ wait_for_log() {
 
   local elapsed=0
   while [ $elapsed -lt "$timeout" ]; do
-    if ha addons logs local_cync-lan 2>&1 | grep -q "$pattern"; then
+    if ha addons logs local_cync-controller 2>&1 | grep -q "$pattern"; then
       test_result "$description" true "Appeared after ${elapsed}s"
       return 0
     fi
@@ -117,7 +117,7 @@ main() {
   check_log "MQTT discovery complete" "MQTT discovery completed"
 
   # Verify NO cloud relay in baseline
-  if ha addons logs local_cync-lan 2>&1 | tail -n 100 | grep -q "RELAY mode"; then
+  if ha addons logs local_cync-controller 2>&1 | tail -n 100 | grep -q "RELAY mode"; then
     test_result "Baseline: No relay mode" false "Found RELAY mode when disabled"
   else
     test_result "Baseline: No relay mode" true "Correctly running in normal mode"
@@ -140,7 +140,7 @@ main() {
   echo "$LP Waiting for debug packet logs to appear..."
   sleep 10
 
-  if ha addons logs local_cync-lan 2>&1 | tail -n 200 | grep -qE "RELAY Device→Cloud|RELAY Cloud→Device|\[PARSED\]"; then
+  if ha addons logs local_cync-controller 2>&1 | tail -n 200 | grep -qE "RELAY Device→Cloud|RELAY Cloud→Device|\[PARSED\]"; then
     test_result "Debug packet logging" true "Found detailed packet logs"
   else
     test_result "Debug packet logging" false "No detailed packet logs found (may need device activity)"
@@ -153,7 +153,7 @@ main() {
 
   # In LAN-only mode, should NOT connect to cloud
   sleep 8
-  if ha addons logs local_cync-lan 2>&1 | tail -n 100 | grep -q "Connected to cloud server"; then
+  if ha addons logs local_cync-controller 2>&1 | tail -n 100 | grep -q "Connected to cloud server"; then
     test_result "LAN-only: No cloud connection" false "Found cloud connection in LAN-only mode"
   else
     test_result "LAN-only: No cloud connection" true "Correctly blocking cloud access"
@@ -163,21 +163,21 @@ main() {
   section "Phase 5: Packet Injection"
 
   # Check if injection directory exists in container
-  docker exec addon_local_cync-lan test -d /tmp && injection_available=true || injection_available=false
+  docker exec addon_local_cync-controller test -d /tmp && injection_available=true || injection_available=false
 
   if [ "$injection_available" = "true" ]; then
     echo "$LP Testing mode change packet injection..."
-    docker exec addon_local_cync-lan sh -c 'echo "smart" > /tmp/cync_inject_command.txt'
+    docker exec addon_local_cync-controller sh -c 'echo "smart" > /tmp/cync_inject_command.txt'
     sleep 3
 
-    if ha addons logs local_cync-lan 2>&1 | tail -n 50 | grep -qE "Injecting|inject"; then
+    if ha addons logs local_cync-controller 2>&1 | tail -n 50 | grep -qE "Injecting|inject"; then
       test_result "Packet injection" true "Injection command processed"
     else
       test_result "Packet injection" false "No injection logs found"
     fi
 
     # Clean up injection file
-    docker exec addon_local_cync-lan rm -f /tmp/cync_inject_command.txt 2> /dev/null || true
+    docker exec addon_local_cync-controller rm -f /tmp/cync_inject_command.txt 2> /dev/null || true
   else
     test_result "Packet injection" false "Container /tmp not accessible"
   fi
@@ -188,7 +188,7 @@ main() {
 
   # Verify back to normal operation
   sleep 5
-  if ha addons logs local_cync-lan 2>&1 | tail -n 100 | grep -q "RELAY mode"; then
+  if ha addons logs local_cync-controller 2>&1 | tail -n 100 | grep -q "RELAY mode"; then
     test_result "Baseline restore" false "Still in relay mode after disabling"
   else
     test_result "Baseline restore" true "Successfully returned to normal mode"

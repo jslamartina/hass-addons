@@ -9,7 +9,7 @@
 # What this script does:
 # 1. Reads configuration values from the add-on's config.yaml via bashio:: functions
 # 2. Exports configuration as CYNC_* environment variables for the Python application
-# 3. Launches the cync-lan Python package with --enable-export flag
+# 3. Launches the cync-controller Python package with --enable-export flag
 #
 # Configuration sources:
 # - User configuration: Set via Home Assistant UI (Settings → Add-ons → CyncLAN → Configuration)
@@ -26,7 +26,7 @@
 # - CYNC_MAX_TCP_CONN: Maximum concurrent TCP connections
 # - CYNC_CLOUD_*: Cloud relay mode settings (MITM proxy configuration)
 #
-# Note: This file must remain in the add-on root directory (cync-lan/run.sh).
+# Note: This file must remain in the add-on root directory (cync-controller/run.sh).
 # Home Assistant Supervisor expects run.sh at this location for add-on lifecycle management.
 #
 LP='[run.sh]'
@@ -53,7 +53,7 @@ CYNC_CLOUD_DISABLE_SSL_VERIFY="$(bashio::config 'cloud_relay' | jq -r '.disable_
 export CYNC_ACCOUNT_USERNAME CYNC_ACCOUNT_PASSWORD CYNC_TOPIC CYNC_DEBUG CYNC_MQTT_HOST CYNC_MQTT_PORT CYNC_MQTT_USER CYNC_MQTT_PASS CYNC_TCP_WHITELIST CYNC_CMD_BROADCASTS CYNC_MAX_TCP_CONN
 export CYNC_CLOUD_RELAY_ENABLED CYNC_CLOUD_FORWARD CYNC_CLOUD_SERVER CYNC_CLOUD_PORT CYNC_CLOUD_DEBUG_LOGGING CYNC_CLOUD_DISABLE_SSL_VERIFY
 
-# when installing the cync_lan python package, pyproject.toml creates a cync-lan executable
-#cync-lan --enable-export
-# for some wierd reason, the cync-lan executable does not work in the add-on container all of a sudden
+# when installing the cync_lan python package, pyproject.toml creates a cync-controller executable
+#cync-controller --enable-export
+# for some wierd reason, the cync-controller executable does not work in the add-on container all of a sudden
 python -c "from cync_lan.main import main; main()" --enable-export

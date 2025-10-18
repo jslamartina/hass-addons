@@ -39,14 +39,14 @@ Advanced AI agent development tools:
 ### Basic Workflow
 1. Edit code in `src/cync_lan/` or `pyproject.toml`
 2. **Run `./rebuild.sh` to rebuild and restart the add-on**
-3. Check logs: `ha addons logs local_cync-lan`
+3. Check logs: `ha addons logs local_cync-controller`
 4. Test functionality in Home Assistant
 
 ### Enhanced Workflow (v0.0.4.4)
 1. Edit code in `src/cync_lan/` or `pyproject.toml`
 2. **Run linting**: `npm run lint:python:fix` (auto-fixes issues)
 3. **Run formatting**: `npm run format:python` (formats code)
-4. **Rebuild**: `ha addons rebuild local_cync-lan`
+4. **Rebuild**: `ha addons rebuild local_cync-controller`
 5. **Test**: Use automated scripts for configuration and validation
 
 ### Testing Workflow
@@ -58,7 +58,7 @@ Advanced AI agent development tools:
 ./scripts/test-cloud-relay.sh
 
 # Check logs
-ha addons logs local_cync-lan --follow | grep -i "relay\|cloud"
+ha addons logs local_cync-controller --follow | grep -i "relay\|cloud"
 ```
 
 ## Important Notes
@@ -83,10 +83,10 @@ npm run lint && npm run format
 ./scripts/test-cloud-relay.sh
 
 # View add-on logs
-ha addons logs local_cync-lan --follow
+ha addons logs local_cync-controller --follow
 
 # Rebuild after Python changes
-ha addons rebuild local_cync-lan
+ha addons rebuild local_cync-controller
 ```
 
 ### MCP Servers Available

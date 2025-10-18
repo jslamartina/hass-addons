@@ -191,5 +191,5 @@ To complete the reverse engineering:
 1. Capture Smart Dimmable → Smart Non-Dimmable
 2. Capture Smart Non-Dimmable → Traditional
 3. Document all three mode byte values
-4. Implement TCP-based mode switching in cync-lan!
+4. Implement TCP-based mode switching in cync-controller!
 

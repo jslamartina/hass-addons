@@ -101,7 +101,7 @@ Timestamp: 2025/10/07 20:31:26
 
 ## Implementation Potential
 
-This discovery enables the cync-lan project to:
+This discovery enables the cync-controller project to:
 
 1. ✅ **Query current mode** - Parse 0x73 packets to detect current relay mode
 2. ✅ **Change mode via TCP** - Send properly formatted 0x73 packets to switch modes
@@ -127,7 +127,7 @@ This discovery enables the cync-lan project to:
 
 1. Capture **Smart Non-Dimmable mode** byte value
 2. **Reverse engineer checksum** algorithm for 0x73 packets
-3. **Implement mode switching** in cync-lan Python library
+3. **Implement mode switching** in cync-controller Python library
 4. Test with **different switch models** to confirm consistency
 5. Document any **fade rate or other configuration** bytes in 0x73 packets
 
@@ -136,7 +136,7 @@ This discovery enables the cync-lan project to:
 - `/mnt/supervisor/addons/local/hass-addons/mitm/smart_to_traditional.txt` - Full capture
 - `/mnt/supervisor/addons/local/hass-addons/mitm/traditional_to_smart.txt` - Full capture
 - `/mnt/supervisor/addons/local/hass-addons/mitm/mode_change_analysis.md` - Detailed analysis
-- `/mnt/supervisor/addons/local/hass-addons/cync-lan/cync-lan-python/docs/packet_structure.md` - Protocol docs
+- `/mnt/supervisor/addons/local/hass-addons/cync-controller/cync-controller-python/docs/packet_structure.md` - Protocol docs
 
 ---
 

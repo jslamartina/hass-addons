@@ -18,7 +18,7 @@ SUPERVISOR_TOKEN=""
 
 # Add-on slugs
 EMQX_SLUG="a0d7b954_emqx"
-CYNC_SLUG="local_cync-lan"
+CYNC_SLUG="local_cync-controller"
 HASSIO_ADDONS_REPO="https://github.com/hassio-addons/repository"
 
 # Colors for output

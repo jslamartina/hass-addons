@@ -51,7 +51,7 @@ netstat -tlnp | grep 23779
 
 **Stop CyncLAN Add-on (if running):**
 ```bash
-docker stop addon_local_cync-lan
+docker stop addon_local_cync-controller
 ```
 
 ### 3. DNS Redirection
@@ -255,8 +255,8 @@ OSError: [Errno 98] Address already in use
 
 2. Stop the CyncLAN add-on:
    ```bash
-   docker ps --filter "name=addon_local_cync-lan"
-   docker stop addon_local_cync-lan
+   docker ps --filter "name=addon_local_cync-controller"
+   docker stop addon_local_cync-controller
    ```
 
 3. Restart the MITM proxy
@@ -359,7 +359,7 @@ kill <PID>
 ### 2. Restart the CyncLAN Add-on
 
 ```bash
-docker start addon_local_cync-lan
+docker start addon_local_cync-controller
 ```
 
 Or via Home Assistant UI:
@@ -471,7 +471,7 @@ INJECTING SMART MODE → INJECTION COMPLETE → 0x7b ACK → MODE DETECTED: SMAR
 ### Start MITM
 ```bash
 cd /mnt/supervisor/addons/local/hass-addons/mitm
-docker stop addon_local_cync-lan
+docker stop addon_local_cync-controller
 python3 mitm_with_injection.py 2>&1 | tee mitm_proxy.log
 ```
 
@@ -499,7 +499,7 @@ pkill -f mitm_with_injection.py
 
 ### Restore Normal
 ```bash
-docker start addon_local_cync-lan
+docker start addon_local_cync-controller
 ```
 
 ---

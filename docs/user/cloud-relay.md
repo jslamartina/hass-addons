@@ -353,7 +353,7 @@ The relay uses the packet parser from the MITM research tools. See `docs/protoco
 - Personal information
 - Network passwords
 
-**Logs are stored in:** Home Assistant supervisor logs (accessible via `ha addons logs local_cync-lan`)
+**Logs are stored in:** Home Assistant supervisor logs (accessible via `ha addons logs local_cync-controller`)
 
 ## Troubleshooting
 

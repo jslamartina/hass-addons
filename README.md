@@ -83,11 +83,11 @@ cloud_relay:
 
 ```bash
 # Quick commands for developers
-ha addons logs local_cync-lan     # View logs
-./scripts/configure-addon.sh      # Configure addon
-ha addons restart local_cync-lan  # Restart addon
-npm run lint                      # Run all linters
-npm run lint:python:fix           # Auto-fix Python issues
+ha addons logs local_cync-controller     # View logs
+./scripts/configure-addon.sh             # Configure addon
+ha addons restart local_cync-controller  # Restart addon
+npm run lint                             # Run all linters
+npm run lint:python:fix                  # Auto-fix Python issues
 ```
 
 **Enhanced Development Tools:**

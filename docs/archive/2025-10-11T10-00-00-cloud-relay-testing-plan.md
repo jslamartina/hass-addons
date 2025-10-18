@@ -9,10 +9,10 @@
 
 Before testing, verify:
 
-- Git repo changes are committed: `/mnt/supervisor/addons/local/cync-lan/`
+- Git repo changes are committed: `/mnt/supervisor/addons/local/cync-controller/`
   ```bash
   # Use Git MCP tool to check status
-  mcp_git_git_status("/mnt/supervisor/addons/local/cync-lan/")
+  mcp_git_git_status("/mnt/supervisor/addons/local/cync-controller/")
   # Should show clean working tree, or use: git status
   ```
 
@@ -43,10 +43,10 @@ Each test follows this pattern:
 
 ```python
 # Check addon container status
-mcp_docker_list_containers(all=True, filters={"name": ["addon_local_cync-lan"]})
+mcp_docker_list_containers(all=True, filters={"name": ["addon_local_cync-controller"]})
 
 # Fetch logs with specific tail count
-mcp_docker_fetch_container_logs("addon_local_cync-lan", tail=100)
+mcp_docker_fetch_container_logs("addon_local_cync-controller", tail=100)
 ```
 
 **Python MCP** - Log analysis and packet validation:
@@ -69,10 +69,10 @@ for field in expected_fields:
 
 ```python
 # Check for uncommitted test configs
-mcp_git_git_status("/mnt/supervisor/addons/local/cync-lan/")
+mcp_git_git_status("/mnt/supervisor/addons/local/cync-controller/")
 
 # Review changes made during testing
-mcp_git_git_diff_unstaged("/mnt/supervisor/addons/local/cync-lan/", context_lines=3)
+mcp_git_git_diff_unstaged("/mnt/supervisor/addons/local/cync-controller/", context_lines=3)
 ```
 
 ## Phase 1: Baseline - Normal LAN-only Mode
@@ -81,7 +81,7 @@ mcp_git_git_diff_unstaged("/mnt/supervisor/addons/local/cync-lan/", context_line
 
 **Status:** ✅ **PASSED** - Backward compatibility confirmed
 
-**Configuration** (`/mnt/supervisor/addons/local/hass-addons/cync-lan/config.yaml` options):
+**Configuration** (`/mnt/supervisor/addons/local/hass-addons/cync-controller/config.yaml` options):
 
 ```yaml
 cloud_relay:
@@ -277,8 +277,8 @@ cloud_relay:
 - ✅ **`docs/developer/agents-guide.md`** - Cloud relay section with configuration examples
 - ✅ **`docs/developer/limitations-lifted.md`** - Detailed explanation of resolved blockers
 - ✅ **`docs/developer/test-results.md`** - Comprehensive test execution results
-- ✅ **`cync-lan/CHANGELOG.md`** - v0.0.4.0 changes documented
-- ✅ **`cync-lan/config.yaml`** - Schema with helpful comments
+- ✅ **`cync-controller/CHANGELOG.md`** - v0.0.4.0 changes documented
+- ✅ **`cync-controller/config.yaml`** - Schema with helpful comments
 - ✅ **`scripts/README.md`** - Automated testing tools documentation
 
 **Documentation Quality:**
@@ -335,7 +335,7 @@ phases = ["Baseline", "Cloud Relay", "Debug Logging", "LAN-only", "Packet Inject
 
 for phase in phases:
     # Fetch and analyze logs for this phase
-    logs = mcp_docker_fetch_container_logs("addon_local_cync-lan", tail=200)
+    logs = mcp_docker_fetch_container_logs("addon_local_cync-controller", tail=200)
 
     result = {
         "name": phase,

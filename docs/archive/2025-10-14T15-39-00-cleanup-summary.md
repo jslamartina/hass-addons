@@ -85,11 +85,11 @@
 ### User Documentation
 ```
 README.md                    # Repository overview
-cync-lan/
+cync-controller/
   ├── README.md              # Quick start
   ├── DOCS.md                # Detailed documentation
   └── CHANGELOG.md           # Version history
-docs/cync-lan/
+docs/cync-controller/
   ├── DNS.md                 # DNS setup (required)
   ├── troubleshooting.md     # Common issues
   ├── tips.md                # Best practices
@@ -149,7 +149,7 @@ mitm/
 
 ### For Users
 1. **[DOCUMENTATION_INDEX.md](DOCUMENTATION_INDEX.md)** - Start here for navigation
-2. **[cync-lan/README.md](cync-lan/README.md)** - Quick start guide
+2. **[cync-controller/README.md](cync-controller/README.md)** - Quick start guide
 3. **[docs/user/dns-setup.md](docs/user/dns-setup.md)** - DNS setup (required)
 4. **[docs/user/troubleshooting.md](docs/user/troubleshooting.md)** - Common issues
 

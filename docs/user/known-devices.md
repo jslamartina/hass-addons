@@ -21,4 +21,4 @@ Devices I do not own, but would like to add support for. If you can get me good 
 - Dynamic lights (Sound/Music sync, segmented leds)
 - Fan controller
 - Thermostat
-- Cameras (I'm not sure if cync-lan will support them, but I would like to try)
+- Cameras (I'm not sure if cync-controller will support them, but I would like to try)

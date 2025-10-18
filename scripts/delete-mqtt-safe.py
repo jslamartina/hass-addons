@@ -266,7 +266,7 @@ def main():
     print("   ha core restart")
     print("")
     print("2. Wait ~20 seconds, then start addon:")
-    print("   ha addons start local_cync-lan")
+    print("   ha addons start local_cync-controller")
     print("")
     print("3. Entities will be FRESH with correct 'Living Room' area!")
     print("")
