@@ -1,5 +1,7 @@
 # Home Assistant CyncLAN Add-ons
 
+> **Note:** This project is forked from [@baudneo/hass-addons](https://github.com/baudneo/hass-addons)
+
 Local control for Cync/C by GE smart devices without cloud dependency.
 
 ## 🚀 Quick Start
@@ -135,5 +137,3 @@ See [LICENSE](LICENSE) for details.
 ---
 
 **⚠️ Important:** This add-on requires DNS redirection. See the [DNS Setup Guide](docs/user/dns-setup.md) before installation.
-
-[polling-shield]: https://img.shields.io/badge/Local%20Push%20Polling-0.0.4-blue.svg

@@ -60,7 +60,7 @@
   - Related: "Refresh Device Status" button now works correctly
   - Location: `/src/cync_lan/server.py` - `parse_status()` method (lines 540-574)
 
-## 0.0.4.0**Major Feature: Cloud Relay Mode**
+## 0.0.4.0 **Major Feature: Cloud Relay Mode**
 
 ### New Features
 - **Cloud Relay Mode**: Add-on can now act as MITM proxy between devices and Cync cloud

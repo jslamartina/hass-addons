@@ -1,6 +1,6 @@
-# CyncLAN Bridge - Setup Guide
+# Cync Controller - Setup Guide
 
-CyncLAN enables **local control** of Cync (C by GE) smart devices via MQTT, bypassing the cloud completely.
+Cync Controller enables **local control** of Cync (C by GE) smart devices via MQTT, bypassing the cloud completely.
 
 ## ⚠️ Prerequisites
 
@@ -51,7 +51,7 @@ cloud_relay:
 5. Follow the prompts, check your Cync account email for the OTP code and enter it into the ingress page form, click 'submit'
 6. Wait for the success message indicating that the device list has been exported
 7. Restart the add-on to load the newly exported configuration
-8. MQTT auto-discovery will automatically create entities in Home Assistant for each device and a 'bridge' device to represent the CyncLAN controller itself
+8. MQTT auto-discovery will automatically create entities in Home Assistant for each device and a 'bridge' device to represent the Cync Controller itself
 9. As long as DNS redirection is set up correctly and you power cycled your Wi-Fi Cync devices, all supported and discovered devices should now be controllable from Home Assistant (Even BTLE only devices!)
 
 ## Migration
@@ -61,10 +61,10 @@ To perform a seamless migration from the old monolithic, non add-on setup:
 - copy your existing `cync_mesh.yaml` into the new dir: `cp /path/to/cync_mesh.yaml /homeassistant/.storage/cync-lan/config`
 - Start the add-on, it will automatically detect the existing config and use it
 - Change your DNS redirection to point to the Home Assistant server's local IP address
-- Power cycle the Cync devices, so they perform a DNS request and get the new IP address of the CyncLAN bridge
+- Power cycle the Cync devices, so they perform a DNS request and get the new IP address of the Cync Controller
 
 ## Exporting Device Configuration
-Visit the CyncLAN 'ingress' webpage (from the sidebar, or from the add-on page `Open Web UI` button). You will be greeted with a simple form that has provisions for being sent an OTP and to enter and submit the OTP.
+Visit the Cync Controller 'ingress' webpage (from the sidebar, or from the add-on page `Open Web UI` button). You will be greeted with a simple form that has provisions for being sent an OTP and to enter and submit the OTP.
 
 **Using the Exporter:**
 
