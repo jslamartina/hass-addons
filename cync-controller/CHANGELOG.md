@@ -1,3 +1,13 @@
+## 0.0.4.6
+**Maintenance: Complete Rebranding to Cync Controller**
+
+### Changed
+- Renamed from "CyncLAN" to "Cync Controller" throughout entire codebase
+- Updated all paths: `/root/cync-lan/` → `/root/cync-controller/`
+- Updated storage paths: `/homeassistant/.storage/cync-lan/` → `/homeassistant/.storage/cync-controller/`
+- Fixed SSL certificate paths in constants and configuration
+- Updated documentation and developer guides
+
 ## 0.0.4.4
 **Enhancement: MQTT Discovery Improvements**
 
