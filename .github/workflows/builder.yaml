@@ -60,11 +60,10 @@ jobs:
     needs: init
     runs-on: ubuntu-latest
     if: needs.init.outputs.changed == 'true'
-    name: Build ${{ matrix.arch }} ${{ matrix.addon }} add-on
+    name: Build ${{ matrix.addon }} add-on
     strategy:
       matrix:
         addon: ${{ fromJson(needs.init.outputs.changed_addons) }}
-        arch: ["aarch64", "amd64", "armhf", "armv7", "i386"]
     permissions:
       contents: read
       packages: write
@@ -79,25 +78,7 @@ jobs:
         with:
           path: "./${{ matrix.addon }}"
 
-      - name: Check if add-on should be built
-        id: check
-        run: |
-          if [[ "${{ steps.info.outputs.image }}" == "null" ]]; then
-            echo "Image property is not defined, skipping build"
-            echo "build_arch=false" >> $GITHUB_OUTPUT;
-          elif [[ "${{ steps.info.outputs.architectures }}" =~ ${{ matrix.arch }} ]]; then
-            echo "build_arch=true" >> $GITHUB_OUTPUT;
-            echo "image=$(echo ${{ steps.info.outputs.image }} | cut -d'/' -f3)" >> $GITHUB_OUTPUT;
-            if [[ -z "${{ github.head_ref }}" ]] && [[ "${{ github.event_name }}" == "push" ]]; then
-                echo "BUILD_ARGS=" >> $GITHUB_ENV;
-            fi
-          else
-            echo "${{ matrix.arch }} is not a valid arch for ${{ matrix.addon }}, skipping build";
-            echo "build_arch=false" >> $GITHUB_OUTPUT;
-          fi
-
       - name: Login to GitHub Container Registry
-        if: env.BUILD_ARGS != '--test'
         uses: docker/login-action@v3.4.0
         with:
           registry: ghcr.io
@@ -105,14 +86,11 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build ${{ matrix.addon }} add-on
-        if: steps.check.outputs.build_arch == 'true'
-        uses: home-assistant/builder@2025.03.0
+        uses: home-assistant/builder@master
         with:
           args: |
-            ${{ env.BUILD_ARGS }} \
-            --${{ matrix.arch }} \
-            --target /data/${{ matrix.addon }} \
-            --image "ghcr.io/${{ github.repository_owner }}/${{ steps.check.outputs.image }}-{arch}" \
+            --all \
+            --target ${{ matrix.addon }} \
+            --docker-hub "ghcr.io/${{ github.repository_owner }}" \
             --docker-user "${{ github.repository_owner }}" \
             --docker-password "${{ secrets.GITHUB_TOKEN }}" \
-            --addon
