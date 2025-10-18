@@ -3,7 +3,7 @@
 #
 # run.sh - Home Assistant Add-on Entry Point
 #
-# This script is the entry point for the CyncLAN Home Assistant add-on.
+# This script is the entry point for the Cync Controller Home Assistant add-on.
 # It is automatically executed by the Home Assistant Supervisor when the add-on starts.
 #
 # What this script does:
@@ -12,7 +12,7 @@
 # 3. Launches the cync-controller Python package with --enable-export flag
 #
 # Configuration sources:
-# - User configuration: Set via Home Assistant UI (Settings → Add-ons → CyncLAN → Configuration)
+# - User configuration: Set via Home Assistant UI (Settings → Add-ons → Cync Controller → Configuration)
 # - Default values: Defined in config.yaml schema
 # - Runtime config: Stored in /data/options.json by Supervisor
 #
@@ -31,7 +31,7 @@
 #
 LP='[run.sh]'
 
-bashio::log.info "${LP} Starting CyncLAN Bridge Add-On"
+bashio::log.info "${LP} Starting Cync Controller Add-On"
 # pull values from the add-on configuration
 CYNC_ACCOUNT_USERNAME="$(bashio::config 'account_username')"
 CYNC_ACCOUNT_PASSWORD="$(bashio::config 'account_password')"

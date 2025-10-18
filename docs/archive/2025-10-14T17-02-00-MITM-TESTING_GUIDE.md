@@ -49,7 +49,7 @@ lsof -i :23779
 netstat -tlnp | grep 23779
 ```
 
-**Stop CyncLAN Add-on (if running):**
+**Stop Cync Controller Add-on (if running):**
 ```bash
 docker stop addon_local_cync-controller
 ```
@@ -253,7 +253,7 @@ OSError: [Errno 98] Address already in use
    netstat -tlnp | grep 23779
    ```
 
-2. Stop the CyncLAN add-on:
+2. Stop the Cync Controller add-on:
    ```bash
    docker ps --filter "name=addon_local_cync-controller"
    docker stop addon_local_cync-controller
@@ -356,7 +356,7 @@ ps aux | grep mitm_with_injection
 kill <PID>
 ```
 
-### 2. Restart the CyncLAN Add-on
+### 2. Restart the Cync Controller Add-on
 
 ```bash
 docker start addon_local_cync-controller
@@ -364,7 +364,7 @@ docker start addon_local_cync-controller
 
 Or via Home Assistant UI:
 1. Go to **Settings** → **Add-ons**
-2. Click **CyncLAN Bridge**
+2. Click **Cync Controller**
 3. Click **Start**
 
 ### 3. Verify Operation

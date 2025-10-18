@@ -1,6 +1,6 @@
 # AGENTS.md
 
-This file provides guidance for AI coding agents working with the Home Assistant CyncLAN Add-on repository.
+This file provides guidance for AI coding agents working with the Home Assistant Cync Controller Add-on repository.
 
 ## Project Overview
 
@@ -100,7 +100,7 @@ This approach helps track progress during long-running tasks and makes it clear 
 
 ```
 /mnt/supervisor/addons/local/hass-addons/
-├── cync-controller/                   # Main CyncLAN add-on directory
+├── cync-controller/                   # Main Cync Controller add-on directory
 │   ├── src/cync_lan/          # Python package source code
 │   │   ├── __init__.py
 │   │   ├── main.py            # CLI entry point
@@ -631,7 +631,7 @@ cloud_relay:
 
 ### Architecture
 
-The CyncLAN add-on has three main components:
+The Cync Controller add-on has three main components:
 
 1. **Exporter** - FastAPI web server for exporting device configuration from Cync cloud (2FA via emailed OTP)
 2. **nCync** - Async TCP server that masquerades as Cync cloud (requires DNS redirection)

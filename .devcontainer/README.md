@@ -1,6 +1,6 @@
 # Devcontainer Setup Scripts
 
-This directory contains setup scripts for the CyncLAN development environment.
+This directory contains setup scripts for the Cync Controller development environment.
 
 ## File Organization
 
@@ -13,10 +13,10 @@ This directory contains setup scripts for the CyncLAN development environment.
 #### Browser Automation (Playwright)
 - **`03-setup-playwright.sh`** - Installs Playwright browsers and configures testing environment
 
-#### Python Package Development (cync-lan)
+#### Python Package Development (cync-controller)
 - **`01-00-python-setup-all.sh`** - Master script that runs all Python development scripts in order
 - **`01-01-python-env-setup.sh`** - Sets up Python development environment
-- **`01-02-python-clone-repo.sh`** - Clones the cync-lan repository
+- **`01-02-python-clone-repo.sh`** - Clones the cync-controller repository
 - **`01-03-python-workspace-setup.sh`** - Sets up development workspace
 - **`01-04-python-vscode-configure.sh`** - Configures VS Code for Python development
 - **`01-05-python-venv-setup.sh`** - Sets up Python virtual environment
@@ -29,11 +29,11 @@ This directory contains setup scripts for the CyncLAN development environment.
 The main `.devcontainer.json` file (in the root directory) is configured to:
 1. Use the Home Assistant devcontainer base image
 2. Install Python 3.12 with development tools
-3. Mount your local `cync-lan` repository for live editing
+3. Mount your local `cync-controller` repository for live editing
 4. Automatically run setup scripts on container creation:
    - `00-setup-prettier.sh` (Node.js/Prettier)
    - `03-setup-playwright.sh` (Playwright browser automation)
-   - `01-00-python-setup-all.sh` (Python environment with uv & cync-lan repo)
+   - `01-00-python-setup-all.sh` (Python environment with uv & cync-controller repo)
 5. MCP servers are managed via `.cursor/mcp.json` and auto-installed by uvx/npx on first use
 
 ## Usage
@@ -68,8 +68,8 @@ npm run playwright:delete-entities switch.hallway_front_switch switch.hallway_co
 /mnt/supervisor/addons/local/
 ├── hass-addons/           # Home Assistant addon repository
 │   ├── hass-cync-dev.code-workspace  # Multi-repo workspace file
-│   └── test-cync-lan.sh   # Test script
-├── cync-lan/              # Python package repository
+│   └── test-cync-controller.sh   # Test script
+├── cync-controller/              # Python package repository
 └── .vscode/               # Global VS Code settings
 ```
 
@@ -85,11 +85,11 @@ npm run playwright:delete-entities switch.hallway_front_switch switch.hallway_co
 **If you opened the folder first (single repo view):**
 1. Inside the container, click File → Open Workspace from File
 2. Select: `hass-cync-dev.code-workspace`
-3. This will reload with both hass-addons and cync-lan repositories
+3. This will reload with both hass-addons and cync-controller repositories
 
 ### Daily Development
 1. Make changes to either repository
-2. Test with: `./test-cync-lan.sh`
+2. Test with: `./test-cync-controller.sh`
 3. Format code: `npm run format`
 
 ## Important Quirks and Gotchas

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Script to programmatically configure the CyncLAN add-on via Supervisor API
+# Script to programmatically configure the Cync Controller add-on via Supervisor API
 # This bypasses the UI and configuration persistence issues in devcontainer
 set -e
 

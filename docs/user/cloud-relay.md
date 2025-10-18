@@ -2,16 +2,16 @@
 
 **New in v0.0.4.0**
 
-The CyncLAN add-on can optionally operate as a Man-in-the-Middle (MITM) proxy between your Cync devices and the Cync cloud servers. This enables real-time packet inspection, protocol analysis, and debugging while maintaining full device functionality.
+The Cync Controller add-on can optionally operate as a Man-in-the-Middle (MITM) proxy between your Cync devices and the Cync cloud servers. This enables real-time packet inspection, protocol analysis, and debugging while maintaining full device functionality.
 
 ## What is Cloud Relay Mode?
 
-In normal operation, the CyncLAN add-on acts as a **local replacement** for the Cync cloud - devices connect directly to the add-on and never communicate with Cync servers.
+In normal operation, the Cync Controller add-on acts as a **local replacement** for the Cync cloud - devices connect directly to the add-on and never communicate with Cync servers.
 
 With **Cloud Relay Mode** enabled, the add-on acts as a **transparent proxy**:
 
 ```
-Device ←→ CyncLAN Relay ←→ Cync Cloud
+Device ←→ Cync Controller Relay ←→ Cync Cloud
               ↓
           MQTT/HA
           Packet Logs
@@ -458,7 +458,7 @@ If you were using the standalone `mitm/mitm_with_injection.py` tool:
 - **Local only:** < 1ms added
 - **With cloud forwarding:** ~10-50ms added (depends on internet)
 
-**Recommendation:** Monitor add-on resources in Home Assistant → Settings → Add-ons → CyncLAN Bridge → Performance
+**Recommendation:** Monitor add-on resources in Home Assistant → Settings → Add-ons → Cync Controller → Performance
 
 ## Advanced Topics
 

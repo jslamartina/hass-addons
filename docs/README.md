@@ -1,6 +1,6 @@
 # Documentation Index
 
-Welcome to the CyncLAN Bridge documentation! This guide helps you find the right documentation for your needs.
+Welcome to the Cync Controller documentation! This guide helps you find the right documentation for your needs.
 
 ## 📁 Documentation Structure
 

@@ -226,23 +226,23 @@ echo "Adding shell aliases..."
 cat >> ~/.zshrc << 'EOF'
 
 # Add-on log aliases (using Docker since journal-gatewayd unavailable in devcontainer)
-alias cync-logs='docker logs addon_local_cync-lan'
-alias cync-logs-follow='docker logs -f addon_local_cync-lan'
-alias cync-logs-tail='docker logs --tail 100 addon_local_cync-lan'
+alias cync-logs='docker logs addon_local_cync-controller'
+alias cync-logs-follow='docker logs -f addon_local_cync-controller'
+alias cync-logs-tail='docker logs --tail 100 addon_local_cync-controller'
 alias emqx-logs='docker logs addon_a0d7b954_emqx'
 alias emqx-logs-follow='docker logs -f addon_a0d7b954_emqx'
 alias emqx-logs-tail='docker logs --tail 100 addon_a0d7b954_emqx'
 
 # Add-on control aliases
-alias cync-restart='ha addon restart local_cync-lan'
-alias cync-stop='ha addon stop local_cync-lan'
-alias cync-start='ha addon start local_cync-lan'
+alias cync-restart='ha addon restart local_cync-controller'
+alias cync-stop='ha addon stop local_cync-controller'
+alias cync-start='ha addon start local_cync-controller'
 alias emqx-restart='ha addon restart a0d7b954_emqx'
 alias emqx-stop='ha addon stop a0d7b954_emqx'
 alias emqx-start='ha addon start a0d7b954_emqx'
 
 # Utility aliases
-alias clear-cync-logs='docker ps --filter "name=cync" --no-trunc --format "{{.ID}}" | xargs -I {} sudo truncate -s 0 /var/lib/docker/containers/{}/{}-json.log && echo "CyncLAN logs cleared"'
+alias clear-cync-logs='docker ps --filter "name=cync" --no-trunc --format "{{.ID}}" | xargs -I {} sudo truncate -s 0 /var/lib/docker/containers/{}/{}-json.log && echo "Cync Controller logs cleared"'
 alias addon-logs='docker ps --filter "name=addon" --format "{{.Names}}" | fzf --preview "docker logs --tail 50 {}"'
 EOF
 echo "  ✅ Aliases added to ~/.zshrc"

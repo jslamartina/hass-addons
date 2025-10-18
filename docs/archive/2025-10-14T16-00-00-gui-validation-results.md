@@ -1,4 +1,4 @@
-# GUI Validation Results - CyncLAN Bridge v0.0.4.0
+# GUI Validation Results - Cync Controller v0.0.4.0
 
 **Test Date:** October 14, 2025
 **Environment:** Home Assistant Devcontainer (supervisor_run)
@@ -20,7 +20,7 @@
 **Result:** ✅ **SUCCESS**
 
 **Evidence:**
-- All 6 cloud relay options accessible via Settings → Add-ons → CyncLAN Bridge → Configuration
+- All 6 cloud relay options accessible via Settings → Add-ons → Cync Controller → Configuration
 - Options verified:
   1. `enabled` (toggle switch)
   2. `forward_to_cloud` (toggle switch - checked)

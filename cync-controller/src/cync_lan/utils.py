@@ -68,7 +68,7 @@ async def _async_signal_cleanup():
         for task in g.tasks:
             if not task.done():
                 logger.debug(
-                    "CyncLAN: Cancelling task: %s // task.get_coro()=%s",
+                    "Cync Controller: Cancelling task: %s // task.get_coro()=%s",
                     task.get_name(),
                     task.get_coro(),
                 )
@@ -76,7 +76,7 @@ async def _async_signal_cleanup():
 
 
 def signal_handler(signum):
-    logger.info("CyncLAN: Intercepted signal: %s (%s)", signal.Signals(signum).name, signum)
+    logger.info("Cync Controller: Intercepted signal: %s (%s)", signal.Signals(signum).name, signum)
     if g:
         loop = g.loop or asyncio.get_event_loop()
         loop.create_task(_async_signal_cleanup())
@@ -283,7 +283,7 @@ def check_python_version():
 
 
 def check_for_uuid():
-    """Check if this is the first run of the Cync LAN server, if so, create the CYNC_ADDON_UUID (UUID4)"""
+    """Check if this is the first run of the Cync Controller server, if so, create the CYNC_ADDON_UUID (UUID4)"""
     lp = "check_uuid:"
     # create dir for cync_mesh.yaml and variable data if it does not exist
     persistent_dir = Path(PERSISTENT_BASE_DIR).expanduser().resolve()
@@ -318,7 +318,7 @@ def check_for_uuid():
                     create_uuid = True
                 else:
                     logger.info(
-                        "%s UUID found in %s for the 'CyncLAN Bridge' MQTT device",
+                        "%s UUID found in %s for the 'Cync Controller' MQTT device",
                         lp,
                         uuid_file.as_posix(),
                     )
@@ -336,7 +336,7 @@ def check_for_uuid():
         create_uuid = True
     if create_uuid:
         logger.debug(
-            "%s Creating and caching a new UUID to be used for the 'CyncLAN Bridge' MQTT device",
+            "%s Creating and caching a new UUID to be used for the 'Cync Controller' MQTT device",
             lp,
         )
         g.uuid = uuid.uuid4()

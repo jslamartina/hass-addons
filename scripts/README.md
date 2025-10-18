@@ -1,6 +1,6 @@
 # Automated Testing Scripts
 
-This directory contains automated tools for testing and configuring the CyncLAN add-on without manual UI interaction.
+This directory contains automated tools for testing and configuring the Cync Controller add-on without manual UI interaction.
 
 ## Overview
 
@@ -12,7 +12,7 @@ These scripts use the **Home Assistant Supervisor API** to programmatically conf
 
 Automated setup script for fresh Home Assistant installations.
 
-**Purpose:** Automates the complete onboarding process, including user creation, EMQX MQTT broker installation, and CyncLAN add-on setup with test credentials.
+**Purpose:** Automates the complete onboarding process, including user creation, EMQX MQTT broker installation, and Cync Controller add-on setup with test credentials.
 
 **Usage:**
 ```bash
@@ -32,11 +32,11 @@ Automated setup script for fresh Home Assistant installations.
    - Configures EMQX with credentials
    - Starts EMQX service
 
-3. **CyncLAN Installation**
-   - Installs local CyncLAN add-on
+3. **Cync Controller Installation**
+   - Installs local Cync Controller add-on
    - Configures with test Cync credentials (placeholder)
    - Configures MQTT connection to EMQX
-   - Starts CyncLAN service
+   - Starts Cync Controller service
 
 4. **Verification**
    - Checks all services are running
@@ -74,8 +74,8 @@ CREDENTIALS_FILE=/path/to/creds.env ./setup-fresh-ha.sh
 [setup-fresh-ha.sh] ✅ Onboarding completed
 [setup-fresh-ha.sh] ✅ EMQX installed successfully
 [setup-fresh-ha.sh] ✅ EMQX is running
-[setup-fresh-ha.sh] ✅ CyncLAN installed successfully
-[setup-fresh-ha.sh] ✅ CyncLAN is running
+[setup-fresh-ha.sh] ✅ Cync Controller installed successfully
+[setup-fresh-ha.sh] ✅ Cync Controller is running
 [setup-fresh-ha.sh] ✅ Setup completed successfully!
 
 Next steps:
@@ -85,11 +85,11 @@ Next steps:
 
   2. Access EMQX WebUI via Add-ons page to test MQTT
 
-  3. Update CyncLAN configuration with your real Cync credentials:
+  3. Update Cync Controller configuration with your real Cync credentials:
      - account_username: Your Cync email
      - account_password: Your Cync password
 
-  4. Restart CyncLAN add-on after updating credentials
+  4. Restart Cync Controller add-on after updating credentials
 ```
 
 **When to Use:**
@@ -121,13 +121,13 @@ The script is safe to re-run:
 | "Credentials file not found"          | Create `.hass-credentials.env` in repo root |
 | "Could not retrieve SUPERVISOR_TOKEN" | Ensure hassio_cli container is running      |
 | "EMQX installation timed out"         | Check internet connection and retry         |
-| "CyncLAN failed to start"             | Check logs: `ha addons logs local_cync-lan` |
+| "Cync Controller failed to start"             | Check logs: `ha addons logs local_cync-controller` |
 
 ---
 
 ### `configure-addon.sh`
 
-Programmatically configure the CyncLAN add-on via Supervisor API.
+Programmatically configure the Cync Controller add-on via Supervisor API.
 
 **Usage:**
 ```bash
@@ -171,9 +171,9 @@ Programmatically configure the CyncLAN add-on via Supervisor API.
 4. Shows relevant logs after restart
 
 **API Endpoints Used:**
-- `GET /addons/local_cync-lan/info` - Read current configuration
-- `POST /addons/local_cync-lan/options` - Update configuration
-- `POST /addons/local_cync-lan/restart` - Restart add-on
+- `GET /addons/local_cync-controller/info` - Read current configuration
+- `POST /addons/local_cync-controller/options` - Update configuration
+- `POST /addons/local_cync-controller/restart` - Restart add-on
 
 ---
 
@@ -267,7 +267,7 @@ Cursor's `mcp.json` doesn't support environment variable expansion (like `${ENV_
 
 Safe MQTT entity deletion script for development and testing.
 
-**Purpose:** Cleanly removes MQTT entities while preserving the CyncLAN Bridge configuration.
+**Purpose:** Cleanly removes MQTT entities while preserving the Cync Controller configuration.
 
 **Usage:**
 ```bash
@@ -279,7 +279,7 @@ sudo python3 scripts/delete-mqtt-safe.py
 ```
 
 **Features:**
-- ✅ Preserves CyncLAN Bridge entities
+- ✅ Preserves Cync Controller entities
 - ✅ Cleans entity and device registries
 - ✅ Clears restore state (removes history memory)
 - ✅ Safe dry-run mode for preview
@@ -299,7 +299,7 @@ SUPERVISOR_TOKEN=$(docker exec hassio_cli env | grep SUPERVISOR_TOKEN | cut -d= 
 
 # API requests use Bearer token authentication
 curl -H "Authorization: Bearer ${SUPERVISOR_TOKEN}" \
-     http://supervisor/addons/local_cync-lan/info
+     http://supervisor/addons/local_cync-controller/info
 ```
 
 ### Configuration Persistence
@@ -351,8 +351,8 @@ ha supervisor restart
 **Cause:** Add-on taking longer than expected to restart.
 
 **Solution:**
-- Check add-on logs: `ha addons logs local_cync-lan`
-- Manually restart: `ha addons restart local_cync-lan`
+- Check add-on logs: `ha addons logs local_cync-controller`
+- Manually restart: `ha addons restart local_cync-controller`
 - Check for errors in supervisor logs: `tail -f /tmp/supervisor_run.log`
 
 ---

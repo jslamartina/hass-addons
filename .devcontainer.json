@@ -1,5 +1,5 @@
 {
-  "name": "CyncLAN Multi-Repo Development",
+  "name": "Cync Controller Multi-Repo Development",
   "image": "ghcr.io/home-assistant/devcontainer:2-addons",
   "features": {
     "ghcr.io/devcontainers/features/python:1": {
