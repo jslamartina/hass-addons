@@ -1,8 +1,8 @@
 name: "Cync Controller"
 version: "0.0.4.8"
 slug: "cync-controller"
-image: "ghcr.io/jslamartina/hass-addons:{arch}-cync-controller"
 description: "Local controller for Cync lighting (DNS redirection required)"
+image: "ghcr.io/jslamartina/{arch}-addon-cync-controller"
 arch:
   - aarch64
   - amd64
