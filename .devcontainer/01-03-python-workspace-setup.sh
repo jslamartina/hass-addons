@@ -16,14 +16,4 @@ if [ -d "${CYNC_CONTROLLER_DIR}" ]; then
   fi
 fi
 
-# Create a development script for easy testing
-cat > "${WORKSPACE_DIRECTORY}/test-cync-controller.sh" << EOF
-#!/bin/bash
-# Test script for cync-controller development
-cd "${CYNC_CONTROLLER_DIR}"
-python -c "from cync_lan.main import main; main()" --enable-export
-EOF
-
-chmod +x "${WORKSPACE_DIRECTORY}/test-cync-controller.sh"
-
 echo "Development workspace setup complete"

@@ -6,6 +6,60 @@ This directory contains automated tools for testing and configuring the Cync Con
 
 These scripts use the **Home Assistant Supervisor API** to programmatically configure add-ons, bypassing the limitations of manual configuration file editing in the devcontainer environment.
 
+## Credentials File Setup
+
+Before using these scripts, you need to configure the credentials file.
+
+### Creating `hass-credentials.env`
+
+1. **Copy the example file:**
+   ```bash
+   cp hass-credentials.env.example hass-credentials.env
+   ```
+
+2. **Edit the file with your credentials:**
+   ```bash
+   nano hass-credentials.env
+   ```
+
+3. **Required fields:**
+
+   | Field                     | Description                                      | Default/Example              |
+   | ------------------------- | ------------------------------------------------ | ---------------------------- |
+   | `HASS_USERNAME`           | Home Assistant UI username                       | `dev`                        |
+   | `HASS_PASSWORD`           | Home Assistant UI password                       | `dev`                        |
+   | `CYNC_USERNAME`           | Your Cync/C by GE account email                  | `your-email@example.com`     |
+   | `CYNC_PASSWORD`           | Your Cync/C by GE account password               | `your-cync-password`         |
+   | `MQTT_USER`               | MQTT broker username                             | `dev`                        |
+   | `MQTT_PASS`               | MQTT broker password                             | `dev`                        |
+   | `LONG_LIVED_ACCESS_TOKEN` | HA API token (optional, auto-extracted if blank) | Leave blank for auto-extract |
+
+4. **Security notes:**
+   - ✅ `hass-credentials.env` is gitignored (never committed)
+   - ✅ File is only used locally in devcontainer
+   - ✅ Use test credentials for development (`dev`/`dev` for HA and MQTT)
+   - ⚠️ Never commit this file with real credentials
+
+**Example file contents:**
+```bash
+# Home Assistant credentials
+HASS_USERNAME=dev
+HASS_PASSWORD=dev
+
+# Cync account credentials
+CYNC_USERNAME=your-email@example.com
+CYNC_PASSWORD=your-cync-password
+
+# MQTT broker credentials
+MQTT_USER=dev
+MQTT_PASS=dev
+
+# Optional: Long-lived access token (leave blank for auto-extract)
+LONG_LIVED_ACCESS_TOKEN=
+```
+
+---
+
 ## Scripts
 
 ### `setup-fresh-ha.sh`
@@ -30,13 +84,13 @@ Automated setup script for fresh Home Assistant installations.
    - Adds hassio-addons repository
    - Installs EMQX MQTT broker add-on
    - Configures EMQX with credentials
-   - Starts EMQX service
+   - Starts EMQX service asynchronously with state polling
 
 3. **Cync Controller Installation**
    - Installs local Cync Controller add-on
    - Configures with test Cync credentials (placeholder)
    - Configures MQTT connection to EMQX
-   - Starts Cync Controller service
+   - Starts Cync Controller service asynchronously with state polling
 
 4. **Verification**
    - Checks all services are running
@@ -73,9 +127,18 @@ CREDENTIALS_FILE=/path/to/creds.env ./setup-fresh-ha.sh
 [setup-fresh-ha.sh] ✅ User created successfully
 [setup-fresh-ha.sh] ✅ Onboarding completed
 [setup-fresh-ha.sh] ✅ EMQX installed successfully
-[setup-fresh-ha.sh] ✅ EMQX is running
+[setup-fresh-ha.sh] Starting EMQX add-on...
+[setup-fresh-ha.sh] Current EMQX state: stopped
+[setup-fresh-ha.sh] Issuing start command...
+[setup-fresh-ha.sh] Start command issued, waiting for addon to become ready...
+[setup-fresh-ha.sh] Waiting for EMQX to start... (1/24, state: startup)
+[setup-fresh-ha.sh] Waiting for EMQX to start... (2/24, state: startup)
+[setup-fresh-ha.sh] ✅ EMQX started successfully
 [setup-fresh-ha.sh] ✅ Cync Controller installed successfully
-[setup-fresh-ha.sh] ✅ Cync Controller is running
+[setup-fresh-ha.sh] Starting Cync Controller add-on...
+[setup-fresh-ha.sh] Current Cync Controller state: stopped
+[setup-fresh-ha.sh] Issuing start command...
+[setup-fresh-ha.sh] ✅ Cync Controller started successfully
 [setup-fresh-ha.sh] ✅ Setup completed successfully!
 
 Next steps:
@@ -105,7 +168,17 @@ The script is safe to re-run:
 - Skips onboarding if already complete
 - Skips add-on installation if already installed
 - Updates configuration if needed
+- Detects already-running addons and skips start
 - Always safe to run multiple times
+
+**Startup Behavior:**
+
+The script uses **async start + state polling** to handle add-on startup:
+- Starts add-ons in background (non-blocking)
+- Polls actual add-on state every 5 seconds
+- Shows real-time progress: `stopped` → `startup` → `started`
+- Timeout protection: 120s for EMQX, 60s for Cync Controller
+- Works reliably even when `ha` CLI has internal timeouts
 
 **Requirements:**
 
@@ -116,12 +189,14 @@ The script is safe to re-run:
 
 **Troubleshooting:**
 
-| Issue                                 | Solution                                    |
-| ------------------------------------- | ------------------------------------------- |
-| "Credentials file not found"          | Create `.hass-credentials.env` in repo root |
-| "Could not retrieve SUPERVISOR_TOKEN" | Ensure hassio_cli container is running      |
-| "EMQX installation timed out"         | Check internet connection and retry         |
-| "Cync Controller failed to start"             | Check logs: `ha addons logs local_cync-controller` |
+| Issue                                 | Solution                                                                   |
+| ------------------------------------- | -------------------------------------------------------------------------- |
+| "Credentials file not found"          | Create `.hass-credentials.env` in repo root                                |
+| "Could not retrieve SUPERVISOR_TOKEN" | Ensure hassio_cli container is running                                     |
+| "EMQX installation timed out"         | Check internet connection and retry                                        |
+| "Cync Controller failed to start"     | Check logs: `ha addons logs local_cync-controller`                         |
+| Stuck on "Waiting to start"           | Script polls for up to 120s - check addon logs if timeout occurs           |
+| "Failed to start after X attempts"    | Addon didn't reach `started` state in time - check logs and manually start |
 
 ---
 
