@@ -2,7 +2,7 @@
   "folders": [
     {
       "name": "hass-addons",
-      "path": "/mnt/supervisor/addons/local/hass-addons",
+      "path": ".",
     },
   ],
   "settings": {

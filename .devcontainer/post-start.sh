@@ -98,13 +98,13 @@ COMPONENTS=("core" "audio" "dns" "cli" "observer" "multicast")
 WAIT_INTERVAL=2
 while [ $TOTAL_WAIT -lt $MAX_WAIT_SECONDS ]; do
   ALL_READY=true
-  SUPERVISOR_HEALTHY=$(curl -s -H "Authorization: Bearer ${TOKEN}" http://supervisor/supervisor/info | jq -r '.data.healthy' 2> /dev/null || echo "false")
+  SUPERVISOR_HEALTHY=$(ha supervisor info --raw-json 2> /dev/null | jq -r '.data.healthy' || echo "false")
 
   echo "  Supervisor healthy: $SUPERVISOR_HEALTHY"
 
-  # Check each component
+  # Check each component using ha CLI (works reliably from devcontainer)
   for component in "${COMPONENTS[@]}"; do
-    VERSION=$(curl -s -H "Authorization: Bearer ${TOKEN}" "http://supervisor/${component}/info" | jq -r '.data.version' 2> /dev/null || echo "null")
+    VERSION=$(ha "$component" info --raw-json 2> /dev/null | jq -r '.data.version' || echo "null")
 
     if [ "$VERSION" = "null" ] || [ -z "$VERSION" ]; then
       echo "    ❌ $component: Not ready"

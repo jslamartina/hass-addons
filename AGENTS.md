@@ -32,6 +32,8 @@ npm run lint:python:fix           # Auto-fix Python issues
 - `docs/user/dns-setup.md` - DNS redirection setup (required for addon to work)
 - `CHANGELOG.md` - Version history and breaking changes
 - `hass-credentials.env` - Home Assistant login credentials (Username: `dev`, Password: `dev`)
+  - See `hass-credentials.env.example` for file format and field descriptions
+  - Copy example file and fill in your credentials before running setup scripts
 - `docs/developer/linting-setup.md` - Linting setup summary (Ruff configuration and npm scripts)
 
 **Important sections:**
@@ -144,6 +146,10 @@ This project uses a devcontainer based on the Home Assistant add-on development 
 # 2. BACKUP RESTORE CURRENTLY DISABLED (see .devcontainer/post-start.sh)
 #    - Comment out lines 131-216 to re-enable test backup restoration
 # 3. Sets up the hass-addons repository
+
+# For fresh HA setup with EMQX and Cync Controller:
+cd scripts
+./setup-fresh-ha.sh  # Automated onboarding, EMQX install, addon config
 
 # Access Home Assistant
 # URL: http://localhost:8123
@@ -930,20 +936,56 @@ If any errors remain, **STOP and fix them**. Do not proceed with rebuild/restart
 
 ## Useful Commands
 
-| Command                                          | Purpose                                                 |
-| ------------------------------------------------ | ------------------------------------------------------- |
+| Command                                                 | Purpose                                                 |
+| ------------------------------------------------------- | ------------------------------------------------------- |
 | `ha addons logs local_cync-controller`                  | View add-on logs for debugging                          |
-| `./scripts/configure-addon.sh`                   | Configure add-on settings programmatically              |
+| `./scripts/configure-addon.sh`                          | Configure add-on settings programmatically              |
 | `ha addons restart local_cync-controller`               | Restart the add-on (for non-Python changes)             |
 | `cd cync-controller && ./rebuild.sh`                    | **Rebuild add-on** (REQUIRED after Python code changes) |
 | `ha addons rebuild local_cync-controller`               | Alternative rebuild command using HA CLI                |
-| `npm run lint`                                   | Run all linters (Python + Shell + Format check)         |
-| `npm run lint:python:fix`                        | Auto-fix Python linting issues with Ruff                |
-| `ruff check .`                                   | Check Python code for linting errors                    |
-| `./scripts/lint-all.sh`                          | Alternative: Run all linters via shell script           |
+| `npm run lint`                                          | Run all linters (Python + Shell + Format check)         |
+| `npm run lint:python:fix`                               | Auto-fix Python linting issues with Ruff                |
+| `ruff check .`                                          | Check Python code for linting errors                    |
+| `./scripts/lint-all.sh`                                 | Alternative: Run all linters via shell script           |
 | `docker exec -it addon_local_cync-controller /bin/bash` | Access add-on container shell for debugging             |
-| `./scripts/test-cloud-relay.sh`                  | Run comprehensive cloud relay test suite                |
-| `sudo python3 scripts/delete-mqtt-safe.py`       | Clean up stale MQTT entities safely                     |
+| `./scripts/test-cloud-relay.sh`                         | Run comprehensive cloud relay test suite                |
+| `sudo python3 scripts/delete-mqtt-safe.py`              | Clean up stale MQTT entities safely                     |
+
+#### Running Scripts That Access Supervisor API
+
+**⚠️ Important:** Scripts that need to access the Home Assistant Supervisor API (e.g., `configure-addon.sh`, `setup-fresh-ha.sh`) **MUST be run from within the `hassio_cli` container** because the `supervisor` hostname is only resolvable inside supervisor-managed containers.
+
+**When running from the devcontainer shell:**
+
+```bash
+# ❌ WRONG - Will fail with "Could not resolve host: supervisor"
+./scripts/configure-addon.sh get
+
+# ✅ CORRECT - Use ha CLI commands directly (automatically runs in hassio_cli)
+ha addons info local_cync-controller --raw-json | jq '.data.options'
+
+# OR: Run individual curl commands inside hassio_cli
+docker exec hassio_cli curl -sf \
+  -H "Authorization: Bearer $SUPERVISOR_TOKEN" \
+  http://supervisor/addons/local_cync-controller/options
+```
+
+**Why this matters:**
+- The devcontainer shell is **outside** the Home Assistant Supervisor network
+- The `supervisor` hostname only resolves inside supervisor-managed containers (like `hassio_cli`, `hassio_supervisor`, and add-on containers)
+- Scripts using `curl http://supervisor/...` need to run inside `hassio_cli` OR use `ha` CLI commands
+- The `hassio_cli` container **does not** have access to the devcontainer filesystem
+
+**Recommended approach:**
+- **Use `ha` CLI commands directly** - They automatically run inside hassio_cli and handle authentication
+- **For complex operations**: Create helper scripts that use `ha` CLI internally instead of direct Supervisor API calls
+- **For one-off API calls**: Use `docker exec hassio_cli` with inline curl commands
+
+**Scripts behavior:**
+- `scripts/configure-addon.sh` - Uses direct Supervisor API, requires `SUPERVISOR_TOKEN` access
+- `scripts/setup-fresh-ha.sh` - Uses `docker exec hassio_cli curl ...` internally
+- `scripts/test-cloud-relay.sh` - ✅ Works from devcontainer (uses `ha` CLI)
+- `cync-controller/rebuild.sh` - ✅ Works from devcontainer (uses `ha` CLI)
 
 ### Testing Add-on Configuration Changes
 

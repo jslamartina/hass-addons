@@ -141,3 +141,32 @@ The `supervisor_run` script has its own Docker initialization (via `start_docker
 
 Any duplicate Docker startup in post-start.sh will cause the hang.
 
+### Supervisor API Access from Devcontainer
+
+**The devcontainer is NOT in the hassio Docker network**, which means the `supervisor` hostname doesn't resolve. This affects how you check component health during startup.
+
+**What doesn't work:**
+```bash
+# ❌ This fails - hostname 'supervisor' doesn't resolve
+curl -s http://supervisor/core/info
+```
+
+**What works:**
+```bash
+# ✅ Use ha CLI - automatically handles networking
+ha core info --raw-json | jq -r '.data.version'
+
+# ✅ Or use the supervisor IP directly
+SUPERVISOR_IP=$(docker network inspect hassio | jq -r '.[0].Containers | to_entries[] | select(.value.Name | contains("supervisor")) | .value.IPv4Address' | cut -d'/' -f1)
+curl -s -H "Authorization: Bearer ${TOKEN}" "http://${SUPERVISOR_IP}/core/info"
+```
+
+**Why this matters:**
+The health check in `post-start.sh` (lines 89-132) uses `ha` CLI commands instead of direct curl requests because:
+1. The devcontainer runs in the default Docker bridge network
+2. The supervisor and plugins run in the isolated `hassio` network (172.30.32.0/24)
+3. DNS resolution for `supervisor` only works within the `hassio` network
+4. The `ha` CLI connects via Unix socket or other mechanisms that work across networks
+
+**Historical issue:** Prior to this fix, the health check script used curl with `http://supervisor/` which caused 240-second timeouts during startup because all health checks failed silently.
+
