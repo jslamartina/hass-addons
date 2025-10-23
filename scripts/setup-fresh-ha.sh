@@ -3,6 +3,12 @@
 # Creates user, installs EMQX and Cync Controller add-ons with configuration
 set -e
 
+# Error handling - show better error messages when script fails
+trap 'echo "ERROR: Script failed at line $LINENO with exit code $?"; echo "Last command that failed: $BASH_COMMAND"; echo "Stack trace:"; caller; exit 1' ERR
+
+# Also trap EXIT to catch any unexpected exits
+trap 'if [ $? -ne 0 ]; then echo "ERROR: Script exited with code $?"; fi' EXIT
+
 LP="[setup-fresh-ha.sh]"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
@@ -151,10 +157,13 @@ create_first_user() {
 
     # Try to extract auth token from response
     local auth_token
-    auth_token=$(echo "$body" | jq -r '.access_token // empty' 2> /dev/null)
+    auth_token=$(echo "$body" | jq -r '.access_token // .auth_code // empty' 2> /dev/null)
     if [ -n "$auth_token" ]; then
       log_info "Auth token received from user creation"
       echo "$auth_token"
+    else
+      log_warn "No auth token found in response"
+      log_warn "Response body: $body"
     fi
     return 0
   else
@@ -673,36 +682,88 @@ main() {
   # Step 2: Wait for HA to be ready
   wait_for_ha
 
-  # Step 3: Check if onboarding is needed and perform it
+  # Step 3: Handle onboarding if needed
   if check_onboarding_status; then
-    create_first_user
+    log_info "Home Assistant needs onboarding, creating first user..."
+
+    local auth_token
+    auth_token=$(create_first_user)
+
+    if [ -z "$auth_token" ]; then
+      log_error "Failed to create first user during onboarding"
+      exit 1
+    fi
+
+    log_success "First user created successfully"
     complete_onboarding
     log_info "Waiting for Home Assistant to initialize after onboarding..."
     sleep 10
   else
-    log_info "Skipping onboarding (already completed)"
+    log_info "Onboarding already completed, proceeding with token creation"
   fi
 
-  # Step 4: Get supervisor token for add-on management
+  # Step 4: Create fresh long-lived access token using WebSocket script
+  log_info "Creating fresh long-lived access token using WebSocket script..."
+
+  # Use the WebSocket token creation script that works with just username/password
+  local token_script="$REPO_ROOT/scripts/create-token-websocket.js"
+
+  if [ -f "$token_script" ]; then
+    log_info "Running WebSocket token creation script..."
+
+    # Run the token creation script with proper environment variables
+    local token_output
+    token_output=$(HA_URL="$HA_URL" HASS_USERNAME="$HASS_USERNAME" HASS_PASSWORD="$HASS_PASSWORD" node "$token_script" 2>&1) || {
+      log_error "Failed to create token using WebSocket script"
+      log_error "Output: $token_output"
+      exit 1
+    }
+
+    # Extract the token from the output (look for JWT pattern)
+    local new_token
+    new_token=$(echo "$token_output" | grep -oE "eyJ[A-Za-z0-9_-]*\.[A-Za-z0-9_-]*\.[A-Za-z0-9_-]*" | head -n1)
+
+    if [ -n "$new_token" ]; then
+      log_success "Successfully created fresh long-lived token using WebSocket script"
+
+      # Save the long-lived access token
+      if grep -q "LONG_LIVED_ACCESS_TOKEN=" "$CREDENTIALS_FILE" 2> /dev/null; then
+        sed -i "s|^LONG_LIVED_ACCESS_TOKEN=.*|LONG_LIVED_ACCESS_TOKEN=$new_token|" "$CREDENTIALS_FILE"
+      else
+        echo "LONG_LIVED_ACCESS_TOKEN=$new_token" >> "$CREDENTIALS_FILE"
+      fi
+
+      log_success "Updated credentials file with fresh long-lived access token"
+    else
+      log_error "Failed to extract token from WebSocket script output"
+      log_error "Output: $token_output"
+      exit 1
+    fi
+  else
+    log_error "WebSocket token creation script not found: $token_script"
+    exit 1
+  fi
+
+  # Step 5: Get supervisor token for add-on management
   get_supervisor_token
   wait_for_supervisor
 
-  # Step 5: Add EMQX repository
+  # Step 6: Add EMQX repository
   add_emqx_repository
 
-  # Step 6: Install and configure EMQX
+  # Step 7: Install and configure EMQX
   install_emqx
   configure_emqx
   enable_emqx_sidebar
   start_emqx
 
-  # Step 7: Install and configure Cync Controller
+  # Step 8: Install and configure Cync Controller
   install_cync_lan
   configure_cync_lan
   enable_cync_sidebar
   start_cync_lan
 
-  # Step 8: Verify everything is running
+  # Step 9: Verify everything is running
   verify_setup
 
   echo "========================================="

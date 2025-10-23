@@ -1,0 +1,64 @@
+---
+description: PR submission checklist and guidelines
+---
+
+# Pull Request Checklist
+
+Before submitting a PR, ensure all items are complete.
+
+## Code Quality
+
+- ✅ Run `npm run lint` - ALL linting errors fixed
+- ✅ Run `npm run format` - Code properly formatted
+- ✅ No console.log/print statements left (use logging functions)
+- ✅ Comments added for complex logic
+- ✅ Type hints added for Python functions
+
+## Testing
+
+- ✅ Tested in devcontainer
+- ✅ Verified with `ha addons logs` for errors
+- ✅ Fresh HA setup tested (if relevant)
+- ✅ No breaking changes to existing functionality
+
+## Documentation
+
+- ✅ Updated [CHANGELOG.md](mdc:CHANGELOG.md) for user-facing changes
+- ✅ Added comments for complex code sections
+- ✅ Updated [docs/developer/](mdc:docs/developer/) if implementation details changed
+- ✅ Updated [docs/user/](mdc:docs/user/) if user-facing behavior changed
+
+## Commits & PR
+
+- ✅ Commits are logical and well-described
+- ✅ PR title format: `[component] Brief description`
+- ✅ PR description explains what and why
+- ✅ No `.env` files or credentials committed
+- ✅ Links to related issues (if any)
+
+## Python-Specific
+
+- ✅ Used `npm run lint:python:fix` to auto-fix
+- ✅ Added docstrings to new functions
+- ✅ No unused imports
+- ✅ Rebuild tested: `cd cync-controller && ./rebuild.sh`
+
+## Shell Script-Specific
+
+- ✅ Scripts are idempotent (safe to run multiple times)
+- ✅ Error handling implemented (set -e, || { ... })
+- ✅ Logging used appropriately (log_info, log_error, etc.)
+- ✅ Variables are quoted properly: `"$VAR"`
+- ✅ ShellCheck warnings resolved
+
+## Files NOT to Commit
+
+- ❌ `hass-credentials.env` - Contains dev credentials
+- ❌ Docker images or build artifacts
+- ❌ Linting output files
+- ❌ Temporary/debug files
+
+## Related
+
+- [CONTRIBUTING.md](mdc:CONTRIBUTING.md) - Full guidelines
+- [AGENTS.md](mdc:AGENTS.md) - Development workflow

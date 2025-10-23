@@ -1,0 +1,79 @@
+---
+alwaysApply: true
+---
+
+# Important "DON'T" Rules
+
+⚠️ **These rules prevent critical bugs.** Violating them can cause silent failures.
+
+## Don't Bypass Authentication
+
+❌ **DON'T:** Skip callback registration in command methods
+- Causes commands to send but devices don't respond
+- Results in silent failures - very hard to debug
+- Always include proper ACK handling
+
+✅ **DO:** Always register callbacks for device commands
+```python
+async def send_command(self, device_id, command):
+    callback = await self.register_callback(device_id)
+    # Send command with callback
+    # Wait for ACK with timeout
+```
+
+## Don't Auto-Refresh After ACKs
+
+❌ **DON'T:** Mark devices offline immediately from mesh info
+- Causes cascading refreshes that break subsequent commands
+- Can turn simple commands into multi-minute operations
+
+✅ **DO:** Use offline_count with threshold to prevent flickering
+
+## Don't Hardcode Credentials
+
+❌ **DON'T:** Hardcode IP addresses, usernames, or tokens
+- Makes debugging impossible
+- Breaks in different environments
+- Creates security issues
+
+✅ **DO:** Use config options, environment variables, or discovery
+
+## Don't Skip Python Rebuilds
+
+❌ **DON'T:** Just restart the add-on after editing Python files
+- Docker image isn't rebuilt, changes won't appear
+- Wastes debugging time looking at old code
+
+✅ **DO:** Always use `cd cync-controller && ./rebuild.sh`
+
+## Don't Remove Linting
+
+❌ **DON'T:** Commit code with linting errors
+- Breaks CI/CD pipelines
+- Makes codebase harder to maintain
+- Can introduce real bugs (unused imports, etc.)
+
+✅ **DO:** Run `npm run lint` and fix ALL issues before committing
+
+## Don't Start Docker Manually
+
+❌ **DON'T:** Start Docker manually in post-start.sh
+- supervisor_run already handles this
+- Causes conflicts and startup failures
+
+✅ **DO:** Let supervisor_run initialize Docker
+
+## Don't Modify Backup Restore Without Testing
+
+❌ **DON'T:** Change backup restore logic without thorough testing
+- Can break development workflows
+- See [.devcontainer/README.md](mdc:.devcontainer/README.md)
+
+✅ **DO:** Test in devcontainer before committing
+
+## For More Details
+
+See:
+- [AGENTS.md](mdc:AGENTS.md) - Full guidelines
+- [CONTRIBUTING.md](mdc:CONTRIBUTING.md) - Standards
+- [Architecture Guide](mdc:docs/developer/architecture.md) - Design details

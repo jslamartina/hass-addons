@@ -84,6 +84,11 @@ function run_supervisor() {
     echo "Configured /tmp/supervisor_data as shared mount"
   fi
 
+  # Get the devcontainer IP for journal gateway access
+  # Use the first non-loopback IP from hostname -I
+  DEVCONTAINER_IP=$(hostname -I | awk '{print $1}')
+  echo "Using devcontainer IP for journal gateway: $DEVCONTAINER_IP"
+
   docker run --rm --privileged \
     --name hassio_supervisor \
     --privileged \
@@ -99,6 +104,7 @@ function run_supervisor() {
     -e SUPERVISOR_NAME=hassio_supervisor \
     -e SUPERVISOR_DEV=1 \
     -e SUPERVISOR_MACHINE="qemuarm-64" \
+    -e SUPERVISOR_SYSTEMD_JOURNAL_GATEWAYD_URL="http://${DEVCONTAINER_IP}:19531" \
     "ghcr.io/home-assistant/aarch64-hassio-supervisor:${SUPERVISOR_VERSION}"
 }
 

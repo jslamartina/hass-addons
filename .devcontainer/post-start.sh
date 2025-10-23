@@ -9,7 +9,50 @@ echo "========================================="
 echo "Running devcontainer bootstrap..."
 bash /usr/bin/devcontainer_bootstrap
 
+# Step 0: Configure Docker daemon with journald logging (BEFORE Docker starts)
+echo "Step 0: Configuring Docker daemon with journald logging..."
+DOCKER_CONFIG="/etc/docker/daemon.json"
+
+# Install systemd-journal-remote if not already installed
+if ! dpkg -l | grep -q systemd-journal-remote; then
+  echo "  Installing systemd-journal-remote..."
+  sudo apt-get update -qq
+  sudo apt-get install -y systemd-journal-remote
+fi
+
+# Configure Docker daemon with journald logging
+if [ ! -f "$DOCKER_CONFIG" ] || ! grep -q '"log-driver": "journald"' "$DOCKER_CONFIG"; then
+  echo "  Updating Docker daemon configuration..."
+  sudo tee "$DOCKER_CONFIG" > /dev/null << 'DOCKERCONFIG'
+{
+    "log-driver": "journald",
+    "storage-driver": "overlay2"
+}
+DOCKERCONFIG
+  echo "  ✅ Docker configured with journald logging"
+else
+  echo "  ✅ Docker already configured with journald logging"
+fi
+
 # Note: supervisor_run will start Docker itself, so we skip that step here
+
+# Step 3.5: Start systemd-journal-gatewayd for addon logs
+echo "Step 3.5: Starting systemd-journal-gatewayd for addon logs..."
+if ! pgrep -f systemd-journal-gatewayd > /dev/null; then
+  # Use systemd-socket-activate to simulate systemd socket activation
+  nohup systemd-socket-activate -l 19531 /lib/systemd/systemd-journal-gatewayd > /tmp/journal-gatewayd.log 2>&1 &
+  sleep 2
+  # Verify it's listening on port 19531
+  if netstat -tln 2> /dev/null | grep -q ":19531" || ss -tln 2> /dev/null | grep -q ":19531"; then
+    echo "  ✅ systemd-journal-gatewayd started on port 19531"
+  else
+    echo "  ⚠️  WARNING: Failed to start systemd-journal-gatewayd"
+    echo "  Check /tmp/journal-gatewayd.log for errors"
+    cat /tmp/journal-gatewayd.log
+  fi
+else
+  echo "  ✅ systemd-journal-gatewayd already running"
+fi
 
 # Step 4: Start Home Assistant Supervisor (this will start Docker internally)
 echo "Starting Home Assistant Supervisor..."
@@ -221,17 +264,22 @@ echo "Note: Add-on logs accessible via Docker commands (aliases available)"
 # fi
 echo "  ⚠️  Backup restore is DISABLED - starting from fresh install"
 
-# Step 9: Add shell aliases (Docker-based since journal-gatewayd unavailable)
+# Step 9: Add shell aliases (journald-based now that it's available)
 echo "Adding shell aliases..."
 cat >> ~/.zshrc << 'EOF'
 
-# Add-on log aliases (using Docker since journal-gatewayd unavailable in devcontainer)
-alias cync-logs='docker logs addon_local_cync-controller'
-alias cync-logs-follow='docker logs -f addon_local_cync-controller'
-alias cync-logs-tail='docker logs --tail 100 addon_local_cync-controller'
-alias emqx-logs='docker logs addon_a0d7b954_emqx'
-alias emqx-logs-follow='docker logs -f addon_a0d7b954_emqx'
-alias emqx-logs-tail='docker logs --tail 100 addon_a0d7b954_emqx'
+# Add-on log aliases (using journalctl now that journald logging is enabled)
+alias cync-logs='sudo journalctl CONTAINER_NAME=addon_local_cync-controller --no-pager'
+alias cync-logs-follow='sudo journalctl CONTAINER_NAME=addon_local_cync-controller -f'
+alias cync-logs-tail='sudo journalctl CONTAINER_NAME=addon_local_cync-controller --no-pager --lines=100'
+alias emqx-logs='sudo journalctl CONTAINER_NAME=addon_a0d7b954_emqx --no-pager'
+alias emqx-logs-follow='sudo journalctl CONTAINER_NAME=addon_a0d7b954_emqx -f'
+alias emqx-logs-tail='sudo journalctl CONTAINER_NAME=addon_a0d7b954_emqx --no-pager --lines=100'
+
+# Docker-based log aliases (fallback for direct container access)
+alias cync-logs-docker='docker logs addon_local_cync-controller'
+alias cync-logs-docker-follow='docker logs -f addon_local_cync-controller'
+alias emqx-logs-docker='docker logs addon_a0d7b954_emqx'
 
 # Add-on control aliases
 alias cync-restart='ha addon restart local_cync-controller'

@@ -42,7 +42,8 @@
     "WORKSPACE_NAME": "hass-cync-dev",
     "WORKSPACE_DIRECTORY": "${containerWorkspaceFolder}",
     "CONTAINER_WORKSPACE_FOLDER": "${containerWorkspaceFolder}",
-    "GIT_EDITOR": "code --wait"
+    "GIT_EDITOR": "code --wait",
+    "SETUP_FRESH_HA": "true"
   },
   "remoteUser": "root",
   "customizations": {
@@ -50,7 +51,6 @@
       "extensions": [
         "timonwong.shellcheck",
         "esbenp.prettier-vscode",
-        "ms-vscode.vscode-json",
         "ms-python.python",
         "ms-python.vscode-pylance",
         "charliermarsh.ruff",
