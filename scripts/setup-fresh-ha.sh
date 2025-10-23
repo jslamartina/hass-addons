@@ -22,6 +22,13 @@ fi
 CREDENTIALS_FILE="${CREDENTIALS_FILE:-$REPO_ROOT/hass-credentials.env}"
 SUPERVISOR_TOKEN=""
 
+# MQTT integration defaults
+MQTT_BROKER_HOST_DEFAULT="a0d7b954-emqx"
+MQTT_BROKER_HOST_FALLBACK="localhost"
+MQTT_BROKER_PORT=1883
+MQTT_ACTIVE_HOST=""
+MQTT_LAST_ABORT_REASON=""
+
 # Add-on slugs
 EMQX_SLUG="a0d7b954_emqx"
 CYNC_SLUG="local_cync-controller"
@@ -629,6 +636,294 @@ start_cync_lan() {
   return 0
 }
 
+# Wait for MQTT broker to accept TCP connections and pick the active host
+wait_for_mqtt_broker() {
+  log_info "Waiting for MQTT broker to be reachable..."
+
+  local hosts=("$MQTT_BROKER_HOST_DEFAULT" "$MQTT_BROKER_HOST_FALLBACK")
+  local selected_host=""
+  local host
+
+  for host in "${hosts[@]}"; do
+    if [ -z "$host" ]; then
+      continue
+    fi
+
+    log_info "Checking MQTT broker at $host:$MQTT_BROKER_PORT..."
+
+    local attempt=0
+    local max_attempts=24
+    local retry_delay=5
+
+    while [ $attempt -lt $max_attempts ]; do
+      attempt=$((attempt + 1))
+
+      if docker exec hassio_cli sh -c "nc -z $host $MQTT_BROKER_PORT >/dev/null 2>&1"; then
+        selected_host="$host"
+        break
+      fi
+
+      log_info "MQTT broker not reachable yet (host: $host, attempt $attempt/$max_attempts)"
+      sleep $retry_delay
+    done
+
+    if [ -n "$selected_host" ]; then
+      break
+    fi
+  done
+
+  if [ -z "$selected_host" ]; then
+    log_warn "Could not reach MQTT broker on $MQTT_BROKER_HOST_DEFAULT or $MQTT_BROKER_HOST_FALLBACK"
+    return 1
+  fi
+
+  MQTT_ACTIVE_HOST="$selected_host"
+  log_success "MQTT broker reachable at $MQTT_ACTIVE_HOST:$MQTT_BROKER_PORT"
+  return 0
+}
+
+# Build the user_input payload for the current MQTT config flow step
+mqtt_build_user_input() {
+  local step_json="$1"
+
+  echo "$step_json" | jq -c \
+    --arg broker "$MQTT_ACTIVE_HOST" \
+    --arg port "$MQTT_BROKER_PORT" \
+    --arg username "${MQTT_USERNAME:-}" \
+    --arg password "${MQTT_PASSWORD:-}" \
+    --arg client_id "cync-controller-setup" \
+    'reduce (.data_schema // [])[] as $field ({};
+      if $field.name == "broker" then . + {"broker": $broker}
+      elif $field.name == "port" then . + {"port": ($port | tonumber)}
+      elif $field.name == "username" then
+        if ($username | length) > 0 then . + {"username": $username} else . end
+      elif $field.name == "password" then
+        if ($password | length) > 0 then . + {"password": $password} else . end
+      elif $field.name == "client_id" then . + {"client_id": $client_id}
+      elif $field.name == "next_step_id" then . + {"next_step_id": "broker"}
+      elif $field.name == "discovery" then . + {"discovery": true}
+      elif $field.name == "discovery_prefix" then . + {"discovery_prefix": "homeassistant"}
+      elif $field.name == "protocol" then . + {"protocol": "3.1.1"}
+      elif $field.name == "transport" then . + {"transport": "tcp"}
+      elif $field.name == "tls" then . + {"tls": false}
+      elif $field.name == "tls_insecure" then . + {"tls_insecure": false}
+      else .
+      end)'
+}
+
+# Execute the MQTT config flow via Home Assistant REST API
+mqtt_run_config_flow() {
+  MQTT_LAST_ABORT_REASON=""
+
+  local auth_token="$LONG_LIVED_ACCESS_TOKEN"
+
+  if [ -z "$auth_token" ]; then
+    log_error "Missing long-lived access token; cannot configure MQTT integration"
+    return 1
+  fi
+
+  local start_payload='{"handler":"mqtt","show_advanced_options":true}'
+  local response
+
+  if ! response=$(curl -sf -X POST "$HA_URL/api/config/config_entries/flow" \
+    -H "Authorization: Bearer $auth_token" \
+    -H "Content-Type: application/json" \
+    -d "$start_payload" 2>&1); then
+    log_error "Failed to start MQTT config flow via REST API"
+    log_error "curl output: $response"
+    return 1
+  fi
+
+  local step_json="$response"
+  local step_type
+  step_type=$(echo "$step_json" | jq -r '.type // empty' 2> /dev/null || echo "")
+
+  if [ -z "$step_type" ]; then
+    log_error "Unexpected response when starting MQTT config flow"
+    echo "$step_json" | jq '.' 2> /dev/null || echo "$step_json"
+    return 1
+  fi
+
+  if [ "$step_type" = "abort" ]; then
+    MQTT_LAST_ABORT_REASON=$(echo "$step_json" | jq -r '.reason // empty' 2> /dev/null || echo "")
+
+    if [ "$MQTT_LAST_ABORT_REASON" = "already_configured" ] || [ "$MQTT_LAST_ABORT_REASON" = "single_instance_allowed" ]; then
+      log_success "MQTT integration already configured"
+      return 0
+    fi
+
+    log_warn "MQTT config flow aborted (reason: ${MQTT_LAST_ABORT_REASON:-unknown})"
+    return 1
+  fi
+
+  if [ "$step_type" = "create_entry" ]; then
+    log_success "MQTT integration created during initial flow step"
+    return 0
+  fi
+
+  if [ "$step_type" != "form" ] && [ "$step_type" != "menu" ]; then
+    log_warn "Unexpected MQTT flow step type: $step_type"
+    echo "$step_json" | jq '.' 2> /dev/null || echo "$step_json"
+    return 1
+  fi
+
+  while true; do
+    local flow_id
+    flow_id=$(echo "$step_json" | jq -r '.flow_id // empty' 2> /dev/null || echo "")
+
+    if [ -z "$flow_id" ]; then
+      log_error "Missing flow_id in MQTT config flow response"
+      echo "$step_json" | jq '.' 2> /dev/null || echo "$step_json"
+      return 1
+    fi
+
+    local user_input
+    user_input=$(mqtt_build_user_input "$step_json")
+
+    if [ -z "$user_input" ]; then
+      log_warn "Unable to build MQTT config user_input payload"
+      echo "$step_json" | jq '.' 2> /dev/null || echo "$step_json"
+      return 1
+    fi
+
+    local request_body
+    if [ "$step_type" = "menu" ]; then
+      # For menu steps, Home Assistant expects a top-level next_step_id
+      request_body='{"next_step_id":"broker"}'
+    else
+      # For form steps, submit fields at the top level (not under user_input)
+      request_body="$user_input"
+    fi
+
+    if [ "$step_type" = "menu" ]; then
+      # Try top-level selector first
+      if ! response=$(curl -sf -X POST "$HA_URL/api/config/config_entries/flow/$flow_id" \
+        -H "Authorization: Bearer $auth_token" \
+        -H "Content-Type: application/json" \
+        -d '{"next_step_id":"broker"}' 2>&1); then
+        # Fallback to user_input wrapper
+        if ! response=$(curl -sf -X POST "$HA_URL/api/config/config_entries/flow/$flow_id" \
+          -H "Authorization: Bearer $auth_token" \
+          -H "Content-Type: application/json" \
+          -d '{"user_input":{"next_step_id":"broker"}}' 2>&1); then
+          log_error "Failed to submit MQTT config flow step (menu)"
+          log_error "curl output: $response"
+          return 1
+        fi
+      fi
+    else
+      if ! response=$(curl -sf -X POST "$HA_URL/api/config/config_entries/flow/$flow_id" \
+        -H "Authorization: Bearer $auth_token" \
+        -H "Content-Type: application/json" \
+        -d "$request_body" 2>&1); then
+        log_error "Failed to submit MQTT config flow step"
+        log_error "curl output: $response"
+        return 1
+      fi
+    fi
+
+    step_json="$response"
+    step_type=$(echo "$step_json" | jq -r '.type // empty' 2> /dev/null || echo "")
+
+    if [ "$step_type" = "create_entry" ]; then
+      log_success "MQTT integration configured successfully"
+      return 0
+    fi
+
+    if [ "$step_type" = "abort" ]; then
+      MQTT_LAST_ABORT_REASON=$(echo "$step_json" | jq -r '.reason // empty' 2> /dev/null || echo "")
+
+      log_warn "MQTT config flow aborted during submission (reason: ${MQTT_LAST_ABORT_REASON:-unknown})"
+      return 1
+    fi
+
+    if [ "$step_type" != "form" ] && [ "$step_type" != "menu" ]; then
+      log_warn "Unexpected MQTT flow step type encountered: $step_type"
+      echo "$step_json" | jq '.' 2> /dev/null || echo "$step_json"
+      return 1
+    fi
+  done
+}
+
+# Publish a test MQTT message via Home Assistant service call to verify integration
+mqtt_verify_publish() {
+  local auth_token="$LONG_LIVED_ACCESS_TOKEN"
+
+  if [ -z "$auth_token" ]; then
+    log_warn "Skipping MQTT publish verification (missing long-lived access token)"
+    return
+  fi
+
+  local payload='{ "topic": "cync_controller_addon/test", "payload": "ok", "qos": 0, "retain": false }'
+  local tmp_file
+  tmp_file=$(mktemp)
+
+  local http_code
+  http_code=$(curl -s -o "$tmp_file" -w "%{http_code}" -X POST "$HA_URL/api/services/mqtt/publish" \
+    -H "Authorization: Bearer $auth_token" \
+    -H "Content-Type: application/json" \
+    -d "$payload")
+
+  if [ "$http_code" = "200" ]; then
+    log_success "Verified MQTT integration by publishing test message"
+  elif [ "$http_code" = "404" ]; then
+    log_warn "MQTT publish service not available yet (HTTP 404)"
+    cat "$tmp_file" 2> /dev/null || true
+  else
+    log_warn "Unexpected response from MQTT publish service (HTTP $http_code)"
+    cat "$tmp_file" 2> /dev/null || true
+  fi
+
+  rm -f "$tmp_file"
+}
+
+# High-level orchestration for configuring the MQTT integration
+setup_mqtt_integration() {
+  log_info "Setting up Home Assistant MQTT integration via REST API..."
+
+  if [ -z "${MQTT_USER:-}" ] || [ -z "${MQTT_PASS:-}" ]; then
+    log_warn "MQTT credentials missing from $CREDENTIALS_FILE (MQTT_USER/MQTT_PASS); skipping MQTT integration setup"
+    return 0
+  fi
+
+  if ! wait_for_mqtt_broker; then
+    log_warn "Skipping MQTT integration setup because broker is unreachable"
+    return 0
+  fi
+
+  MQTT_USERNAME="$MQTT_USER"
+  MQTT_PASSWORD="$MQTT_PASS"
+  MQTT_ACTIVE_HOST="${MQTT_ACTIVE_HOST:-$MQTT_BROKER_HOST_DEFAULT}"
+
+  if ! command -v jq > /dev/null 2>&1 && ! docker exec hassio_cli sh -c "command -v jq >/dev/null 2>&1"; then
+    log_warn "jq not available; skipping automated MQTT integration setup"
+    return 0
+  fi
+
+  local attempt=0
+  local max_attempts=2
+
+  while [ $attempt -lt $max_attempts ]; do
+    attempt=$((attempt + 1))
+
+    if mqtt_run_config_flow; then
+      mqtt_verify_publish
+      return 0
+    fi
+
+    if [ "$MQTT_LAST_ABORT_REASON" = "cannot_connect" ] && [ $attempt -lt $max_attempts ]; then
+      log_warn "MQTT config flow reported cannot_connect; retrying in 5 seconds..."
+      sleep 5
+      continue
+    fi
+
+    break
+  done
+
+  log_warn "MQTT integration setup did not complete successfully; manual intervention may be required"
+  return 0
+}
+
 # Verify all services are running
 verify_setup() {
   log_info "Verifying setup..."
@@ -726,6 +1021,8 @@ main() {
     if [ -n "$new_token" ]; then
       log_success "Successfully created fresh long-lived token using WebSocket script"
 
+      LONG_LIVED_ACCESS_TOKEN="$new_token"
+
       # Save the long-lived access token
       if grep -q "LONG_LIVED_ACCESS_TOKEN=" "$CREDENTIALS_FILE" 2> /dev/null; then
         sed -i "s|^LONG_LIVED_ACCESS_TOKEN=.*|LONG_LIVED_ACCESS_TOKEN=$new_token|" "$CREDENTIALS_FILE"
@@ -756,6 +1053,7 @@ main() {
   configure_emqx
   enable_emqx_sidebar
   start_emqx
+  setup_mqtt_integration
 
   # Step 8: Install and configure Cync Controller
   install_cync_lan
