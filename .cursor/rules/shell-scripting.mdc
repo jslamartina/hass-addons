@@ -1,0 +1,52 @@
+---
+globs: scripts/**/*.sh,cync-controller/*.sh
+---
+
+# Shell Script Guidelines
+
+All shell scripts in this project must follow strict conventions.
+
+## Requirements
+
+### Idempotency
+- ✅ Scripts must be safe to run multiple times
+- ✅ Check before creating/modifying files
+- ❌ Don't assume fresh state
+
+### Error Handling
+- ✅ Use `set -e` for early exit on errors
+- ✅ Check command exit codes with `|| { ... }`
+- ✅ Log errors with context information
+
+### Logging
+- ✅ Use log functions: `log_info`, `log_success`, `log_warn`, `log_error`
+- ✅ Prefix messages with context
+- ✅ Redirect logs to stderr when needed
+
+Example:
+```bash
+log_info "Starting task..."
+if ! command_that_might_fail; then
+  log_error "Task failed with status $?"
+  exit 1
+fi
+log_success "Task completed"
+```
+
+### Variables
+- ✅ Quote all variables: `"$VAR"`
+- ✅ Use `${VAR}` for complex expansion
+- ✅ Declare important variables at top
+- ❌ Don't use unquoted variables
+
+### Supervisor API Access
+- ✅ Use `ha` CLI commands directly (best practice)
+- ✅ Use `docker exec hassio_cli curl ...` for API calls
+- ❌ Don't try direct curl from devcontainer shell
+- See [devcontainer-quirks.mdc](mdc:.cursor/rules/devcontainer-quirks.mdc)
+
+## Related
+
+- [CONTRIBUTING.md](mdc:CONTRIBUTING.md) - Code standards
+- [setup-fresh-ha.sh](mdc:scripts/setup-fresh-ha.sh) - Good example
+- [scripts/README.md](mdc:scripts/README.md) - Scripts reference

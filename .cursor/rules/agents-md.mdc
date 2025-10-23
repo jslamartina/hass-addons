@@ -1,6 +1,0 @@
----
-alwaysApply: true
----
-AI agents working with this repository should follow the guidelines in this file: AGENTS.md
-
-Then, start your first response off by saying "I have read and understood the contents of AGENTS.md" if it was sucessful. Otherwise, state "I was not able to read the contents of AGENTS.md". @AGENTS.md

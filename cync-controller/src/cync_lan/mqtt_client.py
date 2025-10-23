@@ -625,15 +625,17 @@ class MQTTClient:
         mqtt_dev_state = {"state": power_status}
         if device.is_plug:
             mqtt_dev_state = power_status.encode()  # send ON or OFF if plug
+        elif device.is_switch:
+            # Switches only need state - no color_mode
+            mqtt_dev_state = json.dumps(mqtt_dev_state).encode()
         else:
-            # Add color_mode for lights based on capabilities
-            if device.is_light or not device.is_switch:
-                if device.supports_temperature:
-                    mqtt_dev_state["color_mode"] = "color_temp"
-                elif device.supports_rgb:
-                    mqtt_dev_state["color_mode"] = "rgb"
-                else:
-                    mqtt_dev_state["color_mode"] = "brightness"
+            # Lights need color_mode
+            if device.supports_temperature:
+                mqtt_dev_state["color_mode"] = "color_temp"
+            elif device.supports_rgb:
+                mqtt_dev_state["color_mode"] = "rgb"
+            else:
+                mqtt_dev_state["color_mode"] = "brightness"
             mqtt_dev_state = json.dumps(mqtt_dev_state).encode()  # send JSON
         return await self.send_device_status(device, mqtt_dev_state)
 
@@ -792,7 +794,12 @@ class MQTTClient:
         if device.is_plug:
             mqtt_dev_state = power_status.encode()
 
+        elif device.is_switch:
+            # Switches only need state - no brightness or color_mode
+            mqtt_dev_state = json.dumps(mqtt_dev_state).encode()
+
         else:
+            # Lights get brightness and color_mode
             if device_status.brightness is not None:
                 mqtt_dev_state["brightness"] = device_status.brightness
 

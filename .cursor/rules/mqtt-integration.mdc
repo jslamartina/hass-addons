@@ -1,0 +1,44 @@
+---
+globs: scripts/**/*.sh,cync-controller/src/**/*.py
+description: MQTT integration and discovery
+---
+
+# MQTT Integration Guidelines
+
+This project uses MQTT for Home Assistant integration via discovery protocol.
+
+## Key Concepts
+
+### Discovery Protocol
+- Uses [MQTT Discovery](https://www.home-assistant.io/integrations/mqtt/#mqtt-discovery)
+- Configuration published to `homeassistant/{component}/{node_id}/{object_id}/config`
+- Schema must match Home Assistant expectations exactly
+
+### Entity Configuration
+- ✅ Use consistent `suggested_area` values
+- ✅ Publish `availability` topic for device status
+- ✅ Use `stat_t` (status topic) for state updates
+- ✅ Use `cmd_t` (command topic) for commands
+
+### Common Issues
+
+**Stale MQTT entities after schema changes:**
+```bash
+# Use automated cleanup (recommended)
+sudo python3 scripts/delete-mqtt-safe.py [--dry-run]
+ha addons restart local_cync-controller
+
+# OR: Manual cleanup via UI
+# Settings → Devices & Services → Entities → Select & Delete
+```
+
+**API access failures:**
+- Check authentication token validity
+- Verify MQTT broker is running and accessible
+- Ensure Home Assistant can reach MQTT
+
+## Related Files
+
+- [mqtt_client.py](mdc:cync-controller/src/cync_lan/mqtt_client.py) - MQTT implementation
+- [Troubleshooting Guide](mdc:docs/user/troubleshooting.md) - Known issues
+- [Architecture Guide](mdc:docs/developer/architecture.md) - System design
