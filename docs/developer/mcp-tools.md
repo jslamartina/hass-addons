@@ -4,15 +4,16 @@ The devcontainer includes several Model Context Protocol (MCP) servers that prov
 
 ## Quick Reference
 
-| MCP Server               | Primary Use          | Key Functions                                          | When to Use                                                   |
-| ------------------------ | -------------------- | ------------------------------------------------------ | ------------------------------------------------------------- |
-| `mcp-server-time`        | Timezone operations  | `get_current_time`, `convert_time`                     | Scheduling, timestamps, DST calculations                      |
-| `mcp-python-interpreter` | Code execution       | `run_python_code` (native Python, filesystem access)   | Large file processing, data analysis, prototyping, automation |
-| `mcp-server-docker`      | Container management | 15 functions (containers/images/networks/volumes)      | Inspecting containers, managing dev environments              |
-| `mcp-server-fetch`       | Web content          | `fetch` (markdown/HTML modes)                          | Reading docs, fetching API specs, release notes               |
-| `mcp-server-git`         | Version control      | 12 Git operations                                      | Analyzing history, managing branches, reviewing changes       |
-| `mcp-server-filesystem`  | File operations      | `read_file`, `write_file`, `edit_file`, `search_files` | Bulk file edits, transformations, reading/writing files       |
-| `sequential-thinking-mcp`| Thought logging      | `think` (threaded steps, tool recs, planning)          | Track reasoning steps, plan actions, log progress             |
+| MCP Server                | Primary Use          | Key Functions                                           | When to Use                                                   |
+| ------------------------- | -------------------- | ------------------------------------------------------- | ------------------------------------------------------------- |
+| `cursor-playwright`       | Browser automation   | `browser_navigate`, `browser_snapshot`, `browser_click` | UI testing, visual verification, interactive debugging        |
+| `mcp-server-time`         | Timezone operations  | `get_current_time`, `convert_time`                      | Scheduling, timestamps, DST calculations                      |
+| `mcp-python-interpreter`  | Code execution       | `run_python_code` (native Python, filesystem access)    | Large file processing, data analysis, prototyping, automation |
+| `mcp-server-docker`       | Container management | 15 functions (containers/images/networks/volumes)       | Inspecting containers, managing dev environments              |
+| `mcp-server-fetch`        | Web content          | `fetch` (markdown/HTML modes)                           | Reading docs, fetching API specs, release notes               |
+| `mcp-server-git`          | Version control      | 12 Git operations                                       | Analyzing history, managing branches, reviewing changes       |
+| `mcp-server-filesystem`   | File operations      | `read_file`, `write_file`, `edit_file`, `search_files`  | Bulk file edits, transformations, reading/writing files       |
+| `sequential-thinking-mcp` | Thought logging      | `think` (threaded steps, tool recs, planning)           | Track reasoning steps, plan actions, log progress             |
 
 **Installation:** Automatic via `uvx`/`npx` on first use. The `uv` package manager is installed during devcontainer creation via `.devcontainer/02-setup-mcp-servers.sh`, then `uvx` automatically downloads and caches MCP servers when Cursor first connects to them (configured in `.cursor/mcp.json`).
 
@@ -47,6 +48,111 @@ except:
 ---
 
 ## Detailed Tool Documentation
+
+### Browser Automation (`cursor-playwright`)
+
+**Built-in Tool:** Cursor provides Playwright browser automation through MCP (no configuration needed).
+
+**Tools Available:**
+
+- `mcp_cursor-playwright_browser_navigate` - Navigate to URLs
+- `mcp_cursor-playwright_browser_snapshot` - Capture accessibility tree (best for understanding structure)
+- `mcp_cursor-playwright_browser_click` - Click elements
+- `mcp_cursor-playwright_browser_type` - Type text into inputs
+- `mcp_cursor-playwright_browser_fill_form` - Fill multiple form fields
+- `mcp_cursor-playwright_browser_evaluate` - Execute JavaScript
+- `mcp_cursor-playwright_browser_take_screenshot` - Capture visual state
+- `mcp_cursor-playwright_browser_wait_for` - Wait for content/time
+- `mcp_cursor-playwright_browser_console_messages` - Get console logs
+- `mcp_cursor-playwright_browser_network_requests` - Get network activity
+- `mcp_cursor-playwright_browser_tabs` - Manage browser tabs
+- `mcp_cursor-playwright_browser_select_option` - Select dropdown options
+- `mcp_cursor-playwright_browser_hover` - Hover over elements
+- `mcp_cursor-playwright_browser_drag` - Drag and drop
+- `mcp_cursor-playwright_browser_press_key` - Keyboard input
+- `mcp_cursor-playwright_browser_handle_dialog` - Handle alerts/dialogs
+- `mcp_cursor-playwright_browser_file_upload` - Upload files
+
+**When to use:**
+
+- **Interactive testing** - Explore UI, verify behavior, find bugs
+- **Visual verification** - Check if configuration options appear
+- **Debugging** - Understand why something doesn't work in the UI
+- **Ad-hoc operations** - Quick one-off UI interactions
+- **Documentation** - Capture screenshots of UI states
+
+**When NOT to use:**
+
+- ❌ Automated repetitive tasks (use TypeScript scripts instead)
+- ❌ Configuration changes (use `scripts/configure-addon.sh` API tool)
+- ❌ Bulk operations (use TypeScript scripts in `scripts/playwright/`)
+- ❌ CI/CD pipelines (use headless Playwright scripts)
+
+**Example use cases:**
+
+```typescript
+// Login to Home Assistant
+await mcp_cursor-playwright_browser_navigate({ url: "http://localhost:8123" });
+await mcp_cursor-playwright_browser_fill_form({
+  fields: [
+    { name: "Username", type: "textbox", ref: "input[name='username']", value: "dev" },
+    { name: "Password", type: "textbox", ref: "input[name='password']", value: "dev" }
+  ]
+});
+await mcp_cursor-playwright_browser_click({ element: "Log in", ref: "button[type='submit']" });
+
+// Verify configuration option appears
+await mcp_cursor-playwright_browser_navigate({
+  url: "http://localhost:8123/hassio/addon/local_cync-controller"
+});
+await mcp_cursor-playwright_browser_click({
+  element: "Configuration tab",
+  ref: "iframe >> a[role='tab']:has-text('Configuration')"
+});
+await mcp_cursor-playwright_browser_snapshot(); // See structure
+
+// Debug UI issue with screenshots
+await mcp_cursor-playwright_browser_take_screenshot({ filename: "before-click.png" });
+await mcp_cursor-playwright_browser_click({ element: "Button", ref: "button.problem" });
+await mcp_cursor-playwright_browser_take_screenshot({ filename: "after-click.png" });
+await mcp_cursor-playwright_browser_console_messages(); // Check for errors
+```
+
+**Features:**
+
+- ✅ **Headless by default** - Fast, non-intrusive testing
+- ✅ **Shadow DOM support** - Role-based selectors pierce shadow boundaries
+- ✅ **Screenshot/snapshot** - Visual and structural verification
+- ✅ **Console/network access** - Debug JavaScript and API issues
+- ✅ **Permission-based** - Safe automation with user awareness
+- ✅ **Iframe support** - Access add-on pages with `iframe >>` prefix
+
+**Key Gotchas:**
+
+⚠️ **Home Assistant UI uses Shadow DOM** - Standard CSS selectors don't work. Use `browser_snapshot()` first to see accessibility tree, then use role-based or text selectors.
+
+⚠️ **Add-on pages are in iframes** - Use `iframe >>` prefix for selectors:
+```typescript
+ref: "iframe >> button:has-text('Save')"
+```
+
+⚠️ **SVG icons intercept clicks** - Click parent containers instead of buttons with SVG icons.
+
+⚠️ **Dynamic content loads** - Wait for elements before interacting:
+```typescript
+await mcp_cursor-playwright_browser_wait_for({ text: "Configuration", time: 5 });
+```
+
+**Full Documentation:**
+
+See **[AI Browser Testing Plan](ai-browser-testing-plan.md)** for comprehensive guide including:
+- All tool parameters and usage
+- Home Assistant UI patterns and quirks
+- Debugging workflows
+- Templates and examples
+- Integration with TypeScript scripts
+
+Also see **[Browser Automation Guide](browser-automation.md)** for Playwright-specific patterns.
 
 ### Time Operations (`mcp-server-time`)
 
@@ -279,28 +385,220 @@ git_create_branch(repo_path=".", branch_name="feature/mcp-docs",
 
 ### Sequential Thinking (`sequential-thinking-mcp`)
 
+**Purpose:** Track multi-step reasoning with explicit branching, progress tracking, and completion status.
+
 **Tools Available:**
 
-- `mcp_sequential-thinking_think` - Log a single reasoning step with thread, step index, optional next-tool recommendation, and future steps
+- `mcp_sequential-thinking_sequentialthinking` - Log a reasoning step with optional branching, tool recommendations, and status tracking
 
 **When to use:**
 
-- Tracking progress across multi-step tasks
-- Enforcing disciplined, step-wise reasoning with explicit next actions
-- Producing concise status updates and future plan within a thread
+- ✅ Multi-step debugging with parallel hypotheses
+- ✅ Complex decision trees with branching and reconvergence
+- ✅ Tracking progress across long tasks
+- ✅ Enforcing disciplined reasoning with explicit next actions
+- ✅ Planning investigations with multiple exploration paths
 
-**Example use:**
+**When NOT to use:**
+
+- ❌ Simple linear tasks (1-2 steps)
+- ❌ Tasks not requiring branching logic
+- ❌ When you don't need progress tracking
+
+**Parameters:**
 
 ```python
-# Log a reasoning step
+thought: str                  # Current reasoning step (required)
+nextThoughtNeeded: bool       # Whether more thinking needed (required)
+thoughtNumber: int            # Current thought index in thread (required)
+totalThoughts: int            # Estimated total thoughts needed (required)
+
+# Optional branching parameters:
+branchFromThought: int        # Parent thought number to branch from
+branchId: str                 # Unique identifier for this branch
+isRevision: bool              # If revising a previous thought
+revisesThought: int           # Which thought number is being reconsidered
+```
+
+**Response Structure:**
+
+```json
+{
+  "thoughtNumber": 1,
+  "totalThoughts": 5,
+  "nextThoughtNeeded": true,
+  "branches": ["branch_id_1", "branch_id_2"],
+  "thoughtHistoryLength": 3
+}
+```
+
+**Example 1: Simple Linear Reasoning**
+
+```python
+# Step 1: Problem analysis
 think(
-  thread_purpose="Optimize MQTT entity registration",
-  thought="Identify where duplicate entity configs are emitted and guard against re-publish.",
-  thought_index=1,
-  tool_recommendation="functions.grep",
-  left_to_be_done="Search mqtt_client.py for publish discovery calls; add idempotency guard"
+  thought="User reports MQTT entities disappearing after restart. Could be discovery timing issue, retained messages, or registration bug.",
+  nextThoughtNeeded=True,
+  thoughtNumber=1,
+  totalThoughts=3
+)
+
+# Step 2: Check logs
+think(
+  thought="Verified addon logs show clean restart. MQTT connection established. No errors visible.",
+  nextThoughtNeeded=True,
+  thoughtNumber=2,
+  totalThoughts=3
+)
+
+# Step 3: Resolved
+think(
+  thought="Found issue: publish_all_states() called before devices populated from mesh query. Fixed by reordering startup sequence.",
+  nextThoughtNeeded=False,  # Investigation complete
+  thoughtNumber=3,
+  totalThoughts=3
 )
 ```
+
+**Example 2: Branching Investigation (Multiple Hypotheses)**
+
+```python
+# Main investigation
+think(
+  thought="Error: Could be three causes: (1) Discovery schema issue, (2) Entity registration timing, (3) HA caching",
+  nextThoughtNeeded=True,
+  thoughtNumber=1,
+  totalThoughts=2
+)
+
+# Identify need to branch
+think(
+  thought="Need to test each hypothesis separately. Creating parallel branches.",
+  nextThoughtNeeded=True,
+  thoughtNumber=2,
+  totalThoughts=2
+)
+
+# ─── BRANCH 1: Discovery schema ───
+think(
+  thought="Branch 1: Checking MQTT discovery payload structure",
+  nextThoughtNeeded=True,
+  thoughtNumber=1,
+  totalThoughts=2,
+  branchFromThought=2,      # Branches from main thought 2
+  branchId="discovery_check"
+)
+
+think(
+  thought="Discovery payload validates correctly against MQTT schema. Not the issue.",
+  nextThoughtNeeded=True,
+  thoughtNumber=2,
+  totalThoughts=2,
+  branchId="discovery_check"
+)
+
+# ─── BRANCH 2: Entity registration timing (FOUND ISSUE) ───
+think(
+  thought="Branch 2: Examining device population on startup",
+  nextThoughtNeeded=True,
+  thoughtNumber=1,
+  totalThoughts=3,
+  branchFromThought=2,        # Parallel branch from main thought 2
+  branchId="registration_timing"
+)
+
+think(
+  thought="Found: publish_all_states() executes BEFORE mesh query completes. Devices dict is empty!",
+  nextThoughtNeeded=True,
+  thoughtNumber=2,
+  totalThoughts=3,
+  branchId="registration_timing"
+)
+
+think(
+  thought="Fixed by reordering: mesh query first, then publish_all_states(). Entities now persist after restart.",
+  nextThoughtNeeded=True,
+  thoughtNumber=3,
+  totalThoughts=3,
+  branchId="registration_timing"
+)
+```
+
+**Example 3: Nested Branching (Multi-level Investigation)**
+
+```python
+# Main investigation finds issue
+think(
+  thought="Found timing bug, but need to verify edge cases",
+  nextThoughtNeeded=True,
+  thoughtNumber=3,
+  totalThoughts=3,
+  branchId="registration_timing"
+)
+
+# ─── SUB-BRANCH: Edge case handling ───
+think(
+  thought="Sub-branch: What if mesh query times out? Need timeout protection.",
+  nextThoughtNeeded=True,
+  thoughtNumber=1,
+  totalThoughts=2,
+  branchFromThought=3,        # Branches from registration_timing thought 3
+  branchId="timeout_handling"
+)
+
+think(
+  thought="Implemented timeout handler with exponential backoff retry. Edge case protected.",
+  nextThoughtNeeded=False,    # Complete
+  thoughtNumber=2,
+  totalThoughts=2,
+  branchId="timeout_handling"
+)
+```
+
+**Understanding the Response:**
+
+| Field | Meaning |
+|-------|---------|
+| `thoughtNumber` | Current index in this specific branch |
+| `totalThoughts` | Estimated total for this branch (can adjust) |
+| `nextThoughtNeeded` | `false` = investigation complete, `true` = more thinking needed |
+| `branches` | Array of all active branch IDs (shows investigation scope) |
+| `thoughtHistoryLength` | Total thoughts logged across all branches |
+
+**Real-world Workflow:**
+
+```
+Main Thread: "Investigate Docker build failure" [1-2]
+    │
+    └─► Thought 2: "Found package issue. Branch to test solutions."
+        │
+        ├─► Branch 1A: "apt cache refresh" [1-3]
+        │   └─ Thought 3: "Not the issue. Reconverge."
+        │
+        └─► Branch 1B: "base image investigation" [1-3] ← FOUND SOLUTION
+            ├─ Thought 1-2: Testing different base images
+            └─ Thought 3: Branch to slim variant investigation
+                │
+                └─► Sub-branch: "slim package differences" [1-3]
+                    ├─ Thought 1-2: Identify missing package
+                    └─ Thought 3: "RESOLVED - Use full bullseye image" ✓
+                        (nextThoughtNeeded=false)
+```
+
+**Best Practices:**
+
+✅ **DO:**
+- Start with `totalThoughts` estimate, adjust as you go
+- Use `branchId` names that describe the investigation path
+- Set `nextThoughtNeeded=false` when a branch is complete
+- Create sub-branches for edge cases after main issue found
+- Keep thoughts focused on reasoning steps, not implementation details
+
+❌ **DON'T:**
+- Use branching for simple 2-3 step processes
+- Create branches without identifying decision points
+- Forget to set `nextThoughtNeeded=false` when complete
+- Use vague branch IDs (use descriptive names)
 
 **Configuration in `.cursor/mcp.json`:**
 
