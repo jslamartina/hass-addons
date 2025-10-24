@@ -26,6 +26,7 @@ __all__ = [
     "CYNC_CONFIG_FILE_PATH",
     "CYNC_CORP_ID",
     "CYNC_DEBUG",
+    "CYNC_EXPOSE_DEVICE_LIGHTS",
     "CYNC_HASS_BIRTH_MSG",
     "CYNC_HASS_STATUS_TOPIC",
     "CYNC_HASS_TOPIC",
@@ -125,6 +126,9 @@ CYNC_MQTT_CONN_DELAY: int = int(os.environ.get("CYNC_MQTT_CONN_DELAY", "10"))
 
 CYNC_RAW = os.environ.get("CYNC_RAW_DEBUG", "0").casefold() in YES_ANSWER
 CYNC_DEBUG = os.environ.get("CYNC_DEBUG", "0").casefold() in YES_ANSWER
+
+# Feature flags
+CYNC_EXPOSE_DEVICE_LIGHTS: bool = os.environ.get("CYNC_EXPOSE_DEVICE_LIGHTS", "true").casefold() in YES_ANSWER
 
 CYNC_BASE_DIR: str = "/root"
 CYNC_STATIC_DIR: str = "/root/cync-controller/www"

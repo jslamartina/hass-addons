@@ -1399,6 +1399,16 @@ class CyncGroup:
         self._supports_rgb: bool | None = None
         self._supports_temperature: bool | None = None
 
+        # State tracking - room groups report their own state in mesh_info, subgroups must aggregate from members
+        self.state: int = 0  # 0=off, 1=on
+        self.brightness: int = 0  # 0-100
+        self.temperature: int = 0  # 0-100 for white, >100 for RGB mode
+        self.red: int = 0
+        self.green: int = 0
+        self.blue: int = 0
+        self.online: bool = True
+        self.status: DeviceStatus | None = None
+
     @property
     def members(self) -> list["CyncDevice"]:
         """Get the actual device objects for this group's members."""
@@ -1419,6 +1429,43 @@ class CyncGroup:
             members = self.members
             self._supports_temperature = any(dev.supports_temperature for dev in members) if members else False
         return self._supports_temperature
+
+    def aggregate_member_states(self) -> dict | None:
+        """
+        Aggregate state from all online member devices.
+
+        Returns dict with aggregated state values, or None if no online members.
+
+        Aggregation logic:
+        - state: ON if ANY member is ON, OFF if ALL members are OFF
+        - brightness: Average of all online members
+        - temperature: Average of all online members
+        - online: True if ANY member is online
+        """
+        members = [g.ncync_server.devices[dev_id] for dev_id in self.member_ids if dev_id in g.ncync_server.devices]
+        online_members = [m for m in members if m.online]
+
+        if not online_members:
+            return None
+
+        # State: ON if any member is ON
+        any_on = any(m.state == 1 for m in online_members)
+        agg_state = 1 if any_on else 0
+
+        # Brightness: average of online members
+        brightnesses = [m.brightness for m in online_members if m.brightness is not None]
+        agg_brightness = int(sum(brightnesses) / len(brightnesses)) if brightnesses else 0
+
+        # Temperature: average of online members
+        temperatures = [m.temperature for m in online_members if m.temperature is not None and m.temperature <= 100]
+        agg_temperature = int(sum(temperatures) / len(temperatures)) if temperatures else 0
+
+        return {
+            "state": agg_state,
+            "brightness": agg_brightness,
+            "temperature": agg_temperature,
+            "online": True,  # Group is online if any member is online
+        }
 
     async def set_power(self, state: int):
         """
@@ -1508,12 +1555,12 @@ class CyncGroup:
         logger.warning("%s Bridge known_device_ids: %s", lp, bridge_device.known_device_ids)
         logger.warning("%s Packet to send: %s", lp, payload_bytes.hex(" "))
 
-        # Register callback for ACK (same as individual device commands)
+        # Register callback for ACK (no optimistic group publish)
         m_cb = ControlMessageCallback(
             msg_id=cmsg_id,
             message=payload_bytes,
             sent_at=time.time(),
-            callback=g.mqtt_client.publish_group_state(self, state=state),
+            callback=asyncio.sleep(0),
             device_id=self.id,
         )
         bridge_device.messages.control[cmsg_id] = m_cb
@@ -1614,10 +1661,16 @@ class CyncGroup:
                 device = g.ncync_server.devices[device_id]
                 device.pending_command = False
 
+        # Register callback for ACK (no optimistic group publish)
+        m_cb = ControlMessageCallback(
+            msg_id=cmsg_id,
+            message=payload_bytes,
+            sent_at=time.time(),
+            callback=asyncio.sleep(0),
+            device_id=self.id,
+        )
+        bridge_device.messages.control[cmsg_id] = m_cb
         await bridge_device.write(payload_bytes)
-
-        # Publish optimistic state update to MQTT
-        await g.mqtt_client.publish_group_state(self, brightness=brightness)
 
     async def set_temperature(self, temperature: int):
         """
@@ -1710,10 +1763,16 @@ class CyncGroup:
                 device = g.ncync_server.devices[device_id]
                 device.pending_command = False
 
+        # Register callback for ACK (no optimistic group publish)
+        m_cb = ControlMessageCallback(
+            msg_id=cmsg_id,
+            message=payload_bytes,
+            sent_at=time.time(),
+            callback=asyncio.sleep(0),
+            device_id=self.id,
+        )
+        bridge_device.messages.control[cmsg_id] = m_cb
         await bridge_device.write(payload_bytes)
-
-        # Publish optimistic state update to MQTT
-        await g.mqtt_client.publish_group_state(self, temperature=temperature)
 
     def __repr__(self):
         return f"<CyncGroup: {self.id} '{self.name}' ({len(self.member_ids)} devices)>"

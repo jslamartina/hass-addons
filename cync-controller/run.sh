@@ -53,6 +53,10 @@ CYNC_CLOUD_DISABLE_SSL_VERIFY="$(bashio::config 'cloud_relay' | jq -r '.disable_
 export CYNC_ACCOUNT_USERNAME CYNC_ACCOUNT_PASSWORD CYNC_TOPIC CYNC_DEBUG CYNC_MQTT_HOST CYNC_MQTT_PORT CYNC_MQTT_USER CYNC_MQTT_PASS CYNC_TCP_WHITELIST CYNC_CMD_BROADCASTS CYNC_MAX_TCP_CONN
 export CYNC_CLOUD_RELAY_ENABLED CYNC_CLOUD_FORWARD CYNC_CLOUD_SERVER CYNC_CLOUD_PORT CYNC_CLOUD_DEBUG_LOGGING CYNC_CLOUD_DISABLE_SSL_VERIFY
 
+# Feature flags
+CYNC_EXPOSE_DEVICE_LIGHTS="$(bashio::config 'features' | jq -r '.expose_device_lights // "true"')"
+export CYNC_EXPOSE_DEVICE_LIGHTS
+
 # when installing the cync_lan python package, pyproject.toml creates a cync-controller executable
 #cync-controller --enable-export
 # for some wierd reason, the cync-controller executable does not work in the add-on container all of a sudden

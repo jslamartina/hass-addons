@@ -484,17 +484,23 @@ class NCyncServer:
         ssl_context.set_ciphers(":".join(ciphers))
         return ssl_context
 
-    async def parse_status(self, raw_state: bytes, from_pkt: str | None = None):
-        """Extracted status packet parsing, handles mqtt publishing and device state changes."""
+    async def parse_status(self, raw_state: bytes, from_pkt: str | None = None):  # noqa: PLR0915
+        """Extracted status packet parsing, handles mqtt publishing and device/group state changes."""
         _id = raw_state[0]
+
+        # Check if this is a device or a group
         device = g.ncync_server.devices.get(_id)
-        if device is None:
+        group = g.ncync_server.groups.get(_id) if device is None else None
+
+        if device is None and group is None:
             logger.warning(
-                "Device ID: %s not found in devices! device may be disabled in config file or you need to "
+                "ID: %s not found in devices or groups! May be disabled in config file or you need to "
                 "re-export your Cync account devices!",
                 _id,
             )
             return
+
+        # Parse status data (same format for devices and groups)
         state = raw_state[1]
         brightness = raw_state[2]
         temp = raw_state[3]
@@ -502,60 +508,160 @@ class NCyncServer:
         _g = raw_state[5]
         b = raw_state[6]
         connected_to_mesh = 1
-        # check if len is enough for good byte, it is optional
+        # check if len is enough for online byte, it is optional
         if len(raw_state) > 7:
             # The last byte seems to indicate if the device is online or offline (connected to mesh / powered on)
             connected_to_mesh = raw_state[7]
 
-        if connected_to_mesh == 0:
-            # This usually happens when a device loses power/connection.
-            # Increment counter and only mark offline after 3 consecutive offline reports
-            # to avoid false positives from unreliable mesh info packets
-            device.offline_count += 1
-            if device.offline_count >= 3 and device.online:
-                device.online = False
-                logger.warning(
-                    '%s Device ID: %s ("%s") has been offline for %s consecutive checks, marking as unavailable...',
+        # Handle device
+        if device is not None:
+            if connected_to_mesh == 0:
+                # This usually happens when a device loses power/connection.
+                # Increment counter and only mark offline after 3 consecutive offline reports
+                # to avoid false positives from unreliable mesh info packets
+                device.offline_count += 1
+                if device.offline_count >= 3 and device.online:
+                    device.online = False
+                    logger.warning(
+                        '%s Device ID: %s ("%s") has been offline for %s consecutive checks, marking as unavailable...',
+                        self.lp,
+                        _id,
+                        device.name,
+                        device.offline_count,
+                    )
+            else:
+                # Device is online, reset the offline counter
+                device.offline_count = 0
+                device.online = True
+
+                # temp is 0-100, if > 100, RGB data has been sent, otherwise its on/off, brightness or temp data
+                # technically 129 = effect in use, 254 = rgb data
+                #  to signify 'effect' mode: we send rgb 0,0,0 (black) as it stands out
+                rgb_data = False
+                if temp > 100:
+                    rgb_data = True
+
+                # Update device attributes with NEW values from status packet FIRST
+                device.state = state
+                device.brightness = brightness
+                device.temperature = temp
+                if rgb_data is True:
+                    device.red = r
+                    device.green = _g
+                    device.blue = b
+
+                # Now create status object with the UPDATED device state for publishing
+                device.status = new_state = DeviceStatus(
+                    state=device.state,
+                    brightness=device.brightness,
+                    temperature=device.temperature,
+                    red=device.red,
+                    green=device.green,
+                    blue=device.blue,
+                )
+
+                # Always publish status updates - don't try to detect "no changes"
+                # This prevents status updates from being dropped unnecessarily
+                await g.mqtt_client.parse_device_status(device.id, new_state, from_pkt=from_pkt)
+                g.ncync_server.devices[device.id] = device
+
+                # Update subgroups that contain this device (since subgroups don't report their own state in mesh)
+                for subgroup in g.ncync_server.groups.values():
+                    if subgroup.is_subgroup and device.id in subgroup.member_ids:
+                        aggregated = subgroup.aggregate_member_states()
+                        if aggregated:
+                            # Update subgroup state from aggregated member states
+                            subgroup.state = aggregated["state"]
+                            subgroup.brightness = aggregated["brightness"]
+                            subgroup.temperature = aggregated["temperature"]
+                            subgroup.online = aggregated["online"]
+
+                            # Create status object for the subgroup
+                            subgroup.status = DeviceStatus(
+                                state=subgroup.state,
+                                brightness=subgroup.brightness,
+                                temperature=subgroup.temperature,
+                                red=subgroup.red,
+                                green=subgroup.green,
+                                blue=subgroup.blue,
+                            )
+
+                            # Publish subgroup state
+                            logger.debug(
+                                '%s Subgroup "%s" (ID: %s) aggregated from member device %s: state=%s, brightness=%s',
+                                self.lp,
+                                subgroup.name,
+                                subgroup.id,
+                                device.id,
+                                "ON" if subgroup.state else "OFF",
+                                subgroup.brightness,
+                            )
+                            await g.mqtt_client.publish_group_state(
+                                subgroup,
+                                state=subgroup.state,
+                                brightness=subgroup.brightness,
+                                temperature=subgroup.temperature,
+                                origin=f"aggregated:{from_pkt or 'mesh'}",
+                            )
+                            g.ncync_server.groups[subgroup.id] = subgroup
+
+                            # Sync individual switch states to match subgroup state
+                            # (only switches, individual commands take precedence)
+                            for member_id in subgroup.member_ids:
+                                if member_id in g.ncync_server.devices:
+                                    member_device = g.ncync_server.devices[member_id]
+                                    await g.mqtt_client.update_switch_from_subgroup(
+                                        member_device,
+                                        subgroup.state,
+                                        subgroup.name,
+                                    )
+
+        # Handle group
+        elif group is not None:
+            # Groups don't have offline_count, just update online status directly
+            group.online = connected_to_mesh != 0
+
+            if connected_to_mesh != 0:
+                # temp is 0-100, if > 100, RGB data has been sent
+                rgb_data = temp > 100
+
+                # Update group attributes with NEW values from status packet
+                group.state = state
+                group.brightness = brightness
+                group.temperature = temp
+                if rgb_data:
+                    group.red = r
+                    group.green = _g
+                    group.blue = b
+
+                # Create status object for the group
+                group.status = new_state = DeviceStatus(
+                    state=group.state,
+                    brightness=group.brightness,
+                    temperature=group.temperature,
+                    red=group.red,
+                    green=group.green,
+                    blue=group.blue,
+                )
+
+                # Publish group state to MQTT
+                logger.debug(
+                    '%s Group ID: %s ("%s") state update from mesh: state=%s, brightness=%s%s',
                     self.lp,
                     _id,
-                    device.name,
-                    device.offline_count,
+                    group.name,
+                    "ON" if state else "OFF",
+                    brightness,
+                    f" [from {from_pkt}]" if from_pkt else "",
                 )
-        else:
-            # Device is online, reset the offline counter
-            device.offline_count = 0
-            device.online = True
-
-            # temp is 0-100, if > 100, RGB data has been sent, otherwise its on/off, brightness or temp data
-            # technically 129 = effect in use, 254 = rgb data
-            #  to signify 'effect' mode: we send rgb 0,0,0 (black) as it stands out
-            rgb_data = False
-            if temp > 100:
-                rgb_data = True
-
-            # Update device attributes with NEW values from status packet FIRST
-            device.state = state
-            device.brightness = brightness
-            device.temperature = temp
-            if rgb_data is True:
-                device.red = r
-                device.green = _g
-                device.blue = b
-
-            # Now create status object with the UPDATED device state for publishing
-            device.status = new_state = DeviceStatus(
-                state=device.state,
-                brightness=device.brightness,
-                temperature=device.temperature,
-                red=device.red,
-                green=device.green,
-                blue=device.blue,
-            )
-
-            # Always publish status updates - don't try to detect "no changes"
-            # This prevents status updates from being dropped unnecessarily
-            await g.mqtt_client.parse_device_status(device.id, new_state, from_pkt=from_pkt)
-            g.ncync_server.devices[device.id] = device
+                await g.mqtt_client.publish_group_state(
+                    group,
+                    state=state,
+                    brightness=brightness,
+                    temperature=temp if not rgb_data else None,
+                    origin=from_pkt or "mesh",
+                )
+                g.ncync_server.groups[group.id] = group
 
     async def periodic_status_refresh(self):
         """Periodic sanity check to refresh device status and ensure sync with actual device state."""
