@@ -13,8 +13,8 @@ import sys
 from pathlib import Path
 from typing import Any, Dict, List
 
-# Home Assistant config directory
-HA_CONFIG_DIR = Path("/mnt/supervisor/homeassistant")
+# Home Assistant config directory (host container path)
+HA_CONFIG_DIR = Path("/tmp/supervisor_data/homeassistant")
 ENTITY_REGISTRY_FILE = HA_CONFIG_DIR / ".storage" / "core.entity_registry"
 DEVICE_REGISTRY_FILE = HA_CONFIG_DIR / ".storage" / "core.device_registry"
 RESTORE_STATE_FILE = HA_CONFIG_DIR / ".storage" / "core.restore_state"

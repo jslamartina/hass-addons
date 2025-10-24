@@ -9,6 +9,15 @@ echo "========================================="
 echo "Running devcontainer bootstrap..."
 bash /usr/bin/devcontainer_bootstrap
 
+# Ensure mosquitto-clients is installed for local MQTT testing
+if ! command -v mosquitto_pub > /dev/null 2>&1; then
+  echo "Installing mosquitto-clients..."
+  sudo apt-get update -qq
+  sudo apt-get install -y mosquitto-clients
+else
+  echo "mosquitto-clients already installed"
+fi
+
 # Step 0: Configure Docker daemon with journald logging (BEFORE Docker starts)
 echo "Step 0: Configuring Docker daemon with journald logging..."
 DOCKER_CONFIG="/etc/docker/daemon.json"

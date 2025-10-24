@@ -1,21 +1,23 @@
 {
   "mcpServers": {
     "web_fetch": {
-      "command": "uvx",
-      "args": ["--refresh", "mcp-server-fetch"]
+      "command": "uv",
+      "args": ["run", "--with", "mcp-server-fetch", "mcp-server-fetch"]
     },
     "docker": {
-      "command": "uvx",
-      "args": ["--refresh", "mcp-server-docker"]
+      "command": "uv",
+      "args": ["run", "--with", "mcp-server-docker", "mcp-server-docker"]
     },
     "git": {
-      "command": "uvx",
-      "args": ["--refresh", "mcp-server-git"]
+      "command": "uv",
+      "args": ["run", "--with", "mcp-server-git", "mcp-server-git"]
     },
     "python": {
-      "command": "uvx",
+      "command": "uv",
       "args": [
-        "--refresh",
+        "run",
+        "--with",
+        "mcp-python-interpreter",
         "mcp-python-interpreter",
         "--dir",
         "/mnt/supervisor/addons/local/hass-addons",
@@ -24,19 +26,26 @@
       ]
     },
     "time": {
-      "command": "uvx",
+      "command": "uv",
       "args": [
-        "--refresh",
+        "run",
+        "--with",
+        "mcp-server-time",
         "mcp-server-time",
         "--local-timezone=America/Chicago"
       ]
     },
     "filesystem": {
-      "command": "npx",
+      "command": "npm",
+      "args": ["exec", "-y", "@modelcontextprotocol/server-filesystem"]
+    },
+    "sequential-thinking": {
+      "command": "uv",
       "args": [
-        "-y",
-        "@modelcontextprotocol/server-filesystem",
-        "/mnt/supervisor/addons/local/hass-addons"
+        "run",
+        "--with",
+        "sequential-thinking-mcp",
+        "sequential-thinking-mcp"
       ]
     }
   }

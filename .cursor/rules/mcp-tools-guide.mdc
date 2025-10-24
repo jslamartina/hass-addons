@@ -8,6 +8,24 @@ The devcontainer provides Model Context Protocol (MCP) servers for specialized d
 
 ## Available Tools & When to Use
 
+### 🧠 **Sequential Thinking** (`mcp_sequential-thinking_*`)
+
+**When to use:**
+- ✅ Logging step-by-step reasoning with explicit next actions
+- ✅ Tracking progress across multi-step tasks (threaded)
+- ✅ Producing concise status updates and future plan
+
+**Example:**
+```bash
+mcp_sequential-thinking_think(
+  thread_purpose: "Cloud relay test planning",
+  thought: "Validate baseline LAN-only behavior before enabling relay",
+  thought_index: 1,
+  tool_recommendation: "functions.run_terminal_cmd",
+  left_to_be_done: "Run ./scripts/test-cloud-relay.sh Phase 1; check logs"
+)
+```
+
 ### 🐍 **Python Execution** (`mcp_python_*`)
 
 **When to use:**

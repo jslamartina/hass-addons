@@ -96,5 +96,6 @@ ha addons rebuild local_cync-controller
 - **mcp-server-fetch** - Web content fetching and processing
 - **mcp-server-git** - Git operations and repository analysis
 - **mcp-server-filesystem** - Advanced file operations and transformations
+- **sequential-thinking-mcp** - Log step-wise reasoning, status updates, and next actions
 
 **[📖 Complete Developer Guide →](../AGENTS.md)**

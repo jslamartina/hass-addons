@@ -12,6 +12,7 @@ The devcontainer includes several Model Context Protocol (MCP) servers that prov
 | `mcp-server-fetch`       | Web content          | `fetch` (markdown/HTML modes)                          | Reading docs, fetching API specs, release notes               |
 | `mcp-server-git`         | Version control      | 12 Git operations                                      | Analyzing history, managing branches, reviewing changes       |
 | `mcp-server-filesystem`  | File operations      | `read_file`, `write_file`, `edit_file`, `search_files` | Bulk file edits, transformations, reading/writing files       |
+| `sequential-thinking-mcp`| Thought logging      | `think` (threaded steps, tool recs, planning)          | Track reasoning steps, plan actions, log progress             |
 
 **Installation:** Automatic via `uvx`/`npx` on first use. The `uv` package manager is installed during devcontainer creation via `.devcontainer/02-setup-mcp-servers.sh`, then `uvx` automatically downloads and caches MCP servers when Cursor first connects to them (configured in `.cursor/mcp.json`).
 
@@ -275,6 +276,46 @@ git_create_branch(repo_path=".", branch_name="feature/mcp-docs",
 - ✅ Branch filtering (by commit containment)
 - ✅ Configurable context lines for diffs
 - ✅ Works with any local Git repository
+
+### Sequential Thinking (`sequential-thinking-mcp`)
+
+**Tools Available:**
+
+- `mcp_sequential-thinking_think` - Log a single reasoning step with thread, step index, optional next-tool recommendation, and future steps
+
+**When to use:**
+
+- Tracking progress across multi-step tasks
+- Enforcing disciplined, step-wise reasoning with explicit next actions
+- Producing concise status updates and future plan within a thread
+
+**Example use:**
+
+```python
+# Log a reasoning step
+think(
+  thread_purpose="Optimize MQTT entity registration",
+  thought="Identify where duplicate entity configs are emitted and guard against re-publish.",
+  thought_index=1,
+  tool_recommendation="functions.grep",
+  left_to_be_done="Search mqtt_client.py for publish discovery calls; add idempotency guard"
+)
+```
+
+**Configuration in `.cursor/mcp.json`:**
+
+```json
+{
+  "mcpServers": {
+    "sequential-thinking": {
+      "command": "uvx",
+      "args": ["--refresh", "sequential-thinking-mcp"]
+    }
+  }
+}
+```
+
+---
 
 ### Filesystem Operations (`mcp-server-filesystem`)
 
