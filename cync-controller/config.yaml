@@ -1,5 +1,5 @@
 name: "Cync Controller"
-version: "0.0.4.9"
+version: "0.0.4.11"
 slug: "cync-controller"
 description: "Local controller for Cync lighting (DNS redirection required)"
 # image: "ghcr.io/jslamartina/{arch}-addon-cync-controller"  # Commented out for local development
@@ -48,6 +48,9 @@ options:
     debug_packet_logging: false
     disable_ssl_verification: false
 
+  features:
+    expose_device_lights: true
+
 schema:
   account_username: email
   account_password: password
@@ -68,6 +71,8 @@ schema:
     cloud_port: port?
     debug_packet_logging: bool?
     disable_ssl_verification: bool?
+  features:
+    expose_device_lights: bool?
 
 map:
   - type: homeassistant_config

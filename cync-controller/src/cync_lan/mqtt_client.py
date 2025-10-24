@@ -639,6 +639,69 @@ class MQTTClient:
             mqtt_dev_state = json.dumps(mqtt_dev_state).encode()  # send JSON
         return await self.send_device_status(device, mqtt_dev_state)
 
+    async def update_switch_from_subgroup(self, device: CyncDevice, subgroup_state: int, subgroup_name: str) -> bool:
+        """Update a switch device state to match its subgroup state after mesh confirmation.
+
+        Only updates switches that don't have pending commands (individual commands take precedence).
+
+        Args:
+            device: The switch device to update
+            subgroup_state: The subgroup's confirmed state (0=off, 1=on)
+            subgroup_name: Name of the subgroup (for logging)
+
+        Returns:
+            True if the state was updated, False otherwise
+        """
+        lp = f"{self.lp}update_switch_from_subgroup:"
+
+        # Safety checks
+        if not device.is_switch:
+            logger.debug(
+                "%s Device '%s' (ID: %s) is not a switch, skipping subgroup sync",
+                lp,
+                device.name,
+                device.id,
+            )
+            return False
+
+        if device.pending_command:
+            logger.debug(
+                "%s Device '%s' (ID: %s) has pending command, skipping subgroup sync (individual control takes precedence)",
+                lp,
+                device.name,
+                device.id,
+            )
+            return False
+
+        # Update the switch to match subgroup state
+        old_state = device.state
+        if old_state != subgroup_state:
+            logger.info(
+                "%s Syncing switch '%s' (ID: %s) to subgroup '%s' state: %s → %s",
+                lp,
+                device.name,
+                device.id,
+                subgroup_name,
+                "ON" if old_state else "OFF",
+                "ON" if subgroup_state else "OFF",
+            )
+            device.state = subgroup_state
+            device.online = True
+
+            # Publish state update to MQTT
+            power_status = "ON" if subgroup_state else "OFF"
+            mqtt_dev_state = power_status.encode()  # Switches use plain ON/OFF payload
+            return await self.send_device_status(device, mqtt_dev_state)
+        logger.debug(
+            "%s Switch '%s' (ID: %s) already matches subgroup '%s' state (%s), no sync needed",
+            lp,
+            device.name,
+            device.id,
+            subgroup_name,
+            "ON" if subgroup_state else "OFF",
+        )
+        return False
+
     async def update_brightness(self, device: CyncDevice, bri: int) -> bool:
         """Update the device brightness and publish to MQTT for HASS devices to update."""
         device.online = True
@@ -726,8 +789,10 @@ class MQTTClient:
                 return True
         return False
 
-    async def publish_group_state(self, group, state=None, brightness=None, temperature=None):
-        """Publish optimistic group state after a group command."""
+    async def publish_group_state(
+        self, group, state=None, brightness=None, temperature=None, origin: str | None = None
+    ):
+        """Publish group state. For subgroups, use only mesh_info or validated aggregation (no optimistic ACK publishes)."""
         if not isinstance(group, CyncGroup):
             return
 
@@ -759,6 +824,10 @@ class MQTTClient:
 
         if not group_state:
             return
+
+        # annotate origin for visibility
+        if origin:
+            group_state["origin"] = origin
 
         tpc = f"{self.topic}/status/{group.hass_id}"
         try:
@@ -839,6 +908,9 @@ class MQTTClient:
 
             mqtt_dev_state = json.dumps(mqtt_dev_state).encode()
 
+        # Publish device status
+        # NOTE: Subgroup state aggregation is now handled in server.parse_status() after device updates
+        # (subgroups do NOT report their own state in mesh_info, so aggregation from members is required)
         return await self.send_device_status(device, mqtt_dev_state, from_pkt=from_pkt)
 
     async def send_birth_msg(self) -> bool:
@@ -1101,6 +1173,11 @@ class MQTTClient:
                     "high",
                 ]
 
+            # Conditionally publish device discovery: skip device-level lights if feature flag is off
+            if dev_type == "light" and not CYNC_EXPOSE_DEVICE_LIGHTS:
+                logger.info("%s Skipping device light discovery for '%s' due to feature flag", lp, device.name)
+                return True
+
             tpc = tpc_str_template.format(self.ha_topic, dev_type, device_uuid)
             try:
                 json_payload = json.dumps(entity_registry_struct, indent=2)
@@ -1344,6 +1421,11 @@ class MQTTClient:
                         entity_registry_struct["preset_mode_command_topic"] = f"{self.topic}/set/{device_uuid}/preset"
                         entity_registry_struct["preset_mode_state_topic"] = f"{self.topic}/status/{device_uuid}/preset"
 
+                    # Conditionally publish device discovery: skip device-level lights if feature flag is off
+                    if dev_type == "light" and not CYNC_EXPOSE_DEVICE_LIGHTS:
+                        logger.info("%s Skipping device light discovery for '%s' due to feature flag", lp, device.name)
+                        continue
+
                     tpc = tpc_str_template.format(self.ha_topic, dev_type, device_uuid)
                     try:
                         json_payload = json.dumps(entity_registry_struct, indent=2)
@@ -1389,7 +1471,7 @@ class MQTTClient:
                         "schema": "json",
                         "origin": ORIGIN_STRUCT,
                         "device": device_registry_struct,
-                        "optimistic": True,
+                        "optimistic": False,
                     }
 
                     # Add brightness support (exactly like devices do with .update())
@@ -1783,7 +1865,8 @@ class MQTTClient:
                         bridge_device.address,
                     )
                     # Pass correlation ID for tracking mesh responses in logs
-                    await bridge_device.ask_for_mesh_info(False, refresh_id=refresh_id)
+                    # Parse=True to update device AND group states from mesh_info
+                    await bridge_device.ask_for_mesh_info(True, refresh_id=refresh_id)
                     await asyncio.sleep(0.1)  # Small delay between bridge requests
                 except Exception as e:
                     logger.warning(
