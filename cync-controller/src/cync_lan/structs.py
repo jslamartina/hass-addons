@@ -112,6 +112,7 @@ class GlobalObject:
         self.env.cync_cloud_port = CYNC_CLOUD_PORT
         self.env.cync_cloud_debug_logging = CYNC_CLOUD_DEBUG_LOGGING
         self.env.cync_cloud_disable_ssl_verify = CYNC_CLOUD_DISABLE_SSL_VERIFY
+        # Feature flags (none currently)
 
 
 @dataclass(config=ConfigDict(arbitrary_types_allowed=True))

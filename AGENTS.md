@@ -203,7 +203,7 @@ When working with this codebase, AI agents should use web search tools to stay c
 
 The devcontainer includes several Model Context Protocol (MCP) servers that provide specialized capabilities for development tasks.
 
-**Quick reference:** Time operations, Python execution, Docker management, Git operations, Web content fetching, Filesystem operations.
+**Quick reference:** Time operations, Python execution, Docker management, Git operations, Web content fetching, Filesystem operations, Sequential Thinking (status/plan logging).
 
 **📖 See [MCP Tools Guide](docs/developer/mcp-tools.md) for detailed documentation.**
 

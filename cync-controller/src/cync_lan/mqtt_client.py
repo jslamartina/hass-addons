@@ -626,8 +626,8 @@ class MQTTClient:
         if device.is_plug:
             mqtt_dev_state = power_status.encode()  # send ON or OFF if plug
         elif device.is_switch:
-            # Switches only need state - no color_mode
-            mqtt_dev_state = json.dumps(mqtt_dev_state).encode()
+            # Switches only need plain ON/OFF payload (no JSON)
+            mqtt_dev_state = power_status.encode()
         else:
             # Lights need color_mode
             if device.supports_temperature:
@@ -795,8 +795,8 @@ class MQTTClient:
             mqtt_dev_state = power_status.encode()
 
         elif device.is_switch:
-            # Switches only need state - no brightness or color_mode
-            mqtt_dev_state = json.dumps(mqtt_dev_state).encode()
+            # Switches only need plain ON/OFF payload (no JSON)
+            mqtt_dev_state = power_status.encode()
 
         else:
             # Lights get brightness and color_mode
@@ -901,9 +901,6 @@ class MQTTClient:
             unique_id = f"{device.home_id}_{device.id}"
             # Generate entity ID from device name (e.g., "Hallway Light" -> "hallway_light")
             entity_slug = slugify(device.name) if device.name else f"device_{device.id}"
-            # Determine platform for default_entity_id
-            platform = "switch" if device.is_switch else "light"
-            default_entity_id = f"{platform}.{entity_slug}"
             dev_fw_version = str(device.version)
             ver_str = "Unknown"
             fw_len = len(dev_fw_version)
@@ -1001,19 +998,21 @@ class MQTTClient:
                 "device": device_registry_struct,
             }
 
-            # Determine device type
+            # Determine device type (no switch->light reclassification)
             dev_type = "light"  # Default fallback
             if device.is_switch:
-                dev_type = "switch"
                 logger.debug(
                     "%s Device '%s' classified as switch (type: %s)",
                     lp,
                     device.name,
                     device.metadata.type if device.metadata else "None",
                 )
-                if device.metadata and device.metadata.capabilities.fan:
+                # Preserve fan controllers as fan regardless of flag
+                if device.metadata and getattr(device.metadata.capabilities, "fan", False):
                     dev_type = "fan"
                     logger.debug("%s Device '%s' reclassified as fan", lp, device.name)
+                else:
+                    dev_type = "switch"
             elif device.is_light:
                 dev_type = "light"
                 logger.debug("%s Device '%s' classified as light", lp, device.name)
@@ -1053,27 +1052,43 @@ class MQTTClient:
                 )
 
             tpc_str_template = "{0}/{1}/{2}/config"
+            # Ensure default_entity_id matches the final dev_type
+            final_platform = "fan" if dev_type == "fan" else dev_type
+            entity_registry_struct["default_entity_id"] = f"{final_platform}.{entity_slug}"
 
             if dev_type == "light":
-                entity_registry_struct.update({"brightness": True, "brightness_scale": 100})
-                # ALL lights with brightness must declare color modes
-                entity_registry_struct["supported_color_modes"] = []
-                if device.supports_temperature:
-                    entity_registry_struct["supported_color_modes"].append("color_temp")
-                    entity_registry_struct["color_temp_kelvin"] = True
-                    entity_registry_struct["min_kelvin"] = CYNC_MINK
-                    entity_registry_struct["max_kelvin"] = CYNC_MAXK
-                if device.supports_rgb:
-                    entity_registry_struct["supported_color_modes"].append("rgb")
-                    entity_registry_struct["effect"] = True
-                    entity_registry_struct["effect_list"] = list(FACTORY_EFFECTS_BYTES.keys())
-                # If no color support, default to brightness-only mode
-                if not entity_registry_struct["supported_color_modes"]:
-                    entity_registry_struct["supported_color_modes"] = ["brightness"]
+                # For true lights, always include brightness. For switches exposed as lights, include
+                # brightness only if the switch supports dimming.
+                switch_dimmable = (
+                    bool(getattr(getattr(device.metadata, "capabilities", None), "dimmable", False))
+                    if device.is_switch
+                    else False
+                )
+                include_brightness = device.is_light or switch_dimmable
+                if include_brightness:
+                    entity_registry_struct.update({"brightness": True, "brightness_scale": 100})
+                    # ALL lights with brightness must declare color modes
+                    entity_registry_struct["supported_color_modes"] = []
+                    if device.supports_temperature:
+                        entity_registry_struct["supported_color_modes"].append("color_temp")
+                        entity_registry_struct["color_temp_kelvin"] = True
+                        entity_registry_struct["min_kelvin"] = CYNC_MINK
+                        entity_registry_struct["max_kelvin"] = CYNC_MAXK
+                    if device.supports_rgb:
+                        entity_registry_struct["supported_color_modes"].append("rgb")
+                        entity_registry_struct["effect"] = True
+                        entity_registry_struct["effect_list"] = list(FACTORY_EFFECTS_BYTES.keys())
+                    # If no color support, default to brightness-only mode
+                    if not entity_registry_struct.get("supported_color_modes"):
+                        entity_registry_struct["supported_color_modes"] = ["brightness"]
+                else:
+                    # on/off light only
+                    entity_registry_struct.pop("brightness", None)
+                    entity_registry_struct.pop("brightness_scale", None)
+                    entity_registry_struct.pop("supported_color_modes", None)
             elif dev_type == "switch":
-                # Switch entities don't need additional configuration beyond the base entity_registry_struct
-                # The base struct already includes command_topic, state_topic, state_on, state_off, etc.
-                pass
+                # Switch entities should not declare JSON schema
+                entity_registry_struct.pop("schema", None)
             elif dev_type == "fan":
                 entity_registry_struct["platform"] = "fan"
                 # fan can be controlled via light control structs: brightness -> max=255, high=191, medium=128, low=50, off=0
@@ -1308,9 +1323,8 @@ class MQTTClient:
                         if not entity_registry_struct["supported_color_modes"]:
                             entity_registry_struct["supported_color_modes"] = ["brightness"]
                     elif dev_type == "switch":
-                        # Switch entities don't need additional configuration beyond the base entity_registry_struct
-                        # The base struct already includes command_topic, state_topic, state_on, state_off, etc.
-                        pass
+                        # Switch entities should not declare JSON schema
+                        entity_registry_struct.pop("schema", None)
                     elif dev_type == "fan":
                         entity_registry_struct["platform"] = "fan"
                         # fan can be controlled via light control structs: brightness -> max=255, high=191, medium=128, low=50, off=0

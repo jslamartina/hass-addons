@@ -46,6 +46,7 @@
     "typescript": "^5.9.3"
   },
   "dependencies": {
+    "@modelcontextprotocol/server-filesystem": "^2025.8.21",
     "node-fetch": "^3.3.2",
     "sh-syntax": "^0.5.8",
     "tslib": "^2.8.1",
