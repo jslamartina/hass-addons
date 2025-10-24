@@ -1,0 +1,11 @@
+# Binary packet files - these would be actual binary data in production
+# For testing, we'll create them programmatically in conftest.py
+# This file is a placeholder to document the expected packet structure
+
+# 0x73 Control Packet - Turn On Command
+# Header: 73 00 00 00
+# Length: 1e (30 bytes)
+# Device ID: 34 12 (0x1234 little endian)
+# Payload: 01 00 00 00 64 (power=on, brightness=100)
+# Checksum: ab cd
+
