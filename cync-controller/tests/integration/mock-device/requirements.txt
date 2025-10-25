@@ -1,3 +1,0 @@
-# No external dependencies needed for basic mock device
-# All required functionality is in Python standard library
-
