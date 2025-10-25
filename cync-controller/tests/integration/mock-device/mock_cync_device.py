@@ -118,9 +118,9 @@ class MockCyncDevice:
             logger.error(f"Error receiving packet: {e}")
             return None
 
-    def create_ack_packet(self, msg_id: int = 0) -> bytes:
+    def create_ack_packet(self, queue_id: bytes, msg_id: bytes) -> bytes:
         """
-        Create an ACK packet (0x73 response).
+        Create a 0x7B ACK packet in response to a 0x73 command.
 
         Basic structure:
         - Header: 0x73
@@ -130,21 +130,14 @@ class MockCyncDevice:
         - Payload data
         - Checksum: 2 bytes (simplified for testing)
         """
-        # Simplified ACK packet structure
+        # ACK packet structure from structs.py x7b_generate_ack
         packet = bytearray()
-        packet.append(0x73)  # Control packet header
+        packet.append(0x7B)  # ACK packet header (not 0x73!)
         packet.extend([0x00, 0x00, 0x00])  # Padding
-        packet.extend([0x00, 0x1E])  # Length (30 bytes) - simplified
-        packet.extend(self.device_id.to_bytes(2, "little"))  # Device ID
-
-        # ACK payload (simplified)
-        packet.extend([0x01])  # ACK flag
-        packet.extend([msg_id & 0xFF])  # Message ID
-        packet.extend([0x00] * 18)  # Padding
-
-        # Checksum (simplified - just use 0xABCD for testing)
-        packet.extend([0xAB, 0xCD])
-
+        packet.extend([0x07, 0x00])  # Length: 7 bytes (4 queue_id + 3 msg_id)
+        packet.extend(queue_id)  # Queue ID (4 bytes)
+        packet.extend(msg_id)  # Message ID (3 bytes)
+        
         return bytes(packet)
 
     def create_handshake_packet(self) -> bytes:
@@ -217,26 +210,31 @@ class MockCyncDevice:
         """
         Parse a control command packet (0x73).
 
-        Returns dict with command info or None if not a control packet.
+        Returns dict with command info including queue_id and msg_id, or None if not a control packet.
         """
-        if not packet or len(packet) < 10:
+        if not packet or len(packet) < 12:
             return None
 
         if packet[0] != 0x73:
             return None
 
+        # Extract queue_id (4 bytes at position 6-9) and msg_id (3 bytes at position 9-11)
+        queue_id = packet[6:10]  # 4 bytes
+        msg_id = packet[9:12]  # 3 bytes (overlaps with queue_id in some packets)
+        
         # Extract basic info
         result = {
             "packet_type": "0x73",
-            "length": packet[4] if len(packet) > 4 else 0,
+            "length": packet[4] + (packet[5] * 256),
             "command": "UNKNOWN",
+            "queue_id": queue_id,
+            "msg_id": msg_id,
         }
 
-        # Try to parse command type
-        # In real Cync protocol, commands have specific byte patterns
-        # For testing, we'll use simplified detection
-        if len(packet) > 15:
-            # Check for power command
+        # Try to parse command type from payload
+        # Real Cync protocol: check specific byte positions for command data
+        if len(packet) > 12:
+            # Byte 12 might indicate power state or command type
             if packet[12] == 0x01:
                 result["command"] = "POWER_ON"
                 self.power_on = True
@@ -244,8 +242,8 @@ class MockCyncDevice:
                 result["command"] = "POWER_OFF"
                 self.power_on = False
 
-            # Check for brightness command
-            if len(packet) > 16 and packet[16] > 0:
+            # Check for brightness in payload
+            if len(packet) > 16 and packet[16] > 0 and packet[16] < 101:
                 result["command"] = "SET_BRIGHTNESS"
                 self.brightness = packet[16]
 
@@ -267,7 +265,7 @@ class MockCyncDevice:
                     logger.info(f"📥 Received command: {cmd['command']}")
 
                     # Send ACK response
-                    ack_packet = self.create_ack_packet()
+                    ack_packet = self.create_ack_packet(cmd['queue_id'], cmd['msg_id'])
                     await self.send_packet(ack_packet)
                     logger.info(f"📤 Sent ACK for command: {cmd['command']}")
 
