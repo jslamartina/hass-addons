@@ -71,8 +71,8 @@ def mqtt_host():
 
 @pytest.fixture
 def mqtt_port():
-    """MQTT broker port."""
-    return int(os.environ.get("MQTT_PORT", "1883"))
+    """MQTT broker port (using external mapped port to avoid conflicts)."""
+    return int(os.environ.get("MQTT_PORT", "11883"))
 
 
 @pytest.fixture
@@ -88,13 +88,15 @@ def mqtt_pass():
 
 
 @pytest.fixture
-async def mqtt_client(mqtt_host, mqtt_port, mqtt_user, mqtt_pass) -> AsyncGenerator[MQTTClient]:
+async def mqtt_client(mqtt_host, mqtt_port) -> AsyncGenerator[MQTTClient]:
     """
     Create and connect to MQTT broker for testing.
 
     Yields connected MQTT client, automatically disconnects after test.
+    Note: Connects without authentication since test EMQX has enable_authn=false
     """
-    client = MQTTClient(hostname=mqtt_host, port=mqtt_port, username=mqtt_user, password=mqtt_pass)
+    # Omit username/password entirely for anonymous connection
+    client = MQTTClient(hostname=mqtt_host, port=mqtt_port)
 
     try:
         await client.__aenter__()
@@ -213,6 +215,25 @@ async def collect_mqtt_messages(mqtt_client):
         return messages
 
     return _collect
+
+
+@pytest.fixture
+def trigger_discovery(mqtt_client):
+    """
+    Return function to trigger Home Assistant discovery by publishing 'online' status.
+    
+    The cync-controller listens to homeassistant/status and republishes
+    discovery messages when HA comes online.
+    
+    Usage:
+        await trigger_discovery()
+    """
+    async def _trigger():
+        await mqtt_client.publish("homeassistant/status", b"online")
+        # Give controller time to process and republish discovery
+        await asyncio.sleep(0.5)
+    
+    return _trigger
 
 
 @pytest.fixture(scope="session")
