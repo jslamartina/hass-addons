@@ -12,11 +12,9 @@
 | ------- | -------------- | ----- | -------- | ------------ |
 | Phase 1 | ✅ **COMPLETE** | 69    | 96.21%   | Oct 24, 2025 |
 | Phase 2 | ✅ **COMPLETE** | 149   | 38.14%   | Oct 24, 2025 |
-| Phase 3 | ✅ **COMPLETE** | 28    | N/A*     | Oct 24, 2025 |
+| Phase 3 | ❌ **CANCELLED** | 0     | N/A      | Cancelled    |
 
-*Integration tests focus on component interactions rather than code coverage
-
-**Current Achievement:** 218 unit tests + 28 integration tests (100% passing), 38.14% overall coverage, 95-100% on critical modules
+**Current Achievement:** 218 unit tests (100% passing), 38.14% overall coverage, 95-100% on critical modules
 
 ---
 
@@ -1690,155 +1688,26 @@ exit 0
 
 ### Phase 3: Integration Tests (Weeks 5-6)
 
-**Status:** ✅ **COMPLETE** (October 24, 2025)
+**Status:** ❌ **CANCELLED** (October 25, 2025)
 
-**Goals:** Test component interactions with real dependencies
+**Reason:** Integration tests with Docker-based environments proved too complex and costly for the value provided. The overhead of managing multi-container test environments, maintaining mock protocol implementations, and debugging cross-container communication outweighed the benefits.
+
+**Alternative Approach:** Focus on comprehensive unit tests (Phase 1-2 complete with 218 tests, 38% coverage) and manual end-to-end testing using real devices when needed.
+
+**Goals:** ~~Test component interactions with real dependencies~~
 
 **Tasks:**
+- ❌ Create Docker Compose test environment
+- ❌ Build mock Cync device  
+- ❌ Write MQTT integration tests
+- ❌ Write device control integration tests
+- ❌ Write cloud relay integration tests
+- ❌ Create integration test runner script
+- ❌ Add `npm run test:integration` scripts
 
-1. **Create Docker Compose test environment (`docker-compose.test.yml`)** ✅
-   - EMQX MQTT broker service (port 1883, dashboard 18083)
-   - cync-controller service built from Dockerfile
-   - mock-device service for device simulation
-   - Health checks for service readiness
-   - Proper network configuration for inter-container communication
-   - Volume mounts for test fixtures
+**Deliverables:** None - Phase cancelled
 
-2. **Build mock Cync device** ✅
-   - Dockerfile for Python 3.13-alpine container
-   - `mock_cync_device.py` - Full TCP protocol simulator
-   - Connect/disconnect handling
-   - ACK response generation (0x73 packets)
-   - State broadcast simulation (0x43 packets)
-   - Command parsing (power, brightness)
-   - Configurable device ID, name, and room
-
-3. **Create test fixtures** ✅
-   - `fixtures/devices.yaml` - 3 test devices + 2 groups
-   - `fixtures/packets/` - Binary packet samples (documented)
-   - `fixtures/README.md` - Fixture documentation
-   - Device configurations (Living Room, Bedroom, Kitchen)
-   - Group configurations (room groups, whole-home groups)
-
-4. **Write integration test fixtures (`conftest.py`)** ✅
-   - Session-scoped fixtures for config loading
-   - MQTT client fixture with auto-cleanup
-   - Device/group config fixtures from YAML
-   - Sample packet fixtures (control_on, control_off, mesh_info, broadcast)
-   - Helper functions (`wait_for_mqtt_message`, `collect_mqtt_messages`)
-   - Custom pytest markers (integration, slow, requires_docker)
-
-5. **Write MQTT integration tests (`test_mqtt_integration.py`)** ✅
-   - Test MQTT broker connection
-   - Test discovery message publishing
-   - Test discovery message structure and required fields
-   - Test availability messages (online/offline)
-   - Test state update propagation
-   - Test command subscription and processing
-   - Test multiple entity management
-   - Test suggested area assignment
-   - Test configuration validation
-   - Test MQTT reconnection handling (placeholder)
-
-6. **Write device control integration tests (`test_device_control.py`)** ✅
-   - Test full command flow with ACK (validates callback registration fix)
-   - Test turn on/off commands
-   - Test brightness control
-   - Test group commands (all devices respond)
-   - Test device availability updates
-   - Test rapid command sequences
-   - Test concurrent device operations
-   - Test pending_command flag lifecycle (placeholder)
-   - Test command error handling
-   - Test system recovery after invalid commands
-
-7. **Write cloud relay integration tests (`test_cloud_relay.py`)** ✅
-   - Test relay mode disabled by default
-   - Test packet forwarding to cloud (requires special setup)
-   - Test LAN-only mode blocks cloud (privacy mode)
-   - Test packet inspection and logging
-   - Test packet injection mechanism
-   - Test SSL context configuration
-   - Test cloud relay connection lifecycle
-   - **Note:** Most tests are placeholders requiring special environment
-
-8. **Create integration test runner script** ✅
-   - `scripts/run-integration-tests.sh` - Comprehensive test runner
-   - Docker environment setup with health checks
-   - Service readiness verification (EMQX, cync-controller, mock-device)
-   - Environment variable configuration
-   - Pytest execution with integration markers
-   - Log collection to `integration-test-logs.txt`
-   - Cleanup and teardown
-   - Special modes: `--setup-only`, `--teardown-only`, `--no-teardown`
-   - Colored output for better readability
-
-9. **Add npm scripts for integration testing** ✅
-   - `test:integration` - Run all integration tests
-   - `test:integration:setup` - Setup environment only
-   - `test:integration:teardown` - Teardown environment only
-   - `test:integration:logs` - View container logs
-
-**Deliverables:** ✅ **ALL ACHIEVED**
-- ✅ Docker-based test environment with 3 services (EMQX, cync-controller, mock-device)
-- ✅ **28 integration tests** created
-  - 10 MQTT integration tests
-  - 11 device control tests
-  - 7 cloud relay tests (mostly placeholders, documented for future/manual testing)
-- ✅ Mock Cync device with full protocol simulation
-- ✅ Test fixtures and helper functions (10+ pytest fixtures)
-- ✅ Integration test runner with health checks and log collection
-- ✅ **4 npm scripts** for integration test management
-
-**Test Coverage Summary:**
-- **MQTT Integration (10 tests):**
-  - Broker connection
-  - Discovery message publishing and validation (required fields, device metadata)
-  - Availability messages (birth/online/offline)
-  - State update propagation
-  - Command subscription and processing
-  - Multiple entity management
-  - Suggested area assignment (room mapping)
-  - Configuration validation
-
-- **Device Control (11 tests):**
-  - Full command flow with ACK (critical: validates callback registration fix)
-  - Turn on/off commands via MQTT
-  - Brightness control
-  - Group commands (validates all devices respond)
-  - Device availability tracking
-  - Rapid command sequences (stress test)
-  - Concurrent device operations
-  - Error handling and recovery
-  - Invalid command rejection
-
-- **Cloud Relay (7 tests - mostly placeholders):**
-  - Relay mode disabled by default (working test)
-  - Packet forwarding device ↔ cloud (requires cloud setup)
-  - LAN-only mode (privacy mode, requires special config)
-  - Packet inspection and debug logging (requires environment)
-  - Packet injection (requires file monitoring setup)
-  - SSL/TLS configuration testing (requires certs)
-  - Cloud connection lifecycle (requires cloud connectivity)
-  - **Note:** These tests document expected behavior and serve as manual test checklist
-
-**Test Execution:** Tests run in Docker environment, require `docker-compose` for setup
-
-**Files Created:**
-- `tests/integration/docker-compose.test.yml` - 3-service Docker environment
-- `tests/integration/mock-device/Dockerfile` - Mock device container
-- `tests/integration/mock-device/mock_cync_device.py` - 310-line device simulator
-- `tests/integration/mock-device/requirements.txt` - No external dependencies
-- `tests/integration/conftest.py` - 237-line fixture file with 10+ fixtures
-- `tests/integration/fixtures/devices.yaml` - 3 devices, 2 groups
-- `tests/integration/fixtures/packets/control_on.bin` - Packet structure documentation
-- `tests/integration/fixtures/README.md` - Fixture documentation
-- `tests/integration/test_mqtt_integration.py` - 292 lines, 10 tests
-- `tests/integration/test_device_control.py` - 367 lines, 11 tests
-- `tests/integration/test_cloud_relay.py` - 150 lines, 7 tests (placeholders)
-- `scripts/run-integration-tests.sh` - 232-line test runner with health checks
-
-**Total Lines of Code:** ~1,588 lines across 12 new files
+---
 
 ### Phase 4: E2E Tests (Weeks 7-8)
 
