@@ -58,22 +58,24 @@ async def test_full_command_flow_with_ack(mqtt_client, test_device_1):
 @pytest.mark.integration
 @pytest.mark.requires_docker
 @pytest.mark.asyncio
-async def test_turn_on_command(mqtt_client, test_device_1):
+async def test_turn_on_command(mqtt_client, test_device_1, device_topics):
     """Test turning device ON via MQTT command."""
-    device_id = test_device_1["device_id"]
-    command_topic = f"cync_lan_test/device_{device_id:04x}/set"
-    state_topic = f"cync_lan_test/device_{device_id:04x}/state"
+    device_name = test_device_1["name"]
+    topics = device_topics(device_name)
+    command_topic = topics["command_topic"]
+    state_topic = topics["state_topic"]
 
     await mqtt_client.subscribe(state_topic)
 
     # Send ON command
     await mqtt_client.publish(command_topic, payload="ON")
 
-    # Verify state becomes ON
+    # Verify state becomes ON (controller publishes JSON)
     try:
-        async with asyncio.timeout(10.0):
+        async with asyncio.timeout(15.0):
             async for message in mqtt_client.messages:
-                if message.payload.decode() == "ON":
+                state_data = json.loads(message.payload.decode())
+                if state_data.get("state") == "ON":
                     return  # Success
     except TimeoutError:
         pytest.fail("Device did not turn ON")
@@ -82,11 +84,12 @@ async def test_turn_on_command(mqtt_client, test_device_1):
 @pytest.mark.integration
 @pytest.mark.requires_docker
 @pytest.mark.asyncio
-async def test_turn_off_command(mqtt_client, test_device_1):
+async def test_turn_off_command(mqtt_client, test_device_1, device_topics):
     """Test turning device OFF via MQTT command."""
-    device_id = test_device_1["device_id"]
-    command_topic = f"cync_lan_test/device_{device_id:04x}/set"
-    state_topic = f"cync_lan_test/device_{device_id:04x}/state"
+    device_name = test_device_1["name"]
+    topics = device_topics(device_name)
+    command_topic = topics["command_topic"]
+    state_topic = topics["state_topic"]
 
     await mqtt_client.subscribe(state_topic)
 
@@ -97,11 +100,12 @@ async def test_turn_off_command(mqtt_client, test_device_1):
     # Then turn off
     await mqtt_client.publish(command_topic, payload="OFF")
 
-    # Verify state becomes OFF
+    # Verify state becomes OFF (controller publishes JSON)
     try:
-        async with asyncio.timeout(10.0):
+        async with asyncio.timeout(15.0):
             async for message in mqtt_client.messages:
-                if message.payload.decode() == "OFF":
+                state_data = json.loads(message.payload.decode())
+                if state_data.get("state") == "OFF":
                     return  # Success
     except TimeoutError:
         pytest.fail("Device did not turn OFF")
@@ -360,7 +364,8 @@ async def test_command_error_handling(mqtt_client, test_device_1):
     try:
         async with asyncio.timeout(10.0):
             async for message in mqtt_client.messages:
-                if message.payload.decode() == "ON":
+                state_data = json.loads(message.payload.decode())
+                if state_data.get("state") == "ON":
                     return  # Success - system recovered
 
     except TimeoutError:

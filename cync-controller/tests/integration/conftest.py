@@ -6,6 +6,7 @@ with real MQTT broker and mock devices in Docker containers.
 """
 
 import asyncio
+import json
 import os
 from collections.abc import AsyncGenerator
 from pathlib import Path
@@ -244,6 +245,37 @@ def docker_compose_file():
 
 
 # Pytest markers for integration tests
+
+
+@pytest.fixture
+def device_topics():
+    """
+    Return function to get MQTT topics for a device by name.
+    
+    Based on the actual controller format: cync_lan_test/set/{home_id}-{device_id_str}
+    """
+    def _get_topics(device_name):
+        # Controller uses home-id + device_id_str format
+        # From cync_mesh.yaml: test-home-123 + test_light_1
+        device_id_map = {
+            "Test Light 1": "test-home-123-test_light_1",
+            "Test Light 2": "test-home-123-test_light_2",
+            "Test Light 3": "test-home-123-test_light_3",
+        }
+        
+        device_id_str = device_id_map.get(device_name)
+        if not device_id_str:
+            raise ValueError(f"Unknown device: {device_name}")
+        
+        return {
+            "command_topic": f"cync_lan_test/set/{device_id_str}",
+            "state_topic": f"cync_lan_test/status/{device_id_str}",
+            "unique_id": device_id_str.replace("-", "_"),
+        }
+    
+    return _get_topics
+
+
 def pytest_configure(config):
     """Register custom pytest markers."""
     config.addinivalue_line(
@@ -257,3 +289,45 @@ def pytest_configure(config):
         "markers",
         "requires_docker: marks tests that require Docker environment",
     )
+
+
+@pytest.fixture
+async def device_topics(mqtt_client, trigger_discovery):
+    """
+    Get actual MQTT topics for test devices from discovery messages.
+    
+    Returns dict mapping device names to their command/state topics.
+    """
+    device_topics_map = {}
+    
+    # Subscribe FIRST
+    await mqtt_client.subscribe("homeassistant/light/+/config")
+    
+    # THEN trigger discovery
+    await trigger_discovery()
+    
+    # Collect discovery messages with generous timeout for random delay
+    try:
+        async with asyncio.timeout(25.0):
+            message_count = 0
+            async for message in mqtt_client.messages:
+                payload = json.loads(message.payload.decode())
+                device_info = payload.get("device", {})
+                device_name = device_info.get("name")
+                
+                if device_name:
+                    device_topics_map[device_name] = {
+                        "command_topic": payload.get("command_topic"),
+                        "state_topic": payload.get("state_topic"),
+                        "unique_id": payload.get("unique_id"),
+                    }
+                
+                message_count += 1
+                if message_count >= 3:  # We have 3 test devices
+                    break
+    except TimeoutError:
+        pass
+    
+    return device_topics_map
+
+
