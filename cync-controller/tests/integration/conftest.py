@@ -221,18 +221,19 @@ async def collect_mqtt_messages(mqtt_client):
 def trigger_discovery(mqtt_client):
     """
     Return function to trigger Home Assistant discovery by publishing 'online' status.
-    
+
     The cync-controller listens to homeassistant/status and republishes
     discovery messages when HA comes online.
-    
+
     Usage:
         await trigger_discovery()
     """
+
     async def _trigger():
         await mqtt_client.publish("homeassistant/status", b"online")
         # Give controller time to process and republish discovery
         await asyncio.sleep(0.5)
-    
+
     return _trigger
 
 
