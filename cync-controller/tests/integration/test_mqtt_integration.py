@@ -174,7 +174,7 @@ async def test_multiple_entities_published(mqtt_client, test_devices, trigger_di
     """
     discovery_topic = "homeassistant/light/+/config"
     await mqtt_client.subscribe(discovery_topic)
-    
+
     # Trigger discovery
     await trigger_discovery()
 
@@ -216,7 +216,7 @@ async def test_suggested_area_assignment(mqtt_client, test_device_1, trigger_dis
     """
     discovery_topic = "homeassistant/light/+/config"
     await mqtt_client.subscribe(discovery_topic)
-    
+
     # Trigger discovery
     await trigger_discovery()
 
@@ -254,7 +254,7 @@ async def test_entity_configuration_validation(mqtt_client, collect_mqtt_message
     """
     # Trigger discovery
     await trigger_discovery()
-    
+
     # Collect all discovery messages (longer duration for random delay)
     messages = await collect_mqtt_messages("homeassistant/light/+/config", duration=20.0)
 
