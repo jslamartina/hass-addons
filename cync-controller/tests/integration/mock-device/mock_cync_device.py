@@ -62,16 +62,14 @@ class MockCyncDevice:
             logger.info(
                 f"Connecting to {self.server_host}:{self.server_port} as device {self.device_id:04x} ({self.device_name})"
             )
-            
+
             # Create SSL context (controller uses self-signed cert, so disable verification)
             ssl_context = ssl.create_default_context()
             ssl_context.check_hostname = False
             ssl_context.verify_mode = ssl.CERT_NONE
-            
+
             self.reader, self.writer = await asyncio.open_connection(
-                self.server_host, 
-                self.server_port,
-                ssl=ssl_context
+                self.server_host, self.server_port, ssl=ssl_context
             )
             self.connected = True
             logger.info(f"✅ Connected with SSL as device {self.device_id:04x}")
@@ -154,23 +152,23 @@ class MockCyncDevice:
         Create a 0x23 identification/handshake packet.
         
         This is the FIRST packet a Cync device sends to identify itself.
-        Format: 0x23 packet with queue_id at bytes 6-10
+        Format from controller logs: 0x23 00 00 00 [length] [queue_id 4 bytes] [padding]
+        Total packet should be at least 31 bytes (0x1F)
         """
         packet = bytearray()
         packet.append(0x23)  # Handshake/identification packet
-        packet.extend([0x00, 0x00, 0x00])  # Padding
-        packet.extend([0x00, 0x1F])  # Length (31 bytes total)
+        packet.extend([0x00, 0x00, 0x00])  # Padding bytes 1-3
+        packet.extend([0x1F, 0x00])  # Length: 31 bytes (little endian: 0x001F)
         
-        # Queue ID (4 bytes) - device identifier
+        # Queue ID (4 bytes at position 6-9) - device identifier
         # Use device_id as part of queue_id
         queue_id = self.device_id.to_bytes(4, "big")
         packet.extend(queue_id)
         
-        # Additional padding to reach expected packet size
-        packet.extend([0x00] * 20)
-        
-        # Checksum (last 2 bytes)
-        packet.extend([0x00, 0x00])
+        # Additional padding to reach 31 bytes total
+        # Current length: 10 bytes (header + length + queue_id)
+        # Need: 21 more bytes to reach 31
+        packet.extend([0x00] * 21)
         
         return bytes(packet)
 
@@ -179,13 +177,14 @@ class MockCyncDevice:
         Create a 0xC3 connection request packet.
         
         Sent after receiving auth_ack and 0xA3 from server.
+        Format: 0xC3 00 00 00 [length little-endian] [payload]
         """
         packet = bytearray()
         packet.append(0xC3)  # Connection request
-        packet.extend([0x00, 0x00, 0x00])  # Padding
-        packet.extend([0x00, 0x08])  # Length (8 bytes)
+        packet.extend([0x00, 0x00, 0x00])  # Padding bytes 1-3
+        packet.extend([0x08, 0x00])  # Length: 8 bytes (little endian: 0x0008)
         
-        # Simple connection request payload
+        # Simple connection request payload (2 bytes to total 8)
         packet.extend([0x00, 0x00])
         
         return bytes(packet)
@@ -302,37 +301,37 @@ class MockCyncDevice:
         try:
             # Perform Cync protocol handshake
             logger.info("🤝 Starting Cync protocol handshake...")
-            
+
             # Step 1: Send 0x23 identification packet
             handshake_packet = self.create_handshake_packet()
             await self.send_packet(handshake_packet)
             logger.info("📤 Sent 0x23 handshake packet")
-            
+
             # Step 2: Wait for server responses (auth_ack and 0xA3)
             await asyncio.sleep(0.5)
             response = await self.receive_packet(timeout=5.0)
             if response:
                 logger.info(f"📥 Received auth_ack: {' '.join(f'{b:02x}' for b in response[:10])}")
-            
+
             # Wait for 0xA3 packet from server
             await asyncio.sleep(0.5)
             a3_response = await self.receive_packet(timeout=5.0)
             if a3_response:
                 logger.info(f"📥 Received 0xA3: {' '.join(f'{b:02x}' for b in a3_response[:10])}")
-            
+
             # Step 3: Send 0xC3 connection request
             connection_request = self.create_connection_request()
             await self.send_packet(connection_request)
             logger.info("📤 Sent 0xC3 connection request")
-            
+
             # Step 4: Wait for connection ack
             await asyncio.sleep(0.3)
             conn_ack = await self.receive_packet(timeout=5.0)
             if conn_ack:
                 logger.info(f"📥 Received connection ack: {' '.join(f'{b:02x}' for b in conn_ack[:10])}")
-            
+
             logger.info("✅ Handshake complete!")
-            
+
             # Now send initial state broadcast
             await asyncio.sleep(0.5)
             initial_state = self.create_state_broadcast()
