@@ -325,6 +325,7 @@ configure_emqx() {
   log_info "Configuring EMQX with required settings..."
 
   # EMQX requires node.cookie to be set via environment variable
+  # Also disable authentication for development (no auth needed in dev environment)
   local config
   config=$(
     cat << EOF
@@ -334,6 +335,10 @@ configure_emqx() {
       {
         "name": "EMQX_NODE__COOKIE",
         "value": "emqxsecretcookie"
+      },
+      {
+        "name": "EMQX_LISTENERS__TCP__DEFAULT__ENABLE_AUTHN",
+        "value": "false"
       }
     ]
   }

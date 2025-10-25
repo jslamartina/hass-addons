@@ -1657,7 +1657,7 @@ class MQTTClient:
         )
         if ret is False:
             logger.error("%s Failed to publish export server running entity config", lp)
-        status = "ON" if g.export_server.running is True else "OFF"
+        status = "ON" if g.export_server and g.export_server.running is True else "OFF"
         pub_tasks.append(self.publish(f"{self.topic}/status/bridge/export_server/running", status.encode()))
 
         entity_unique_id = f"{bridge_base_unique_id}_mqtt_client_connected"

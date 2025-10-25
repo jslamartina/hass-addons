@@ -23,7 +23,7 @@ async def test_mqtt_broker_connection(mqtt_client):
 @pytest.mark.integration
 @pytest.mark.requires_docker
 @pytest.mark.asyncio
-async def test_discovery_messages_published(mqtt_client, test_device_1):
+async def test_discovery_messages_published(mqtt_client, test_device_1, trigger_discovery):
     """
     Test that add-on publishes MQTT discovery messages.
 
@@ -36,10 +36,13 @@ async def test_discovery_messages_published(mqtt_client, test_device_1):
     discovery_topic = "homeassistant/light/+/config"
     await mqtt_client.subscribe(discovery_topic)
 
-    # Collect discovery messages for 5 seconds
+    # Trigger rediscovery AFTER subscribing
+    await trigger_discovery()
+
+    # Collect discovery messages (controller uses random 5-15s delay before publishing)
     messages = []
     try:
-        async with asyncio.timeout(5.0):
+        async with asyncio.timeout(20.0):
             async for message in mqtt_client.messages:
                 messages.append(message)
                 # Stop after receiving at least 1 message

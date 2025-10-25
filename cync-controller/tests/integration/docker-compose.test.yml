@@ -6,12 +6,13 @@ services:
     image: emqx/emqx:5.8.0
     container_name: cync_test_emqx
     ports:
-      - "1883:1883" # MQTT
-      - "18083:18083" # Dashboard
+      - "11883:1883" # MQTT (use 11883 externally to avoid conflict with HA's EMQX)
+      - "28083:18083" # Dashboard (use 28083 externally to avoid conflict)
     environment:
       - EMQX_NAME=test_broker
       - EMQX_HOST=127.0.0.1
-      - EMQX_LOADED_PLUGINS="emqx_dashboard,emqx_management,emqx_auth_mnesia"
+      - EMQX_ALLOW_ANONYMOUS=true
+      - EMQX_LISTENERS__TCP__DEFAULT__ENABLE_AUTHN=false
     healthcheck:
       test: ["CMD", "emqx", "ping"]
       interval: 5s
@@ -30,6 +31,7 @@ services:
         BUILD_ARCH: amd64
         BUILD_VERSION: test
     container_name: cync_test_controller
+    command: sh /test/start-test.sh
     depends_on:
       emqx:
         condition: service_healthy
@@ -38,6 +40,7 @@ services:
       - CYNC_DEBUG=1
       - CYNC_RAW_DEBUG=1
       - CYNC_TOPIC=cync_lan_test
+      - CYNC_PERSISTENT_BASE_DIR=/data/config
       - CYNC_MQTT_HOST=emqx
       - CYNC_MQTT_PORT=1883
       - CYNC_MQTT_USER=test_user
@@ -54,15 +57,17 @@ services:
       - CYNC_CLOUD_RELAY_ENABLED=false
       - CYNC_CLOUD_FORWARD=false
     ports:
-      - "23779:23779" # Device TCP port
-      - "23778:23778" # Web interface
-      - "5678:5678" # Debug port
+      - "33779:23779" # Device TCP port (use 33779 externally to avoid conflict)
+      - "33778:23778" # Web interface (use 33778 externally to avoid conflict)
+      - "15678:5678" # Debug port (use 15678 externally to avoid conflict)
     volumes:
       - ./fixtures:/data/fixtures:ro
+      - ./start-test.sh:/test/start-test.sh:ro
+      - test_config:/data/config
     networks:
       - cync_test_network
     healthcheck:
-      test: ["CMD", "nc", "-z", "localhost", "23779"]
+      test: ["CMD", "nc", "-z", "127.0.0.1", "23779"]
       interval: 5s
       timeout: 5s
       retries: 3
@@ -90,3 +95,6 @@ services:
 networks:
   cync_test_network:
     driver: bridge
+
+volumes:
+  test_config:
