@@ -4,14 +4,6 @@
       "command": "uv",
       "args": ["run", "--with", "mcp-server-fetch", "mcp-server-fetch"]
     },
-    "docker": {
-      "command": "uv",
-      "args": ["run", "--with", "mcp-server-docker", "mcp-server-docker"]
-    },
-    "git": {
-      "command": "uv",
-      "args": ["run", "--with", "mcp-server-git", "mcp-server-git"]
-    },
     "python": {
       "command": "uv",
       "args": [
@@ -24,20 +16,6 @@
         "--python-path",
         "/usr/local/bin/python3"
       ]
-    },
-    "time": {
-      "command": "uv",
-      "args": [
-        "run",
-        "--with",
-        "mcp-server-time",
-        "mcp-server-time",
-        "--local-timezone=America/Chicago"
-      ]
-    },
-    "filesystem": {
-      "command": "npm",
-      "args": ["exec", "-y", "@modelcontextprotocol/server-filesystem"]
     },
     "sequential-thinking": {
       "command": "uv",

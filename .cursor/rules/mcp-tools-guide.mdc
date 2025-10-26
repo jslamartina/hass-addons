@@ -2,152 +2,35 @@
 alwaysApply: true
 ---
 
-# MCP Tools Guide
+# MCP Tool Basics
 
-The devcontainer provides Model Context Protocol (MCP) servers for specialized development tasks.
+Devcontainer exposes three MCP servers (see `.cursor/mcp.json`):
 
-## Available Tools & When to Use
+1. **sequential-thinking**: log multi-step reasoning, next actions, tool picks.
+2. **python**: run native Python 3.13 with filesystem access for large-file processing, quick analysis, transformations.
+3. **web_fetch**: pull external docs/web pages (markdown or raw HTML).
 
-### 🧠 **Sequential Thinking** (`mcp_sequential-thinking_*`)
+**Usage order:** prefer standard tools (`read_file`, `grep`, terminal) when faster; reach for MCP when they add value. If an MCP call fails, note it and continue with alternatives.
 
-**When to use:**
-- ✅ Logging step-by-step reasoning with explicit next actions
-- ✅ Tracking progress across multi-step tasks (threaded)
-- ✅ Producing concise status updates and future plan
+Example snippets:
+```python
+# Python: transform file
+mcp_python_run_python_code("""
+from pathlib import Path
+text = Path('file.py').read_text()
+...
+""")
 
-**Example:**
-```bash
+# Web fetch: docs
+mcp_web_fetch_fetch(url="https://developers.home-assistant.io/docs/add-ons/", max_length=5000)
+
+# Thought logging
 mcp_sequential-thinking_think(
-  thread_purpose: "Cloud relay test planning",
-  thought: "Validate baseline LAN-only behavior before enabling relay",
-  thought_index: 1,
-  tool_recommendation: "functions.run_terminal_cmd",
-  left_to_be_done: "Run ./scripts/test-cloud-relay.sh Phase 1; check logs"
+  thread_purpose="Investigation",
+  thought="Checked logs; exploring config reload timing",
+  thought_index=2,
+  tool_recommendation="grep"
 )
 ```
 
-### 🐍 **Python Execution** (`mcp_python_*`)
-
-**When to use:**
-- ✅ Running quick Python scripts for analysis
-- ✅ Testing Python code snippets
-- ✅ Automating file operations (read/write/list)
-- ✅ Processing data or logs
-
-**Example:**
-```bash
-# Analyze a Python file
-mcp_python_run_python_code("import ast; tree = ast.parse(open('file.py').read())")
-```
-
-### 🐳 **Docker Management** (`mcp_docker_*`)
-
-**When to use:**
-- ✅ Checking container status/logs
-- ✅ Building Docker images
-- ✅ Managing containers (start/stop/remove)
-- ✅ Debugging add-on containers
-
-**Example:**
-```bash
-# Check addon logs
-mcp_docker_fetch_container_logs("addon_local_cync-controller")
-```
-
-### 🔧 **Git Operations** (`mcp_git_*`)
-
-**When to use:**
-- ✅ Checking git status and diffs
-- ✅ Committing changes with messages
-- ✅ Viewing commit history
-- ✅ Branch management
-
-**Example:**
-```bash
-# Commit changes
-mcp_git_git_commit("repo_path: /workspaces/hass-addons, message: 'Fix token creation'")
-```
-
-### 🌐 **Web Fetching** (`mcp_web_fetch_*`)
-
-**When to use:**
-- ✅ Fetching current documentation or specs
-- ✅ Looking up API documentation
-- ✅ Getting latest protocol information
-- ✅ Research current best practices
-
-**Don't use for:**
-- ❌ Searching the codebase (use codebase_search)
-- ❌ Reading project files (use read_file)
-
-### ⏰ **Time Operations** (`mcp_time_*`)
-
-**When to use:**
-- ✅ Converting between timezones
-- ✅ Getting current time for scripts
-- ✅ Calculating timestamps for documentation
-
-### 📁 **Filesystem Operations** (`mcp_filesystem_*`)
-
-**When to use:**
-- ✅ Reading/writing files across the workspace
-- ✅ Creating directories
-- ✅ Moving/renaming files
-- ✅ Listing directories with sizes
-
-**Preferred over:**
-- Plain shell commands when file operations are needed
-
-## Tool Usage Priorities
-
-1. **Use specialized MCP tools first** - They're faster and provide better context
-2. **Use grep/search for exact matches** - More efficient than Python parsing
-3. **Use terminal commands** - Only when MCP tools can't do it
-4. **Use web search sparingly** - Prefer codebase search and local knowledge
-
-## Common Patterns
-
-### Checking Addon Status
-```bash
-# Use Docker tool
-mcp_docker_fetch_container_logs("addon_local_cync-controller", tail: 50)
-```
-
-### Reading Project Files
-```bash
-# Use filesystem tool
-mcp_filesystem_read_text_file("path/to/file.py")
-```
-
-### Analyzing Code
-```bash
-# Use Python tool
-mcp_python_run_python_code("import ast; ...")
-```
-
-### Finding Patterns
-```bash
-# Use grep tool
-grep("pattern", "path/to/search")
-```
-
-### Searching Codebase
-```bash
-# Use codebase_search for semantic understanding
-codebase_search(query: "How does token creation work?", target_directories: ["scripts"])
-```
-
-## Troubleshooting
-
-If an MCP tool fails:
-1. Check tool parameters are correct
-2. Try alternative tool (e.g., shell command instead)
-3. Continue gracefully with available information
-4. Note the limitation for future runs
-
-**Important:** If MCP tools fail, standard tools (grep, terminal commands) are always available as fallback.
-
-## Related
-
-- [AGENTS.md](mdc:AGENTS.md) - Full MCP documentation reference
-- [docs/developer/mcp-tools.md](mdc:docs/developer/mcp-tools.md) - Detailed MCP guide
+Troubleshooting: if a server is unavailable or errors, fall back to local commands and mention the issue. See `docs/developer/mcp-tools.md` for deep dive.

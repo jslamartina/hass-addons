@@ -1,54 +1,18 @@
 ---
-description: Important devcontainer setup and quirks
+description: Devcontainer quirks
 ---
 
-# Devcontainer Quirks & Setup
+# Devcontainer Essentials
 
-⚠️ **READ FIRST:** [.devcontainer/README.md](mdc:.devcontainer/README.md) contains critical setup information.
-
-## Key Points
-
-### Docker & Supervisor
-
-- **Supervisor is auto-started** - Don't manually start Docker
-- **Log filtering enabled** - Check [.devcontainer/post-start.sh](mdc:.devcontainer/post-start.sh) for log configuration
-- **Backup restore** - Currently disabled in post-start.sh (lines 131-216)
-  - To re-enable: Uncomment those lines and test thoroughly
-
-### Fresh HA Setup
-
-```bash
-cd scripts
-./setup-fresh-ha.sh  # Automated onboarding, EMQX install, addon config
-```
-
-### Credentials
-
-Access Home Assistant at `http://localhost:8123`
-- **Username:** `dev`
-- **Password:** `dev`
-- See [hass-credentials.env](mdc:hass-credentials.env) for credentials
-
-### Scripts Access
-
-⚠️ **Important:** Scripts that call Supervisor API must run inside `hassio_cli` container:
-
-```bash
-# ❌ WRONG - Will fail with "Could not resolve host: supervisor"
-./scripts/configure-addon.sh get
-
-# ✅ CORRECT - Use ha CLI or docker exec hassio_cli
-ha addons info local_cync-controller
-docker exec hassio_cli curl -sf http://supervisor/...
-```
-
-## Common Commands
-
-```bash
-ha addons logs local_cync-controller --follow    # View logs
-ha addons restart local_cync-controller           # Restart addon
-ha addons rebuild local_cync-controller           # Rebuild (Python changes)
-npm run lint                                       # Check all linters
-```
-
-See [AGENTS.md](mdc:AGENTS.md) for full command reference.
+- Read `.devcontainer/README.md` first; supervisor + Docker already managed.
+- Never start Docker manually—`supervisor_run` handles lifecycle.
+- Backup restore in `post-start.sh` is disabled by default; only re-enable after testing.
+- Scripts needing Supervisor API must run via `ha` CLI or `docker exec hassio_cli ...`; `supervisor` hostname is not reachable from the devcontainer shell.
+- Credentials: Home Assistant at `http://localhost:8123` (`dev` / `dev`, see `hass-credentials.env`).
+- Common commands:
+  ```bash
+  ha addons logs local_cync-controller --follow
+  ha addons restart local_cync-controller
+  ha addons rebuild local_cync-controller   # after Python edits
+  npm run lint
+  ```

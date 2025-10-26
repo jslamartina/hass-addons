@@ -201,17 +201,17 @@ When working with this codebase, AI agents should use web search tools to stay c
 
 ### MCP Development Tools
 
-The devcontainer includes several Model Context Protocol (MCP) servers that provide specialized capabilities for development tasks.
+The devcontainer includes Model Context Protocol (MCP) servers that provide specialized capabilities for development tasks.
 
-**Quick reference:** Time operations, Python execution, Docker management, Git operations, Web content fetching, Filesystem operations, Sequential Thinking (status/plan logging).
+**Available tools:** Web content fetching, Python code execution, Sequential thinking (reasoning tracker).
 
 **📖 See [MCP Tools Guide](docs/developer/mcp-tools.md) for detailed documentation.**
 
 **Key points:**
 
-- Automatic installation via `uvx`/`npx` (no manual setup)
+- Automatic installation via `uvx` (no manual setup)
 - Configured in `.cursor/mcp.json`
-- When MCP tools fail, use standard tools (grep, terminal commands) and continue gracefully
+- When MCP tools fail, use standard tools (grep, read_file, terminal commands) and continue gracefully
 
 ---
 
