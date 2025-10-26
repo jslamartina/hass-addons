@@ -61,3 +61,4 @@ export CYNC_EXPOSE_DEVICE_LIGHTS
 #cync-controller --enable-export
 # for some wierd reason, the cync-controller executable does not work in the add-on container all of a sudden
 python -c "from cync_lan.main import main; main()" --enable-export
+# Force rebuild trigger
