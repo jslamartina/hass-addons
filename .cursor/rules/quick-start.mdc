@@ -2,75 +2,16 @@
 alwaysApply: true
 ---
 
-# Quick Start for New Contributors
+# Quick Start
 
-Welcome! Here's what you need to know.
-
-## First: Read AGENTS.md
-
-Start with [AGENTS.md](mdc:AGENTS.md) - it has all the critical info:
-- Repository structure
-- Development workflows
-- Important rules (read the "DON'T" section!)
-- Useful commands
-
-**Key files to bookmark:**
-- [.devcontainer/README.md](mdc:.devcontainer/README.md) - Setup quirks
-- [Architecture Guide](mdc:docs/developer/architecture.md) - System design
-- [Troubleshooting Guide](mdc:docs/user/troubleshooting.md) - Common issues
-
-## Most Common Commands
-
-```bash
-# View logs
-ha addons logs local_cync-controller --follow
-
-# After editing Python files (REQUIRED!)
-cd cync-controller && ./rebuild.sh
-
-# After ANY file edit (also REQUIRED!)
-npm run lint:python:fix && npm run format
-
-# Check everything
-npm run lint
-
-# Configure the addon
-./scripts/configure-addon.sh get
-./scripts/configure-addon.sh set-cloud-relay true true false
-
-# Fresh Home Assistant setup
-./scripts/setup-fresh-ha.sh
-```
-
-## Development Workflow
-
-1. **Edit files** (Python, config, scripts, etc.)
-2. **Run linters** → `npm run lint:python:fix && npm run format`
-3. **Fix ALL linting errors** (no exceptions!)
-4. **If Python changed** → `cd cync-controller && ./rebuild.sh`
-5. **If only config/scripts** → `ha addons restart local_cync-controller`
-6. **Verify** → `ha addons logs local_cync-controller --follow`
-7. **Commit** → Only when everything works!
-
-## Rules to Remember
-
-✅ **ALWAYS:**
-- Run linters after editing
-- Rebuild after Python changes
-- Check logs for errors
-- Use `ha` CLI for supervisor operations
-
-❌ **NEVER:**
-- Commit without linting
-- Just restart for Python changes (must rebuild!)
-- Hardcode credentials
-- Skip callback registration (causes silent failures)
-- Start Docker manually
-
-## Got Questions?
-
-See:
-- [Important "DON'T" Rules](mdc:.cursor/rules/important-dont-rules.mdc) - Prevent bugs
-- [Token Creation Flow](mdc:.cursor/rules/token-creation-flow.mdc) - LLAT system
-- [Devcontainer Quirks](mdc:.cursor/rules/devcontainer-quirks.mdc) - Setup issues
-- [CONTRIBUTING.md](mdc:CONTRIBUTING.md) - Full standards
+- Read `AGENTS.md` for repo structure, workflows, and critical DON'T rules.
+- Bookmark: `.devcontainer/README.md`, `docs/developer/architecture.md`, `docs/user/troubleshooting.md`.
+- Core commands:
+  ```bash
+  ha addons logs local_cync-controller --follow
+  npm run lint:python:fix && npm run format        # after any edit
+  npm run lint                                     # final check
+  cd cync-controller && ./rebuild.sh               # whenever Python changes
+  ```
+- Workflow: edit → lint & fix → rebuild (if Python) / restart (if config) → verify logs → let user commit.
+- Never hardcode credentials or skip lint/rebuild requirements.

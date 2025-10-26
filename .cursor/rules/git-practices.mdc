@@ -1,0 +1,15 @@
+---
+alwaysApply: true
+---
+
+# Git Practices
+
+**Default:** prepare changes only; user owns commits and pushes.
+
+- Stage files intentionally (`git add <file>`, `git add -p`) and show `git status` / `git diff`.
+- Never run `git commit`, `push`, `reset`, `checkout`, `rebase`, `merge`, or other history-altering commands unless the user explicitly instructs and confirms the message/branch.
+- If asked to commit/push, summarize staged files, confirm branch + message, warn before destructive actions (`--force`, `reset --hard`, etc.).
+- Keep Conventional Commits format handy for draft messages: `<type>(<scope>): <subject>`.
+- Respect `.gitignore`; never stage build artifacts or credentials.
+
+**Key reminder:** stage + suggest; user presses the button.

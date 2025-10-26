@@ -3,36 +3,24 @@ globs: cync-controller/src/**/*.py
 alwaysApply: true
 ---
 
-# Python Changes Require Rebuild
+# Python Changes → Rebuild
 
-⚠️ **CRITICAL:** Python files (`.py`) **MUST be rebuilt** after editing.
+Editing any `.py` file means:
 
-## After Editing Python Files
-
-1. **Run linters** (MANDATORY - no exceptions):
+1. Run linters:
    ```bash
-   npm run lint:python:fix    # Auto-fix issues
-   npm run format:python      # Auto-format
-   npm run lint               # Check all linters
+   npm run lint:python:fix
+   npm run format:python
+   npm run lint
    ```
-
-2. **Rebuild the add-on**:
+2. Rebuild add-on:
    ```bash
    cd cync-controller && ./rebuild.sh
-   # OR: ha addons rebuild local_cync-controller
+   # or: ha addons rebuild local_cync-controller
    ```
-
-3. **Verify changes**:
+3. Tail logs to confirm:
    ```bash
    ha addons logs local_cync-controller --follow
    ```
 
-## Why?
-
-Python packages are baked into the Docker image at build time. Just restarting the add-on won't pick up Python changes - you MUST rebuild.
-
-## Related Files
-
-- [setup-fresh-ha.sh](mdc:scripts/setup-fresh-ha.sh) - Main setup script
-- [CONTRIBUTING.md](mdc:CONTRIBUTING.md) - Coding standards
-- [Architecture Guide](mdc:docs/developer/architecture.md) - System design
+Restarting alone will not load Python changes.

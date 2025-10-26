@@ -2,41 +2,16 @@
 alwaysApply: true
 ---
 
-# Linting is MANDATORY
+# Linting Is Mandatory
 
-All code changes require linting before proceeding.
-
-## Standard Workflow
-
-After **any** file edit, run linters:
+Run linters after every edit and fix all issues **before** suggesting commits.
 
 ```bash
-npm run lint              # Check all (Python + Shell + Format)
-npm run lint:python:fix   # Auto-fix Python issues
-npm run format:python     # Auto-format Python
-npm run format            # Format all files
+npm run lint:python:fix && npm run format:python  # Python auto-fix/format
+npm run format                                   # Global formatting
+npm run lint                                     # Final check (Python, Shell, Format)
 ```
 
-## What Gets Checked
-
-- **Python files** (`.py`): Ruff linting + formatting
-- **Shell scripts** (`.sh`): ShellCheck warnings
-- **YAML/JSON**: Formatting validation
-- **Code style**: Consistent indentation and formatting
-
-## Rules
-
-✅ **ALWAYS:**
-- Run `npm run lint` after editing files
-- Fix ALL linting errors before proceeding
-- Commit only after linting passes
-
-❌ **NEVER:**
-- Commit code with linting errors
-- Skip linting for "simple" changes
-- Use `--force` flags to bypass checks
-
-## Related
-
-- [CONTRIBUTING.md](mdc:CONTRIBUTING.md) - Coding standards
-- [AGENTS.md](mdc:AGENTS.md) - Development guidelines
+- Do not skip linting for "small" changes or bypass failures with `--force`.
+- Restart/rebuild only after lint succeeds.
+- Reference `CONTRIBUTING.md` if unclear on standards.

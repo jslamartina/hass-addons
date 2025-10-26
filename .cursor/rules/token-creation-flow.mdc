@@ -1,49 +1,22 @@
 ---
-description: Automated Long-Lived Access Token creation flow
+description: Automated Long-Lived Access Token (LLAT) flow
 ---
 
-# Automated LLAT Creation Flow
+# Token Creation Flow
 
-This project uses a three-phase token creation system for Home Assistant integration.
+Three phases keep Home Assistant tokens valid:
 
-## Phase 1: Onboarding Token (Fresh Setup)
+1. **Onboarding token** (first run)
+   - `setup-fresh-ha.sh` creates initial user → returns short-lived token stored as `ONBOARDING_TOKEN` in `hass-credentials.env`.
 
-When Home Assistant needs onboarding:
-- `create_first_user()` in [setup-fresh-ha.sh](mdc:scripts/setup-fresh-ha.sh) creates first user
-- Returns **short-lived access token**
-- Saved as `ONBOARDING_TOKEN` in `hass-credentials.env`
+2. **Bootstrap LLAT**
+   - `get_ha_auth_token()` passes `ONBOARDING_TOKEN` to `scripts/create-token-from-existing.js`.
+   - Script validates via REST + WebSocket and requests a long-lived token.
 
-## Phase 2: Bootstrap Long-Lived Token
+3. **Persist LLAT**
+   - Long-lived token saved as `LONG_LIVED_ACCESS_TOKEN` in `hass-credentials.env`.
+   - Onboarding token can be discarded after success.
 
-The onboarding token is used to bootstrap LLAT creation:
-- `get_ha_auth_token()` passes `ONBOARDING_TOKEN` via `EXISTING_TOKEN` env var
-- Calls [create-token-from-existing.js](mdc:scripts/create-token-from-existing.js)
-- Script validates token with Home Assistant API
-- Connects to WebSocket and creates long-lived token
+**Rules:** never hardcode tokens, always pass through env vars, validate responses, and avoid creating redundant LLATs.
 
-## Phase 3: Long-Lived Token Replacement
-
-Final token is saved for all subsequent calls:
-- New LLAT saved as `LONG_LIVED_ACCESS_TOKEN` in `hass-credentials.env`
-- `ONBOARDING_TOKEN` can be discarded (was temporary)
-- LLAT used for all API calls
-
-## Key Files
-
-- [setup-fresh-ha.sh](mdc:scripts/setup-fresh-ha.sh) - Orchestrates token creation
-- [create-token-from-existing.js](mdc:scripts/create-token-from-existing.js) - WebSocket LLAT creation
-- [automated-token-creation.md](mdc:docs/developer/automated-token-creation.md) - Full documentation
-
-## Important Rules
-
-✅ **DO:**
-- Use `ONBOARDING_TOKEN` for fresh setup bootstrapping
-- Pass tokens via environment variables (not credentials files)
-- Validate tokens before using them
-- Save LLAT to `hass-credentials.env` after creation
-
-❌ **DON'T:**
-- Try to use stale tokens from credentials file for bootstrapping
-- Bypass token validation
-- Hardcode tokens in scripts
-- Create multiple tokens unnecessarily
+See `docs/developer/automated-token-creation.md` for full details.

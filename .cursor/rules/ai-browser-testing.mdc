@@ -1,0 +1,13 @@
+---
+---
+
+# AI Browser Testing (MCP Playwright)
+
+- Use MCP Playwright for quick UI checks; TS scripts handle repeatable automation.
+- Always start with `browser_snapshot()` to inspect structure; Home Assistant relies heavily on Shadow DOM.
+- Add `iframe >>` to selectors for add-on views; avoid clicking SVG nodes directly.
+- Use credential defaults (`dev` / `dev`) from `hass-credentials.env`.
+- Wait for dynamic content (`browser_wait_for`) before interacting; capture screenshots when debugging.
+- Check console/network via MCP tools when diagnosing UI issues.
+
+See `docs/developer/ai-browser-testing-plan.md` for full workflows.
