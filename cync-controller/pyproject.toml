@@ -3,7 +3,7 @@ requires = ["setuptools>=61.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "cync_lan"
+name = "cync_controller"
 version = "0.0.4.12"
 description = "A Python library for local async MQTT control of Cync/C by GE smart devices"
 readme = "README.md"
@@ -31,7 +31,7 @@ dev = [
 ]
 
 [project.scripts]
-cync-controller = "cync_lan.main:main"
+cync-controller = "cync_controller.main:main"
 
 [project.urls]
 Homepage = "https://github.com/jslamartina/hass-addons"
