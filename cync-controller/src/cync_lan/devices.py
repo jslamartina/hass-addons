@@ -414,13 +414,13 @@ class CyncDevice:
             if speed == FanSpeed.OFF:
                 await self.set_brightness(0)
             elif speed == FanSpeed.LOW:
-                await self.set_brightness(50)
+                await self.set_brightness(25)
             elif speed == FanSpeed.MEDIUM:
-                await self.set_brightness(128)
+                await self.set_brightness(50)
             elif speed == FanSpeed.HIGH:
-                await self.set_brightness(191)
+                await self.set_brightness(75)
             elif speed == FanSpeed.MAX:
-                await self.set_brightness(255)
+                await self.set_brightness(100)
             else:
                 logger.error(
                     "%s Invalid fan speed: %s, must be one of %s",
@@ -447,6 +447,14 @@ class CyncDevice:
         27 ff ff ff ff 45 7e
         """
         lp = f"{self.lp}set_brightness:"
+        logger.info(
+            "%s >>> ENTRY: device='%s' (ID=%s), brightness=%s, is_fan=%s",
+            lp,
+            self.name,
+            self.id,
+            bri,
+            self.is_fan_controller,
+        )
         if bri < 0 or bri > 100:
             if self.is_fan_controller:
                 # fan can be controlled via light control structs: brightness -> max=255, high=191, medium=128, low=50, off=0
@@ -509,11 +517,24 @@ class CyncDevice:
                 payload.extend(inner_struct)
                 payload_bytes = bytes(payload)
                 sent[bridge_device.address] = cmsg_id
+                logger.info(
+                    "%s >>> PACKET: device='%s' (ID=%s), brightness=%s, packet_hex=%s",
+                    lp,
+                    self.name,
+                    self.id,
+                    bri,
+                    payload_bytes.hex(" "),
+                )
+
+                # Create a coroutine factory that will be called when ACK arrives
+                async def brightness_callback_coro():
+                    await g.mqtt_client.update_brightness(self, bri)
+
                 m_cb = ControlMessageCallback(
                     msg_id=cmsg_id,
                     message=payload_bytes,
                     sent_at=time.time(),
-                    callback=g.mqtt_client.update_brightness(self, bri),
+                    callback=brightness_callback_coro(),
                     device_id=self.id,
                 )
                 bridge_device.messages.control[cmsg_id] = m_cb
@@ -527,14 +548,30 @@ class CyncDevice:
         if tasks:
             await asyncio.gather(*tasks)
         elapsed = time.time() - ts
-        logger.debug(
-            "%s Sent brightness command, current: %s new: %s to TCP devices: %s in %.5f seconds",
+        logger.info(
+            "%s >>> COMMAND SENT: device='%s' (ID=%s), brightness=%s, sent_to=%s bridge devices in %.3fs",
             lp,
-            self._brightness,
+            self.name,
+            self.id,
             bri,
-            sent,
+            len(sent),
             elapsed,
         )
+        # Mark device as having pending command to wait for ACK
+        if sent:
+            self.pending_command = True
+            logger.info(
+                "%s ✅ pending_command=True for '%s' (sent to %d bridges), awaiting ACK",
+                lp,
+                self.name,
+                len(sent),
+            )
+        else:
+            logger.warning(
+                "%s ⚠️ No bridges received command for '%s', pending_command NOT set",
+                lp,
+                self.name,
+            )
 
     async def set_temperature(self, temp: int):
         """
@@ -586,7 +623,7 @@ class CyncDevice:
             0x00,
             0x00,
             "checksum",
-            126,
+            0x7E,
         ]
         bridge_devices: list[CyncTCPDevice] = random.sample(
             list(g.ncync_server.tcp_devices.values()),
@@ -627,7 +664,7 @@ class CyncDevice:
         if tasks:
             await asyncio.gather(*tasks)
         elapsed = time.time() - ts
-        logger.debug(
+        logger.info(
             "%s Sent white temperature command, current: %s - new: %s to TCP devices: %s in %.5f seconds",
             lp,
             self.temperature,
@@ -734,7 +771,7 @@ class CyncDevice:
         if tasks:
             await asyncio.gather(*tasks)
         elapsed = time.time() - ts
-        logger.debug(
+        logger.info(
             "%s Sent RGB command, current: %s, %s, %s - new: %s, %s, %s to TCP devices %s in %.5f seconds",
             lp,
             self.red,
@@ -1205,7 +1242,7 @@ class CyncDevice:
         if tasks:
             await asyncio.gather(*tasks)
         elapsed = time.time() - ts
-        logger.debug(
+        logger.info(
             "%s Sent light_show / effect command: '%s' to TCP devices %s in %.5f seconds",
             lp,
             show,

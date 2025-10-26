@@ -263,7 +263,93 @@ ls -la test-results/runs/*/screenshots/
 - **../../docs/developer/limitations-lifted.md** - Automated testing tools and resolved blockers
 - **../../docs/developer/entity-management.md** - User guide for entity deletion workflows
 
+### 4. Fan Speed Control E2E Tests
+
+**Purpose:** Validate fan speed control through Home Assistant UI by testing slider and preset interactions.
+
+**Script:** `test-fan-speed.spec.ts`
+
+**Use Cases:**
+- Test fan slider control at multiple speeds (0%, 25%, 50%, 75%, 100%)
+- Verify preset mode selection (off, low, medium, high, max)
+- Validate state persistence across page refreshes
+- Test rapid speed changes for stability
+- Diagnose fan speed control issues
+
+**Quick Start:**
+
+```bash
+# Run all fan speed tests
+npx playwright test scripts/playwright/test-fan-speed.spec.ts
+
+# Run with visible browser (for debugging)
+npx playwright test scripts/playwright/test-fan-speed.spec.ts --headed
+
+# Run specific test
+npx playwright test scripts/playwright/test-fan-speed.spec.ts -g "slider control"
+
+# Run with custom fan name
+FAN_ENTITY_NAME="Living Room Fan" npx playwright test scripts/playwright/test-fan-speed.spec.ts
+```
+
+**Environment Variables:**
+- `HA_BASE_URL` - Home Assistant URL (default: `http://localhost:8123`)
+- `HA_USERNAME` - Username (default: `dev`)
+- `HA_PASSWORD` - Password (default: `dev`)
+- `FAN_ENTITY_NAME` - Fan entity name to test (default: `Master Bedroom Fan Switch`)
+
+**Test Cases:**
+
+1. **Verify Fan Entity Exists** - Confirms fan card is visible on dashboard
+2. **Test Power Toggle** - Baseline test for on/off functionality
+3. **Test Slider Control** - Tests speed adjustment at 0%, 25%, 50%, 75%, 100%
+4. **Test Preset Modes** - Validates low, medium, high, max, and off presets
+5. **Test State Persistence** - Verifies state survives page refresh
+6. **Test Rapid Changes** - Ensures system handles quick successive changes
+7. **Verify via Developer Tools** - Cross-checks state in Developer Tools → States
+
+**Output:**
+
+Test results are saved to `test-results/` with screenshots at each step:
+
+```
+test-results/fan-speed-screenshots/
+├── 01-fan-entity-found.png
+├── 02-fan-on.png
+├── 02-fan-off.png
+├── 03-slider-0%.png
+├── 03-slider-25%.png
+├── 03-slider-50%.png
+├── 03-slider-75%.png
+├── 03-slider-100%.png
+├── 04-preset-low.png
+├── 04-preset-medium.png
+├── 04-preset-high.png
+├── 04-preset-max.png
+├── 05-before-refresh.png
+├── 05-after-refresh.png
+├── 06-rapid-changes-final.png
+└── 07-developer-tools.png
+```
+
+**Troubleshooting:**
+
+If tests fail:
+
+1. **Check screenshots** to see UI state at failure point
+2. **Review add-on logs**: `ha addons logs local_cync-controller`
+3. **Verify fan entity name** matches `FAN_ENTITY_NAME` environment variable
+4. **Check diagnostic logs** from `FANSPEED-DIAGNOSIS.md` for backend issues
+5. **Run in headed mode** to watch test execution: `--headed`
+
+**Common Issues:**
+
+- **Fan card not found**: Check entity name matches exactly
+- **Slider not responding**: Verify fan is turned on first
+- **Preset dropdown not found**: UI element selectors may need adjustment for your HA version
+- **State not updating**: Check add-on logs for MQTT command reception
+
 ## Credits
 
-These scripts were developed to automate MQTT entity management in the Cync Controller Add-on development workflow, following Home Assistant UI best practices for Shadow DOM interaction.
+These scripts were developed to automate MQTT entity management and E2E testing in the Cync Controller Add-on development workflow, following Home Assistant UI best practices for Shadow DOM interaction.
 

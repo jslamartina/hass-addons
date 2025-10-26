@@ -2,7 +2,12 @@
   "mcpServers": {
     "web_fetch": {
       "command": "uv",
-      "args": ["run", "--with", "mcp-server-fetch", "mcp-server-fetch"]
+      "args": [
+        "run",
+        "--with",
+        "mcp-server-fetch",
+        "mcp-server-fetch"
+      ]
     },
     "python": {
       "command": "uv",
@@ -15,15 +20,6 @@
         "/mnt/supervisor/addons/local/hass-addons",
         "--python-path",
         "/usr/local/bin/python3"
-      ]
-    },
-    "sequential-thinking": {
-      "command": "uv",
-      "args": [
-        "run",
-        "--with",
-        "sequential-thinking-mcp",
-        "sequential-thinking-mcp"
       ]
     }
   }

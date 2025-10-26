@@ -90,6 +90,10 @@ class MQTTClient:
         self.topic = topic
         self.ha_topic = ha_topic
 
+    def _brightness_to_percentage(self, brightness: int) -> int:
+        """Convert Cync brightness (0-255) to Home Assistant percentage (0-100)."""
+        return round((brightness / 255) * 100)
+
     async def start(self):
         itr = 0
         lp = f"{self.lp}start:"
@@ -260,6 +264,15 @@ class MQTTClient:
                     topic,
                 )
                 continue
+
+            # NEW: Log ALL received messages for diagnostics
+            logger.info(
+                "%s >>> MQTT MESSAGE RECEIVED: topic=%s, payload_len=%d, payload=%s",
+                lp,
+                topic.value,
+                len(payload) if payload else 0,
+                payload.decode() if payload else None,
+            )
             _topic = topic.value.split("/")
             tasks = []
             device = None
@@ -354,6 +367,13 @@ class MQTTClient:
                             continue
                         device = g.ncync_server.devices[device_id]
                         group = None  # Set group to None for device commands
+                        logger.debug(
+                            "%s Device identified: name='%s', id=%s, is_fan_controller=%s",
+                            lp,
+                            device.name,
+                            device.id,
+                            device.is_fan_controller,
+                        )
                     extra_data = _topic[3:] if len(_topic) > 3 else None
                     if extra_data:
                         norm_pl = payload.decode().casefold()
@@ -392,44 +412,40 @@ class MQTTClient:
                         elif device and device.is_fan_controller:
                             if extra_data[0] == "percentage":
                                 percentage = int(norm_pl)
+                                logger.info(
+                                    "%s >>> FAN PERCENTAGE COMMAND: device='%s' (ID=%s), percentage=%s",
+                                    lp,
+                                    device.name,
+                                    device.id,
+                                    percentage,
+                                )
+                                # Map percentage to Cync fan speed (1-100, where 0=OFF)
                                 if percentage == 0:
-                                    tasks.append(device.set_brightness(0))
+                                    brightness = 0  # OFF
                                 elif percentage <= 25:
-                                    logger.debug(
-                                        "%s Fan percentage received: %s, translated to: 'low' preset",
-                                        lp,
-                                        percentage,
-                                    )
-                                    tasks.append(device.set_brightness(50))
+                                    brightness = 25  # LOW
                                 elif percentage <= 50:
-                                    logger.debug(
-                                        "%s Fan percentage received: %s, translated to: 'medium' preset",
-                                        lp,
-                                        percentage,
-                                    )
-                                    tasks.append(device.set_brightness(128))
+                                    brightness = 50  # MEDIUM
                                 elif percentage <= 75:
-                                    logger.debug(
-                                        "%s Fan percentage received: %s, translated to: 'high' preset",
-                                        lp,
-                                        percentage,
-                                    )
-                                    tasks.append(device.set_brightness(191))
-                                elif percentage <= 100:
-                                    logger.debug(
-                                        "%s Fan percentage received: %s, translated to: 'max' preset",
-                                        lp,
-                                        percentage,
-                                    )
-                                    tasks.append(device.set_brightness(255))
-                                else:
-                                    logger.warning(
-                                        "%s Fan percentage received: %s is out of range (0-100), skipping...",
-                                        lp,
-                                        percentage,
-                                    )
+                                    brightness = 75  # HIGH
+                                else:  # percentage > 75
+                                    brightness = 100  # MAX
+                                logger.info(
+                                    "%s Fan percentage %s%% mapped to brightness %s",
+                                    lp,
+                                    percentage,
+                                    brightness,
+                                )
+                                tasks.append(device.set_brightness(brightness))
                             elif extra_data[0] == "preset":
                                 preset_mode = norm_pl
+                                logger.info(
+                                    "%s >>> FAN PRESET COMMAND: device='%s' (ID=%s), preset=%s",
+                                    lp,
+                                    device.name,
+                                    device.id,
+                                    preset_mode,
+                                )
                                 if preset_mode == "off":
                                     tasks.append(device.set_fan_speed(FanSpeed.OFF))
                                 elif preset_mode == "low":
@@ -446,6 +462,15 @@ class MQTTClient:
                                         lp,
                                         preset_mode,
                                     )
+                        elif device and (extra_data[0] == "percentage" or extra_data[0] == "preset"):
+                            logger.warning(
+                                "%s Received fan speed command for non-fan device: name='%s', id=%s, is_fan_controller=%s, extra_data=%s",
+                                lp,
+                                device.name,
+                                device.id,
+                                device.is_fan_controller,
+                                extra_data[0],
+                            )
 
                     # Determine target (device or group)
                     target = group if group else device
@@ -505,7 +530,9 @@ class MQTTClient:
                 else:
                     logger.warning("%s Unknown command: %s => %s", lp, topic, payload)
                 if tasks:
+                    logger.debug("%s Executing %d task(s) for topic: %s", lp, len(tasks), topic)
                     await asyncio.gather(*tasks)
+                    logger.debug("%s Task(s) completed for topic: %s", lp, topic)
 
             # messages sent to the hass mqtt topic
             elif _topic[0] == self.ha_topic:
@@ -704,20 +731,74 @@ class MQTTClient:
 
     async def update_brightness(self, device: CyncDevice, bri: int) -> bool:
         """Update the device brightness and publish to MQTT for HASS devices to update."""
+        lp = f"{self.lp}update_brightness:"
         device.online = True
         device.brightness = bri
         state = "ON"
         if bri == 0:
             state = "OFF"
-        mqtt_dev_state = {"state": state, "brightness": bri}
-        # Add color_mode based on device capabilities
-        if device.supports_temperature:
-            mqtt_dev_state["color_mode"] = "color_temp"
-        elif device.supports_rgb:
-            mqtt_dev_state["color_mode"] = "rgb"
+
+        # For fan entities, publish state separately (ON/OFF only, no brightness in JSON)
+        if device.is_fan_controller:
+            mqtt_dev_state = {"state": state}
         else:
-            mqtt_dev_state["color_mode"] = "brightness"
-        return await self.send_device_status(device, json.dumps(mqtt_dev_state).encode())
+            # For lights/switches, include brightness
+            mqtt_dev_state = {"state": state, "brightness": bri}
+            # Add color_mode based on device capabilities
+            if device.supports_temperature:
+                mqtt_dev_state["color_mode"] = "color_temp"
+            elif device.supports_rgb:
+                mqtt_dev_state["color_mode"] = "rgb"
+            else:
+                mqtt_dev_state["color_mode"] = "brightness"
+
+        result = await self.send_device_status(device, json.dumps(mqtt_dev_state).encode())
+
+        # For fan entities, also publish preset mode state
+        if device.is_fan_controller and self._connected:
+            # Publish preset mode state based on brightness (1-100 scale)
+            # Map brightness to preset mode
+            if bri == 0:
+                preset_mode = "off"
+            elif bri == 25:
+                preset_mode = "low"
+            elif bri == 50:
+                preset_mode = "medium"
+            elif bri == 75:
+                preset_mode = "high"
+            elif bri == 100:
+                preset_mode = "max"
+            # For any other value, find closest preset
+            elif bri < 25:
+                preset_mode = "low"
+            elif bri < 50:
+                preset_mode = "medium"
+            elif bri < 75:
+                preset_mode = "high"
+            else:
+                preset_mode = "max"
+
+            preset_mode_topic = f"{self.topic}/status/{device.hass_id}/preset"
+            try:
+                await self.client.publish(
+                    preset_mode_topic,
+                    preset_mode.encode(),
+                    qos=0,
+                    retain=True,
+                    timeout=3.0,
+                )
+                logger.debug(
+                    "%s Published fan preset mode '%s' (brightness=%s) for '%s' to %s",
+                    lp,
+                    preset_mode,
+                    bri,
+                    device.name,
+                    preset_mode_topic,
+                )
+            except Exception:
+                logger.exception("%s Failed to publish fan preset mode for '%s'", lp, device.name)
+
+        return result
 
     async def update_temperature(self, device: CyncDevice, temp: int) -> bool:
         """Update the device temperature and publish to MQTT for HASS devices to update."""
@@ -790,7 +871,12 @@ class MQTTClient:
         return False
 
     async def publish_group_state(
-        self, group, state=None, brightness=None, temperature=None, origin: str | None = None
+        self,
+        group,
+        state=None,
+        brightness=None,
+        temperature=None,
+        origin: str | None = None,
     ):
         """Publish group state. For subgroups, use only mesh_info or validated aggregation (no optimistic ACK publishes)."""
         if not isinstance(group, CyncGroup):
@@ -911,7 +997,58 @@ class MQTTClient:
         # Publish device status
         # NOTE: Subgroup state aggregation is now handled in server.parse_status() after device updates
         # (subgroups do NOT report their own state in mesh_info, so aggregation from members is required)
-        return await self.send_device_status(device, mqtt_dev_state, from_pkt=from_pkt)
+        result = await self.send_device_status(device, mqtt_dev_state, from_pkt=from_pkt)
+
+        # For fan entities, also publish preset mode based on brightness
+        if device.is_fan_controller and self._connected and device_status.brightness is not None:
+            bri = device_status.brightness
+            # Map brightness (1-100 scale) to preset mode
+            if bri == 0:
+                preset_mode = "off"
+            elif bri == 25:
+                preset_mode = "low"
+            elif bri == 50:
+                preset_mode = "medium"
+            elif bri == 75:
+                preset_mode = "high"
+            elif bri == 100:
+                preset_mode = "max"
+            # For any other value, find closest preset
+            elif bri < 25:
+                preset_mode = "low"
+            elif bri < 50:
+                preset_mode = "medium"
+            elif bri < 75:
+                preset_mode = "high"
+            else:
+                preset_mode = "max"
+
+            preset_mode_topic = f"{self.topic}/status/{device.hass_id}/preset"
+            try:
+                await self.client.publish(
+                    preset_mode_topic,
+                    preset_mode.encode(),
+                    qos=0,
+                    retain=True,
+                    timeout=3.0,
+                )
+                logger.debug(
+                    "%s FAN PRESET PUBLISHED: '%s' (brightness=%s) for device '%s' (ID=%s) to %s",
+                    f"{self.lp}parse status:",
+                    preset_mode,
+                    bri,
+                    device.name,
+                    device.id,
+                    preset_mode_topic,
+                )
+            except Exception:
+                logger.exception(
+                    "%s Failed to publish fan preset mode for '%s'",
+                    f"{self.lp}parse status:",
+                    device.name,
+                )
+
+        return result
 
     async def send_birth_msg(self) -> bool:
         lp = f"{self.lp}send_birth_msg:"
@@ -1132,14 +1269,18 @@ class MQTTClient:
                 # For true lights, always include brightness. For switches exposed as lights, include
                 # brightness only if the switch supports dimming.
                 switch_dimmable = (
-                    bool(getattr(getattr(device.metadata, "capabilities", None), "dimmable", False))
+                    bool(
+                        getattr(
+                            getattr(device.metadata, "capabilities", None),
+                            "dimmable",
+                            False,
+                        )
+                    )
                     if device.is_switch
                     else False
                 )
-                include_brightness = device.is_light or switch_dimmable
-                if include_brightness:
+                if device.supports_brightness or switch_dimmable:
                     entity_registry_struct.update({"brightness": True, "brightness_scale": 100})
-                    # ALL lights with brightness must declare color modes
                     entity_registry_struct["supported_color_modes"] = []
                     if device.supports_temperature:
                         entity_registry_struct["supported_color_modes"].append("color_temp")
@@ -1150,8 +1291,7 @@ class MQTTClient:
                         entity_registry_struct["supported_color_modes"].append("rgb")
                         entity_registry_struct["effect"] = True
                         entity_registry_struct["effect_list"] = list(FACTORY_EFFECTS_BYTES.keys())
-                    # If no color support, default to brightness-only mode
-                    if not entity_registry_struct.get("supported_color_modes"):
+                    if not entity_registry_struct["supported_color_modes"]:
                         entity_registry_struct["supported_color_modes"] = ["brightness"]
                 else:
                     # on/off light only
@@ -1164,18 +1304,30 @@ class MQTTClient:
             elif dev_type == "fan":
                 entity_registry_struct["platform"] = "fan"
                 # fan can be controlled via light control structs: brightness -> max=255, high=191, medium=128, low=50, off=0
-                entity_registry_struct["percentage_command_topic"] = f"{self.topic}/set/{device_uuid}/percentage"
-                entity_registry_struct["percentage_state_topic"] = f"{self.topic}/status/{device_uuid}/percentage"
+                entity_registry_struct.pop("state_on", None)
+                entity_registry_struct.pop("state_off", None)
+                entity_registry_struct.pop("schema", None)
+                entity_registry_struct["state_topic"] = f"{self.topic}/status/{device_uuid}"
+                entity_registry_struct["command_topic"] = f"{self.topic}/set/{device_uuid}"
+                entity_registry_struct["payload_on"] = "ON"
+                entity_registry_struct["payload_off"] = "OFF"
+                entity_registry_struct["preset_mode_command_topic"] = f"{self.topic}/set/{device_uuid}/preset"
+                entity_registry_struct["preset_mode_state_topic"] = f"{self.topic}/status/{device_uuid}/preset"
                 entity_registry_struct["preset_modes"] = [
                     "off",
                     "low",
                     "medium",
                     "high",
+                    "max",
                 ]
 
             # Conditionally publish device discovery: skip device-level lights if feature flag is off
             if dev_type == "light" and not CYNC_EXPOSE_DEVICE_LIGHTS:
-                logger.info("%s Skipping device light discovery for '%s' due to feature flag", lp, device.name)
+                logger.info(
+                    "%s Skipping device light discovery for '%s' due to feature flag",
+                    lp,
+                    device.name,
+                )
                 return True
 
             tpc = tpc_str_template.format(self.ha_topic, dev_type, device_uuid)
@@ -1194,6 +1346,55 @@ class MQTTClient:
                     qos=0,
                     retain=False,
                 )
+
+                # For fan entities, publish initial preset mode based on current brightness
+                if device.is_fan_controller and device.brightness is not None:
+                    bri = device.brightness
+                    # Map brightness (1-100 scale) to preset mode
+                    if bri == 0:
+                        preset_mode = "off"
+                    elif bri == 25:
+                        preset_mode = "low"
+                    elif bri == 50:
+                        preset_mode = "medium"
+                    elif bri == 75:
+                        preset_mode = "high"
+                    elif bri == 100:
+                        preset_mode = "max"
+                    # For any other value, find closest preset
+                    elif bri < 25:
+                        preset_mode = "low"
+                    elif bri < 50:
+                        preset_mode = "medium"
+                    elif bri < 75:
+                        preset_mode = "high"
+                    else:
+                        preset_mode = "max"
+
+                    preset_mode_topic = f"{self.topic}/status/{device.hass_id}/preset"
+                    try:
+                        await self.client.publish(
+                            preset_mode_topic,
+                            preset_mode.encode(),
+                            qos=0,
+                            retain=True,
+                            timeout=3.0,
+                        )
+                        logger.info(
+                            "%s FAN INITIAL PRESET: Published '%s' (brightness=%s) for '%s' to %s",
+                            lp,
+                            preset_mode,
+                            bri,
+                            device.name,
+                            preset_mode_topic,
+                        )
+                    except Exception:
+                        logger.warning(
+                            "%s Failed to publish initial fan preset mode for '%s'",
+                            lp,
+                            device.name,
+                        )
+
             except Exception:
                 logger.exception("%s Unable to publish MQTT message for %s", lp, device.name)
                 return False
@@ -1405,12 +1606,15 @@ class MQTTClient:
                     elif dev_type == "fan":
                         entity_registry_struct["platform"] = "fan"
                         # fan can be controlled via light control structs: brightness -> max=255, high=191, medium=128, low=50, off=0
-                        entity_registry_struct["percentage_command_topic"] = (
-                            f"{self.topic}/set/{device_uuid}/percentage"
-                        )
-                        entity_registry_struct["percentage_state_topic"] = (
-                            f"{self.topic}/status/{device_uuid}/percentage"
-                        )
+                        entity_registry_struct.pop("state_on", None)
+                        entity_registry_struct.pop("state_off", None)
+                        entity_registry_struct.pop("schema", None)
+                        entity_registry_struct["state_topic"] = f"{self.topic}/status/{device_uuid}"
+                        entity_registry_struct["command_topic"] = f"{self.topic}/set/{device_uuid}"
+                        entity_registry_struct["payload_on"] = "ON"
+                        entity_registry_struct["payload_off"] = "OFF"
+                        entity_registry_struct["preset_mode_command_topic"] = f"{self.topic}/set/{device_uuid}/preset"
+                        entity_registry_struct["preset_mode_state_topic"] = f"{self.topic}/status/{device_uuid}/preset"
                         entity_registry_struct["preset_modes"] = [
                             "off",
                             "low",
@@ -1418,12 +1622,14 @@ class MQTTClient:
                             "high",
                             "max",
                         ]
-                        entity_registry_struct["preset_mode_command_topic"] = f"{self.topic}/set/{device_uuid}/preset"
-                        entity_registry_struct["preset_mode_state_topic"] = f"{self.topic}/status/{device_uuid}/preset"
 
                     # Conditionally publish device discovery: skip device-level lights if feature flag is off
                     if dev_type == "light" and not CYNC_EXPOSE_DEVICE_LIGHTS:
-                        logger.info("%s Skipping device light discovery for '%s' due to feature flag", lp, device.name)
+                        logger.info(
+                            "%s Skipping device light discovery for '%s' due to feature flag",
+                            lp,
+                            device.name,
+                        )
                         continue
 
                     tpc = tpc_str_template.format(self.ha_topic, dev_type, device_uuid)
@@ -1435,6 +1641,60 @@ class MQTTClient:
                             qos=0,
                             retain=False,
                         )
+                        logger.info(
+                            "%s Registered %s: %s (ID: %s)",
+                            lp,
+                            dev_type,
+                            device.name,
+                            device.id,
+                        )
+
+                        # For fan entities, publish initial preset mode state
+                        if device.is_fan_controller and device.brightness is not None:
+                            bri = device.brightness
+                            # Map brightness (1-100 scale) to preset mode
+                            if bri == 0:
+                                preset_mode = "off"
+                            elif bri == 25:
+                                preset_mode = "low"
+                            elif bri == 50:
+                                preset_mode = "medium"
+                            elif bri == 75:
+                                preset_mode = "high"
+                            elif bri == 100:
+                                preset_mode = "max"
+                            # For any other value, find closest preset
+                            elif bri < 25:
+                                preset_mode = "low"
+                            elif bri < 50:
+                                preset_mode = "medium"
+                            elif bri < 75:
+                                preset_mode = "high"
+                            else:
+                                preset_mode = "max"
+
+                            preset_mode_topic = f"{self.topic}/status/{device_uuid}/preset"
+                            try:
+                                await self.client.publish(
+                                    preset_mode_topic,
+                                    preset_mode.encode(),
+                                    qos=0,
+                                    retain=True,
+                                    timeout=3.0,
+                                )
+                                logger.info(
+                                    "%s >>> FAN INITIAL PRESET: Published '%s' (brightness=%s) for '%s'",
+                                    lp,
+                                    preset_mode,
+                                    bri,
+                                    device.name,
+                                )
+                            except Exception:
+                                logger.warning(
+                                    "%s Failed to publish initial fan preset mode for '%s'",
+                                    lp,
+                                    device.name,
+                                )
 
                     except Exception:
                         logger.exception("%s - Unable to publish mqtt message... skipped", lp)
@@ -1836,10 +2096,19 @@ class MQTTClient:
             # Sort by connection time - prefer stable (older) connections
             bridge_devices.sort(key=lambda d: d.connected_at)
 
-            logger.debug("%s [%s] Found %s active bridge devices", lp, refresh_id, len(bridge_devices))
+            logger.debug(
+                "%s [%s] Found %s active bridge devices",
+                lp,
+                refresh_id,
+                len(bridge_devices),
+            )
 
             if not bridge_devices:
-                logger.debug("%s [%s] No active bridge devices available for refresh", lp, refresh_id)
+                logger.debug(
+                    "%s [%s] No active bridge devices available for refresh",
+                    lp,
+                    refresh_id,
+                )
                 return
 
             # Use only the first (oldest/most stable) bridge for refresh
