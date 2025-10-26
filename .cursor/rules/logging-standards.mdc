@@ -1,0 +1,97 @@
+---
+alwaysApply: true
+description: 'Essential logging standards for debugging and production monitoring'
+---
+
+CRITICAL: LOGGING IS A FIRST-CLASS CITIZEN
+
+# Logging Standards
+
+Always add comprehensive logging to code changes. Proper logging is critical for debugging issues in production.
+
+## When to Log
+
+**Always Log:**
+
+- Function entry/exit (especially async operations)
+- State changes
+- External operations (File I/O, network, process spawning)
+- Error paths (all catch blocks)
+- Configuration loading
+- Lifecycle events
+- User actions
+- Validation results
+
+**Don't Log:**
+
+- Sensitive data (tokens, passwords, personal info)
+- Excessive loops (log summary, not every iteration)
+- Already-logged information (avoid duplicates)
+
+## Logging Format
+
+### Console.error (stderr) - For MCP Servers
+
+Use `console.error()` for MCP server processes since stdout is used for JSON-RPC:
+
+```typescript
+console.error('[Tapper] Starting tapper process (PID: ' + process.pid + ')');
+console.error('[Tapper] ✓ Port file created successfully');
+console.error('[Tapper] ✗ Failed to write port file: ' + error.message);
+```
+
+### Console.log (stdout) - For VS Code Extension
+
+```typescript
+console.log('[ObserverClient] Starting connection...');
+console.log('[ObserverClient] ✓ Connected successfully');
+console.log('[ObserverClient] ✗ Connection failed: ' + error.message);
+```
+
+### Output Channel - For User-Facing Messages
+
+```typescript
+mcpClient.getOutputChannel().appendLine('✓ Observer mode active');
+mcpClient.getOutputChannel().appendLine('✗ Connection error: ...');
+```
+
+## Log Prefixes
+
+Use consistent prefixes:
+
+- `[Tapper]` - Stream tapper process
+- `[config]` - Configuration module
+- `[ObserverClient]` - Observer TCP client
+- `[ThoughtTreeProvider]` - Tree view provider
+- `[MermaidVisualizationPanel]` - Mermaid panel
+- `[MCPClient]` - MCP client
+- `[Extension]` - Main extension code
+
+## Log Symbols
+
+- ✓ - Success
+- ✗ - Failure/Error
+- ⚠️ - Warning
+- 📥 - Incoming data
+- 📤 - Outgoing data
+- 🔌 - Connection event
+- 🔄 - Retry/Reconnect
+
+## Pre-Completion Checklist
+
+Before finishing changes:
+
+- [ ] Did I log function entry points?
+- [ ] Did I log all error cases?
+- [ ] Did I log state changes?
+- [ ] Are my log messages clear and searchable?
+- [ ] Did I use appropriate prefixes?
+- [ ] Did I include relevant context (IDs, values, paths)?
+
+## Remember
+
+**Good logging makes debugging 10x easier.** When in doubt, log more rather than less. Logging is not optional—it's as important as the business logic itself.
+
+---
+
+**For detailed examples and patterns**, request the `logging-examples` rule.

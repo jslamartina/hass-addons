@@ -4,11 +4,10 @@ The devcontainer includes Model Context Protocol (MCP) servers for specialized d
 
 ## Available Tools
 
-| Tool                    | Purpose                 | Key Functions                        | When to Use                                        |
-| ----------------------- | ----------------------- | ------------------------------------ | -------------------------------------------------- |
-| **web_fetch**           | Web content fetching    | `fetch` (markdown/HTML)              | Documentation, API specs, release notes            |
-| **python**              | Native Python execution | `run_python_code`, `run_python_file` | Large file processing, data analysis, code testing |
-| **sequential-thinking** | Reasoning tracker       | `think` (branching, progress)        | Multi-step debugging, complex investigations       |
+| Tool          | Purpose                 | Key Functions                        | When to Use                                        |
+| ------------- | ----------------------- | ------------------------------------ | -------------------------------------------------- |
+| **web_fetch** | Web content fetching    | `fetch` (markdown/HTML)              | Documentation, API specs, release notes            |
+| **python**    | Native Python execution | `run_python_code`, `run_python_file` | Large file processing, data analysis, code testing |
 
 **Installation:** The `uv` package manager is installed during devcontainer setup (`.devcontainer/02-setup-mcp-servers.sh`). MCP servers are automatically downloaded and cached by `uvx` when Cursor first connects.
 
@@ -18,7 +17,6 @@ The devcontainer includes Model Context Protocol (MCP) servers for specialized d
 
 - **Python**: Full filesystem access. Package installs are temporary per execution.
 - **Web Fetch**: Respects robots.txt (some sites may block automated access).
-- **Sequential Thinking**: Primarily for logging/tracking, not execution.
 
 **When MCP tools fail:**
 
@@ -30,7 +28,7 @@ The devcontainer includes Model Context Protocol (MCP) servers for specialized d
 
 ```bash
 # Preferred: MCP Python for large files
-# If it fails, use read_file + search_replace for smaller edits
+# If it fails, use built-in tools for smaller edits.
 ```
 
 ---
@@ -162,72 +160,6 @@ mcp_web_fetch_fetch(
 ```
 
 
-### 🧠 Sequential Thinking (`sequential-thinking-mcp`)
-
-Track multi-step reasoning with branching, progress tracking, and completion status.
-
-**Available Functions:**
-
-- `mcp_sequential-thinking_think` - Log reasoning step with branching support
-
-**When to use:**
-
-- ✅ Multi-step debugging with parallel hypotheses
-- ✅ Complex investigations requiring explicit planning
-- ✅ Tracking progress across long tasks
-
-**When NOT to use:**
-
-- ❌ Simple linear tasks (1-2 steps)
-- ❌ When branching logic isn't needed
-
-**Parameters:**
-
-```python
-thread_purpose: str          # High-level objective/identifier
-thought: str                 # Current reasoning step
-thought_index: int           # Sequence number in thread
-tool_recommendation: str     # Next tool to use (optional)
-left_to_be_done: str         # Remaining steps (optional)
-```
-
-**Example: Simple Investigation**
-
-```python
-mcp_sequential-thinking_think(
-  thread_purpose="MQTT entity disappearance",
-  thought="Logs show clean restart. MQTT connected. Checking publish timing vs mesh query.",
-  thought_index=2,
-  tool_recommendation="grep",
-  left_to_be_done="Search for publish_all_states call order"
-)
-```
-
-**Example: Parallel Hypotheses**
-
-```python
-# Investigation identifies multiple potential causes
-mcp_sequential-thinking_think(
-  thread_purpose="Command ACK timeout",
-  thought="Three possibilities: (1) Network latency, (2) Device offline, (3) Callback registration missing",
-  thought_index=1,
-  left_to_be_done="Test each hypothesis in parallel"
-)
-```
-
-**Best Practices:**
-
-✅ **DO:**
-- Use descriptive `thread_purpose` names
-- Include `tool_recommendation` for next action
-- Update `left_to_be_done` with remaining work
-- Keep thoughts focused on reasoning, not implementation
-
-❌ **DON'T:**
-- Use for simple 1-2 step tasks
-- Create entries without clear next actions
-- Mix multiple investigations in one thread
-
 ## Configuration
 
 MCP servers are configured in `.cursor/mcp.json`:
@@ -251,23 +183,7 @@ MCP servers are configured in `.cursor/mcp.json`:
         "--python-path",
         "/usr/local/bin/python3"
       ]
-    },
-    "sequential-thinking": {
-      "command": "uv",
-      "args": [
-        "run",
-        "--with",
-        "sequential-thinking-mcp",
-        "sequential-thinking-mcp"
-      ]
     }
   }
 }
 ```
-
-**Installation:** The `uv` package manager is installed during devcontainer setup via `.devcontainer/02-setup-mcp-servers.sh`. MCP servers are automatically downloaded and cached when Cursor first connects.
-
----
-
-_For more information, see [AGENTS.md](../../AGENTS.md) in the repository root._
-

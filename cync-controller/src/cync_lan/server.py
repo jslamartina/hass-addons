@@ -488,6 +488,15 @@ class NCyncServer:
         """Extracted status packet parsing, handles mqtt publishing and device/group state changes."""
         _id = raw_state[0]
 
+        # Debug: log every parse_status call
+        if _id == 103:
+            logger.warning(
+                "%s >>> PARSE_STATUS CALLED for device 103, from_pkt=%s, raw_state=%s",
+                self.lp,
+                from_pkt,
+                raw_state.hex(),
+            )
+
         # Check if this is a device or a group
         device = g.ncync_server.devices.get(_id)
         group = g.ncync_server.groups.get(_id) if device is None else None
@@ -515,6 +524,29 @@ class NCyncServer:
 
         # Handle device
         if device is not None:
+            # Debug logging for device 103 specifically
+            if _id == 103:
+                logger.warning(
+                    "%s >>> DEVICE 103 DEBUG: name='%s' is_fan_controller=%s metadata=%s type=%s capabilities=%s brightness=%s",
+                    self.lp,
+                    device.name,
+                    device.is_fan_controller,
+                    device.metadata,
+                    device.metadata.type if device.metadata else None,
+                    device.metadata.capabilities if device.metadata else None,
+                    brightness,
+                )
+            # Log brightness for fan devices to debug preset mode mapping
+            if device.is_fan_controller:
+                logger.warning(
+                    "%s >>> RAW BRIGHTNESS from device: ID=%s name='%s' brightness=%s (raw_state[2]=%s) from_pkt=%s",
+                    self.lp,
+                    _id,
+                    device.name,
+                    brightness,
+                    raw_state[2],
+                    from_pkt,
+                )
             if connected_to_mesh == 0:
                 # This usually happens when a device loses power/connection.
                 # Increment counter and only mark offline after 3 consecutive offline reports

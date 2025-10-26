@@ -1,3 +1,23 @@
+## 0.0.4.7
+**Enhancement: Fan Speed Control Improvements**
+
+### Fixed
+- **Fan preset mode persistence**: Fan entities now correctly persist preset mode state across UI reopens and addon restarts
+  - Added `retain=True` to preset mode MQTT messages
+  - Preset mode now publishes in three locations: command execution, status updates, and initial discovery
+  - Impact: Fan preset mode (off/low/medium/high/max) now persists correctly in Home Assistant UI
+
+### Changed
+- **Fan control UI**: Removed percentage slider from fan entities
+  - Fan devices only support discrete preset modes (off, low, medium, high, max)
+  - UI now only shows preset mode buttons for clearer user experience
+  - Brightness mapping: 0→off, 25→low, 50→medium, 75→high, 100→max
+
+### Added
+- Initial preset mode publishing during device discovery
+- Preset mode publishing on device status updates (0x83 packets)
+- Comprehensive logging for fan preset mode changes
+
 ## 0.0.4.6
 **Maintenance: Complete Rebranding to Cync Controller**
 
