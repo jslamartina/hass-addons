@@ -23,6 +23,7 @@ These prevent common mistakes and are always loaded:
 6. **[critical-state-management.mdc](.cursor/rules/critical-state-management.mdc)** - State management rules
 7. **[critical-credentials.mdc](.cursor/rules/critical-credentials.mdc)** - Credential handling rules
 8. **[critical-docker.mdc](.cursor/rules/critical-docker.mdc)** - Docker handling rules
+9. **[file-size-limits.mdc](.cursor/rules/file-size-limits.mdc)** - Code file size limits (600 lines)
 
 ### File-Specific Rules
 

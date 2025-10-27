@@ -1,11 +1,10 @@
 ---
-alwaysApply: true
-description: How to properly use create_plan and todo_write tools
+description: CRITICAL - Update todos before/after every task. Maintain mutual understanding with user.
 ---
 
 # Plan and Todo Management
 
-## Core Principle
+**CRITICAL: Don't complete todos without approval. When bugs are encountered, create a TODO and continue with the original task.**
 
 **One plan per session** - Update the same plan file; don't create new ones.
 
@@ -13,16 +12,7 @@ description: How to properly use create_plan and todo_write tools
 
 ### create_plan
 
-**Purpose:** Manages the plan file (.plan.md) for current session.
-
-**CRITICAL: NEVER edit plan files directly with search_replace, write, or any other file tool. ALWAYS use create_plan.**
-
-**CRITICAL: DO NOT ADD CHECKBOXES via MARKDOWN. Todos are handled by the Cursor todos system!**
-
-**NOTE: The "### To-dos" section with markdown checkboxes is auto-generated from the structured `todos` array you pass to `create_plan`. You cannot use `old_str`/`new_str` to edit it. To update what checkboxes appear:**
-1. Pass the updated `todos` array to `create_plan` with `plan=""`
-2. The markdown checkbox display will regenerate automatically
-3. The display may not update immediately - check the workspace todos to verify
+**CRITICAL: NEVER edit plan files with file tools. ALWAYS use create_plan. Todos are handled by the Cursor system, not markdown checkboxes.**
 
 **First call:**
 ```python
@@ -37,74 +27,39 @@ create_plan(
 **Updating:**
 - Full replacement: Provide new `plan` string
 - Partial edit: Use `old_str`/`new_str` for specific sections
-- Only todos: **MUST pass `plan=""`** (required, not optional), provide `todos` array
-
-**WRONG:**
-```python
-# ❌ NEVER DO THIS
-search_replace("/path/to/file.plan.md", old_str="...", new_str="...")
-write("/path/to/file.plan.md", contents="...")
-```
-
-**CORRECT:**
-```python
-# ✅ ALWAYS DO THIS
-create_plan(old_str="...", new_str="...", plan="")
-create_plan(todos=[...])
-```
+- Only todos: Pass `plan=""` (empty string), provide `todos` array with `status` field
 
 ### todo_write
 
-**Purpose:** Manages workspace task tracking (separate from plan todos).
+**!!CRITICAL - NO EXCEPTIONS!!** Mandatory for multi-step (3+) tasks. Todos maintain mutual understanding of done/doing/to-do. Skipping updates breaks collaboration.
 
-**Usage:**
+**Required Usage:**
 ```python
-# Update specific todos
-todo_write(merge=True, todos=[{"id": "x", "content": "...", "status": "completed"}])
+# ALWAYS mark in_progress BEFORE starting work
+todo_write(merge=True, todos=[{"id": "x", "status": "in_progress"}])
 
-# Replace all todos
-todo_write(merge=False, todos=[...only keep these...])
+# ALWAYS update AFTER finishing any task
+todo_write(merge=True, todos=[{"id": "x", "status": "completed"}])
+
+# ALWAYS update after ANY state change
+todo_write(merge=True, todos=[{"id": "y", "status": "in_progress"}])
 ```
 
-## Workflow
+**State Transitions:**
+1. `pending` → `in_progress` (BEFORE starting - communicate to user)
+2. `in_progress` → `completed` (AFTER finishing - communicate to user)
+3. Update after ANY todo state change (explain to user)
 
-**Adding a phase:** Say "update the plan to add Phase 2" not "create a new plan"
+**Key Rules:**
+- Apply to ALL multi-step (3+) tasks, not trivial edits
+- ALWAYS explain updates to user ("✓ Completed X, starting Y...")
+- Mark current task in_progress BEFORE starting
+- Update after finishing ANY todo, before starting ANY todo
+- Status values: "pending", "in_progress", "completed", "cancelled"
 
-```python
-create_plan(old_str="## Phase 1\n...", new_str="## Phase 1\n...\n\n## Phase 2\n...", todos=[...keep existing + add new...])
-```
-
-**Syncing todos:** Plan and workspace todos are **separate systems** that sync by matching IDs.
-
-**Workflow**:
-1. Update workspace todos with `todo_write` (includes `status`) DURING work AS IT'S BEING DONE.
-2. Refresh plan todos from workspace todos with `create_plan` (NO `status` field) AFTER work is completed. You can't do this step in Plan Mode.
-3. Plan syncs status from workspace based on matching IDs
-
-```python
-# Step 1: Update workspace todos (with status)
-todo_write(merge=True, todos=[
-    {"id": "task-1", "content": "...", "status": "completed"}
-])
-
-# Step 2: Refresh plan todos (NO status - it syncs from workspace)
-create_plan(plan="", todos=[
-    {"id": "task-1", "content": "..."},  # Status synced from workspace
-    {"id": "task-2", "content": "..."},
-    # Must pass FULL list every time
-])
-```
-
-**Critical**:
-- `create_plan` only accepts `id` and `content` (NOT `status`)
-- Must pass complete todo list to `create_plan` each time (not just changed items)
-- Status syncs from workspace → plan when you call `create_plan`
-
-**After task completion:** Update both with completed status.
-
-## Rules
-
-- One plan per session (update, don't create new)
-- Use `old_str`/`new_str` for partial edits; full `plan` for restructuring
-- `todo_write(merge=False)` replaces all todos (use to delete)
-- Keep plan and workspace todos synchronized
+**Anti-Patterns (NEVER DO THIS):**
+- ❌ Start work without marking todo in_progress
+- ❌ Complete task without updating user
+- ❌ Skip todo tracking on "simple" multi-step tasks
+- ❌ Update todos silently without explaining to user
+- ❌ Leave multiple todos in_progress simultaneously

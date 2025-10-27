@@ -1,5 +1,4 @@
 ---
-alwaysApply: true
 description: Git and commit guidelines
 ---
 
@@ -15,3 +14,10 @@ description: Git and commit guidelines
 - Respect `.gitignore`; never stage build artifacts or credentials.
 
 **Key reminder:** stage + suggest; user presses the button.
+
+## Collaboration Policy
+
+- **Ask before design decisions** - Don't make architectural or design choices without consulting the user
+- **Stop after completing the task** - Don't keep coding beyond what was requested
+- **Clarify before major changes** - Ask questions if requirements are ambiguous
+- **Implement changes, don't just suggest** - Unless the user explicitly wants suggestions only

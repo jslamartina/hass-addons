@@ -1,0 +1,62 @@
+---
+description: Debugging the application and viewing logs
+alwaysApply: false
+---
+# Debugging with Logs
+
+**Use logs as your primary tool for understanding what the application is doing.**
+
+## Log Access
+
+```bash
+# Human-readable
+ha addons logs local_cync-controller --follow
+
+# JSON logs (filter with jq)
+docker exec addon_local_cync-controller tail -100 /var/log/cync_controller.json | jq '.'
+```
+
+## Key Investigation Commands
+
+```bash
+# Filter by module
+docker exec addon_local_cync-controller sh -c "grep 'cync_controller.server' /var/log/cync_controller.json | jq '.'"
+
+# Find errors
+docker exec addon_local_cync-controller sh -c "grep '\"level\":\"ERROR\"' /var/log/cync_controller.json | jq '.'"
+
+# Filter by timestamp
+docker exec addon_local_cync-controller sh -c "tail -1000 /var/log/cync_controller.json | jq 'select(.timestamp > \"2025-10-27T12:00:00\")'"
+
+# Trace by correlation ID
+CORR_ID="550e8400-e29b-41d4-a716-446655440000"
+docker exec addon_local_cync-controller sh -c "grep '$CORR_ID' /var/log/cync_controller.json | jq '.'"
+```
+
+## Log Structure
+
+```json
+{
+  "timestamp": "2025-10-27T12:42:10.275182+00:00",
+  "level": "DEBUG",
+  "logger": "cync_controller.server",
+  "message": "Device connected",
+  "correlation_id": "550e8400-e29b-41d4-a716-446655440000"
+}
+```
+
+## Log Levels
+
+| Level        | Meaning                                |
+| ------------ | -------------------------------------- |
+| **DEBUG**    | Detailed diagnostics (debug mode only) |
+| **INFO**     | Important events                       |
+| **WARNING**  | Issues recovered from                  |
+| **ERROR**    | Failures affecting functionality       |
+| **CRITICAL** | System-wide failures                   |
+
+## Related
+
+- See `debugging-guide.mdc` for container inspection
+- See `logging-patterns.mdc` for configuration
+- See `logging-mandatory.mdc` for logging guidelines

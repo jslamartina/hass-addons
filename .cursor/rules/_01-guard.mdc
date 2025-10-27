@@ -1,0 +1,47 @@
+---
+alwaysApply: true
+description: ACK pattern - MUST acknowledge rules before acting
+---
+
+# Guard: ACK Required Before Action
+
+**CRITICAL:** On your first reply in any new thread/phase, acknowledge rules before taking any action.
+
+## Required ACK Format
+
+**Start your first reply with exactly:**
+
+```
+ACK:{
+  rules_you_will_follow: [list 7 executive rules from _00-exec-rules.mdc],
+  how_you_will_verify: [3 bullets max - how you'll verify you followed each rule]
+}
+```
+
+**End your first reply with:**
+
+```
+ACK-DONE
+```
+
+## If You Cannot Comply
+
+Output only:
+```
+ACK-FAIL: <brief reason>
+```
+
+## GUARD Rule
+
+**NEVER call tools or take actions until:**
+1. You've emitted the complete `ACK:{...}` block
+2. You've ended with `ACK-DONE`
+
+**If ACK block is missing:** Emit ACK first. No tool calls until `ACK-DONE` is emitted.
+
+## NEVER
+
+- ❌ Call tools before emitting ACK
+- ❌ Skip the ACK block
+- ❌ Emit partial or incomplete ACK
+- ❌ Take actions without `ACK-DONE`

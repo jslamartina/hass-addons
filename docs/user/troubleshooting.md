@@ -80,6 +80,82 @@ await bridge_device.write(payload_bytes)
 
 **Fix:** Added `offline_count` threshold - devices only marked offline after 3 consecutive offline reports (`server.py` lines 530-544)
 
+## Logging and Debugging
+
+### Viewing JSON Logs
+
+The add-on outputs structured JSON logs to `/var/log/cync_controller.json` for detailed analysis.
+
+**Access JSON logs:**
+```bash
+# View recent logs
+docker exec addon_local_cync-controller cat /var/log/cync_controller.json | jq '.'
+
+# Filter by correlation ID
+CORR_ID="abc123"
+docker exec addon_local_cync-controller \
+  sh -c "grep '$CORR_ID' /var/log/cync_controller.json | jq '.'"
+
+# Find errors
+docker exec addon_local_cync-controller \
+  sh -c "grep '\"level\":\"ERROR\"' /var/log/cync_controller.json | jq '.'"
+```
+
+### Using Correlation IDs to Trace Operations
+
+Every async operation gets a unique correlation ID that propagates across the codebase.
+
+**Filter logs by operation:**
+```bash
+# Get correlation ID from any log entry
+# Then filter all related logs
+ha addons logs local_cync-controller | grep "correlation-id"
+```
+
+### Performance Issues
+
+**Symptoms:**
+- Commands take a long time to execute
+- Logs show "exceeded threshold" warnings
+
+**Interpreting timing logs:**
+```bash
+# View performance warnings
+ha addons logs local_cync-controller --follow | grep "exceeded.*threshold"
+```
+
+**Configuration:** Adjust `CYNC_PERF_THRESHOLD_MS` in config if thresholds are too aggressive for your hardware.
+
+### Device Offline Debugging
+
+**Understanding offline count thresholds:**
+
+Devices are marked offline after 3 consecutive offline reports (not immediately):
+
+```python
+# Device reports offline
+if connected_to_mesh == 0:
+    device.offline_count += 1  # Increment counter
+    if device.offline_count >= 3 and device.online:
+        device.online = False  # Only after 3 consecutive reports
+    logger.debug("OFFLINE_TRACKING", extra={
+        "device_id": device.id,
+        "offline_count": device.offline_count,
+    })
+```
+
+**Monitor offline tracking:**
+```bash
+# Watch offline count progression
+ha addons logs local_cync-controller --follow | grep "OFFLINE_TRACKING"
+
+# See when devices marked offline
+ha addons logs local_cync-controller | grep "OFFLINE_STATE"
+
+# See when devices come back online
+ha addons logs local_cync-controller | grep "ONLINE_STATE"
+```
+
 ---
 
 _For more troubleshooting information, see [AGENTS.md](../../AGENTS.md) in the repository root._

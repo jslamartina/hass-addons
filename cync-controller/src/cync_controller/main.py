@@ -81,7 +81,7 @@ class CyncController:
         asyncio.set_event_loop(g.loop)
 
         logger.info(
-            "→ Initializing Cync Controller",
+            " Initializing Cync Controller",
             extra={"version": CYNC_VERSION},
         )
 
@@ -100,13 +100,13 @@ class CyncController:
 
         if cfg_file.exists():
             logger.info(
-                "→ Loading configuration",
+                " Loading configuration",
                 extra={"config_path": str(cfg_file)},
             )
             devices, groups = await parse_config(cfg_file)
 
             logger.info(
-                "✓ Configuration loaded",
+                " Configuration loaded",
                 extra={
                     "device_count": len(devices),
                     "group_count": len(groups),
@@ -122,10 +122,10 @@ class CyncController:
             g.mqtt_client.start_task = m_start = asyncio.Task(g.mqtt_client.start(), name=MQTT_CLIENT_START_TASK_NAME)
             tasks.extend([n_start, m_start])
 
-            logger.info("→ Starting TCP server and MQTT client...")
+            logger.info(" Starting TCP server and MQTT client...")
         else:
             logger.error(
-                "✗ Configuration file not found",
+                " Configuration file not found",
                 extra={
                     "config_path": str(cfg_file),
                     "action_required": "migrate existing config or export devices via ingress page",
@@ -134,7 +134,7 @@ class CyncController:
 
         # Start export server if enabled
         if g.cli_args.export_server is True:
-            logger.info("→ Starting export server...")
+            logger.info(" Starting export server...")
             g.cloud_api = CyncCloudAPI()
             g.export_server = ExportServer()
             g.export_server.start_task = x_start = asyncio.Task(
@@ -146,7 +146,7 @@ class CyncController:
             await asyncio.gather(*tasks, return_exceptions=True)
         except Exception as e:
             logger.exception(
-                "✗ Service startup failed",
+                " Service startup failed",
                 extra={"error": str(e)},
             )
             await self.stop()
@@ -154,7 +154,7 @@ class CyncController:
 
     async def stop(self):
         """Stop the nCync server, MQTT client, and Export server."""
-        logger.info("→ Shutting down Cync Controller...")
+        logger.info(" Shutting down Cync Controller...")
         send_sigterm()
 
 
@@ -202,7 +202,7 @@ def parse_cli():
                 loaded_any = dotenv.load_dotenv(env_path, override=True)
                 if loaded_any:
                     logger.info(
-                        "✓ Environment variables loaded",
+                        " Environment variables loaded",
                         extra={"source": str(env_path)},
                     )
                     g.reload_env()
@@ -222,14 +222,14 @@ def main():
     """Main entry point for Cync Controller."""
     with correlation_context():  # Auto-generate correlation ID for app lifecycle
         logger.info(
-            "═══════════════════════════════════════════════════",
+            "",
         )
         logger.info(
             "Starting Cync Controller",
             extra={"version": CYNC_VERSION},
         )
         logger.info(
-            "═══════════════════════════════════════════════════",
+            "",
         )
 
         parse_cli()
@@ -251,14 +251,14 @@ def main():
             logger.info("Keyboard interrupt received, shutting down...")
         except Exception as e:
             logger.exception(
-                "✗ Fatal error in main loop",
+                " Fatal error in main loop",
                 extra={"error": str(e)},
             )
         else:
-            logger.info("✓ Cync Controller stopped gracefully")
+            logger.info(" Cync Controller stopped gracefully")
         finally:
             if not g.loop.is_closed():
                 g.loop.close()
-            logger.info("═══════════════════════════════════════════════════")
+            logger.info("")
             logger.info("Cync Controller shutdown complete")
-            logger.info("═══════════════════════════════════════════════════")
+            logger.info("")

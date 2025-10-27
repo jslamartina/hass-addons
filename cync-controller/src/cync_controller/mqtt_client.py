@@ -2,6 +2,8 @@ import asyncio
 import json
 import random
 import re
+import time
+import traceback
 import unicodedata
 import uuid
 from collections.abc import Coroutine
@@ -22,6 +24,177 @@ g = GlobalObject()
 bridge_device_reg_struct = CYNC_BRIDGE_DEVICE_REGISTRY_CONF
 # Log all loggers in the logger manager
 # logging.getLogger().manager.loggerDict.keys()
+
+
+class DeviceCommand:
+    """Base class for device commands."""
+
+    def __init__(self, cmd_type: str, device_id: str | int, **kwargs):
+        """
+        Initialize a device command.
+
+        Args:
+            cmd_type: Command type (e.g., "set_power", "set_brightness")
+            device_id: Device or group ID
+            **kwargs: Command-specific parameters
+        """
+        self.cmd_type = cmd_type
+        self.device_id = device_id
+        self.params = kwargs
+        self.timestamp = asyncio.get_event_loop().time()
+
+    async def publish_optimistic(self):
+        """Publish optimistic state update to MQTT (before device command)."""
+        raise NotImplementedError
+
+    async def execute(self):
+        """Execute the actual device command."""
+        raise NotImplementedError
+
+    def __repr__(self) -> str:
+        return f"<{self.cmd_type}: device_id={self.device_id} params={self.params}>"
+
+
+class CommandProcessor:
+    """Singleton processor for device commands with sequential mesh refresh."""
+
+    _instance = None
+
+    def __new__(cls):
+        if cls._instance is None:
+            cls._instance = super().__new__(cls)
+        return cls._instance
+
+    def __init__(self):
+        """Initialize command processor."""
+        if not hasattr(self, "_initialized"):
+            self._queue = asyncio.Queue()
+            self._processing = False
+            self._initialized = True
+            self.lp = "CommandProcessor:"
+
+    async def enqueue(self, cmd: DeviceCommand):
+        """
+        Enqueue a command for processing.
+
+        Args:
+            cmd: DeviceCommand to process
+        """
+        await self._queue.put(cmd)
+        logger.debug("%s Queued command: %s (queue size: %d)", self.lp, cmd, self._queue.qsize())
+        if not self._processing:
+            task = asyncio.create_task(self.process_next())
+            del task  # Reference stored, allow garbage collection
+
+    async def process_next(self):
+        """Process commands sequentially with mesh refresh."""
+        lp = f"{self.lp}process_next:"
+        self._processing = True
+
+        try:
+            while not self._queue.empty():
+                cmd = await self._queue.get()
+
+                logger.info("%s Processing: %s", lp, cmd)
+
+                try:
+                    # 1 Optimistic MQTT update first (UX feels instant)
+                    logger.debug("%s Publishing optimistic update", lp)
+                    await cmd.publish_optimistic()
+
+                    # 2 Send to device
+                    logger.debug("%s Executing device command", lp)
+                    await cmd.execute()
+
+                    # 3 Sync state with mesh refresh (synchronous - wait for completion)
+
+                    logger.debug("%s Triggering mesh refresh", lp)
+                    logger.debug("%s Waiting 500ms for optimistic updates to settle", lp)
+                    await asyncio.sleep(0.5)
+
+                    if g.mqtt_client:
+                        await g.mqtt_client.trigger_status_refresh()
+
+                    logger.info("%s Command cycle complete for %s", lp, cmd.cmd_type)
+
+                except Exception:
+                    logger.exception("%s Command failed: %s", lp, cmd)
+
+                finally:
+                    self._queue.task_done()
+        finally:
+            self._processing = False
+            logger.debug("%s Processing loop ended, queue size: %d", lp, self._queue.qsize())
+
+
+class SetPowerCommand(DeviceCommand):
+    """Command to set device or group power state."""
+
+    def __init__(self, device_or_group, state: int):
+        """
+        Initialize set power command.
+
+        Args:
+            device_or_group: CyncDevice or CyncGroup instance
+            state: Power state (0=OFF, 1=ON)
+        """
+        super().__init__("set_power", device_or_group.id, state=state)
+        self.device_or_group = device_or_group
+        self.state = state
+
+    async def publish_optimistic(self):
+        """Publish optimistic state update for the device and its group."""
+        if isinstance(self.device_or_group, CyncGroup):
+            # For groups: sync_group_devices will be called in set_power()
+            pass
+        else:
+            # For individual devices: publish optimistic state immediately
+            await g.mqtt_client.update_device_state(self.device_or_group, self.state)
+
+            # If this is a switch, also sync its group
+            try:
+                if self.device_or_group.is_switch:
+                    device = self.device_or_group
+                    if g.ncync_server and g.ncync_server.groups:
+                        for group_id, group in g.ncync_server.groups.items():
+                            if device.id in group.member_ids:
+                                # Sync all group devices to match this switch's new state
+                                await g.mqtt_client.sync_group_devices(group_id, self.state, group.name)
+            except Exception as e:
+                logger.warning("Group sync failed for switch: %s", e)
+
+    async def execute(self):
+        """Execute the actual set_power command."""
+        await self.device_or_group.set_power(self.state)
+
+
+class SetBrightnessCommand(DeviceCommand):
+    """Command to set device brightness."""
+
+    def __init__(self, device_or_group, brightness: int):
+        """
+        Initialize set brightness command.
+
+        Args:
+            device_or_group: CyncDevice or CyncGroup instance
+            brightness: Brightness value (0-100)
+        """
+        super().__init__("set_brightness", device_or_group.id, brightness=brightness)
+        self.device_or_group = device_or_group
+        self.brightness = brightness
+
+    async def publish_optimistic(self):
+        """Publish optimistic brightness update for the device."""
+        if isinstance(self.device_or_group, CyncGroup):
+            # For groups: sync_group_devices will be called in set_brightness()
+            pass
+        else:
+            # For individual devices: publish optimistic brightness immediately
+            await g.mqtt_client.update_brightness(self.device_or_group, self.brightness)
+
+    async def execute(self):
+        """Execute the actual set_brightness command."""
+        await self.device_or_group.set_brightness(self.brightness)
 
 
 def slugify(text: str) -> str:
@@ -123,6 +296,22 @@ class MQTTClient:
                         logger.debug("%s Setting %s subgroups: online", lp, len(subgroups))
                         for group in subgroups:
                             await self.publish(f"{self.topic}/availability/{group.hass_id}", b"online")
+
+                        # After discovery, publish all devices as online initially
+                        # They will be marked offline only if they fail to connect
+                        logger.info(
+                            "%s Publishing initial device availability as ONLINE for all %d devices",
+                            lp,
+                            len(g.ncync_server.devices),
+                        )
+                        for device_id, device in g.ncync_server.devices.items():
+                            try:
+                                device_uuid = f"{device.home_id}-{device_id}"
+                                await self.client.publish(f"{self.topic}/availability/{device_uuid}", b"online", qos=0)
+                            except Exception as e:
+                                logger.debug(
+                                    "%s Failed to publish initial availability for device %s: %s", lp, device_id, e
+                                )
                     elif itr > 1:
                         tasks = []
                         # set the device online/offline and set its status
@@ -153,7 +342,7 @@ class MQTTClient:
                             )
                         if tasks:
                             await asyncio.gather(*tasks)
-                    logger.debug("%s Starting MQTT receiver...", lp)
+                    logger.info("%s Starting MQTT receiver...", lp)
                     lp: str = f"{self.lp}rcv:"
                     topics = [
                         (f"{self.topic}/set/#", 0),
@@ -283,70 +472,6 @@ class MQTTClient:
                     if device_id == "bridge":
                         device = None  # Bridge commands don't target a device
                         group = None  # Bridge commands don't target a group
-                    # EXPERIMENTAL: Test group command trigger
-                    # Format: test_group_GROUPID or test_group_GROUPID_VARIATION
-                    elif device_id.startswith("test_group_"):
-                        parts = device_id.replace("test_group_", "").split("_")
-                        try:
-                            group_id = int(parts[0])
-                            test_variation = int(parts[1]) if len(parts) > 1 else 3  # Default to Test 3 (working)
-
-                            # Check what command type we're testing (check extra_data from topic)
-                            extra_data = _topic[3:] if len(_topic) > 3 else None
-                            command_type = extra_data[1] if extra_data and len(extra_data) > 1 else "power"
-
-                            logger.warning(
-                                "%s TEST GROUP COMMAND TRIGGER: group_id=%s, variation=%s, command_type=%s",
-                                lp,
-                                group_id,
-                                test_variation,
-                                command_type,
-                            )
-                            # Get any device to send the command
-                            if g.ncync_server.devices:
-                                test_device = next(iter(g.ncync_server.devices.values()))
-
-                                if command_type == "brightness":
-                                    # Parse brightness value from payload
-                                    brightness = int(payload.decode())
-                                    logger.warning(
-                                        "%s Using device '%s' to test group %s brightness=%s",
-                                        lp,
-                                        test_device.name,
-                                        group_id,
-                                        brightness,
-                                    )
-                                    await test_device.test_group_brightness(group_id, brightness)
-                                elif command_type == "temperature":
-                                    # Parse temperature value from payload
-                                    temperature = int(payload.decode())
-                                    logger.warning(
-                                        "%s Using device '%s' to test group %s temperature=%s",
-                                        lp,
-                                        test_device.name,
-                                        group_id,
-                                        temperature,
-                                    )
-                                    await test_device.test_group_temperature(group_id, temperature)
-                                else:
-                                    # Power command (default)
-                                    state = 1 if payload.decode().casefold() in ("on", "1") else 0
-                                    logger.warning(
-                                        "%s Using device '%s' to test group %s, state=%s, variation=%s",
-                                        lp,
-                                        test_device.name,
-                                        group_id,
-                                        state,
-                                        test_variation,
-                                    )
-                                    await test_device.test_group_command(group_id, state, test_variation)
-                            else:
-                                logger.error("%s No devices available for test!", lp)
-                        except ValueError:
-                            logger.exception("%s Invalid group ID in test trigger: %s", lp, device_id)
-                        except Exception:
-                            logger.exception("%s Error executing test_group_command", lp)
-                        continue
                     elif "-group-" in _topic[2]:
                         # Group command
                         group_id = int(_topic[2].split("-group-")[1])
@@ -355,6 +480,13 @@ class MQTTClient:
                             continue
                         group = g.ncync_server.groups[group_id]
                         device = None  # Set device to None for group commands
+                        logger.info(
+                            "%s [BUG4-TRACE] Group command detected: group_id=%s, group_name='%s', topic=%s",
+                            lp,
+                            group_id,
+                            group.name,
+                            topic.value,
+                        )
                     else:
                         # Device command
                         device_id = int(_topic[2].split("-")[1])
@@ -475,6 +607,17 @@ class MQTTClient:
                     # Determine target (device or group)
                     target = group if group else device
 
+                    if target:
+                        target_type = "GROUP" if group else "DEVICE"
+                        target_name = target.name
+                        logger.info(
+                            "%s [BUG4-TRACE] Target determined: type=%s, name='%s', payload=%s",
+                            lp,
+                            target_type,
+                            target_name,
+                            payload.decode() if payload else None,
+                        )
+
                     if payload.startswith(b"{"):
                         try:
                             json_data = json.loads(payload)
@@ -494,12 +637,27 @@ class MQTTClient:
                                 effect = json_data["effect"]
                                 tasks.append(device.set_lightshow(effect))
                             elif json_data["state"].upper() == "ON":
-                                tasks.append(target.set_power(1))
+                                logger.info(
+                                    "%s [BUG4-TRACE] Calling set_power(1) on %s '%s'",
+                                    lp,
+                                    target_type if target else "UNKNOWN",
+                                    target.name if target else "UNKNOWN",
+                                )
+                                cmd = SetPowerCommand(target, 1)
+                                await CommandProcessor().enqueue(cmd)
                             else:
-                                tasks.append(target.set_power(0))
+                                logger.info(
+                                    "%s [BUG4-TRACE] Calling set_power(0) on %s '%s'",
+                                    lp,
+                                    target_type if target else "UNKNOWN",
+                                    target.name if target else "UNKNOWN",
+                                )
+                                cmd = SetPowerCommand(target, 0)
+                                await CommandProcessor().enqueue(cmd)
                         if "brightness" in json_data:
                             lum = int(json_data["brightness"])
-                            tasks.append(target.set_brightness(lum))
+                            cmd = SetBrightnessCommand(target, lum)
+                            await CommandProcessor().enqueue(cmd)
 
                         if "color_temp" in json_data:
                             tasks.append(target.set_temperature(self.kelvin2cync(int(json_data["color_temp"]))))
@@ -520,11 +678,23 @@ class MQTTClient:
                         if pattern.match(str_payload):
                             # handle non-JSON payloads
                             if str_payload.casefold() == "on":
-                                logger.debug("%s setting power to ON (non-JSON)", lp)
-                                tasks.append(target.set_power(1))
+                                logger.info(
+                                    "%s [BUG4-TRACE] Calling set_power(1) on %s '%s' (non-JSON)",
+                                    lp,
+                                    target_type if target else "UNKNOWN",
+                                    target.name if target else "UNKNOWN",
+                                )
+                                cmd = SetPowerCommand(target, 1)
+                                await CommandProcessor().enqueue(cmd)
                             elif str_payload.casefold() == "off":
-                                logger.debug("%s setting power to OFF (non-JSON)", lp)
-                                tasks.append(target.set_power(0))
+                                logger.info(
+                                    "%s [BUG4-TRACE] Calling set_power(0) on %s '%s' (non-JSON)",
+                                    lp,
+                                    target_type if target else "UNKNOWN",
+                                    target.name if target else "UNKNOWN",
+                                )
+                                cmd = SetPowerCommand(target, 0)
+                                await CommandProcessor().enqueue(cmd)
                         else:
                             logger.warning("%s Unknown payload: %s, skipping...", lp, payload)
                 else:
@@ -633,9 +803,12 @@ class MQTTClient:
         return False
 
     async def update_device_state(self, device: CyncDevice, state: int) -> bool:
-        """Update the device state and publish to MQTT for HASS devices to update."""
+        """Update the device state and publish to MQTT for HASS devices to update.
+
+        NOTE: Device availability is managed by server.parse_status() based on the
+        connected_to_mesh byte and offline_count threshold. Do not set device.online here.
+        """
         lp = f"{self.lp}update_device_state:"
-        device.online = True
         old_state = device.state
         device.state = state
         # NOTE: pending_command is cleared in the ACK handler (devices.py), not here
@@ -667,9 +840,10 @@ class MQTTClient:
         return await self.send_device_status(device, mqtt_dev_state)
 
     async def update_switch_from_subgroup(self, device: CyncDevice, subgroup_state: int, subgroup_name: str) -> bool:
-        """Update a switch device state to match its subgroup state after mesh confirmation.
+        """Update a switch device state to match its subgroup state.
 
         Only updates switches that don't have pending commands (individual commands take precedence).
+        Only publishes to MQTT when state actually changes (no redundant updates).
 
         Args:
             device: The switch device to update
@@ -677,7 +851,7 @@ class MQTTClient:
             subgroup_name: Name of the subgroup (for logging)
 
         Returns:
-            True if the state was updated, False otherwise
+            True if the state was updated and published, False otherwise
         """
         lp = f"{self.lp}update_switch_from_subgroup:"
 
@@ -702,32 +876,29 @@ class MQTTClient:
 
         # Update the switch to match subgroup state
         old_state = device.state
-        if old_state != subgroup_state:
-            logger.info(
-                "%s Syncing switch '%s' (ID: %s) to subgroup '%s' state: %s → %s",
-                lp,
-                device.name,
-                device.id,
-                subgroup_name,
-                "ON" if old_state else "OFF",
-                "ON" if subgroup_state else "OFF",
-            )
-            device.state = subgroup_state
-            device.online = True
-
-            # Publish state update to MQTT
-            power_status = "ON" if subgroup_state else "OFF"
-            mqtt_dev_state = power_status.encode()  # Switches use plain ON/OFF payload
-            return await self.send_device_status(device, mqtt_dev_state)
-        logger.debug(
-            "%s Switch '%s' (ID: %s) already matches subgroup '%s' state (%s), no sync needed",
+        logger.warning(
+            "%s Syncing switch '%s' (ID: %s) to subgroup '%s' state: %s",
             lp,
             device.name,
             device.id,
             subgroup_name,
             "ON" if subgroup_state else "OFF",
         )
-        return False
+
+        # Always publish for optimistic feedback on group commands
+        # (this function is now only called after explicit group commands, never from aggregation)
+        logger.warning(
+            "%s Publishing optimistic state update: %s  %s",
+            lp,
+            "ON" if old_state else "OFF",
+            "ON" if subgroup_state else "OFF",
+        )
+        device.state = subgroup_state
+
+        # Publish state update to MQTT
+        power_status = "ON" if subgroup_state else "OFF"
+        mqtt_dev_state = power_status.encode()  # Switches use plain ON/OFF payload
+        return await self.send_device_status(device, mqtt_dev_state)
 
     async def sync_group_switches(self, group_id: int, group_state: int, group_name: str) -> int:
         """Sync all switch devices in a group to match the group's state.
@@ -746,15 +917,16 @@ class MQTTClient:
         lp = f"{self.lp}sync_group_switches:"
 
         if group_id not in g.ncync_server.groups:
-            logger.warning("%s Group %s not found in server groups", lp, group_id)
+            logger.warning("%s [BUG4-TRACE] Group %s not found in server groups", lp, group_id)
             return 0
 
         group = g.ncync_server.groups[group_id]
         synced_count = 0
 
-        logger.info(
-            "%s Syncing switches for group '%s' (ID: %s) to state: %s",
+        logger.warning(
+            "%s Syncing %d switches for group '%s' (ID: %s) to state: %s",
             lp,
+            len(group.member_ids),
             group_name,
             group_id,
             "ON" if group_state else "OFF",
@@ -763,16 +935,94 @@ class MQTTClient:
         for member_id in group.member_ids:
             if member_id in g.ncync_server.devices:
                 device = g.ncync_server.devices[member_id]
+                logger.debug(
+                    "%s Processing member: id=%d, name='%s', is_switch=%s",
+                    lp,
+                    member_id,
+                    device.name,
+                    device.is_switch,
+                )
+                # Sync switch to group state (will only publish if state actually changed)
                 if await self.update_switch_from_subgroup(device, group_state, group_name):
                     synced_count += 1
+            else:
+                logger.debug(
+                    "%s Member ID %d not found in devices",
+                    lp,
+                    member_id,
+                )
 
-        logger.info("%s Synced %s switches for group '%s'", lp, synced_count, group_name)
+        logger.warning("%s Synced %s switches for group '%s'", lp, synced_count, group_name)
+        return synced_count
+
+    async def sync_group_devices(self, group_id: int, group_state: int, group_name: str) -> int:
+        """Sync all devices (switches and bulbs) in a group to match the group's state.
+
+        This is called after a group command is executed to provide immediate optimistic
+        feedback for all devices in the group.
+
+        Args:
+            group_id: The group ID
+            group_state: The group's state (0=off, 1=on)
+            group_name: Name of the group (for logging)
+
+        Returns:
+            Number of devices synced
+        """
+        lp = f"{self.lp}sync_group_devices:"
+
+        if group_id not in g.ncync_server.groups:
+            logger.warning("%s [BUG4-TRACE] Group %s not found in server groups", lp, group_id)
+            return 0
+
+        group = g.ncync_server.groups[group_id]
+        synced_count = 0
+
+        logger.info(
+            "%s Syncing %d devices for group '%s' (ID: %s) to state: %s",
+            lp,
+            len(group.member_ids),
+            group_name,
+            group_id,
+            "ON" if group_state else "OFF",
+        )
+
+        for member_id in group.member_ids:
+            if member_id in g.ncync_server.devices:
+                device = g.ncync_server.devices[member_id]
+                logger.debug(
+                    "%s Processing member: id=%d, name='%s', is_switch=%s, is_bulb=%s",
+                    lp,
+                    member_id,
+                    device.name,
+                    device.is_switch,
+                    not device.is_switch,
+                )
+
+                if device.is_switch:
+                    # Sync switch to group state
+                    if await self.update_switch_from_subgroup(device, group_state, group_name):
+                        synced_count += 1
+                # Sync bulb/light to group state (optimistic update)
+                elif await self.update_device_state(device, group_state):
+                    synced_count += 1
+            else:
+                logger.debug(
+                    "%s Member ID %d not found in devices",
+                    lp,
+                    member_id,
+                )
+
+        logger.info("%s Synced %s devices for group '%s'", lp, synced_count, group_name)
         return synced_count
 
     async def update_brightness(self, device: CyncDevice, bri: int) -> bool:
-        """Update the device brightness and publish to MQTT for HASS devices to update."""
+        """Update the device brightness and publish to MQTT for HASS devices to update.
+
+        NOTE: Device availability is managed by server.parse_status() based on the
+        connected_to_mesh byte and offline_count threshold. Do not set device.online here.
+        """
         lp = f"{self.lp}update_brightness:"
-        device.online = True
         device.brightness = bri
         state = "ON"
         if bri == 0:
@@ -841,8 +1091,11 @@ class MQTTClient:
         return result
 
     async def update_temperature(self, device: CyncDevice, temp: int) -> bool:
-        """Update the device temperature and publish to MQTT for HASS devices to update."""
-        device.online = True
+        """Update the device temperature and publish to MQTT for HASS devices to update.
+
+        NOTE: Device availability is managed by server.parse_status() based on the
+        connected_to_mesh byte and offline_count threshold. Do not set device.online here.
+        """
         if device.supports_temperature:
             mqtt_dev_state = {
                 "state": "ON",
@@ -857,8 +1110,12 @@ class MQTTClient:
         return False
 
     async def update_rgb(self, device: CyncDevice, rgb: tuple[int, int, int]) -> bool:
-        """Update the device RGB and publish to MQTT for HASS devices to update. Intended for callbacks"""
-        device.online = True
+        """Update the device RGB and publish to MQTT for HASS devices to update.
+
+        NOTE: Device availability is managed by server.parse_status() based on the
+        connected_to_mesh byte and offline_count threshold. Do not set device.online here.
+        Intended for callbacks.
+        """
         if device.supports_rgb and (
             any(
                 [
@@ -880,23 +1137,34 @@ class MQTTClient:
             return await self.send_device_status(device, json.dumps(mqtt_dev_state).encode())
         return False
 
-    async def send_device_status(self, device: CyncDevice, msg: bytes, from_pkt: str | None = None) -> bool:
-        lp = f"{self.lp}device_status:"
-        if from_pkt:
-            lp = f"{lp}{from_pkt}:"
+    async def send_device_status(self, device: CyncDevice, state_bytes: bytes) -> bool:
+        """Publish device status to MQTT."""
+        lp = f"{self.lp}send_device_status:"
+
+        timestamp_ms = int(time.time() * 1000)
+        caller = "".join(traceback.format_stack()[-3].split("\n")[0:1])
+
+        logger.warning(
+            "%s [STATE_UPDATE_SEQ] ts=%dms device=%s state=%s caller=%s",
+            lp,
+            timestamp_ms,
+            device.name if hasattr(device, "name") else device.id,
+            state_bytes.decode() if isinstance(state_bytes, bytes) else state_bytes,
+            caller,
+        )
         if self._connected:
             tpc = f"{self.topic}/status/{device.hass_id}"
             logger.debug(
                 "%s Sending %s for device: '%s' (ID: %s)",
                 lp,
-                msg,
+                state_bytes,
                 device.name,
                 device.id,
             )
             try:
                 await self.client.publish(
                     tpc,
-                    msg,
+                    state_bytes,
                     qos=0,
                     timeout=3.0,
                 )
@@ -964,12 +1232,20 @@ class MQTTClient:
                 timeout=3.0,
             )
         except Exception as e:
-            logger.debug("Failed to publish group state for %s: %s", group.name, e)
+            logger.warning("Failed to publish group state for %s: %s", group.name, e)
 
     async def parse_device_status(self, device_id: int, device_status: DeviceStatus, *_args, **kwargs) -> bool:
         """Parse device status and publish to MQTT for HASS devices to update. Useful for device status packets that report the complete device state"""
         lp = f"{self.lp}parse status:"
         from_pkt = kwargs.get("from_pkt")
+        ts_ms = int(time.time() * 1000)
+        logger.warning(
+            "[PUBLISH_STATE] ts=%dms device_id=%s state=%s source=%s",
+            ts_ms,
+            device_id,
+            "ON" if device_status.state else "OFF",
+            from_pkt if from_pkt else "unknown",
+        )
         if from_pkt:
             lp = f"{lp}{from_pkt}:"
         if device_id not in g.ncync_server.devices:
@@ -980,6 +1256,21 @@ class MQTTClient:
             )
             return False
         device: CyncDevice = g.ncync_server.devices[device_id]
+
+        # CRITICAL: Skip publishing switch state from mesh packets (0x83 and mesh info from 0x73)
+        # Switches are CONTROL OUTPUTS, not status inputs. They should only be updated
+        # from explicit group/device commands, not from mesh broadcasts.
+        # This prevents the flicker where incoming mesh packets show stale switch state
+        # that overwrites our optimistic command updates.
+        # Only skip mesh info for switches - trust direct 0x83 packets
+        if device.is_switch and from_pkt == "mesh info":
+            logger.info(
+                "%s Skipping mesh info status update for switch (control output, stale): %s",
+                lp,
+                device.name,
+            )
+            return False
+
         # if device.build_status() == device_status:
         #     # logger.debug("%s Device status unchanged, skipping...", lp)
         #     return
@@ -1037,7 +1328,7 @@ class MQTTClient:
         # Publish device status
         # NOTE: Subgroup state aggregation is now handled in server.parse_status() after device updates
         # (subgroups do NOT report their own state in mesh_info, so aggregation from members is required)
-        result = await self.send_device_status(device, mqtt_dev_state, from_pkt=from_pkt)
+        result = await self.send_device_status(device, mqtt_dev_state)
 
         # For fan entities, also publish preset mode based on brightness
         if device.is_fan_controller and self._connected and device_status.brightness is not None:
@@ -1227,26 +1518,6 @@ class MQTTClient:
             if suggested_area:
                 device_registry_struct["suggested_area"] = suggested_area
 
-            entity_registry_struct = {
-                "default_entity_id": default_entity_id,
-                "name": None,
-                "command_topic": f"{self.topic}/set/{device_uuid}",
-                "state_topic": f"{self.topic}/status/{device_uuid}",
-                "avty_t": f"{self.topic}/availability/{device_uuid}",
-                "pl_avail": "online",
-                "pl_not_avail": "offline",
-                "state_on": "ON",
-                "state_off": "OFF",
-                "unique_id": unique_id,
-                "schema": "json",
-                "origin": {
-                    "name": "cync-controller",
-                    "sw_version": "0.2.1a1",
-                    "support_url": "https://github.com/jslamartina/hass-addons",
-                },
-                "device": device_registry_struct,
-            }
-
             # Determine device type (no switch->light reclassification)
             dev_type = "light"  # Default fallback
             if device.is_switch:
@@ -1300,10 +1571,32 @@ class MQTTClient:
                     device.is_switch,
                 )
 
-            tpc_str_template = "{0}/{1}/{2}/config"
-            # Ensure default_entity_id matches the final dev_type
+            # Generate default entity ID based on device type
             final_platform = "fan" if dev_type == "fan" else dev_type
-            entity_registry_struct["default_entity_id"] = f"{final_platform}.{entity_slug}"
+            default_entity_id = f"{final_platform}.{entity_slug}"
+
+            # Create entity registry structure
+            entity_registry_struct = {
+                "default_entity_id": default_entity_id,
+                "name": None,
+                "command_topic": f"{self.topic}/set/{device_uuid}",
+                "state_topic": f"{self.topic}/status/{device_uuid}",
+                "avty_t": f"{self.topic}/availability/{device_uuid}",
+                "pl_avail": "online",
+                "pl_not_avail": "offline",
+                "state_on": "ON",
+                "state_off": "OFF",
+                "unique_id": unique_id,
+                "schema": "json",
+                "origin": {
+                    "name": "cync-controller",
+                    "sw_version": "0.2.1a1",
+                    "support_url": "https://github.com/jslamartina/hass-addons",
+                },
+                "device": device_registry_struct,
+            }
+
+            tpc_str_template = "{0}/{1}/{2}/config"
 
             if dev_type == "light":
                 # For true lights, always include brightness. For switches exposed as lights, include
@@ -1745,6 +2038,34 @@ class MQTTClient:
                 for group in subgroups:
                     group_uuid = group.hass_id
                     unique_id = f"{group.home_id}_group_{group.id}"
+
+                    # Check if group contains any light-compatible devices
+                    has_light_devices = False
+                    for member_id in group.member_ids:
+                        if member_id in g.ncync_server.devices:
+                            device = g.ncync_server.devices[member_id]
+                            # Publish light entity only for groups with light devices
+                            if device.is_light:
+                                has_light_devices = True
+                                break
+
+                    logger.info(
+                        "[SUBGROUP_CHECK] Group '%s' (ID: %s) - has_light_devices=%s, member_count=%d",
+                        group.name,
+                        group.id,
+                        has_light_devices,
+                        len(group.member_ids),
+                    )
+
+                    if not has_light_devices:
+                        logger.info(
+                            "%s Skipping light entity for group '%s' (ID: %s) - no light-compatible devices",
+                            lp,
+                            group.name,
+                            group.id,
+                        )
+                        continue
+
                     # Generate entity ID from group name (e.g., "Hallway Lights" -> "light.hallway_lights")
                     entity_slug = slugify(group.name) if group.name else f"group_{group.id}"
                     default_entity_id = f"light.{entity_slug}"
@@ -1794,11 +2115,22 @@ class MQTTClient:
                     try:
                         json_payload = json.dumps(entity_registry_struct, indent=2)
                         logger.debug("%s GROUP JSON for %s:\n%s", lp, group.name, json_payload)
-                        _ = await self.client.publish(
+                        logger.info(
+                            "[SUBGROUP_PUBLISHING] Publishing group '%s' to topic: %s",
+                            group.name,
+                            tpc,
+                        )
+                        publish_result = await self.client.publish(
                             tpc,
                             json_payload.encode(),
                             qos=0,
                             retain=False,
+                        )
+                        logger.info(
+                            "[SUBGROUP_PUBLISHED] ✓ Group '%s' (ID: %s) published successfully. Result: %s",
+                            group.name,
+                            group.id,
+                            publish_result,
                         )
                         logger.info(
                             "%s Registered group '%s' (ID: %s) with %s devices",
@@ -1809,9 +2141,10 @@ class MQTTClient:
                         )
                     except Exception:
                         logger.exception(
-                            "%s Unable to publish group discovery for '%s'",
-                            lp,
+                            "[SUBGROUP_ERROR] ✗ Failed to publish group '%s' (ID: %s) to topic %s",
                             group.name,
+                            group.id,
+                            tpc,
                         )
 
             except aiomqtt.MqttCodeError as mqtt_code_exc:
@@ -2183,7 +2516,7 @@ class MQTTClient:
                         lp,
                         refresh_id,
                         bridge_device.address,
-                        e,
+                        str(e),
                     )
 
         finally:

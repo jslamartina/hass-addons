@@ -32,3 +32,49 @@ Unfortunately, the motion and ambient light data is not available in the Cync cl
 
 >[!IMPORTANT]
 > **Do not** mention this project to them, just say you would like it exposed to google home / alexa and the cync app
+
+# Enable Debug Logging
+
+Enable detailed debug logging to troubleshoot issues:
+
+```yaml
+# config.yaml
+debug_log_level: 1  # 0=INFO, 1=DEBUG
+```
+
+This enables verbose logging with packet-level details and performance timing information.
+
+# Monitor Performance
+
+Track slow operations in real-time:
+
+```bash
+# Watch for performance warnings
+ha addons logs local_cync-controller --follow | grep "exceeded.*threshold"
+
+# View JSON logs for detailed timing data
+docker exec addon_local_cync-controller \
+  sh -c "grep 'performance' /var/log/cync_controller.json | jq '.'"
+
+# Adjust threshold if needed (in config.yaml)
+CYNC_PERF_THRESHOLD_MS: 200  # Default: 100ms
+```
+
+# Log Analysis Tools
+
+Use `jq` for advanced log filtering and analysis:
+
+```bash
+# Count errors by level
+docker exec addon_local_cync-controller \
+  sh -c "cat /var/log/cync_controller.json | jq -s 'group_by(.level) | map({level: .[0].level, count: length})'"
+
+# Extract all device connections
+docker exec addon_local_cync-controller \
+  sh -c "grep 'Device connected' /var/log/cync_controller.json | jq '{device_id, device_name, ip_address}'"
+
+# Trace operations by correlation ID
+CORR_ID="your-correlation-id"
+docker exec addon_local_cync-controller \
+  sh -c "grep '$CORR_ID' /var/log/cync_controller.json | jq '.'"
+```

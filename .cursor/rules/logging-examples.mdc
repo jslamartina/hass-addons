@@ -1,17 +1,14 @@
 ---
-alwaysApply: true
 description: Logging patterns and examples
+appliesTo:
+  - "**/*.py"
 ---
 
 # Logging Examples
 
-## Python Logging Pattern
+## Basic Patterns
 
 ```python
-import logging
-
-logger = logging.getLogger(__name__)
-
 # Function entry with context
 logger.info("Processing device %s (IP: %s)", device_id, device_ip)
 
@@ -24,53 +21,25 @@ logger.info("✓ Command sent successfully to %s", device_id)
 # Error with context
 logger.error("✗ Failed to send command to %s: %s", device_id, error_msg)
 
-# Warning
-logger.warning("⚠️ Device %s offline (count: %d)", device_id, offline_count)
-
 # Debug for protocol details
 logger.debug("Received packet: %s", packet.hex())
 ```
 
-## Prefixes
-
-Use component prefixes for searchability:
-
-- `[Server]` - TCP server operations
-- `[MQTT]` - MQTT client operations
-- `[Device]` - Device management
-- `[CloudRelay]` - Cloud relay mode
-
-## Anti-Patterns to Avoid
+## Anti-Patterns
 
 ```python
 # ❌ Don't log sensitive data
 logger.info("Password: %s", password)
 
-# ❌ Don't log in tight loops (log summary instead)
+# ❌ Don't log in tight loops
 for device in devices:
     logger.debug(f"Processing {device}")  # Too verbose
 
-# ✅ Log summary
+# ✅ Log summary instead
 logger.debug(f"Processed {len(devices)} devices")
-
-# ❌ Don't log just to log
-logger.info("Entering function")  # Only if it matters
-
-# ✅ Log when it provides value
-logger.info("Starting mesh refresh with %d devices", device_count)
 ```
 
-## When to Log
+## Related
 
-- Function entry/exit (especially async operations)
-- State changes
-- External operations (network, file I/O)
-- Error paths (all exception handlers)
-- Configuration loading
-- User actions
-
-## When NOT to Log
-
-- Sensitive data (passwords, tokens)
-- Excessive loop iterations
-- Already-logged information
+- See `logging-mandatory.mdc` for setup and when to log
+- See `logging-patterns.mdc` for configuration patterns

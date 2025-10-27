@@ -20,6 +20,6 @@ export default defineConfig({
       use: { ...devices.chromium },
     },
   ],
-  reporter: [["html", { outputFolder: "playwright-report" }], ["list"]],
+  reporter: [["list"]],
   outputDir: "test-results",
 });

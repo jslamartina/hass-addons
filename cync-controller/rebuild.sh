@@ -13,6 +13,10 @@ REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 CREDENTIALS_FILE="${CREDENTIALS_FILE:-$REPO_ROOT/hass-credentials.env}"
 CYNC_SLUG="local_cync-controller"
 
+# Run Linting, Formatting, and Unit Tests
+npm run lint:python:fix && npm run format:python
+npm run test:unit
+
 # Load credentials from hass-credentials.env
 load_credentials() {
   if [ ! -f "$CREDENTIALS_FILE" ]; then

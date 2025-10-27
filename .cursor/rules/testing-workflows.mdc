@@ -1,7 +1,11 @@
 ---
-alwaysApply: true
 description: Testing workflows and procedures
+appliesTo:
+  - "cync-controller/tests/**"
+  - "scripts/test-*.sh"
 ---
+
+See `docs/developer/testing-infrastructure.md` for comprehensive test coverage details.
 
 # Testing Workflows
 
@@ -53,35 +57,44 @@ description: Testing workflows and procedures
 
 ## Full Rebuild Workflow (For Schema Changes)
 
-When adding new configuration options or changing the schema:
+**PREFER:** `ha addons rebuild --no-cache local_cync-controller` (safest, scoped to add-on)
+
+When schema changes aren't picked up:
 
 ```bash
 # 1. Stop the add-on
 ha addons stop local_cync-controller
 
-# 2. Remove all cached Docker images
-docker rmi -f $(docker images -q local/aarch64-addon-cync-controller)
+# 2. Rebuild with --no-cache flag (PREFERRED)
+ha addons rebuild --no-cache local_cync-controller
 
-# 3. Clear Docker build cache
-docker builder prune -af
-
-# 4. Restart Supervisor to clear metadata cache
-ha supervisor restart
-sleep 10  # Wait for supervisor to fully restart
-
-# 5. Rebuild with fresh cache
-ha addons rebuild local_cync-controller
-
-# 6. Verify new version is detected
+# 3. Verify new version is detected
 ha addons info local_cync-controller | grep -E "^version"
 
-# 7. Update (if version changed)
+# 4. Update (if version changed)
 ha addons update local_cync-controller
 
-# 8. Test with automated tools
+# 5. Test with automated tools
 ./scripts/configure-addon.sh get
 ./scripts/test-cloud-relay.sh
 ```
+
+**If `--no-cache` insufficient (rare):**
+
+```bash
+# ⚠️ WARNING: Scoped Docker operations only
+# Remove ONLY add-on images (not system images)
+docker images | grep cync-controller | awk '{print $3}' | xargs docker rmi -f
+
+# Restart Supervisor to clear metadata cache
+ha supervisor restart
+sleep 10
+
+# Rebuild
+ha addons rebuild local_cync-controller
+```
+
+**❌ NEVER:** Global `docker builder prune -af` or `docker rmi -f $(docker images -q)` - breaks system
 
 ## Manual UI Verification (Optional)
 
@@ -96,6 +109,81 @@ ha addons update local_cync-controller
 
 ## Browser Automation with Playwright
 
+**CRITICAL:** Use proper reporters and tracing
+
+```bash
+# Always use --reporter=list for full output
+npx playwright test --reporter=list
+
+# Add tracing on retries for debugging
+npx playwright test --reporter=list --trace on-first-retry
+
+# Never use waitForTimeout in tests - prefer expect() assertions
+```
+
+## E2E Test Execution (Sequential Mode)
+
+**CRITICAL: E2E tests MUST run sequentially** - device state dependencies require serial execution.
+
+```bash
+# ✅ CORRECT: Run tests sequentially (marked with @pytest.mark.serial)
+pytest cync-controller/tests/e2e/ -v --sequential
+
+# Or with Playwright runner
+npx playwright test cync-controller/tests/e2e/
+
+# ❌ WRONG: Parallel execution causes state conflicts
+pytest cync-controller/tests/e2e/ -n auto  # BROKEN - races and flaky failures
+```
+
+## Test Results Output (Save for Analysis)
+
+**CRITICAL: Always save results to file** - avoid re-running test suite multiple times to filter/analyze.
+
+```bash
+# Save full results (text + HTML + JSON)
+pytest cync-controller/tests/e2e/ -v --sequential \
+  --capture=no \
+  --tb=short \
+  --junitxml=results/e2e-junit.xml \
+  --html=results/e2e-report.html \
+  --self-contained-html \
+  > results/e2e-output.txt 2>&1
+
+# Later: Filter, grep, analyze without re-running
+grep "FAILED" results/e2e-output.txt
+grep -A 5 "test_turn_light_on" results/e2e-output.txt
+cat results/e2e-junit.xml | grep "failures\|errors"
+```
+
+**Workflow:**
+1. **Run once:** Save full results to files
+2. **Analyze:** grep, search, filter saved output (no re-run)
+3. **Debug:** Use HTML report for visual inspection
+4. **CI/CD:** Upload JUnit XML to test reporting systems
+
+**Benefits:**
+- ✅ Fast analysis (grep is instant)
+- ✅ No device state pollution from re-runs
+- ✅ Full audit trail (can't lose results)
+- ✅ Supports multiple filter approaches without re-execution
+
+**❌ Anti-Pattern:**
+```bash
+# NEVER: Re-running suite just to grep output
+pytest cync-controller/tests/e2e/ | grep "FAILED"  # Re-runs entire suite
+```
+
+**Why sequential?**
+- E2E tests interact with real devices (Home Assistant + Cync devices)
+- Device state persists between tests (ON/OFF, brightness)
+- Parallel execution causes race conditions:
+  - Test 1: Turn light ON
+  - Test 2 (parallel): Turn light OFF
+  - Both tests fail due to unexpected state
+
+**Mark all E2E tests with `@pytest.mark.serial`** to prevent parallelization.
+
 See `docs/developer/browser-automation.md` for detailed patterns and best practices.
 
 **Key points:**
@@ -103,3 +191,7 @@ See `docs/developer/browser-automation.md` for detailed patterns and best practi
 - Home Assistant UI uses Shadow DOM - use `getByRole` selectors that pierce through
 - Avoid `{force: true}` clicks - they bypass safety checks
 - Credentials: Username `dev`, Password `dev` (see `hass-credentials.env`)
+
+## Running Test Commands
+
+**Never use `head` or `tail` on test output** - displays full results, warnings, and error traces.

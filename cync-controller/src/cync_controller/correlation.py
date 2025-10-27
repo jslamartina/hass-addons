@@ -2,7 +2,7 @@
 Correlation ID tracking for distributed tracing across async operations.
 
 Provides automatic correlation ID generation and propagation using contextvars
-for async-safe operation tracking across TCP → Server → MQTT → HA chains.
+for async-safe operation tracking across TCP  Server  MQTT  HA chains.
 """
 
 from __future__ import annotations

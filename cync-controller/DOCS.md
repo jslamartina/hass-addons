@@ -13,13 +13,28 @@ Before starting, you must set up **DNS redirection** to route these domains to y
 
 > **Note:** You'll still use the Cync app to add new devices. After adding devices, export a new config and restart this add-on.
 
-## 🆕 New in v0.0.4.4 (WIP)
+## 🆕 New in v0.0.4.13
+
+### Production-Grade Structured Logging
+- **Dual-format output**: JSON for machine parsing, human-readable for developers
+- **Correlation ID tracking** across async operations for debugging
+- **Performance instrumentation** with configurable thresholds
+
+### Comprehensive Test Infrastructure
+- **24 unit test files** covering all core modules (90%+ coverage)
+- **10 E2E test files** using Playwright for browser automation
+- **Integration tests** for mesh refresh performance
+
+### Critical Bug Fixes
+- Fixed OTP submission reliability (works on first try)
+- Fixed restart button behavior and persistence
+- Fixed group switch synchronization issues
+- Fixed random device offline issues
 
 ### Cloud Relay Mode
 Optional MITM proxy functionality for packet inspection and debugging:
 - **Transparent proxy** between devices and cloud
 - **Packet inspection** and real-time logging
-- **Multiple operating modes** for different use cases
 - **File-based packet injection** for testing
 
 **Configuration:**

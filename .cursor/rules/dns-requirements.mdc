@@ -1,5 +1,4 @@
 ---
-alwaysApply: true
 description: DNS redirection setup requirements and patterns
 ---
 
@@ -62,21 +61,41 @@ local-data: "cm-ge.xlink.cn. 90 IN A 10.0.1.20"
 
 ## Selective vs Network-Wide
 
-**Selective (OPNsense/Unbound):**
-- ✅ Only affects specific Cync devices
+**Selective (OPNsense/Unbound with Views):**
+- ✅ Only affects specific Cync devices (by IP)
 - ✅ Can still add new devices via app
-- ⚠️ More complex setup
+- ✅ Phone not affected (can manage devices)
+- ⚠️ More complex setup (requires view configuration)
+- **Recommended** for production use
 
-**Network-Wide (Pi-hole, DNSCryptProxy):**
-- ✅ Simple setup
+**Network-Wide (Pi-hole, DNSCryptProxy, Unbound without Views):**
+- ✅ Simple setup (single redirect rule)
 - ❌ Cannot add new devices without disabling redirect
 - ❌ Phone app affected if on same network
+- ❌ Must disable temporarily to add new devices
+- **Use only** for testing or isolated networks
 
-## Testing
+**Safety:** Keep phones on cloud DNS (don't redirect their traffic) to allow device management.
+
+## Testing and Verification
 
 ```bash
 # Test DNS redirect (should return HA IP)
-dig cm.gelighting.com
+dig +short cm.gelighting.com
+# Expected: 10.0.1.20 (your HA IP)
+
+# Check TTL (Time To Live)
+dig cm.gelighting.com | grep "^cm.gelighting.com"
+# Should show TTL (e.g., 90 seconds)
+
+# Flush DNS cache on device (if needed)
+# iOS: Airplane mode on/off
+# Android: Clear DNS cache in settings
+# Windows: ipconfig /flushdns
+# Linux: sudo systemd-resolve --flush-caches
+
+# Verify from device's perspective
+nslookup cm.gelighting.com
 
 # Check connection attempts
 ha addons logs local_cync-controller --follow

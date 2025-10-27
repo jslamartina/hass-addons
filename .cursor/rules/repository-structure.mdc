@@ -1,5 +1,4 @@
 ---
-alwaysApply: true
 description: Repository structure and key files
 ---
 
@@ -16,16 +15,17 @@ The main add-on intercepts device communications and bridges them to Home Assist
 ```
 hass-addons/
 ├── cync-controller/          # Main add-on (Python package, Dockerfile, config)
-│   ├── src/cync_controller/  # Python source (server.py, devices.py, mqtt_client.py)
+│   ├── src/cync_controller/  # Python source (server.py, devices.py, mqtt_client.py, logging_abstraction.py, correlation.py, instrumentation.py)
 │   ├── tests/                # Test suites
-│   │   ├── unit/             # Unit tests (pytest)
-│   │   └── e2e/              # E2E tests (Playwright)
+│   │   ├── unit/             # Unit tests (pytest, 24 files)
+│   │   ├── e2e/              # E2E tests (Playwright, 10 files)
+│   │   └── integration/      # Integration tests
 │   └── rebuild.sh            # Rebuild script (use after Python changes)
 ├── .devcontainer/            # Dev environment (read README.md for quirks!)
 ├── docs/                     # Documentation
-│   ├── developer/            # Dev guides (architecture.md, mcp-tools.md, etc.)
+│   ├── developer/            # Dev guides (architecture.md, logging-system.md, testing-infrastructure.md, etc.)
 │   ├── user/                 # User docs (dns-setup.md, troubleshooting.md)
-│   └── protocol/             # Protocol research (findings.md)
+│   └── archive/              # Archived documentation
 └── scripts/                  # Helper scripts (configure-addon.sh, setup-fresh-ha.sh)
     └── playwright/           # Playwright utility scripts (entity management)
 ```
@@ -33,6 +33,7 @@ hass-addons/
 ## Key Files
 
 **Development:**
+**!!CRITICAL: NO EMOJIS IN CODE FILES!!**
 - `cync-controller/src/cync_controller/` - Python package source code
 - `cync-controller/tests/` - Unit and E2E test suites
 - `.devcontainer/README.md` - Critical devcontainer quirks
@@ -41,6 +42,10 @@ hass-addons/
 - `docs/user/dns-setup.md` - DNS redirection setup (required)
 - `scripts/configure-addon.sh` - Programmatic addon configuration
 - `scripts/playwright/` - Entity management utility scripts
+
+**Documentation:**
+- `docs/developer/testing-infrastructure.md` - Test infrastructure guide
+- `docs/developer/logging-system.md` - Structured logging system guide
 
 **Credentials:**
 - `hass-credentials.env` - Login credentials (Username: `dev`, Password: `dev`)

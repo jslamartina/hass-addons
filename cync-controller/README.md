@@ -30,13 +30,29 @@ Without DNS redirection, your devices will continue using the cloud and this add
 
 **[📖 Full Device Compatibility List →](https://github.com/jslamartina/hass-addons/blob/dev/docs/user/known-devices.md)**
 
-## 🆕 New in v0.0.4.4
+## 🆕 New in v0.0.4.13
 
-### Cloud Relay Mode (WIP)
+### Production-Grade Structured Logging
+- **Dual-format output**: JSON for machine parsing, human-readable for developers
+- **Correlation ID tracking** across async operations for debugging
+- **Performance instrumentation** with configurable thresholds
+- **Visual prefixes**: ═ ✓ → ⚠️ ✗ for quick log scanning
+
+### Comprehensive Test Infrastructure
+- **24 unit test files** covering all core modules (90%+ coverage)
+- **10 E2E test files** using Playwright for browser automation
+- **Integration tests** for mesh refresh performance
+
+### Critical Bug Fixes
+- Fixed OTP submission reliability (works on first try)
+- Fixed restart button behavior and persistence
+- Fixed group switch synchronization issues
+- Fixed random device offline issues
+
+### Cloud Relay Mode
 Optional MITM proxy functionality for packet inspection and debugging:
 - **Transparent proxy** between devices and cloud
 - **Packet inspection** and real-time logging
-- **Multiple operating modes** for different use cases
 - **File-based packet injection** for testing
 
 **Configuration:**

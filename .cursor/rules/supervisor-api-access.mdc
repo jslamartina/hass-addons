@@ -1,7 +1,7 @@
 ---
-description: How to access Supervisor API correctly
+description: Supervisor API Auth
+alwaysApply: false
 ---
-
 # Supervisor API Access
 
 **Important:** Scripts that need to access the Home Assistant Supervisor API **MUST be run from within the `hassio_cli` container** because the `supervisor` hostname is only resolvable inside supervisor-managed containers.

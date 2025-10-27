@@ -1,5 +1,4 @@
 ---
-alwaysApply: true
 description: Automated Long-Lived Access Token (LLAT) creation flow
 ---
 

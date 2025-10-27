@@ -32,9 +32,10 @@ def send_signal(signal_num: int):
         signal_num (int): The signal number to send.
     """
     try:
+        logger.debug("Sending signal %s to process %s", signal_num, os.getpid())
         os.kill(os.getpid(), signal_num)
     except OSError:
-        logger.exception("Failed to send signal %s", signal_num)
+        logger.exception("Failed to send signal %s to process", signal_num)
         raise
 
 
@@ -42,7 +43,9 @@ def send_sigint():
     """
     Send a SIGINT signal to the current process.
     This is typically used to gracefully shut down the application.
+    Signal number: 2 on Unix systems.
     """
+    logger.info("Initiating graceful shutdown with SIGINT")
     send_signal(signal.SIGINT)
 
 
@@ -55,13 +58,18 @@ def send_sigterm():
 
 
 async def _async_signal_cleanup():
+    logger.info("Cync Controller: Starting signal cleanup...")
     if g.ncync_server:
+        logger.debug("Stopping ncync_server...")
         await g.ncync_server.stop()
     if g.export_server:
+        logger.debug("Stopping export_server...")
         await g.export_server.stop()
     if g.cloud_api:
+        logger.debug("Closing cloud_api...")
         await g.cloud_api.close()
     if g.mqtt_client:
+        logger.debug("Stopping mqtt_client...")
         await g.mqtt_client.stop()
     if g.loop:
         for task in g.tasks:
@@ -70,6 +78,7 @@ async def _async_signal_cleanup():
                     "Cync Controller: Cancelling task: %s // task.get_coro()=%s", task.get_name(), task.get_coro()
                 )
                 task.cancel()
+    logger.info("Cync Controller: Signal cleanup completed")
 
 
 def signal_handler(signum):
@@ -93,12 +102,12 @@ def hex2list(hex_string: str) -> list[int]:
 
 
 def ints2hex(ints: list[int]) -> str:
-    """Convert a list of integers to a hex string"""
+    """Convert a list of integers to a hex string with space separators"""
     return bytes(ints).hex(" ")
 
 
 def ints2bytes(ints: list[int]) -> bytes:
-    """Convert a list of integers to a byte string"""
+    """Convert a list of integers to a byte string representation"""
     return bytes(ints)
 
 
@@ -148,14 +157,26 @@ async def parse_config(cfg_file: Path):
 
     lp = "parse_config:"
     logger.debug("%s reading devices and groups from Cync config file: %s", lp, cfg_file.as_posix())
+
+    if not cfg_file.exists():
+        logger.error("%s Config file not found: %s", lp, cfg_file.as_posix())
+        error_msg = f"Config file not found: {cfg_file}"
+        raise FileNotFoundError(error_msg)
+
     try:
+        logger.debug("%s Starting async YAML parsing with timeout...", lp)
         # wrap synchronous yaml reading in an async function to avoid blocking the event loop
         # raw_config = yaml.safe_load(cfg_file.read_text())
         # get an executor
-        raw_config = await asyncio.get_event_loop().run_in_executor(
-            None, yaml.safe_load, cfg_file.read_text(encoding="utf-8")
+        raw_config = await asyncio.wait_for(
+            asyncio.get_event_loop().run_in_executor(None, yaml.safe_load, cfg_file.read_text(encoding="utf-8")),
+            timeout=30.0,
         )
+        logger.debug("%s YAML parsing completed successfully", lp)
 
+    except TimeoutError:
+        logger.exception("%s Config file parsing timed out after 30 seconds", lp)
+        raise
     except Exception:
         logger.exception("%s Error reading config file", lp)
         raise

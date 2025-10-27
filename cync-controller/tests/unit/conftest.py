@@ -23,9 +23,19 @@ def mock_tcp_device():
     device.register_callback = MagicMock()
     device.messages = MagicMock()
     device.messages.control = {}
-    device.reader = AsyncMock()
-    device.writer = AsyncMock()
+
+    # Use MagicMock for reader/writer with proper sync/async methods
+    device.reader = MagicMock()
+    device.reader.at_eof = MagicMock(return_value=False)
+    device.reader.feed_eof = MagicMock()
+
+    device.writer = MagicMock()
+    device.writer.is_closing = MagicMock(return_value=False)
+    device.writer.close = MagicMock()
+    device.writer.wait_closed = AsyncMock()
     device.writer.drain = AsyncMock()
+    device.writer.write = MagicMock()
+
     return device
 
 
@@ -182,3 +192,60 @@ def mock_global_object():
     g.mqtt_client = AsyncMock()
     g.uuid = "test-uuid-1234"
     return g
+
+
+@pytest.fixture
+def stream_reader():
+    """Mock asyncio.StreamReader with proper sync/async methods.
+
+    Returns a MagicMock configured for StreamReader where:
+    - Sync methods (at_eof, feed_eof) are MagicMock
+    - Async methods (read, readexactly) are AsyncMock
+    """
+    reader = MagicMock()
+    reader.at_eof = MagicMock(return_value=False)
+    reader.feed_eof = MagicMock()
+    reader.read = AsyncMock()
+    reader.readexactly = AsyncMock()
+    return reader
+
+
+@pytest.fixture
+def stream_writer():
+    """Mock asyncio.StreamWriter with proper sync/async methods.
+
+    Returns a MagicMock configured for StreamWriter where:
+    - Sync methods (is_closing, close, write, get_extra_info) are MagicMock
+    - Async methods (drain, wait_closed) are AsyncMock
+    """
+    writer = MagicMock()
+    writer.is_closing = MagicMock(return_value=False)
+    writer.close = MagicMock()
+    writer.write = MagicMock()
+    writer.get_extra_info = MagicMock(return_value=("192.168.1.100", 50001))
+    writer.drain = AsyncMock()
+    writer.wait_closed = AsyncMock()
+    return writer
+
+
+@pytest.fixture
+def real_tcp_device():
+    """Create a real CyncTCPDevice instance for testing"""
+    from cync_controller.devices import CyncTCPDevice
+
+    # Create reader and writer with proper sync/async methods
+    reader = MagicMock()
+    reader.at_eof = MagicMock(return_value=False)
+    reader.feed_eof = MagicMock()
+
+    writer = MagicMock()
+    writer.is_closing = MagicMock(return_value=False)
+    writer.close = MagicMock()
+    writer.wait_closed = AsyncMock()
+    writer.drain = AsyncMock()
+    writer.write = MagicMock()
+
+    # Initialize queue_id after creation
+    tcp_device = CyncTCPDevice(reader=reader, writer=writer, address="192.168.1.100")
+    tcp_device.queue_id = bytes([0x00, 0x00, 0x00])
+    return tcp_device

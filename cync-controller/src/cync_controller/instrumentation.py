@@ -142,7 +142,7 @@ def _log_timing(logger: Any, operation_name: str, elapsed_ms: float, threshold_m
     """
     if elapsed_ms > threshold_ms:
         logger.warning(
-            "⏱️ [%s] completed in %.1fms (threshold: %dms)",
+            " [%s] completed in %.1fms (threshold: %dms)",
             operation_name,
             elapsed_ms,
             threshold_ms,
@@ -155,7 +155,7 @@ def _log_timing(logger: Any, operation_name: str, elapsed_ms: float, threshold_m
         )
     else:
         logger.debug(
-            "⏱️ [%s] completed in %.1fms",
+            " [%s] completed in %.1fms",
             operation_name,
             elapsed_ms,
             extra={

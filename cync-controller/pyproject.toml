@@ -33,6 +33,7 @@ test = [
     "pytest>=8.0.0",
     "pytest-asyncio>=0.23.0",
     "pytest-playwright>=0.4.0",
+    "pytest-xdist>=3.0.0",
 ]
 
 [project.scripts]
@@ -96,6 +97,9 @@ ignore = [
 [tool.ruff.lint.per-file-ignores]
 "__init__.py" = ["F401"]  # Allow unused imports in __init__.py files
 
+# Tests: allow localized imports and test-specific patterns
+"tests/**/*.py" = ["PLC0415", "EM101", "TRY301", "TRY002", "SIM222", "PT018", "PT006", "SIM117", "PLW2901", "PLR1714", "RET504", "PT015", "B011", "RSE102"]
+
 [tool.ruff.format]
 # Ruff formatter (Black-compatible)
 quote-style = "double"
@@ -104,3 +108,13 @@ line-ending = "auto"
 skip-magic-trailing-comma = false
 docstring-code-format = true
 docstring-code-line-length = 88
+
+[tool.pytest.ini_options]
+markers = [
+    "unit: Unit tests (fast, isolated)",
+    "integration: Integration tests (slower, requires services)",
+    "e2e: End-to-end tests (slowest, full workflow)",
+    "slow: Tests that take a long time to run",
+    "skip: Skip this test",
+    "serial: Tests that must run serially (restarts addon, changes config)",
+]

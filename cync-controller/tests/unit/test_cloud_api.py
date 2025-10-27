@@ -134,7 +134,7 @@ class TestCyncCloudAPITokenManagement:
             patch("cync_controller.cloud_api.Path") as mock_path,
             patch("cync_controller.cloud_api.pickle.load") as mock_pickle,
         ):
-            mock_file = MagicMock()
+            MagicMock()
             mock_path.return_value.open = mock_open()
             mock_pickle.return_value = sample_token
 
@@ -382,7 +382,7 @@ class TestCyncCloudAPIDeviceOperations:
         api = CyncCloudAPI()
 
         # Mock valid token
-        future_time = datetime.datetime.now(datetime.UTC) + datetime.timedelta(hours=1)
+        datetime.datetime.now(datetime.UTC) + datetime.timedelta(hours=1)
         sample_token = ComputedTokenData(
             user_id="test-user",
             access_token="test-token",
@@ -420,10 +420,6 @@ class TestCyncCloudAPIDeviceOperations:
         # When token_cache is None, this should raise AttributeError
         with pytest.raises(AttributeError):
             await api.request_devices()
-
-
-class TestCyncCloudAPIDeviceOperations:
-    """Tests for device-specific operations (get_properties, export_config)"""
 
     @pytest.mark.asyncio
     async def test_get_properties_success(self):

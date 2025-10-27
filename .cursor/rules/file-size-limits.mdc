@@ -1,0 +1,32 @@
+---
+description: Code file size limits (600 lines max)
+---
+
+# CRITICAL: File Size Limits
+
+**Code files must NEVER exceed 600 lines unless strictly necessary.**
+
+## Rule
+
+Keep files under 600 lines. Split when exceeding:
+- Extract classes/modules into separate files
+- Separate concerns (data, logic, UI)
+- Use composition over large classes
+
+**Exceptions:**
+- Auto-generated files
+- Test files with extensive cases
+- Config files that can't be split reasonably
+
+## Examples
+
+```
+✅ device_manager.py (450 lines)
+✅ device_storage.py (380 lines)
+❌ device_handler.py (1,200 lines)
+```
+
+## Related
+
+- See `development-workflow.mdc` - Making changes
+- See `pr-checklist.mdc` - Code quality requirements

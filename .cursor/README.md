@@ -2,6 +2,45 @@
 
 This directory contains Cursor-specific configuration to enhance AI assistance and code consistency.
 
+## Rules Philosophy: Top+Tail Architecture
+
+The rules structure is designed to combat **"lost-in-the-middle"** problems where LLMs ignore instructions buried in long contexts:
+
+### Design Principles
+
+1. **Top + Tail Salience** - Critical guardrails duplicated at start and end
+   - `_00-exec-rules.mdc` - 7 must-follow rules (~214 tokens) at the top
+   - `zz_end_recap.mdc` - One-line recap at the bottom
+   - Model attends best to beginning and end; worst in the middle
+
+2. **ACK Pattern (Always-Apply)** - Mandatory acknowledgment before any action
+   - `_00-first-turn-ack.mdc` - Forces model to emit `ACK:{...}` with 7 rules + verification
+   - `_00-guard-no-act-before-ack.mdc` - Blocks tool calls until ACK emitted
+   - **Format:** First reply must start with `ACK:{rules_you_will_follow: [...], how_you_will_verify: [...]}` and end with `ACK-DONE`
+   - Prevents action without explicit rule acknowledgment
+
+3. **Fetch-on-Demand** - Long guidance kept as indexed modules, not inline dumps
+   - `_10-rules-index.mdc` - Points to topic modules (use code search)
+   - Avoids pasting 100k tokens of docs; model fetches sections as needed
+   - Keeps creativity high while maintaining guardrails
+
+4. **Byte-Stable Guardrails** - No timestamps or dynamic content in critical files
+   - Preserves provider caching
+   - Reduces drift across turns
+   - Critical rules remain consistent
+
+### The 7 Executive Rules
+
+All work must follow these non-negotiable guardrails (see `_00-exec-rules.mdc`):
+
+1. Python edits → rebuild with `./rebuild.sh`, never just restart
+2. Never hardcode IPs/tokens; use env/config; never commit secrets
+3. Device commands: register callbacks before send, wait for ACK
+4. Logging mandatory: log entry/exit, state changes; set both logger AND handler levels from config
+5. Docker/Supervisor: use `ha` CLI only; never start Docker manually
+6. DNS redirection REQUIRED; validate with `dig cm.gelighting.com` before debugging
+7. Multi-step (3+): track todos, update status (in_progress → completed), summarize at end
+
 ## Structure
 
 - **`rules/`** - Development rules and guidelines
@@ -16,10 +55,10 @@ This directory contains Cursor-specific configuration to enhance AI assistance a
 
 ### For New Contributors
 
-Start with **[rules/quick-start.mdc](rules/quick-start.mdc)** for:
-- Essential commands
-- Development workflow
-- Rules to remember
+Start with **[rules/_10-rules-index.mdc](rules/_10-rules-index.mdc)** for:
+- Fetch-on-demand navigation to all rule modules
+- Essential commands and workflows
+- Topic-specific guidance
 
 ### Common Tasks
 
