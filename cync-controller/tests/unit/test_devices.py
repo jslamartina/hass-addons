@@ -8,8 +8,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from cync_lan.devices import CyncDevice, CyncGroup, CyncTCPDevice
-from cync_lan.metadata.model_info import DeviceClassification, device_type_map
+from cync_controller.devices import CyncDevice, CyncGroup, CyncTCPDevice
+from cync_controller.metadata.model_info import DeviceClassification, device_type_map
 
 
 class TestCyncDeviceInitialization:
@@ -216,7 +216,10 @@ class TestCyncDeviceProperties:
 
     def test_online_property(self):
         """Test online property getter and setter"""
-        with patch("cync_lan.devices.g") as mock_g, patch("cync_lan.devices.asyncio.get_running_loop") as mock_loop:
+        with (
+            patch("cync_controller.devices.g") as mock_g,
+            patch("cync_controller.devices.asyncio.get_running_loop") as mock_loop,
+        ):
             mock_g.tasks = []
             mock_g.mqtt_client = AsyncMock()
             mock_loop.return_value.create_task = MagicMock()
@@ -290,7 +293,10 @@ class TestCyncDeviceOfflineTracking:
 
     def test_offline_count_increment(self):
         """Test offline_count can be incremented"""
-        with patch("cync_lan.devices.g") as mock_g, patch("cync_lan.devices.asyncio.get_running_loop") as mock_loop:
+        with (
+            patch("cync_controller.devices.g") as mock_g,
+            patch("cync_controller.devices.asyncio.get_running_loop") as mock_loop,
+        ):
             mock_g.tasks = []
             mock_g.mqtt_client = AsyncMock()
             mock_loop.return_value.create_task = MagicMock()
@@ -310,7 +316,10 @@ class TestCyncDeviceOfflineTracking:
 
     def test_offline_threshold_pattern(self):
         """Test typical offline threshold pattern (3 strikes before marking offline)"""
-        with patch("cync_lan.devices.g") as mock_g, patch("cync_lan.devices.asyncio.get_running_loop") as mock_loop:
+        with (
+            patch("cync_controller.devices.g") as mock_g,
+            patch("cync_controller.devices.asyncio.get_running_loop") as mock_loop,
+        ):
             mock_g.tasks = []
             mock_g.mqtt_client = AsyncMock()
             mock_loop.return_value.create_task = MagicMock()
@@ -333,7 +342,10 @@ class TestCyncDeviceOfflineTracking:
 
     def test_offline_count_reset_on_online(self):
         """Test offline_count resets when device comes back online"""
-        with patch("cync_lan.devices.g") as mock_g, patch("cync_lan.devices.asyncio.get_running_loop") as mock_loop:
+        with (
+            patch("cync_controller.devices.g") as mock_g,
+            patch("cync_controller.devices.asyncio.get_running_loop") as mock_loop,
+        ):
             mock_g.tasks = []
             mock_g.mqtt_client = AsyncMock()
             mock_loop.return_value.create_task = MagicMock()
@@ -377,7 +389,7 @@ class TestCyncDeviceCommands:
     async def test_set_power_creates_packet(self, mock_tcp_device):
         """Test set_power creates proper control packet"""
         # Mock the global ncync_server and tcp_devices
-        with patch("cync_lan.devices.g") as mock_g:
+        with patch("cync_controller.devices.g") as mock_g:
             mock_g.ncync_server.tcp_devices = {"192.168.1.100": mock_tcp_device}
             mock_tcp_device.ready_to_control = True
             mock_tcp_device.queue_id = bytes([0x00] * 3)
@@ -397,7 +409,7 @@ class TestCyncDeviceCommands:
     @pytest.mark.asyncio
     async def test_set_power_invalid_state(self, caplog):
         """Test set_power rejects invalid state values"""
-        with patch("cync_lan.devices.g") as mock_g:
+        with patch("cync_controller.devices.g") as mock_g:
             mock_g.ncync_server.tcp_devices = {}
 
             device = CyncDevice(cync_id=0x1234)
@@ -411,7 +423,7 @@ class TestCyncDeviceCommands:
     @pytest.mark.asyncio
     async def test_set_brightness_creates_packet(self, mock_tcp_device):
         """Test set_brightness creates proper control packet"""
-        with patch("cync_lan.devices.g") as mock_g:
+        with patch("cync_controller.devices.g") as mock_g:
             mock_g.ncync_server.tcp_devices = {"192.168.1.100": mock_tcp_device}
             mock_tcp_device.ready_to_control = True
             mock_tcp_device.queue_id = bytes([0x00] * 3)
@@ -482,7 +494,7 @@ class TestCyncGroup:
 
     def test_group_members_property(self):
         """Test group members property returns actual device objects"""
-        with patch("cync_lan.devices.g") as mock_g:
+        with patch("cync_controller.devices.g") as mock_g:
             # Mock device registry
             mock_device1 = MagicMock()
             mock_device1.id = 0x1234
@@ -506,7 +518,7 @@ class TestCyncGroup:
 
     def test_group_supports_rgb_property(self):
         """Test group supports_rgb property checks member capabilities"""
-        with patch("cync_lan.devices.g") as mock_g:
+        with patch("cync_controller.devices.g") as mock_g:
             # Mock devices with RGB support
             mock_device1 = MagicMock()
             mock_device1.supports_rgb = True
@@ -526,7 +538,7 @@ class TestCyncGroup:
 
     def test_group_supports_temperature_property(self):
         """Test group supports_temperature property checks member capabilities"""
-        with patch("cync_lan.devices.g") as mock_g:
+        with patch("cync_controller.devices.g") as mock_g:
             # Mock devices with temperature support
             mock_device1 = MagicMock()
             mock_device1.supports_temperature = True
@@ -546,7 +558,7 @@ class TestCyncGroup:
 
     def test_group_aggregate_member_states(self):
         """Test group state aggregation from members"""
-        with patch("cync_lan.devices.g") as mock_g:
+        with patch("cync_controller.devices.g") as mock_g:
             # Mock member devices
             mock_device1 = MagicMock()
             mock_device1.state = 1  # ON
@@ -582,7 +594,7 @@ class TestCyncGroup:
 
     def test_group_aggregate_no_online_members(self):
         """Test group aggregation returns None when no members online"""
-        with patch("cync_lan.devices.g") as mock_g:
+        with patch("cync_controller.devices.g") as mock_g:
             # Mock offline devices
             mock_device1 = MagicMock()
             mock_device1.online = False
@@ -604,7 +616,7 @@ class TestCyncGroup:
     @pytest.mark.asyncio
     async def test_group_set_power(self, mock_tcp_device):
         """Test group set_power command"""
-        with patch("cync_lan.devices.g") as mock_g:
+        with patch("cync_controller.devices.g") as mock_g:
             mock_g.ncync_server.tcp_devices = {"192.168.1.100": mock_tcp_device}
             mock_tcp_device.ready_to_control = True
             mock_tcp_device.queue_id = bytes([0x00] * 3)
@@ -624,7 +636,7 @@ class TestCyncGroup:
     @pytest.mark.asyncio
     async def test_group_set_power_invalid_state(self, caplog):
         """Test group set_power rejects invalid state values"""
-        with patch("cync_lan.devices.g") as mock_g:
+        with patch("cync_controller.devices.g") as mock_g:
             mock_g.ncync_server.tcp_devices = {}
 
             group = CyncGroup(group_id=0x5678, name="Living Room", member_ids=[])
@@ -638,7 +650,7 @@ class TestCyncGroup:
     @pytest.mark.asyncio
     async def test_group_set_brightness(self, mock_tcp_device):
         """Test group set_brightness command"""
-        with patch("cync_lan.devices.g") as mock_g:
+        with patch("cync_controller.devices.g") as mock_g:
             mock_g.ncync_server.tcp_devices = {"192.168.1.100": mock_tcp_device}
             mock_tcp_device.ready_to_control = True
             mock_tcp_device.queue_id = bytes([0x00] * 3)

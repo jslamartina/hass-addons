@@ -14,14 +14,14 @@ import uvloop
 from pydantic import BaseModel, ConfigDict, computed_field
 from pydantic.dataclasses import dataclass
 
-from cync_lan.const import *
+from cync_controller.const import *
 
 if TYPE_CHECKING:
-    from cync_lan.cloud_api import CyncCloudAPI
-    from cync_lan.exporter import ExportServer
-    from cync_lan.main import CyncController
-    from cync_lan.mqtt_client import MQTTClient
-    from cync_lan.server import NCyncServer
+    from cync_controller.cloud_api import CyncCloudAPI
+    from cync_controller.exporter import ExportServer
+    from cync_controller.main import CyncController
+    from cync_controller.mqtt_client import MQTTClient
+    from cync_controller.server import NCyncServer
 
 
 logger = logging.getLogger(CYNC_LOG_NAME)

@@ -1,3 +1,41 @@
+## 0.0.4.13
+**Bug Fixes: Ingress Page and Group Control Issues**
+
+### Fixed
+- **Bug 1 - OTP submission reliability**: Fixed OTP failing on first submission, succeeding on second
+  - Root cause: Token was written to file but not set in memory before export
+  - Fix: Set token in memory IMMEDIATELY after OTP verification, before file write
+  - Impact: OTP now works reliably on first submission
+  - Location: `cloud_api.py` `send_otp()` method
+
+- **Bug 2 - Restart button error handling**: Fixed false error message when restart succeeds
+  - Root cause: Server restarts before HTTP response sent, causing frontend connection error
+  - Fix: Treat connection errors as success with auto-reload after 5 seconds
+  - Impact: Users now see success message and page auto-reloads after restart
+  - Location: `static/index.html` `restartServer()` function
+
+- **Bug 3 - Restart button persistence**: Fixed restart button disappearing after navigation
+  - Root cause: Button visibility only set on OTP submission, not restored on page load
+  - Fix: Check for existing config on page load and restore button visibility
+  - Impact: Restart button persists when navigating away and back to ingress page
+  - Location: `static/index.html` `checkExistingConfig()` function
+
+- **Bug 4 - Group switch synchronization**: Fixed switches not updating when group is controlled
+  - Root cause: Group commands target bulbs via group ID, switches don't receive status updates
+  - Fix: Proactively sync member switches after group power commands
+  - Impact: Turning off "Hallway Lights" group now turns off all member switches in HA
+  - Location: `devices.py` `CyncGroup.set_power()` + `mqtt_client.py` `sync_group_switches()`
+
+### Added
+- E2E test infrastructure using Playwright for browser automation
+- Reproduction tests for all four bugs in `tests/e2e/`
+- Comprehensive logging for token caching operations
+
+### Technical Details
+- Token caching now follows "memory first, file second" pattern for reliability
+- Switch sync respects `pending_command` flag - individual commands take precedence
+- Restart handling uses optimistic success approach with timeout-based page reload
+
 ## 0.0.4.12
 **Enhancement: Fan Speed Control Improvements**
 

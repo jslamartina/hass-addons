@@ -57,8 +57,8 @@ export CYNC_CLOUD_RELAY_ENABLED CYNC_CLOUD_FORWARD CYNC_CLOUD_SERVER CYNC_CLOUD_
 CYNC_EXPOSE_DEVICE_LIGHTS="$(bashio::config 'features' | jq -r '.expose_device_lights // "true"')"
 export CYNC_EXPOSE_DEVICE_LIGHTS
 
-# when installing the cync_lan python package, pyproject.toml creates a cync-controller executable
+# when installing the cync_controller python package, pyproject.toml creates a cync-controller executable
 #cync-controller --enable-export
-# for some wierd reason, the cync-controller executable does not work in the add-on container all of a sudden
-python -c "from cync_lan.main import main; main()" --enable-export
+# for some weird reason, the cync-controller executable does not work in the add-on container all of a sudden
+python -c "from cync_controller.main import main; main()" --enable-export
 # Force rebuild trigger

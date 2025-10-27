@@ -20,7 +20,7 @@ RUN set -x \
   && rm -rf /var/cache/apk/*
 
 # Copy local cync-controller Python package source
-COPY src/cync_lan /tmp/src/cync_lan
+COPY src/cync_controller /tmp/src/cync_controller
 COPY pyproject.toml /tmp/pyproject.toml
 
 ARG BUILD_ARCH

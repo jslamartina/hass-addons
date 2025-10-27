@@ -56,13 +56,6 @@ print(f'Stdev: {statistics.stdev(data):.2f}')
 """)
 ```
 
-## Web Fetch - External Documentation
-
-```python
-# Fetch docs
-mcp_web_fetch_fetch(url="https://developers.home-assistant.io/docs/add-ons/", max_length=5000)
-```
-
 ## Fallback Strategy
 
 If MCP fails, use standard tools (`read_file`, `grep`, terminal) and note the issue. See `docs/developer/mcp-tools.md` for details.

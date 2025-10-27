@@ -9,8 +9,8 @@ from unittest.mock import AsyncMock, MagicMock, mock_open, patch
 
 import pytest
 
-from cync_lan.cloud_api import CyncCloudAPI
-from cync_lan.structs import ComputedTokenData
+from cync_controller.cloud_api import CyncCloudAPI
+from cync_controller.structs import ComputedTokenData
 
 
 @pytest.fixture(autouse=True)
@@ -53,7 +53,7 @@ class TestCyncCloudAPISession:
     @pytest.mark.asyncio
     async def test_check_session_creates_new_session(self):
         """Test that _check_session creates session if none exists"""
-        with patch("cync_lan.cloud_api.aiohttp.ClientSession") as mock_session_class:
+        with patch("cync_controller.cloud_api.aiohttp.ClientSession") as mock_session_class:
             mock_session = AsyncMock()
             mock_session.__aenter__ = AsyncMock()
             mock_session_class.return_value = mock_session
@@ -68,7 +68,7 @@ class TestCyncCloudAPISession:
     @pytest.mark.asyncio
     async def test_check_session_reuses_open_session(self):
         """Test that _check_session doesn't recreate open session"""
-        with patch("cync_lan.cloud_api.aiohttp.ClientSession") as mock_session_class:
+        with patch("cync_controller.cloud_api.aiohttp.ClientSession") as mock_session_class:
             mock_session = AsyncMock()
             mock_session.closed = False
             mock_session_class.return_value = mock_session
@@ -106,7 +106,7 @@ class TestCyncCloudAPITokenManagement:
         """Test reading token cache when file doesn't exist"""
         api = CyncCloudAPI()
 
-        with patch("cync_lan.cloud_api.Path") as mock_path:
+        with patch("cync_controller.cloud_api.Path") as mock_path:
             mock_file = MagicMock()
             mock_file.open.side_effect = FileNotFoundError()
             mock_path.return_value = mock_file
@@ -130,7 +130,10 @@ class TestCyncCloudAPITokenManagement:
             issued_at=datetime.datetime.now(datetime.UTC),
         )
 
-        with patch("cync_lan.cloud_api.Path") as mock_path, patch("cync_lan.cloud_api.pickle.load") as mock_pickle:
+        with (
+            patch("cync_controller.cloud_api.Path") as mock_path,
+            patch("cync_controller.cloud_api.pickle.load") as mock_pickle,
+        ):
             mock_file = MagicMock()
             mock_path.return_value.open = mock_open()
             mock_pickle.return_value = sample_token
@@ -153,7 +156,10 @@ class TestCyncCloudAPITokenManagement:
             issued_at=datetime.datetime.now(datetime.UTC),
         )
 
-        with patch("cync_lan.cloud_api.Path") as mock_path, patch("cync_lan.cloud_api.pickle.dump") as mock_pickle:
+        with (
+            patch("cync_controller.cloud_api.Path") as mock_path,
+            patch("cync_controller.cloud_api.pickle.dump") as mock_pickle,
+        ):
             mock_file = mock_open()
             mock_path.return_value.open = mock_file
 
@@ -225,8 +231,8 @@ class TestCyncCloudAPIAuthentication:
     async def test_request_otp_success(self):
         """Test successful OTP request"""
         with (
-            patch("cync_lan.cloud_api.CYNC_ACCOUNT_USERNAME", "test@example.com"),
-            patch("cync_lan.cloud_api.CYNC_ACCOUNT_PASSWORD", "password123"),
+            patch("cync_controller.cloud_api.CYNC_ACCOUNT_USERNAME", "test@example.com"),
+            patch("cync_controller.cloud_api.CYNC_ACCOUNT_PASSWORD", "password123"),
         ):
             api = CyncCloudAPI()
 
@@ -248,8 +254,8 @@ class TestCyncCloudAPIAuthentication:
     async def test_request_otp_no_credentials(self):
         """Test OTP request without credentials"""
         with (
-            patch("cync_lan.cloud_api.CYNC_ACCOUNT_USERNAME", None),
-            patch("cync_lan.cloud_api.CYNC_ACCOUNT_PASSWORD", None),
+            patch("cync_controller.cloud_api.CYNC_ACCOUNT_USERNAME", None),
+            patch("cync_controller.cloud_api.CYNC_ACCOUNT_PASSWORD", None),
         ):
             api = CyncCloudAPI()
             api._check_session = AsyncMock()
@@ -262,8 +268,8 @@ class TestCyncCloudAPIAuthentication:
     async def test_request_otp_http_error(self):
         """Test OTP request with HTTP error"""
         with (
-            patch("cync_lan.cloud_api.CYNC_ACCOUNT_USERNAME", "test@example.com"),
-            patch("cync_lan.cloud_api.CYNC_ACCOUNT_PASSWORD", "password123"),
+            patch("cync_controller.cloud_api.CYNC_ACCOUNT_USERNAME", "test@example.com"),
+            patch("cync_controller.cloud_api.CYNC_ACCOUNT_PASSWORD", "password123"),
         ):
             api = CyncCloudAPI()
 
@@ -284,8 +290,8 @@ class TestCyncCloudAPIAuthentication:
     async def test_send_otp_success(self):
         """Test successful OTP submission"""
         with (
-            patch("cync_lan.cloud_api.CYNC_ACCOUNT_USERNAME", "test@example.com"),
-            patch("cync_lan.cloud_api.CYNC_ACCOUNT_PASSWORD", "password123"),
+            patch("cync_controller.cloud_api.CYNC_ACCOUNT_USERNAME", "test@example.com"),
+            patch("cync_controller.cloud_api.CYNC_ACCOUNT_PASSWORD", "password123"),
         ):
             api = CyncCloudAPI()
 
@@ -326,8 +332,8 @@ class TestCyncCloudAPIAuthentication:
     async def test_send_otp_string_conversion(self):
         """Test OTP submission with string code (gets converted)"""
         with (
-            patch("cync_lan.cloud_api.CYNC_ACCOUNT_USERNAME", "test@example.com"),
-            patch("cync_lan.cloud_api.CYNC_ACCOUNT_PASSWORD", "password123"),
+            patch("cync_controller.cloud_api.CYNC_ACCOUNT_USERNAME", "test@example.com"),
+            patch("cync_controller.cloud_api.CYNC_ACCOUNT_PASSWORD", "password123"),
         ):
             api = CyncCloudAPI()
 
@@ -449,7 +455,7 @@ class TestCyncCloudAPIDeviceOperations:
     @pytest.mark.asyncio
     async def test_get_properties_access_token_expired(self):
         """Test get_properties with expired access token (code 4031021)"""
-        from cync_lan.cloud_api import CyncAuthenticationError
+        from cync_controller.cloud_api import CyncAuthenticationError
 
         api = CyncCloudAPI()
         api.token_cache = ComputedTokenData(
@@ -560,7 +566,7 @@ class TestCyncCloudAPIDeviceOperations:
             }
         ]
 
-        with patch("cync_lan.cloud_api.Path") as mock_path:
+        with patch("cync_controller.cloud_api.Path") as mock_path:
             mock_file = mock_open()
             mock_path.return_value.open = mock_file
 
@@ -591,7 +597,7 @@ class TestCyncCloudAPIDeviceOperations:
             }
         ]
 
-        with patch("cync_lan.cloud_api.Path") as mock_path:
+        with patch("cync_controller.cloud_api.Path") as mock_path:
             mock_file = mock_open()
             mock_path.return_value.open = mock_file
 
@@ -613,7 +619,7 @@ class TestCyncCloudAPIDeviceOperations:
             }
         ]
 
-        with patch("cync_lan.cloud_api.Path") as mock_path:
+        with patch("cync_controller.cloud_api.Path") as mock_path:
             mock_file = mock_open()
             mock_path.return_value.open = mock_file
 
@@ -638,7 +644,7 @@ class TestCyncCloudAPIDeviceOperations:
             }
         ]
 
-        with patch("cync_lan.cloud_api.Path") as mock_path:
+        with patch("cync_controller.cloud_api.Path") as mock_path:
             mock_file = mock_open()
             mock_path.return_value.open = mock_file
 
@@ -676,7 +682,7 @@ class TestCyncCloudAPIDeviceOperations:
             }
         ]
 
-        with patch("cync_lan.cloud_api.Path") as mock_path:
+        with patch("cync_controller.cloud_api.Path") as mock_path:
             mock_file = mock_open()
             mock_path.return_value.open = mock_file
 
@@ -721,7 +727,7 @@ class TestCyncCloudAPIDeviceOperations:
             }
         ]
 
-        with patch("cync_lan.cloud_api.Path") as mock_path:
+        with patch("cync_controller.cloud_api.Path") as mock_path:
             mock_file = mock_open()
             mock_path.return_value.open = mock_file
 
@@ -775,7 +781,7 @@ class TestCyncCloudAPIDeviceOperations:
             }
         ]
 
-        with patch("cync_lan.cloud_api.Path") as mock_path:
+        with patch("cync_controller.cloud_api.Path") as mock_path:
             mock_file = mock_open()
             mock_path.return_value.open = mock_file
 
@@ -815,7 +821,7 @@ class TestCyncCloudAPIDeviceOperations:
             }
         ]
 
-        with patch("cync_lan.cloud_api.Path") as mock_path:
+        with patch("cync_controller.cloud_api.Path") as mock_path:
             mock_file = mock_open()
             mock_path.return_value.open = mock_file
 

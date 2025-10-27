@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "cync_controller"
-version = "0.0.4.12"
+version = "0.0.4.13"
 description = "A Python library for local async MQTT control of Cync/C by GE smart devices"
 readme = "README.md"
 authors = [{name = "jslamartina", email = "6307064+jslamartina@users.noreply.github.com"}]
@@ -28,6 +28,11 @@ dependencies = [
 [project.optional-dependencies]
 dev = [
     "python-dotenv>=1.1.0",
+]
+test = [
+    "pytest>=8.0.0",
+    "pytest-asyncio>=0.23.0",
+    "pytest-playwright>=0.4.0",
 ]
 
 [project.scripts]
