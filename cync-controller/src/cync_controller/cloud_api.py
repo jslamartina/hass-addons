@@ -1,6 +1,5 @@
 import datetime
 import json
-import logging
 import pickle
 import random
 import string
@@ -9,7 +8,7 @@ from pathlib import Path
 import aiohttp
 import yaml
 
-from cync_lan.const import (
+from cync_controller.const import (
     CYNC_ACCOUNT_LANGUAGE,
     CYNC_ACCOUNT_PASSWORD,
     CYNC_ACCOUNT_USERNAME,
@@ -17,13 +16,13 @@ from cync_lan.const import (
     CYNC_CLOUD_AUTH_PATH,
     CYNC_CONFIG_FILE_PATH,
     CYNC_CORP_ID,
-    CYNC_LOG_NAME,
     PERSISTENT_BASE_DIR,
 )
-from cync_lan.devices import CyncDevice
-from cync_lan.structs import ComputedTokenData, GlobalObject
+from cync_controller.devices import CyncDevice
+from cync_controller.logging_abstraction import get_logger
+from cync_controller.structs import ComputedTokenData, GlobalObject
 
-logger = logging.getLogger(CYNC_LOG_NAME)
+logger = get_logger(__name__)
 g = GlobalObject()
 
 
@@ -185,7 +184,17 @@ class CyncCloudAPI:
             # add issued_at to the token data for computing the expiration datetime
             token_data["issued_at"] = iat
             computed_token = ComputedTokenData(**token_data)
-            await self.write_token_cache(computed_token)
+
+            # CRITICAL: Set token in memory FIRST before attempting file write
+            # This ensures subsequent calls can use the token even if file write fails
+            self.token_cache = computed_token
+            logger.info("%s ✓ Token set in memory cache (user_id: %s)", lp, computed_token.user_id)
+
+            # Then attempt to write to persistent cache file
+            write_success = await self.write_token_cache(computed_token)
+            if not write_success:
+                logger.warning("%s Token set in memory but file write failed - token will be lost on restart", lp)
+
             return True
 
     async def write_token_cache(self, tkn: ComputedTokenData) -> bool:
@@ -204,8 +213,8 @@ class CyncCloudAPI:
             logger.exception("%s Failed to write token cache", lp)
             return False
         else:
-            logger.debug("%s Token cache written successfully to: %s", lp, self.auth_cache_file)
-            self.token_cache = tkn
+            logger.info("%s ✓ Token cache written successfully to file: %s", lp, self.auth_cache_file)
+            # Note: self.token_cache should already be set by caller before this function
             return True
 
     async def request_devices(self):

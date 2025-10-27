@@ -1,7 +1,6 @@
 """FastAPI application for exporting Cync device configuration from the Cync Cloud API."""
 
 import asyncio
-import logging
 import os
 from pathlib import Path
 
@@ -13,17 +12,17 @@ from fastapi.responses import FileResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-from cync_lan.const import (
+from cync_controller.const import (
     CYNC_CONFIG_FILE_PATH,
-    CYNC_LOG_NAME,
     CYNC_SRV_HOST,
     CYNC_STATIC_DIR,
     INGRESS_PORT,
 )
-from cync_lan.structs import GlobalObject
+from cync_controller.logging_abstraction import get_logger
+from cync_controller.structs import GlobalObject
 
 g = GlobalObject()
-logger = logging.getLogger(CYNC_LOG_NAME)
+logger = get_logger(__name__)
 
 
 class OTPRequest(BaseModel):
@@ -99,10 +98,7 @@ async def restart():
     lp = "ExportServer:restart:"
     supervisor_token = os.environ.get("SUPERVISOR_TOKEN")
     if not supervisor_token:
-        logger.warning(
-            "%s SUPERVISOR_TOKEN environment variable not set. Are you in a Home Assistant add-on?",
-            lp,
-        )
+        logger.warning("%s SUPERVISOR_TOKEN environment variable not set. Are you in a Home Assistant add-on?", lp)
         return {"success": False, "message": "Supervisor token not found."}
 
     # The 'self' slug is a special value that refers to the current add-on.
@@ -118,10 +114,7 @@ async def restart():
     try:
         async with aiohttp.ClientSession() as session, session.post(url, headers=headers) as response:
             if response.status == 200:
-                logger.debug(
-                    "%s Successfully called the restart API. The add-on will now restart.",
-                    lp,
-                )
+                logger.debug("%s Successfully called the restart API. The add-on will now restart.", lp)
                 return {"success": True, "message": "Add-on is restarting."}
             # Try to get more details from the response if it fails
             error_details = await response.text()

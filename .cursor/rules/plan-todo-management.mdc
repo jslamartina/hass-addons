@@ -74,13 +74,31 @@ todo_write(merge=False, todos=[...only keep these...])
 create_plan(old_str="## Phase 1\n...", new_str="## Phase 1\n...\n\n## Phase 2\n...", todos=[...keep existing + add new...])
 ```
 
-**Syncing todos:** Plan and workspace todos are **separate systems**—updating one doesn't update the other.
+**Syncing todos:** Plan and workspace todos are **separate systems** that sync by matching IDs.
+
+**Workflow**:
+1. Update workspace todos with `todo_write` (includes `status`) DURING work AS IT'S BEING DONE.
+2. Refresh plan todos from workspace todos with `create_plan` (NO `status` field) AFTER work is completed. You can't do this step in Plan Mode.
+3. Plan syncs status from workspace based on matching IDs
 
 ```python
-# To sync: call BOTH tools with same todos array
-todo_write(merge=False, todos=[...])      # Updates workspace panel
-create_plan(plan="", todos=[...])         # Updates plan checkboxes
+# Step 1: Update workspace todos (with status)
+todo_write(merge=True, todos=[
+    {"id": "task-1", "content": "...", "status": "completed"}
+])
+
+# Step 2: Refresh plan todos (NO status - it syncs from workspace)
+create_plan(plan="", todos=[
+    {"id": "task-1", "content": "..."},  # Status synced from workspace
+    {"id": "task-2", "content": "..."},
+    # Must pass FULL list every time
+])
 ```
+
+**Critical**:
+- `create_plan` only accepts `id` and `content` (NOT `status`)
+- Must pass complete todo list to `create_plan` each time (not just changed items)
+- Status syncs from workspace → plan when you call `create_plan`
 
 **After task completion:** Update both with completed status.
 

@@ -10,23 +10,22 @@ from pathlib import Path
 
 import uvloop
 
-from cync_lan.cloud_api import CyncCloudAPI
-from cync_lan.const import (
+from cync_controller.cloud_api import CyncCloudAPI
+from cync_controller.const import (
     CYNC_CONFIG_FILE_PATH,
     CYNC_DEBUG,
-    CYNC_LOG_NAME,
     CYNC_VERSION,
     EXPORT_SRV_START_TASK_NAME,
-    FOREIGN_LOG_FORMATTER,
-    LOG_FORMATTER,
     MQTT_CLIENT_START_TASK_NAME,
     NCYNC_START_TASK_NAME,
 )
-from cync_lan.exporter import ExportServer
-from cync_lan.mqtt_client import MQTTClient
-from cync_lan.server import NCyncServer
-from cync_lan.structs import GlobalObject
-from cync_lan.utils import check_for_uuid, check_python_version, parse_config, send_sigterm, signal_handler
+from cync_controller.correlation import correlation_context, ensure_correlation_id
+from cync_controller.exporter import ExportServer
+from cync_controller.logging_abstraction import get_logger
+from cync_controller.mqtt_client import MQTTClient
+from cync_controller.server import NCyncServer
+from cync_controller.structs import GlobalObject
+from cync_controller.utils import check_for_uuid, check_python_version, parse_config, send_sigterm, signal_handler
 
 # Optional dependency for .env file support
 try:
@@ -36,13 +35,10 @@ try:
 except ImportError:
     HAS_DOTENV = False
 
-logger = logging.getLogger(CYNC_LOG_NAME)
-stdout_handler = logging.StreamHandler(sys.stdout)
-stdout_handler.setLevel(logging.INFO)
-stdout_handler.setFormatter(LOG_FORMATTER)
-foreign_handler = logging.StreamHandler(sys.stderr)
-foreign_handler.setLevel(logging.INFO)
-foreign_handler.setFormatter(FOREIGN_LOG_FORMATTER)
+# Initialize new logging system
+logger = get_logger(__name__)
+
+# Configure third-party loggers (uvicorn, mqtt) to reduce noise
 uv_handler = logging.StreamHandler(sys.stdout)
 uv_handler.setLevel(logging.INFO)
 uv_handler.setFormatter(
@@ -51,23 +47,20 @@ uv_handler.setFormatter(
         "%m/%d/%y %H:%M:%S",
     )
 )
-logger.addHandler(stdout_handler)
-logger.setLevel(logging.INFO)
-# Control uvicorn logging, what a mess!
+# Control uvicorn logging
 uvi_logger = logging.getLogger("uvicorn")
 uvi_error_logger = logging.getLogger("uvicorn.error")
 uvi_access_logger = logging.getLogger("uvicorn.access")
-uvi_loggers = (uvi_logger, uvi_error_logger, uvi_access_logger)
-for _ul in uvi_loggers:
+for _ul in (uvi_logger, uvi_error_logger, uvi_access_logger):
     _ul.setLevel(logging.INFO)
     _ul.propagate = False
     _ul.addHandler(uv_handler)
+
+# Suppress verbose MQTT library warnings
 mqtt_logger = logging.getLogger("mqtt")
-# shut off the 'There are x pending publish calls.' from the mqtt logger (WARNING level)
 mqtt_logger.setLevel(logging.ERROR)
 mqtt_logger.propagate = False
-mqtt_logger.addHandler(foreign_handler)
-# logger.debug("%s Logging all registered loggers: %s", lp, logging.getLogger().manager.loggerDict.keys())
+
 g = GlobalObject()
 
 
@@ -82,40 +75,66 @@ class CyncController:
         return cls._instance
 
     def __init__(self):
-        lp = f"{self.lp}init:"
         check_for_uuid()
         asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
         g.loop = asyncio.new_event_loop()
         asyncio.set_event_loop(g.loop)
-        logger.debug(
-            "%s Cync Controller (version: %s) stack initializing, "
-            "setting up event loop signal handlers for SIGINT & SIGTERM...",
-            lp,
-            CYNC_VERSION,
+
+        logger.info(
+            "→ Initializing Cync Controller",
+            extra={"version": CYNC_VERSION},
         )
+
         g.loop.add_signal_handler(signal.SIGINT, partial(signal_handler, signal.SIGINT))
         g.loop.add_signal_handler(signal.SIGTERM, partial(signal_handler, signal.SIGTERM))
 
+        logger.debug("Signal handlers configured for SIGINT & SIGTERM")
+
     async def start(self):
         """Start the Cync Controller server, MQTT client, and Export server."""
-        lp = f"{self.lp}start:"
+        # Ensure correlation ID for async context
+        ensure_correlation_id()
+
         self.config_file = cfg_file = Path(CYNC_CONFIG_FILE_PATH).expanduser().resolve()
         tasks = []
+
         if cfg_file.exists():
+            logger.info(
+                "→ Loading configuration",
+                extra={"config_path": str(cfg_file)},
+            )
             devices, groups = await parse_config(cfg_file)
+
+            logger.info(
+                "✓ Configuration loaded",
+                extra={
+                    "device_count": len(devices),
+                    "group_count": len(groups),
+                },
+            )
+
+            # Initialize core services
             g.ncync_server = NCyncServer(devices, groups)
             g.mqtt_client = MQTTClient()
+
+            # Create async tasks for services
             g.ncync_server.start_task = n_start = asyncio.Task(g.ncync_server.start(), name=NCYNC_START_TASK_NAME)
             g.mqtt_client.start_task = m_start = asyncio.Task(g.mqtt_client.start(), name=MQTT_CLIENT_START_TASK_NAME)
             tasks.extend([n_start, m_start])
+
+            logger.info("→ Starting TCP server and MQTT client...")
         else:
             logger.error(
-                "%s Cync config file not found at %s. Please migrate "
-                "an existing config file or visit the ingress page and perform a device export.",
-                lp,
-                cfg_file.as_posix(),
+                "✗ Configuration file not found",
+                extra={
+                    "config_path": str(cfg_file),
+                    "action_required": "migrate existing config or export devices via ingress page",
+                },
             )
+
+        # Start export server if enabled
         if g.cli_args.export_server is True:
+            logger.info("→ Starting export server...")
             g.cloud_api = CyncCloudAPI()
             g.export_server = ExportServer()
             g.export_server.start_task = x_start = asyncio.Task(
@@ -124,20 +143,18 @@ class CyncController:
             tasks.append(x_start)
 
         try:
-            # the components start() methods have long running tasks of their own
-            # NOTE: Future improvement - implement better task monitoring and control mechanisms
             await asyncio.gather(*tasks, return_exceptions=True)
-        except Exception:
-            logger.exception("%s Exception occurred while starting services", lp)
-            # Stop all services if any service fails to start
+        except Exception as e:
+            logger.exception(
+                "✗ Service startup failed",
+                extra={"error": str(e)},
+            )
             await self.stop()
             raise
 
     async def stop(self):
         """Stop the nCync server, MQTT client, and Export server."""
-        lp = f"{self.lp}stop:"
-        # send sigterm
-        logger.info("%s Bringing software stack down using SIGTERM...", lp)
+        logger.info("→ Shutting down Cync Controller...")
         send_sigterm()
 
 
@@ -162,50 +179,86 @@ def parse_cli():
     g.cli_args = args = parser.parse_args()
 
     if args.debug:
-        logger.setLevel(logging.DEBUG)
+        logger.set_level(logging.DEBUG)
         for handler in logger.handlers:
             handler.setLevel(logging.DEBUG)
-        logger.debug("Debug mode enabled via CLI argument")
+        logger.info("Debug mode enabled via CLI argument")
+
     if args.env:
-        env_path = args.env
-        env_path = env_path.expanduser().resolve()
+        env_path = args.env.expanduser().resolve()
+
         if not HAS_DOTENV:
-            logger.error("dotenv module is not installed. Please install it with 'pip install python-dotenv'")
+            logger.error(
+                "dotenv module not installed",
+                extra={"install_command": "pip install python-dotenv"},
+            )
+        elif not env_path.exists():
+            logger.error(
+                "Environment file not found",
+                extra={"path": str(env_path)},
+            )
         else:
             try:
                 loaded_any = dotenv.load_dotenv(env_path, override=True)
-            except Exception:
-                logger.exception("Failed to read environment file %s", env_path)
-            else:
-                if not env_path.exists():
-                    logger.error("Environment file %s does not exist", env_path)
                 if loaded_any:
-                    logger.info("Environment variables loaded from %s", env_path)
+                    logger.info(
+                        "✓ Environment variables loaded",
+                        extra={"source": str(env_path)},
+                    )
                     g.reload_env()
                 else:
-                    logger.warning("No environment variables were loaded from %s", env_path)
+                    logger.warning(
+                        "No environment variables loaded from file",
+                        extra={"path": str(env_path)},
+                    )
+            except Exception as e:
+                logger.exception(
+                    "Failed to load environment file",
+                    extra={"path": str(env_path), "error": str(e)},
+                )
 
 
 def main():
-    lp = "main:"
-    parse_cli()
-    if CYNC_DEBUG:
-        logger.info("%s Add-on config has set logging level to: Debug", lp)
-        logger.setLevel(logging.DEBUG)
-        for handler in logger.handlers:
-            handler.setLevel(logging.DEBUG)
-    check_python_version()
-    g.cync_lan = CyncController()
-    try:
-        asyncio.get_event_loop().run_until_complete(g.cync_lan.start())
-    except asyncio.CancelledError as e:
-        logger.info("%s Cync Controller async stack cancelled: %s", lp, e)
-    except KeyboardInterrupt:
-        logger.info("%s Caught KeyboardInterrupt, exiting...", lp)
-    except Exception:
-        logger.exception("%s Caught exception", lp)
-    else:
-        logger.info("%s Cync Controller stack stopped gracefully, bye!", lp)
-    finally:
-        if not g.loop.is_closed():
-            g.loop.close()
+    """Main entry point for Cync Controller."""
+    with correlation_context():  # Auto-generate correlation ID for app lifecycle
+        logger.info(
+            "═══════════════════════════════════════════════════",
+        )
+        logger.info(
+            "Starting Cync Controller",
+            extra={"version": CYNC_VERSION},
+        )
+        logger.info(
+            "═══════════════════════════════════════════════════",
+        )
+
+        parse_cli()
+
+        if CYNC_DEBUG:
+            logger.info("Debug logging enabled via configuration")
+            logger.set_level(logging.DEBUG)
+            for handler in logger.handlers:
+                handler.setLevel(logging.DEBUG)
+
+        check_python_version()
+        g.cync_lan = CyncController()
+
+        try:
+            asyncio.get_event_loop().run_until_complete(g.cync_lan.start())
+        except asyncio.CancelledError:
+            logger.info("Cync Controller cancelled, shutting down...")
+        except KeyboardInterrupt:
+            logger.info("Keyboard interrupt received, shutting down...")
+        except Exception as e:
+            logger.exception(
+                "✗ Fatal error in main loop",
+                extra={"error": str(e)},
+            )
+        else:
+            logger.info("✓ Cync Controller stopped gracefully")
+        finally:
+            if not g.loop.is_closed():
+                g.loop.close()
+            logger.info("═══════════════════════════════════════════════════")
+            logger.info("Cync Controller shutdown complete")
+            logger.info("═══════════════════════════════════════════════════")

@@ -4,7 +4,7 @@ import zoneinfo
 
 import tzlocal
 
-from cync_lan import __version__
+from cync_controller import __version__
 
 __all__ = [
     "CYNC_ACCOUNT_LANGUAGE",
@@ -31,6 +31,10 @@ __all__ = [
     "CYNC_HASS_STATUS_TOPIC",
     "CYNC_HASS_TOPIC",
     "CYNC_HASS_WILL_MSG",
+    "CYNC_LOG_CORRELATION_ENABLED",
+    "CYNC_LOG_FORMAT",
+    "CYNC_LOG_HUMAN_OUTPUT",
+    "CYNC_LOG_JSON_FILE",
     "CYNC_LOG_NAME",
     "CYNC_MANUFACTURER",
     "CYNC_MAXK",
@@ -41,6 +45,8 @@ __all__ = [
     "CYNC_MQTT_PASS",
     "CYNC_MQTT_PORT",
     "CYNC_MQTT_USER",
+    "CYNC_PERF_THRESHOLD_MS",
+    "CYNC_PERF_TRACKING",
     "CYNC_PORT",
     "CYNC_RAW",
     "CYNC_SRV_HOST",
@@ -194,3 +200,14 @@ _cloud_port = os.environ.get("CYNC_CLOUD_PORT", "23779")
 CYNC_CLOUD_PORT: int = int(_cloud_port) if _cloud_port and _cloud_port.lower() != "null" else 23779
 CYNC_CLOUD_DEBUG_LOGGING: bool = os.environ.get("CYNC_CLOUD_DEBUG_LOGGING", "false").casefold() in YES_ANSWER
 CYNC_CLOUD_DISABLE_SSL_VERIFY: bool = os.environ.get("CYNC_CLOUD_DISABLE_SSL_VERIFY", "false").casefold() in YES_ANSWER
+
+# Logging Configuration
+CYNC_LOG_FORMAT: str = os.environ.get("CYNC_LOG_FORMAT", "both")  # "json", "human", or "both"
+CYNC_LOG_JSON_FILE: str = os.environ.get("CYNC_LOG_JSON_FILE", "/var/log/cync_controller.json")
+CYNC_LOG_HUMAN_OUTPUT: str = os.environ.get("CYNC_LOG_HUMAN_OUTPUT", "stdout")  # "stdout", "stderr", or file path
+CYNC_LOG_CORRELATION_ENABLED: bool = os.environ.get("CYNC_LOG_CORRELATION_ENABLED", "true").casefold() in YES_ANSWER
+
+# Performance Instrumentation
+CYNC_PERF_TRACKING: bool = os.environ.get("CYNC_PERF_TRACKING", "true").casefold() in YES_ANSWER
+_perf_threshold = os.environ.get("CYNC_PERF_THRESHOLD_MS", "100")
+CYNC_PERF_THRESHOLD_MS: int = int(_perf_threshold) if _perf_threshold and _perf_threshold.isdigit() else 100
