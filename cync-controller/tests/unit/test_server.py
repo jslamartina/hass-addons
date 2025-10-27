@@ -8,7 +8,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from cync_lan.server import CloudRelayConnection, NCyncServer
+from cync_controller.server import CloudRelayConnection, NCyncServer
 
 
 class TestCloudRelayConnectionInitialization:
@@ -157,7 +157,10 @@ class TestNCyncServerInitialization:
 
     def test_init_with_devices(self):
         """Test NCyncServer initialization with devices"""
-        with patch("cync_lan.server.g") as mock_g, patch("cync_lan.server.asyncio.get_event_loop") as mock_loop:
+        with (
+            patch("cync_controller.server.g") as mock_g,
+            patch("cync_controller.server.asyncio.get_event_loop") as mock_loop,
+        ):
             mock_g.reload_env = MagicMock()
             mock_g.env.cync_srv_ssl_cert = None
             mock_g.env.cync_srv_ssl_key = None
@@ -181,7 +184,10 @@ class TestNCyncServerInitialization:
 
     def test_init_without_groups(self):
         """Test NCyncServer initialization without groups"""
-        with patch("cync_lan.server.g") as mock_g, patch("cync_lan.server.asyncio.get_event_loop") as mock_loop:
+        with (
+            patch("cync_controller.server.g") as mock_g,
+            patch("cync_controller.server.asyncio.get_event_loop") as mock_loop,
+        ):
             mock_g.reload_env = MagicMock()
             mock_g.env.cync_srv_ssl_cert = None
             mock_g.env.cync_srv_ssl_key = None
@@ -202,7 +208,10 @@ class TestNCyncServerInitialization:
 
     def test_init_creates_singleton(self):
         """Test that NCyncServer is a singleton"""
-        with patch("cync_lan.server.g") as mock_g, patch("cync_lan.server.asyncio.get_event_loop") as mock_loop:
+        with (
+            patch("cync_controller.server.g") as mock_g,
+            patch("cync_controller.server.asyncio.get_event_loop") as mock_loop,
+        ):
             mock_g.reload_env = MagicMock()
             mock_g.env.cync_srv_ssl_cert = None
             mock_g.env.cync_srv_ssl_key = None
@@ -224,7 +233,10 @@ class TestNCyncServerInitialization:
 
     def test_init_cloud_relay_configuration(self):
         """Test cloud relay configuration during initialization"""
-        with patch("cync_lan.server.g") as mock_g, patch("cync_lan.server.asyncio.get_event_loop") as mock_loop:
+        with (
+            patch("cync_controller.server.g") as mock_g,
+            patch("cync_controller.server.asyncio.get_event_loop") as mock_loop,
+        ):
             mock_g.reload_env = MagicMock()
             mock_g.env.cync_srv_ssl_cert = None
             mock_g.env.cync_srv_ssl_key = None
@@ -253,7 +265,10 @@ class TestNCyncServerTCPDeviceManagement:
     @pytest.mark.asyncio
     async def test_add_tcp_device(self):
         """Test adding a TCP device to the server"""
-        with patch("cync_lan.server.g") as mock_g, patch("cync_lan.server.asyncio.get_event_loop") as mock_loop:
+        with (
+            patch("cync_controller.server.g") as mock_g,
+            patch("cync_controller.server.asyncio.get_event_loop") as mock_loop,
+        ):
             mock_g.reload_env = MagicMock()
             mock_g.env.cync_srv_ssl_cert = None
             mock_g.env.cync_srv_ssl_key = None
@@ -284,7 +299,10 @@ class TestNCyncServerTCPDeviceManagement:
     @pytest.mark.asyncio
     async def test_remove_tcp_device_by_object(self):
         """Test removing a TCP device by object reference"""
-        with patch("cync_lan.server.g") as mock_g, patch("cync_lan.server.asyncio.get_event_loop") as mock_loop:
+        with (
+            patch("cync_controller.server.g") as mock_g,
+            patch("cync_controller.server.asyncio.get_event_loop") as mock_loop,
+        ):
             mock_g.reload_env = MagicMock()
             mock_g.env.cync_srv_ssl_cert = None
             mock_g.env.cync_srv_ssl_key = None
@@ -303,7 +321,7 @@ class TestNCyncServerTCPDeviceManagement:
             server = NCyncServer(devices={})
 
             # Import CyncTCPDevice to create proper instance
-            from cync_lan.devices import CyncTCPDevice
+            from cync_controller.devices import CyncTCPDevice
 
             mock_reader = AsyncMock()
             mock_writer = AsyncMock()
@@ -321,7 +339,10 @@ class TestNCyncServerTCPDeviceManagement:
     @pytest.mark.asyncio
     async def test_remove_tcp_device_by_address(self):
         """Test removing a TCP device by address string"""
-        with patch("cync_lan.server.g") as mock_g, patch("cync_lan.server.asyncio.get_event_loop") as mock_loop:
+        with (
+            patch("cync_controller.server.g") as mock_g,
+            patch("cync_controller.server.asyncio.get_event_loop") as mock_loop,
+        ):
             mock_g.reload_env = MagicMock()
             mock_g.env.cync_srv_ssl_cert = None
             mock_g.env.cync_srv_ssl_key = None
@@ -340,7 +361,7 @@ class TestNCyncServerTCPDeviceManagement:
             server = NCyncServer(devices={})
 
             # Import CyncTCPDevice to create proper instance
-            from cync_lan.devices import CyncTCPDevice
+            from cync_controller.devices import CyncTCPDevice
 
             mock_reader = AsyncMock()
             mock_writer = AsyncMock()
@@ -362,7 +383,10 @@ class TestNCyncServerSSL:
     @pytest.mark.asyncio
     async def test_create_ssl_context_without_certs(self):
         """Test SSL context creation when no certificates configured"""
-        with patch("cync_lan.server.g") as mock_g, patch("cync_lan.server.asyncio.get_event_loop") as mock_loop:
+        with (
+            patch("cync_controller.server.g") as mock_g,
+            patch("cync_controller.server.asyncio.get_event_loop") as mock_loop,
+        ):
             mock_g.reload_env = MagicMock()
             mock_g.env.cync_srv_ssl_cert = None
             mock_g.env.cync_srv_ssl_key = None
@@ -385,10 +409,10 @@ class TestNCyncServerSSL:
     async def test_create_ssl_context_with_certs(self):
         """Test SSL context creation with certificates"""
         with (
-            patch("cync_lan.server.g") as mock_g,
-            patch("cync_lan.server.PathLib") as mock_path,
-            patch("cync_lan.server.asyncio.get_event_loop") as mock_loop,
-            patch("cync_lan.server.ssl.SSLContext") as mock_ssl_context,
+            patch("cync_controller.server.g") as mock_g,
+            patch("cync_controller.server.PathLib") as mock_path,
+            patch("cync_controller.server.asyncio.get_event_loop") as mock_loop,
+            patch("cync_controller.server.ssl.SSLContext") as mock_ssl_context,
         ):
             mock_g.reload_env = MagicMock()
             mock_g.env.cync_srv_ssl_cert = "/path/to/cert.pem"
@@ -422,7 +446,10 @@ class TestNCyncServerCloudRelay:
 
     def test_cloud_relay_disabled_by_default(self):
         """Test that cloud relay is disabled by default"""
-        with patch("cync_lan.server.g") as mock_g, patch("cync_lan.server.asyncio.get_event_loop") as mock_loop:
+        with (
+            patch("cync_controller.server.g") as mock_g,
+            patch("cync_controller.server.asyncio.get_event_loop") as mock_loop,
+        ):
             mock_g.reload_env = MagicMock()
             mock_g.env.cync_srv_ssl_cert = None
             mock_g.env.cync_srv_ssl_key = None
@@ -440,7 +467,10 @@ class TestNCyncServerCloudRelay:
 
     def test_cloud_relay_configuration(self):
         """Test cloud relay configuration is loaded from environment"""
-        with patch("cync_lan.server.g") as mock_g, patch("cync_lan.server.asyncio.get_event_loop") as mock_loop:
+        with (
+            patch("cync_controller.server.g") as mock_g,
+            patch("cync_controller.server.asyncio.get_event_loop") as mock_loop,
+        ):
             mock_g.reload_env = MagicMock()
             mock_g.env.cync_srv_ssl_cert = None
             mock_g.env.cync_srv_ssl_key = None
@@ -467,7 +497,10 @@ class TestNCyncServerState:
 
     def test_server_initial_state(self):
         """Test server initial state"""
-        with patch("cync_lan.server.g") as mock_g, patch("cync_lan.server.asyncio.get_event_loop") as mock_loop:
+        with (
+            patch("cync_controller.server.g") as mock_g,
+            patch("cync_controller.server.asyncio.get_event_loop") as mock_loop,
+        ):
             mock_g.reload_env = MagicMock()
             mock_g.env.cync_srv_ssl_cert = None
             mock_g.env.cync_srv_ssl_key = None
@@ -488,10 +521,10 @@ class TestNCyncServerState:
     def test_server_host_and_port_config(self):
         """Test server host and port configuration"""
         with (
-            patch("cync_lan.server.g") as mock_g,
-            patch("cync_lan.server.CYNC_SRV_HOST", "0.0.0.0"),
-            patch("cync_lan.server.CYNC_PORT", 23779),
-            patch("cync_lan.server.asyncio.get_event_loop") as mock_loop,
+            patch("cync_controller.server.g") as mock_g,
+            patch("cync_controller.server.CYNC_SRV_HOST", "0.0.0.0"),
+            patch("cync_controller.server.CYNC_PORT", 23779),
+            patch("cync_controller.server.asyncio.get_event_loop") as mock_loop,
         ):
             mock_g.reload_env = MagicMock()
             mock_g.env.cync_srv_ssl_cert = None

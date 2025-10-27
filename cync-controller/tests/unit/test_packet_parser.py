@@ -6,7 +6,7 @@ Tests packet parsing functionality for Cync protocol packets.
 
 import pytest
 
-from cync_lan.packet_parser import format_packet_log, parse_cync_packet
+from cync_controller.packet_parser import format_packet_log, parse_cync_packet
 
 
 class TestParseCyncPacket:

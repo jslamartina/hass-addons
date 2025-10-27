@@ -6,7 +6,7 @@ Tests utility functions for data conversion and firmware parsing.
 
 import pytest
 
-from cync_lan.utils import (
+from cync_controller.utils import (
     bytes2list,
     hex2list,
     ints2bytes,

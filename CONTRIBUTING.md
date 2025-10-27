@@ -323,5 +323,5 @@ When you complete a task or fix an issue, **document your findings in `docs/arch
 
 ---
 
-_For more information, see [AGENTS.md](AGENTS.md) in the repository root._
+_For more information, see [Cursor Rules Guide](.cursor/RULES_GUIDE.md)._
 

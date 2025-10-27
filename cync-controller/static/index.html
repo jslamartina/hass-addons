@@ -378,17 +378,33 @@
           const response = await fetch(`${BASE_PATH}/api/restart`, {
             method: "POST",
           });
-          if (response.ok) {
-            showToast("Server restart requested.");
+
+          // BUG FIX: Check JSON body, not just HTTP status
+          // Backend returns HTTP 200 with {"success": true/false} in the body
+          const result = await response.json();
+
+          if (result.success) {
+            showToast("Server restarting... page will reload shortly.");
+            // Auto-reload after 5 seconds
+            setTimeout(() => {
+              window.location.reload();
+            }, 5000);
           } else {
-            showError("Failed to restart server.");
+            // Backend returned an error message in the JSON
+            showError(result.message || "Failed to restart server.");
           }
         } catch (e) {
-          showError("Restart error: " + e.message);
+          // BUG FIX: Treat connection errors as success
+          // When server restarts, it closes connections before sending response
+          // This causes a network error, but the restart actually succeeds
+          showToast("Server restarting... page will reload shortly.");
+          // Auto-reload after 5 seconds
+          setTimeout(() => {
+            window.location.reload();
+          }, 5000);
         } finally {
-          btn.disabled = false;
-          txt.textContent = "Restart Server";
-          spinner.classList.add("hidden");
+          // Keep button disabled during restart
+          // Don't re-enable or hide spinner - let page reload handle it
         }
       }
 
@@ -407,10 +423,37 @@
         }
       }
 
+      async function checkExistingConfig() {
+        /**
+         * BUG FIX: Check for existing config on page load.
+         * If config exists, show the restart button and config display.
+         * This fixes the issue where the button disappears after navigation.
+         */
+        try {
+          const response = await fetch(`${BASE_PATH}/api/export/download`);
+          if (response.ok) {
+            // Config exists - show restart button and load config
+            document
+              .getElementById("restartDivider")
+              .classList.remove("hidden");
+            document.getElementById("restartButton").classList.remove("hidden");
+            await fetchAndShowConfig();
+          }
+          // If 404 or error, config doesn't exist - keep button hidden (default)
+        } catch (e) {
+          // Config doesn't exist or server error - keep button hidden
+          console.log("No existing config found:", e.message);
+        }
+      }
+
       document.addEventListener("DOMContentLoaded", () => {
+        // Set up OTP input enter key handler
         document.getElementById("otpInput").addEventListener("keydown", (e) => {
           if (e.key === "Enter") submitOTP();
         });
+
+        // Check for existing config and restore UI state
+        checkExistingConfig();
       });
     </script>
   </body>

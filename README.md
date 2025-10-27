@@ -32,7 +32,7 @@ Local control for Cync/C by GE smart devices without cloud dependency.
 - **[DNS Setup](docs/user/dns-setup.md)** - **Required setup** for local control
 - **[Troubleshooting](docs/user/troubleshooting.md)** - Common issues and solutions
 - **[Documentation Index](docs/README.md)** - Complete documentation guide
-- **[Developer Guide](AGENTS.md)** - For developers and AI agents
+- **[Developer Guide](AGENTS.md)** - Rules system and navigation
 
 ## 🏠 What's Included
 
@@ -102,7 +102,7 @@ npm run lint:python:fix                  # Auto-fix Python issues
 ./scripts/setup-fresh-ha.sh
 ```
 
-**[→ Full Developer Guide (AGENTS.md)](AGENTS.md)**
+**[→ Cursor Rules Guide](.cursor/RULES_GUIDE.md)** for development workflow
 
 ## 📖 Documentation Structure
 
@@ -118,7 +118,7 @@ docs/
 
 ## 🤝 Contributing
 
-See **[AGENTS.md](AGENTS.md)** for:
+See **[Cursor Rules](.cursor/RULES_GUIDE.md)** for:
 - Development environment setup
 - Coding conventions and standards
 - Testing procedures

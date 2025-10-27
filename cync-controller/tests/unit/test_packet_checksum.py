@@ -6,7 +6,7 @@ Tests checksum calculation and insertion for Cync protocol packets.
 
 import pytest
 
-from cync_lan.packet_checksum import (
+from cync_controller.packet_checksum import (
     DEFAULT_OFFSET_AFTER_START,
     calculate_checksum_between_markers,
     insert_checksum_in_place,
