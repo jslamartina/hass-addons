@@ -700,7 +700,7 @@ npm run playwright:test
 npx playwright test --headed
 
 # Run specific test file
-npx playwright test scripts/playwright/happy-path.spec.ts
+npx playwright test cync-controller/tests/e2e/happy-path.spec.ts
 
 # Run with specific browser
 npx playwright test --project=chromium
@@ -708,7 +708,7 @@ npx playwright test --project=chromium
 
 #### Test Flow
 
-The happy path test (`scripts/playwright/happy-path.spec.ts`) performs these steps:
+The happy path test (`cync-controller/tests/e2e/happy-path.spec.ts`) performs these steps:
 
 1. **Login** - Authenticates to Home Assistant (defaults: dev/dev)
 2. **Verify MQTT Integration** - Ensures MQTT integration is installed
@@ -816,7 +816,7 @@ mock_method = AsyncMock(return_value=True)  # Add return_value!
 
 ## References
 
-- [Multi-Tiered Testing Plan](multi-tiered-testing-plan.md) - Overall testing strategy
+- [Multi-Tiered Testing Plan](../archive/2025-10-27T00-07-33-multi-tiered-testing-plan.md) - Overall testing strategy (archived)
 - [AGENTS.md](../../AGENTS.md) - Development guidelines
 - [Architecture Guide](architecture.md) - System design
 - [pytest Documentation](https://docs.pytest.org/)

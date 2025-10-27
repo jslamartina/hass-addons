@@ -46,13 +46,26 @@ When you complete a task or fix an issue, **document your findings in `docs/arch
 
 **Format:** `YYYY-MM-DDTHH-MM-SS-category-description.md`
 
+**CRITICAL: Use seconds-level accuracy (HH-MM-SS), not placeholder zeros!**
+
+**Get timestamp from file's created date:**
+```bash
+# Get file creation time with seconds-level accuracy
+stat -c '%y' IMPLEMENTATION_SUMMARY.md
+# Output: 2025-10-27 02:15:34.123456789 +0000
+
+# Use: 2025-10-27T02-15-34-implementation-summary.md
+```
+
 **Examples:**
 ```
-2025-10-27T01-17-00-AGENTS.md
-2025-10-27T00-14-34-fix-ingress-and-group-bugs.md
-2025-10-26T00-50-00-fan-speed-implementation-complete.md
-2025-10-22T23-10-19-MQTT-INTEGRATION-FIX.md
-2025-10-14T17-00-00-MITM-CLEANUP_SUMMARY.md
+2025-10-27T01-17-00-AGENTS.md                  ✓ Actual time (seconds precision)
+2025-10-27T00-14-34-fix-ingress-and-group-bugs.md  ✓ Actual time
+2025-10-26T00-50-00-fan-speed-implementation-complete.md  ✓ Actual time
+2025-10-22T23-10-19-MQTT-INTEGRATION-FIX.md    ✓ Actual time
+
+2025-10-27T00-00-00-my-summary.md              ✗ BAD - placeholder zeros
+2025-10-27T02-15-00-my-summary.md              ✗ BAD - missing seconds
 ```
 
 **When to use:**
@@ -60,6 +73,12 @@ When you complete a task or fix an issue, **document your findings in `docs/arch
 - Feature implementations
 - Investigation summaries
 - Anything with a specific completion date
+
+**Why seconds-level accuracy matters:**
+- Multiple completions on same day need unique timestamps
+- Chronological sorting requires precision
+- Easier to correlate with git commits and logs
+- Matches ISO 8601 standard for timestamps
 
 ### Descriptive Names (Topic-Based)
 
@@ -96,14 +115,23 @@ MQTT-INTEGRATION-AUTO-CONFIG.md
 
 ### 1. Summarize Your Work
 
-Create an archive document:
-```bash
-# Timestamp-based name
-touch docs/archive/$(date +%Y-%m-%dT%H-%M-%S)-my-fix-summary.md
+Create an archive document with accurate timestamp:
 
-# Or descriptive name
+```bash
+# Use file's creation time (minutes-level accuracy)
+FILE_TO_ARCHIVE="IMPLEMENTATION_SUMMARY.md"
+TIMESTAMP=$(stat -c '%y' "$FILE_TO_ARCHIVE" | cut -d' ' -f1,2 | tr ' ' 'T' | tr ':' '-' | cut -d'.' -f1)
+mv "$FILE_TO_ARCHIVE" "docs/archive/${TIMESTAMP}-implementation-summary.md"
+
+# Or use current time for new summaries
+TIMESTAMP=$(date +%Y-%m-%dT%H-%M-%S)
+touch "docs/archive/${TIMESTAMP}-my-fix-summary.md"
+
+# Or descriptive name for topic-based docs
 touch docs/archive/MY-FIX-SUMMARY.md
 ```
+
+**Important:** Always use actual timestamps (HH-MM-SS), not placeholder zeros (00-00-00)!
 
 ### 2. Document Key Findings
 

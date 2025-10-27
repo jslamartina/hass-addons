@@ -268,14 +268,14 @@ CYNC_PERF_TRACKING=true
 
 ## Quick Reference: When to Rebuild vs Restart
 
-| Change Type | Action | Command |
-|-------------|--------|---------|
-| Python files (`.py`) | **REBUILD** | `cd cync-controller && ./rebuild.sh` |
-| `config.yaml` | Restart | `ha addons restart local_cync-controller` |
-| `run.sh` | Restart | `ha addons restart local_cync-controller` |
-| `static/*` (HTML) | Restart | `ha addons restart local_cync-controller` |
-| `pyproject.toml` | **REBUILD** | `cd cync-controller && ./rebuild.sh` |
-| When unsure | **REBUILD** | `cd cync-controller && ./rebuild.sh` |
+| Change Type          | Action      | Command                                   |
+| -------------------- | ----------- | ----------------------------------------- |
+| Python files (`.py`) | **REBUILD** | `cd cync-controller && ./rebuild.sh`      |
+| `config.yaml`        | Restart     | `ha addons restart local_cync-controller` |
+| `run.sh`             | Restart     | `ha addons restart local_cync-controller` |
+| `static/*` (HTML)    | Restart     | `ha addons restart local_cync-controller` |
+| `pyproject.toml`     | **REBUILD** | `cd cync-controller && ./rebuild.sh`      |
+| When unsure          | **REBUILD** | `cd cync-controller && ./rebuild.sh`      |
 
 ## Keyboard Shortcuts (in logs)
 

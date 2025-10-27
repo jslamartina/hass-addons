@@ -81,7 +81,7 @@ cloud_relay:
 - ❌ Commands from HA don't work
 - ⚠️ Devices fall back to cloud if relay fails
 
-**When to use:** 
+**When to use:**
 - Monitor device traffic while keeping devices functional
 - Cloud backup during testing
 - Observing protocol patterns
@@ -274,7 +274,7 @@ grep "Parsed packet" relay-capture.log
 
 **Cause:** Relay doesn't maintain bidirectional TCP connections properly
 
-**Fix:** 
+**Fix:**
 - Keep relay mode temporary
 - Return to baseline for daily use
 - Only use relay for packet capture sessions
@@ -331,7 +331,7 @@ cloud_relay:
 
 ### Devices Not Connecting Through Relay
 
-**Cause:** 
+**Cause:**
 1. DNS not pointing to HA server
 2. Firewall blocking port 23779
 3. SSL verification failing
