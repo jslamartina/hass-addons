@@ -1,6 +1,6 @@
 ---
+alwaysApply: true
 globs: cync-controller/src/**/*.py
-alwaysApply: false
 description: Python changes require Docker rebuild
 ---
 

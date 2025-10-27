@@ -1,218 +1,53 @@
 ---
+alwaysApply: true
 description: Helper scripts and automation tools available in the project
 ---
 
-# Helper Scripts and Automation Tools
+# Helper Scripts
 
-The project includes many helper scripts that automate common development tasks. Use these instead of manual operations.
-
-## Quick Reference
-
-### Setup and Configuration
+## Setup and Configuration
 
 **Fresh Home Assistant Setup:**
 ```bash
-./scripts/setup-fresh-ha.sh
-# Automates: user creation, EMQX install, addon setup
-# Idempotent: Safe to run multiple times
+./scripts/setup-fresh-ha.sh  # Automated user, EMQX, addon setup (idempotent)
 ```
 
-**Configure Add-on via API:**
+**Configure Add-on:**
 ```bash
 ./scripts/configure-addon.sh get                    # Show config
 ./scripts/configure-addon.sh preset-baseline        # LAN-only mode
 ./scripts/configure-addon.sh preset-relay-with-forward  # Cloud relay
-./scripts/configure-addon.sh restart                # Restart addon
-./scripts/configure-addon.sh logs                   # Show logs
+./scripts/configure-addon.sh restart                # Restart
 ```
 
-**Why use API:** Direct file editing in devcontainer doesn't trigger proper Supervisor reloads.
+## Entity Management
 
-### Entity Management
-
-**Delete MQTT Entities (Automated):**
+**Delete MQTT Entities:**
 ```bash
-# Preview what will be deleted
-sudo python3 scripts/delete-mqtt-safe.py --dry-run
-
-# Delete all entities except Cync Controller (cleans registries)
-sudo python3 scripts/delete-mqtt-safe.py
-
-# Delete and restart addon
-sudo python3 scripts/delete-mqtt-safe.py --restart
+sudo python3 scripts/delete-mqtt-safe.py --dry-run  # Preview
+sudo python3 scripts/delete-mqtt-safe.py            # Delete
+sudo python3 scripts/delete-mqtt-safe.py --restart  # Delete + restart
 ```
 
-**Common Workflow: Test Entity Rediscovery**
-```bash
-# 1. Make changes to discovery code
-cd cync-controller && ./rebuild.sh
-
-# 2. Delete all entities
-sudo python3 scripts/delete-mqtt-safe.py
-
-# 3. Restart to republish
-ha addons restart local_cync-controller
-
-# 4. Verify in Home Assistant UI
-```
-
-**Why use script:** Manual deletion is tedious (20+ entities × 3 clicks each).
-
-### Linting and Formatting
-
-```bash
-# Auto-fix and format (fastest)
-npm run lint:python:fix && npm run format:python
-
-# Check everything
-npm run lint
-
-# Format all file types
-npm run format
-```
-
-### Testing
+## Testing
 
 **Unit Tests:**
 ```bash
 cd cync-controller
-pytest tests/unit/                    # Run all unit tests (< 0.4s)
-pytest tests/unit/test_devices.py     # Run specific test file
-pytest -k "test_set_power"            # Run tests matching pattern
+pytest tests/unit/                    # All tests
+pytest tests/unit/test_devices.py     # Specific file
+pytest -k "test_set_power"            # Pattern match
 ```
 
-**E2E Tests (Playwright):**
+**Cloud Relay Test Suite:**
 ```bash
-npm run playwright:delete-entities switch.hallway_front_switch
+./scripts/test-cloud-relay.sh  # Full automated test
 ```
 
-## Script Details
+## Script Features
 
-### scripts/setup-fresh-ha.sh
+**Idempotent:** All scripts safe to run multiple times.
 
-**What it does:**
-- Creates first Home Assistant user
-- Installs and configures EMQX MQTT broker
-- Installs and configures Cync Controller addon
-- Async start + state polling (handles timeout issues)
+**Error handling:** All scripts use `set -e` for early exit.
 
-**Requirements:**
-- `hass-credentials.env` file with HASS_USERNAME and HASS_PASSWORD
-- Fresh or onboarded Home Assistant instance
-
-**Features:**
-- ✅ Idempotent (safe to re-run)
-- ✅ Async polling (no startup hangs)
-- ✅ Skips completed steps
-
-### scripts/configure-addon.sh
-
-**Why it exists:** Direct config file editing doesn't trigger Supervisor reload in devcontainer.
-
-**Presets:**
-- `preset-baseline` - Disable cloud relay (LAN-only)
-- `preset-relay-with-forward` - Enable relay with cloud forwarding
-- `preset-relay-debug` - Enable relay with debug packet logging
-- `preset-lan-only` - Enable relay in LAN-only mode (no cloud)
-
-**How it works:**
-1. Extracts SUPERVISOR_TOKEN from hassio_cli container
-2. Sends HTTP POST to Supervisor API
-3. Automatically restarts addon after config changes
-
-### scripts/delete-mqtt-safe.py
-
-**Features:**
-- ✅ Preserves Cync Controller entities
-- ✅ Cleans entity and device registries
-- ✅ Clears restore state (removes history memory)
-- ✅ Safe dry-run mode for preview
-- ✅ Backup creation before deletion
-
-**When to use:**
-- Changed `suggested_area` in MQTT discovery
-- Testing entity rediscovery
-- Cleaning up test entities
-
-## Environment Variables
-
-All scripts respect these environment variables:
-
-```bash
-# Home Assistant connection
-HA_URL="http://homeassistant.local:8123"
-CREDENTIALS_FILE="../hass-credentials.env"
-
-# Add-on configuration
-ADDON_SLUG="local_cync-controller"
-
-# MQTT entity cleanup
-BRIDGE_NAME="Cync Controller"
-RESTART_ADDON="true"
-DRY_RUN="true"
-HEADED="1"  # Show browser
-```
-
-## File Naming Conventions
-
-When creating new scripts or files:
-
-- **Shell scripts:** `kebab-case.sh` (e.g., `configure-addon.sh`)
-- **Python files:** `snake_case.py` (e.g., `mqtt_client.py`)
-- **Documentation:** `SCREAMING_CAPS.md` for top-level, `kebab-case.md` for docs/
-- **Archived docs:** `YYYY-MM-DDTHH-MM-SS-category-description.md`
-
-## Script Idempotency
-
-**All scripts MUST be idempotent** - running the same script multiple times should produce the same result.
-
-**Good patterns:**
-```bash
-# ✅ Check before creating
-mkdir -p /path/to/dir
-
-# ✅ Conditional operations
-[ -f /path/file ] || touch /path/file
-
-# ✅ Use || true for non-critical operations
-docker network create my-network 2>/dev/null || true
-```
-
-**Bad patterns:**
-```bash
-# ❌ Fails on second run
-mkdir /path/to/dir
-
-# ❌ Appends on every run (duplicates)
-echo "export PATH=/new:$PATH" >> ~/.bashrc
-```
-
-## Troubleshooting
-
-### "Could not retrieve SUPERVISOR_TOKEN"
-
-```bash
-# Check if hassio_cli is running
-docker ps | grep hassio_cli
-
-# Restart supervisor if needed
-ha supervisor restart
-```
-
-### Scripts are slow
-
-**Normal execution times:**
-- `delete-mqtt-safe.py` dry run: ~15-20 seconds
-- Actual deletion (20 entities): ~60-90 seconds
-- Add-on restart: ~15-20 seconds
-
-**Optimization:**
-- Use headless mode (default) for speed
-- Use `--headed` only for debugging
-
-## Related
-
-See also:
-- `scripts/README.md` - Complete scripts documentation
-- `CONTRIBUTING.md` - Script idempotency requirements
-- `supervisor-api-access.mdc` - How to access Supervisor API
+**Use helper scripts** instead of manual operations.

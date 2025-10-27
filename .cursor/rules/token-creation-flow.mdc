@@ -1,4 +1,5 @@
 ---
+alwaysApply: true
 description: Automated Long-Lived Access Token (LLAT) creation flow
 ---
 
@@ -9,55 +10,28 @@ Automated token creation using WebSocket API with existing token bootstrap. **No
 ## Three-Phase Flow
 
 ### Phase 1: Onboarding Token (Fresh HA Setup)
-
-**When:** First-time Home Assistant setup
-
-**How:**
 ```bash
-# setup-fresh-ha.sh creates first user via onboarding API
 create_first_user() {
   local auth_token=$(curl -X POST "$HA_URL/api/onboarding/users" \
     -H "Content-Type: application/json" \
-    -d '{
-      "username": "dev",
-      "password": "dev",
-      "name": "Developer",
-      "language": "en"
-    }' | jq -r '.auth_token')
-
+    -d '{"username": "dev", "password": "dev", "name": "Developer", "language": "en"}' | jq -r '.auth_token')
   echo "$auth_token"
 }
-
-# Save immediately to credentials file
 ONBOARDING_TOKEN="$(create_first_user)"
 echo "ONBOARDING_TOKEN=$ONBOARDING_TOKEN" >> hass-credentials.env
 ```
 
-**Key Points:**
-- Onboarding returns **short-lived** token
-- Must be saved **immediately** as `ONBOARDING_TOKEN`
-- Used to bootstrap LLAT creation
-- Can be discarded after LLAT created
-
 ### Phase 2: Bootstrap LLAT Creation
-
-**When:** After onboarding token obtained
-
-**How:**
 ```bash
 get_ha_auth_token() {
-  # Use onboarding token to create LLAT
   if [ -n "$ONBOARDING_TOKEN" ]; then
     local new_token=$(EXISTING_TOKEN="$ONBOARDING_TOKEN" \
       node scripts/create-token-from-existing.js)
-
-    # Save as long-lived token
     echo "LONG_LIVED_ACCESS_TOKEN=$new_token" >> hass-credentials.env
     HA_AUTH_TOKEN="$new_token"
     return 0
   fi
 
-  # Fallback: use existing LLAT if available
   if [ -n "$LONG_LIVED_ACCESS_TOKEN" ]; then
     HA_AUTH_TOKEN="$LONG_LIVED_ACCESS_TOKEN"
     return 0
@@ -68,140 +42,40 @@ get_ha_auth_token() {
 }
 ```
 
-**WebSocket Token Creation:**
-```javascript
-// scripts/create-token-from-existing.js
-
-// 1. Validate existing token via REST API
-const testResponse = await fetch(`${HA_URL}/api/`, {
-  headers: { Authorization: `Bearer ${EXISTING_TOKEN}` }
-});
-
-if (!testResponse.ok) {
-  console.error("❌ Existing token is invalid (HTTP 401)");
-  process.exit(1);
-}
-
-// 2. Connect to WebSocket API
-const ws = new WebSocket(`ws://localhost:8123/api/websocket`);
-
-ws.on('message', async (data) => {
-  const msg = JSON.parse(data);
-
-  if (msg.type === 'auth_required') {
-    // 3. Authenticate with existing token
-    ws.send(JSON.stringify({
-      type: 'auth',
-      access_token: EXISTING_TOKEN
-    }));
-  }
-
-  if (msg.type === 'auth_ok') {
-    // 4. Request long-lived token
-    ws.send(JSON.stringify({
-      id: 1,
-      type: 'auth/long_lived_access_token',
-      client_name: 'Setup Script',
-      lifespan: 3650  // 10 years in days
-    }));
-  }
-
-  if (msg.type === 'result' && msg.success) {
-    // 5. Extract and output LLAT
-    console.log(msg.result);
-    ws.close();
-  }
-});
-```
-
 ### Phase 3: Persist LLAT
-
-**When:** After successful LLAT creation
-
-**How:**
 ```bash
-# Long-lived token saved to credentials file
-echo "LONG_LIVED_ACCESS_TOKEN=$new_token" >> hass-credentials.env
-
+# Token automatically saved to hass-credentials.env
 # Use for all subsequent API calls
 HA_AUTH_TOKEN="$LONG_LIVED_ACCESS_TOKEN"
 ```
 
-**Token Format:**
-- Type: JWT (JSON Web Token)
-- Prefix: `eyJ` (base64 encoded JSON header)
-- Lifespan: 3650 days (10 years)
-- Usage: `Authorization: Bearer <token>`
+## WebSocket Token Creation (Node.js)
 
-## Token Lifecycle Summary
-
-```
-Fresh HA Setup
-    ↓
-Create User via Onboarding API
-    ↓
-Receive Short-Lived Token
-    ↓
-Save as ONBOARDING_TOKEN
-    ↓
-Validate Token via REST API
-    ↓
-Connect to WebSocket API
-    ↓
-Authenticate with Onboarding Token
-    ↓
-Request Long-Lived Token
-    ↓
-Receive LLAT (10-year lifespan)
-    ↓
-Save as LONG_LIVED_ACCESS_TOKEN
-    ↓
-Use for All Subsequent API Calls
+```javascript
+// scripts/create-token-from-existing.js
+// 1. Validate existing token via REST API
+// 2. Connect to WebSocket API
+// 3. Authenticate with existing token
+// 4. Request long-lived token (3650 days lifespan)
+// 5. Extract and output LLAT
 ```
 
 ## Error Handling
 
-### Missing Environment Variable
-```
-❌ No existing token found in environment (EXISTING_TOKEN)
-💡 This script requires an existing token to bootstrap LLAT creation
-```
+**Missing Environment Variable:** Ensure `EXISTING_TOKEN` or `ONBOARDING_TOKEN` is set
 
-**Fix:** Ensure `EXISTING_TOKEN` or `ONBOARDING_TOKEN` is set
+**Invalid Token (HTTP 401):** Token expired or incorrect - run fresh onboarding
 
-### Invalid Token
-```
-❌ Existing token is invalid (HTTP 401)
-💡 Please ensure token passed via EXISTING_TOKEN environment variable is valid
-```
+**WebSocket Failure:** Check HA logs, ensure API accessible
 
-**Fix:** Token may be expired or incorrect - run fresh onboarding
+## Usage
 
-### WebSocket Failure
-```
-❌ Failed to create token: {"type":"result","success":false,"error":"..."}
-```
-
-**Fix:** Check Home Assistant logs, ensure API is accessible
-
-## Usage Patterns
-
-### Automatic (Recommended)
 ```bash
-# Setup script automatically creates tokens when needed
+# Automatic (recommended)
 ./scripts/setup-fresh-ha.sh
-```
 
-### Direct Token Creation
-```bash
-# Create LLAT directly from existing token
+# Direct token creation
 EXISTING_TOKEN="$ONBOARDING_TOKEN" node scripts/create-token-from-existing.js
-```
-
-### With Existing LLAT (Fallback)
-```bash
-# Use existing LLAT if still valid
-export HA_AUTH_TOKEN="$LONG_LIVED_ACCESS_TOKEN"
 ```
 
 ## Key Rules
@@ -209,48 +83,9 @@ export HA_AUTH_TOKEN="$LONG_LIVED_ACCESS_TOKEN"
 **Never:**
 - ❌ Hardcode tokens in scripts or code
 - ❌ Commit tokens to version control
-- ❌ Create redundant LLATs (check if one exists first)
-- ❌ Use expired tokens (validate before use)
+- ❌ Create redundant LLATs
 
 **Always:**
 - ✅ Pass tokens via environment variables
-- ✅ Validate tokens before use (REST API check)
 - ✅ Save LLAT to `hass-credentials.env` immediately
 - ✅ Use LLAT for all subsequent API calls
-- ✅ Check for existing valid token before creating new one
-
-## Troubleshooting
-
-### "Could not retrieve SUPERVISOR_TOKEN"
-```bash
-# Check if hassio_cli container is running
-docker ps | grep hassio_cli
-
-# Restart supervisor if needed
-ha supervisor restart
-```
-
-### "Token validation failed"
-```bash
-# Test token manually
-curl -H "Authorization: Bearer $LONG_LIVED_ACCESS_TOKEN" \
-  http://localhost:8123/api/
-
-# Should return: {"message": "API running."}
-```
-
-### "WebSocket connection refused"
-```bash
-# Ensure Home Assistant is running
-ha core info
-
-# Check if API is accessible
-curl http://localhost:8123/api/
-```
-
-## Related
-
-- `docs/developer/automated-token-creation.md` - Complete implementation details
-- `scripts/create-token-from-existing.js` - Token creation script
-- `scripts/setup-fresh-ha.sh` - Automated setup with token creation
-- `critical-credentials.mdc` - Credential handling rules
