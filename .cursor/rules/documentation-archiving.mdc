@@ -1,279 +1,62 @@
 ---
+alwaysApply: true
 description: Where and how to document completed work
 ---
 
 # Documentation Archiving
 
-When you complete a task or fix an issue, **document your findings in `docs/archive/`** rather than leaving summary files in the repository root.
+**Always archive completed work** to `docs/archive/` rather than leaving summary files in repository root.
 
-## Why Archive Documentation
+## File Naming
 
-- ✅ Keeps repository root clean and focused
-- ✅ Preserves institutional knowledge
-- ✅ Makes findings searchable for future reference
-- ✅ Separates active documentation from historical records
-
-## What Belongs in `docs/archive/`
-
-**Implementation summaries:**
-- How we fixed X
-- Why we chose approach Y
-- What we learned from debugging Z
-
-**Debugging session findings:**
-- Protocol analysis results
-- Performance investigation results
-- Bug reproduction steps and fixes
-
-**Historical context:**
-- Major refactoring decisions
-- Architecture evolution
-- Removed features and why
-
-**Exploration notes:**
-- Research into alternatives
-- Technology evaluations
-- Proof-of-concept results
-
-**One-off investigation results:**
-- Network troubleshooting
-- Configuration experiments
-- Integration testing notes
-
-## File Naming for Archived Docs
-
-### Timestamp-Based (Chronological Ordering)
-
-**Format:** `YYYY-MM-DDTHH-MM-SS-category-description.md`
-
-**CRITICAL: Use seconds-level accuracy (HH-MM-SS), not placeholder zeros!**
-
-**Get timestamp from file's created date:**
+**Use actual timestamps with seconds-level accuracy:**
 ```bash
-# Get file creation time with seconds-level accuracy
+# Get file creation time
 stat -c '%y' IMPLEMENTATION_SUMMARY.md
 # Output: 2025-10-27 02:15:34.123456789 +0000
 
 # Use: 2025-10-27T02-15-34-implementation-summary.md
 ```
 
-**Examples:**
-```
-2025-10-27T01-17-00-AGENTS.md                  ✓ Actual time (seconds precision)
-2025-10-27T00-14-34-fix-ingress-and-group-bugs.md  ✓ Actual time
-2025-10-26T00-50-00-fan-speed-implementation-complete.md  ✓ Actual time
-2025-10-22T23-10-19-MQTT-INTEGRATION-FIX.md    ✓ Actual time
-
-2025-10-27T00-00-00-my-summary.md              ✗ BAD - placeholder zeros
-2025-10-27T02-15-00-my-summary.md              ✗ BAD - missing seconds
-```
-
-**When to use:**
-- Bug fixes
-- Feature implementations
-- Investigation summaries
-- Anything with a specific completion date
-
-**Why seconds-level accuracy matters:**
-- Multiple completions on same day need unique timestamps
-- Chronological sorting requires precision
-- Easier to correlate with git commits and logs
-- Matches ISO 8601 standard for timestamps
-
-### Descriptive Names (Topic-Based)
-
-**Format:** `SCREAMING_CAPS-description.md`
+**Format:** `YYYY-MM-DDTHH-MM-SS-category-description.md`
 
 **Examples:**
 ```
-SWITCH-STATUS-FIX-SUMMARY.md
-SETUP-SCRIPT-IDEMPOTENCY.md
-MQTT-INTEGRATION-AUTO-CONFIG.md
+2025-10-27T01-17-00-AGENTS.md                 ✓ Actual time
+2025-10-27T00-14-34-fix-ingress-and-group.md  ✓ Actual time
+
+2025-10-27T00-00-00-my-summary.md             ✗ BAD - placeholder zeros
 ```
 
-**When to use:**
-- General reference material
-- Thematic documentation
-- Cross-cutting concerns
+## What to Archive
 
-## What Stays in Repository Root
+✅ Bug fixes - How we fixed X, why we chose approach Y
+✅ Feature implementations - What was built, architecture decisions
+✅ Investigations - What we learned, recommendations
+✅ Debugging findings - Protocol analysis, performance results
 
-**Active development guides:**
-- `AGENTS.md` (now `.cursor/rules/`)
-- `CHANGELOG.md`
-- `CONTRIBUTING.md`
-
-**Critical user-facing documentation:**
-- `README.md`
-- Installation guides
-
-**Current project status:**
-- Active implementation plans (use `.cursor/plans/`)
-- Work-in-progress documentation
-
-## Workflow: After Completing a Task
-
-### 1. Summarize Your Work
-
-Create an archive document with accurate timestamp:
+## Workflow After Completing Task
 
 ```bash
-# Use file's creation time (minutes-level accuracy)
-FILE_TO_ARCHIVE="IMPLEMENTATION_SUMMARY.md"
-TIMESTAMP=$(stat -c '%y' "$FILE_TO_ARCHIVE" | cut -d' ' -f1,2 | tr ' ' 'T' | tr ':' '-' | cut -d'.' -f1)
+# 1. Archive with proper timestamp
+TIMESTAMP=$(stat -c '%y' IMPLEMENTATION_SUMMARY.md | cut -d' ' -f1,2 | tr ' ' 'T' | tr ':' '-' | cut -d'.' -f1)
 mv "$FILE_TO_ARCHIVE" "docs/archive/${TIMESTAMP}-implementation-summary.md"
 
-# Or use current time for new summaries
-TIMESTAMP=$(date +%Y-%m-%dT%H-%M-%S)
-touch "docs/archive/${TIMESTAMP}-my-fix-summary.md"
+# 2. Document key findings (use template from CONTRIBUTING.md)
 
-# Or descriptive name for topic-based docs
-touch docs/archive/MY-FIX-SUMMARY.md
+# 3. Clean up root directory
 ```
-
-**Important:** Always use actual timestamps (HH-MM-SS), not placeholder zeros (00-00-00)!
-
-### 2. Document Key Findings
-
-**Include:**
-- Problem statement
-- Root cause analysis
-- Solution approach
-- Files modified
-- Testing done
-- Lessons learned
 
 **Template:**
 ```markdown
-# [Title of Fix/Feature]
+# [Title]
 
 **Status**: ✅ Completed
 **Date**: YYYY-MM-DD
-**Version**: x.x.x
 
-## Overview
-Brief description of what was done
-
-## Problem Statement
-What issue were we solving?
-
+## Problem
 ## Root Cause
-What was causing the issue?
-
 ## Solution
-How did we fix it?
-
 ## Files Modified
-- path/to/file.py (lines X-Y)
-
 ## Testing
-How was this verified?
-
-## Lessons Learned
-What patterns emerged?
-
----
-_Implementation completed: YYYY-MM-DD_
-_Archived from: [source-file.md]_
 ```
-
-### 3. Clean Up Root Directory
-
-Move any temporary files:
-```bash
-# Move implementation summaries
-mv IMPLEMENTATION_SUMMARY.md docs/archive/2025-10-27T12-00-00-implementation-summary.md
-
-# Move plan completions
-mv fix-bug.plan.md docs/archive/2025-10-27T12-00-00-fix-bug-completion.md
-```
-
-### 4. Update Active Documentation
-
-If changes affect user-facing docs:
-```bash
-# Update relevant guides
-vim docs/user/troubleshooting.md
-vim cync-controller/CHANGELOG.md
-```
-
-## Common Patterns
-
-### Bug Fix Archive
-
-```markdown
-# Fix [Bug Name]
-
-**Symptom:** What users saw
-**Root Cause:** Technical explanation
-**Fix:** Code changes made
-**Testing:** How verified
-**Files Modified:** List with line ranges
-```
-
-### Feature Implementation Archive
-
-```markdown
-# Implement [Feature Name]
-
-**Overview:** What was built
-**Architecture:** Design decisions
-**Implementation:** Key code patterns
-**Testing:** Test approach
-**Future Work:** Known limitations
-```
-
-### Investigation Archive
-
-```markdown
-# [Investigation Topic]
-
-**Question:** What were we trying to answer?
-**Approach:** How did we investigate?
-**Findings:** What did we learn?
-**Conclusion:** Recommendations
-**Related Issues:** Links to issues/PRs
-```
-
-## Examples from This Project
-
-**Bug fixes:**
-- `2025-10-27T00-14-34-fix-ingress-and-group-bugs.md` - Four bug fixes with detailed analysis
-- `2025-10-22T23-10-19-MQTT-INTEGRATION-FIX.md` - MQTT integration fix
-
-**Feature implementations:**
-- `2025-10-26T00-50-00-fan-speed-implementation-complete.md` - Fan speed feature
-- `2025-10-24T18-19-36-ai-browser-testing-ready.md` - Browser testing infrastructure
-
-**Investigations:**
-- `2025-10-13T15-00-00-throttling-solution.md` - Command throttling analysis
-- `2025-10-13T14-00-00-refresh-solution.md` - Refresh storm investigation
-
-**Historical context:**
-- `2025-10-11T00-00-00-limitations-lifted.md` - Resolved testing limitations
-- `2025-10-11T00-00-00-cloud-relay-implementation.md` - Cloud relay architecture
-
-## Search and Discovery
-
-**Finding archived docs:**
-```bash
-# Search by topic
-grep -r "callback registration" docs/archive/
-
-# Search by date range
-ls docs/archive/2025-10-2*
-
-# Find recent archives
-ls -lt docs/archive/ | head -10
-```
-
-**Categories for searching:**
-- Bug fixes: Search for "fix", "bug", "issue"
-- Features: Search for "implement", "feature", "add"
-- Investigations: Search for "analysis", "investigation", "findings"
-
-## Related
-
-- `CONTRIBUTING.md` - Documentation guidelines (section on archiving)
-- `pr-checklist.mdc` - PR submission requirements
-- `.cursor/plans/` - Active implementation plans

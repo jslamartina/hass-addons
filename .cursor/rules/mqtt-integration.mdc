@@ -1,4 +1,5 @@
 ---
+alwaysApply: true
 globs: cync-controller/src/cync_controller/mqtt_client.py,cync-controller/src/cync_controller/devices.py
 description: MQTT discovery and integration patterns
 ---

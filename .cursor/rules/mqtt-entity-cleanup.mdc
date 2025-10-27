@@ -1,378 +1,41 @@
 ---
+alwaysApply: true
 description: MQTT entity cleanup workflows and best practices
 ---
 
 # MQTT Entity Cleanup
 
-Guide for safely removing and managing MQTT entities during development and testing.
+**Critical:** MQTT entities CANNOT be deleted while the integration is actively providing them.
 
-## Why Entity Cleanup Matters
-
-During development, you often need to:
-- Test entity rediscovery after changing `suggested_area`
-- Clean up test entities without losing configuration
-- Remove stale entities after config changes
-- Verify entities appear in correct areas
-
-**Manual deletion is tedious:** 20+ entities × 3 clicks each = waste of time.
-
-## Critical Limitation: MQTT Entities While Connected
-
-**⚠️ MQTT entities CANNOT be deleted through the UI while the integration is actively providing them.**
-
-**What you see in UI:**
-```
-"You can only delete 0 of 23 entities"
-```
-
-**Why:** Home Assistant prevents deletion of entities that are currently being published by an integration.
-
-## Proper Cleanup Sequence
-
-### Method 1: Stop Integration First (Recommended)
-
+**Quick cleanup workflow:**
 ```bash
-# 1. Stop the add-on (stops MQTT publishing)
-ha addons stop local_cync-controller
-
-# 2. Wait for entities to become unavailable (10-30 seconds)
-# Entities will show "unavailable" in UI
-
-# 3. NOW delete entities through UI
-# Settings → Devices & Services → Entities
-# Enter selection mode → Select entities → Delete selected
-
-# 4. Restart add-on to republish
+sudo python3 scripts/delete-mqtt-safe.py --dry-run  # Preview
+sudo python3 scripts/delete-mqtt-safe.py             # Delete
 ha addons restart local_cync-controller
 ```
 
-### Method 2: Automated Python Script (Fastest)
+**Pattern:** Stop integration → Delete entities → Restart integration
 
+**Automated (recommended):**
 ```bash
-# Preview what will be deleted (dry run)
-sudo python3 scripts/delete-mqtt-safe.py --dry-run
-
-# Delete all entities except Cync Controller (cleans registries)
-sudo python3 scripts/delete-mqtt-safe.py
-
-# Delete and automatically restart add-on
 sudo python3 scripts/delete-mqtt-safe.py --restart
 ```
 
-**What the script does:**
-- ✅ Stops add-on automatically
-- ✅ Waits for entities to become unavailable
-- ✅ Deletes entities via UI automation
-- ✅ Cleans entity registry
-- ✅ Cleans device registry
-- ✅ Clears restore state (removes history memory)
-- ✅ Restarts add-on (if --restart flag used)
-
-## Common Workflows
-
-### Workflow: Test Entity Rediscovery
-
+**Manual:**
 ```bash
-# Scenario: You edited mqtt_client.py to change suggested_area
-
-# 1. Rebuild addon (Python changes require rebuild)
-cd cync-controller && ./rebuild.sh
-
-# 2. Delete all entities except bridge
-sudo python3 scripts/delete-mqtt-safe.py
-
-# 3. Restart addon (script already restarted if using --restart)
-ha addons restart local_cync-controller
-
-# 4. Verify entities republish with new suggested_area
-# Navigate to Settings → Devices & Services → Entities
-# Check that entities appear in correct areas
-```
-
-### Workflow: Change Discovery Configuration
-
-```bash
-# Scenario: Changed MQTT discovery payload structure
-
-# 1. Make changes to code
-# 2. Rebuild
-cd cync-controller && ./rebuild.sh
-
-# 3. Clean entities
-sudo python3 scripts/delete-mqtt-safe.py --restart
-
-# 4. Verify new discovery payloads
-ha addons logs local_cync-controller | grep "Publishing MQTT discovery"
-```
-
-### Workflow: Manual UI Cleanup
-
-```bash
-# 1. Stop add-on
 ha addons stop local_cync-controller
-
-# 2. Wait for entities to become unavailable
-sleep 30
-
-# 3. Navigate to Settings → Devices & Services → Entities
-# 4. Enter selection mode (checkbox icon in top right)
-# 5. Select entities to delete
-# 6. Action → Delete selected
-# 7. Confirm deletion
-
-# 8. Restart add-on
+sleep 30  # Wait for entities to become unavailable
+# Then delete via UI: Settings → Devices & Services → Entities
 ha addons restart local_cync-controller
 ```
 
-## Registry Cleaning
+## When to Use
 
-The automated script cleans three registries:
+- Changed `suggested_area` in MQTT discovery
+- Changed MQTT discovery payload structure
+- Testing entity rediscovery
+- Cleaning up test entities
 
-### Entity Registry
-**Location:** `/homeassistant/.storage/core.entity_registry`
+## What Gets Cleaned
 
-**What it stores:**
-- Entity unique IDs
-- Friendly names
-- Disabled state
-- Area assignments
-
-**Why clean:** Old entity references prevent new entities from using same IDs
-
-### Device Registry
-**Location:** `/homeassistant/.storage/core.device_registry`
-
-**What it stores:**
-- Device unique IDs
-- Manufacturer/model info
-- Area assignments
-- Device relationships
-
-**Why clean:** Orphaned device entries clutter UI
-
-### Restore State
-**Location:** `/homeassistant/.storage/core.restore_state`
-
-**What it stores:**
-- Last known entity states
-- Used to restore state after HA restart
-
-**Why clean:** Prevents stale state from being restored
-
-## What Gets Preserved
-
-The cleanup scripts **always preserve:**
-- ✅ Cync Controller bridge device
-- ✅ Bridge sensor entities (server status, device count, etc.)
-- ✅ MQTT integration configuration
-- ✅ All non-MQTT entities
-- ✅ Add-on configuration
-
-## What Gets Deleted
-
-The cleanup scripts delete:
-- ❌ All MQTT device entities (lights, switches, fans)
-- ❌ Device registry entries for deleted entities
-- ❌ Entity configuration (helpers, area assignments reset to discovery defaults)
-- ❌ Restore state for deleted entities
-
-## Automated Script Features
-
-### Dry Run Mode
-
-```bash
-# Preview what will be deleted
-sudo python3 scripts/delete-mqtt-safe.py --dry-run
-
-# Output:
-# ⚠️ DRY RUN MODE - No entities will be actually deleted
-# ℹ️ Entities that WOULD be deleted:
-# ℹ️   - Hallway Front Switch
-# ℹ️   - Hallway Counter Switch
-# ...
-```
-
-### Auto-Restart Option
-
-```bash
-# Delete and automatically restart add-on
-sudo python3 scripts/delete-mqtt-safe.py --restart
-
-# Equivalent to:
-sudo python3 scripts/delete-mqtt-safe.py
-ha addons restart local_cync-controller
-```
-
-### Bridge Preservation
-
-```bash
-# Specify custom bridge name (if changed)
-sudo python3 scripts/delete-mqtt-safe.py --bridge "Custom Bridge Name"
-
-# Default bridge name: "Cync Controller"
-```
-
-## Troubleshooting
-
-### "No entities found"
-
-**Causes:**
-1. MQTT integration not running
-2. Add-on not publishing entities
-3. Wrong bridge name specified
-
-**Fix:**
-```bash
-# Check MQTT integration
-ha integrations list | grep mqtt
-
-# Check add-on status
-ha addons info local_cync-controller
-
-# Run with correct bridge name
-sudo python3 scripts/delete-mqtt-safe.py --bridge "Exact Bridge Name"
-```
-
-### "Cannot delete entities"
-
-**Cause:** Add-on still running (entities still being published)
-
-**Fix:**
-```bash
-# Stop add-on first
-ha addons stop local_cync-controller
-
-# Wait for unavailable status
-sleep 30
-
-# Try deletion again
-sudo python3 scripts/delete-mqtt-safe.py
-```
-
-### "Wrong entities selected"
-
-**Cause:** Bridge name doesn't match exactly
-
-**Fix:**
-```bash
-# Check exact bridge name
-ha states list | grep "Cync"
-
-# Use exact name
-sudo python3 scripts/delete-mqtt-safe.py --bridge "Exact Match"
-```
-
-### Script is slow
-
-**Normal execution times:**
-- Dry run: ~15-20 seconds
-- Actual deletion (20 entities): ~60-90 seconds
-- With addon restart: Add ~15-20 seconds
-
-**Optimization:**
-- Headless mode (default) is faster
-- Use `--headed` flag only for debugging
-
-## Environment Variables
-
-All scripts respect these environment variables:
-
-```bash
-# Home Assistant connection
-HA_BASE_URL="http://localhost:8123"
-HA_USERNAME="dev"
-HA_PASSWORD="dev"
-
-# Add-on configuration
-ADDON_SLUG="local_cync-controller"
-
-# MQTT entity cleanup
-BRIDGE_NAME="Cync Controller"
-RESTART_ADDON="true"
-DRY_RUN="true"
-HEADED="1"  # Show browser
-```
-
-## Alternative: Delete Specific Entities
-
-If you only need to delete specific entities:
-
-```bash
-# Delete by name
-npx ts-node scripts/playwright/delete-mqtt-entities.ts \
-  "Hallway Front Switch" \
-  "Bedroom Light"
-
-# With restart
-RESTART_ADDON=true \
-npx ts-node scripts/playwright/delete-mqtt-entities.ts \
-  "Entity 1" "Entity 2"
-```
-
-## Best Practices
-
-### During Development
-
-1. **Always use dry-run first:**
-   ```bash
-   sudo python3 scripts/delete-mqtt-safe.py --dry-run
-   ```
-
-2. **Verify bridge preservation:**
-   - Check dry-run output lists bridge as preserved
-
-3. **Use automated script:**
-   - Faster than manual UI clicks
-   - Ensures registry cleaning
-   - More reliable
-
-### During Testing
-
-1. **Clean before testing:**
-   ```bash
-   sudo python3 scripts/delete-mqtt-safe.py --restart
-   ```
-
-2. **Verify republishing:**
-   ```bash
-   ha addons logs local_cync-controller | grep "Publishing MQTT discovery"
-   ```
-
-3. **Check entity states:**
-   - Settings → Devices & Services → Entities
-   - Verify entities appear with correct metadata
-
-### Before Commits
-
-1. **Don't commit with test entities:**
-   - Clean up test entities before creating PR
-   - Document entity structure changes
-
-2. **Document discovery changes:**
-   - Update CHANGELOG.md if discovery payload changed
-   - Note if entities will need re-discovery
-
-## Safety and Audit
-
-### Audit Trail
-
-Every script run creates:
-- **run.log** - Complete action log with timestamps
-- **screenshots/** - Visual proof at each step
-- **\*-a11y.yaml** - Machine-readable page state
-
-**Location:** `test-results/runs/delete-mqtt-*/`
-
-### Backup Before Deletion
-
-Script automatically creates backups:
-- Entity registry backup
-- Device registry backup
-- Timestamped for rollback if needed
-
-## Related
-
-- `scripts/README.md` - Complete scripts documentation
-- `docs/developer/entity-management.md` - Full entity management guide
-- `helper-scripts.mdc` - Other automation tools
-- `ai-browser-testing.mdc` - Browser automation patterns
+The script cleans: entity registry, device registry, restore state. Always preserves Cync Controller bridge device.

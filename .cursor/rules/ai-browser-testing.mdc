@@ -1,332 +1,100 @@
 ---
+alwaysApply: true
 description: Browser testing with Playwright patterns and workarounds
 ---
 
 # Browser Testing with Playwright
 
-**When to use:** Manual UI verification, visual testing, or when API tools are insufficient.
+**When to use:** Manual UI verification or when API tools are insufficient.
 
-**Important:** Home Assistant UI uses Web Components with Shadow DOM and nested SVG icons that interfere with clicks.
+## Critical Patterns
 
-## Critical Pattern: Shadow DOM Handling
-
-Home Assistant extensively uses Shadow DOM, which requires special selectors:
-
-### Problem: Shadow Boundaries Block Normal Selectors
-
+### 1. Shadow DOM - Use Role-Based Selectors
 ```typescript
-// ❌ WRONG: querySelector can't find inputs inside shadow roots
-const input = page.locator("ha-data-table input"); // Returns empty
-```
+// ❌ WRONG: querySelector can't find inputs in shadow roots
+const input = page.locator("ha-data-table input");
 
-### Solution: Use Role-Based Selectors
-
-```typescript
-// ✅ CORRECT: Role-based selector pierces shadow DOM automatically
+// ✅ CORRECT: Role-based selector pierces shadow DOM
 const searchInput = page.getByRole("textbox", { name: /^Search/i });
 await searchInput.fill("Hallway");
 ```
 
-**Why this works:** Playwright's `getByRole` automatically pierces shadow boundaries.
-
-## Critical Pattern: SVG Click Interception
-
-### Problem: Nested SVG Icons Block Clicks
-
-Buttons with nested SVG icons fail with "element intercepts pointer events" error.
-
-### Solutions (in order of preference)
-
-**1. Click Parent Containers (Most Reliable)**
-
+### 2. SVG Click Interception - Click Parent Containers
 ```typescript
-// ✅ GOOD: Click the entity card to open dialog
+// ❌ WRONG: Click button directly (fails with SVG)
+await page.getByRole("button", { name: "Toggle" }).click();
+
+// ✅ CORRECT: Click the entity card container
 await page.locator("div").filter({ hasText: "Hallway Lights" }).nth(5).click();
-
-// ✅ GOOD: Click the container, not the button
-await page
-  .locator("div, ha-card, section, a, button")
-  .filter({ hasText: /Configuration/i })
-  .first()
-  .click();
 ```
 
-**2. Click Interactive Elements Directly**
-
+### 3. Iframe Access - Use frameLocator
 ```typescript
-// ✅ GOOD: Sliders don't have SVG interference
-await page.getByRole("slider", { name: "Brightness" }).click();
-
-// ✅ GOOD: Switches work reliably
-await page.getByRole("switch", { name: /Debug/i }).click();
-
-// ✅ GOOD: Text inputs are safe
-await page.getByRole("textbox", { name: "Username*" }).fill("dev");
-```
-
-**3. Programmatic Dispatch (When User Interaction Isn't Critical)**
-
-```typescript
-// ⚠️ ACCEPTABLE: Programmatic click (doesn't test real UX)
-await page.evaluate(() => {
-  document
-    .querySelector('button[aria-label="Toggle"]')
-    .dispatchEvent(new MouseEvent("click", { bubbles: true }));
-});
-
-// Or with a reusable helper:
-async function clickReliably(locator: Locator) {
-  try {
-    await locator.click();
-  } catch {
-    await locator.evaluate((el: HTMLElement) => {
-      el.dispatchEvent(new MouseEvent("click", { bubbles: true }));
-    });
-  }
-}
-
-await clickReliably(page.getByRole("button", { name: "Save" }));
-```
-
-**4. Force Clicks (Last Resort)**
-
-```typescript
-// ❌ AVOID: Bypasses actionability checks (makes tests flaky)
-await page.getByRole("button", { name: "Toggle" }).click({ force: true });
-```
-
-## Critical Pattern: Search Inputs in Shadow DOM
-
-Home Assistant's search boxes are nested inside shadow roots:
-
-### Problem: Can't Find Search Inputs
-
-```typescript
-// ❌ WRONG: querySelector can't penetrate shadow DOM
-const input = page.locator("ha-data-table input"); // Returns empty
-```
-
-### Solution: Role-Based Selector with Flexible Pattern
-
-```typescript
-// ✅ CORRECT: Works through shadow DOM
-const searchInput = page.getByRole("textbox", { name: /^Search/i });
-await searchInput.fill("Hallway");
-
-// For entity page: "Search 56 entities"
-const searchInput = page.getByRole("textbox", { name: /^Search \\d+ entities$/i });
-await searchInput.fill("switch");
-```
-
-**Why this works:** Role-based selectors pierce shadow boundaries automatically.
-
-## Critical Pattern: Iframe Handling
-
-Add-on pages under Settings → Add-ons are rendered in iframes:
-
-```typescript
-// Access add-on configuration page
 const frame = page.frameLocator("iframe");
-
-// Click tabs
 await frame.getByRole("link", { name: /Configuration/i }).click();
-
-// Toggle switches
-await frame.getByRole("switch", { name: /Debug/i }).click();
-
-// Click buttons
-const saveButton = frame.getByRole("button", { name: /^Save$/i });
-await saveButton.click();
 ```
 
-**Note:** Save button is disabled until a change is made - toggle a field first.
-
-## Critical Pattern: MQTT Entity Deletion
-
-### Problem: Cannot Delete MQTT Entities While Connected
-
-**Home Assistant shows:** "You can only delete 0 of 23 entities"
-
-**Reason:** MQTT entities cannot be deleted while integration is actively providing them.
-
-### Solution: Stop Add-on First
-
+### 4. MQTT Entity Deletion - Stop Integration First
 ```typescript
-// 1. Stop the add-on
+// 1. Stop add-on
 await stopAddon("local_cync-controller");
 
-// 2. Wait for entities to become unavailable
+// 2. Wait for entities unavailable
 await page.waitForTimeout(30000);
 
-// 3. NOW entities can be deleted
-await page.getByRole("checkbox", { name: "Hallway Switch" }).click();
-
-// 4. Click "Delete selected" TEXT, not menuitem role
+// 3. NOW delete entities
 await page.getByText("Delete selected").click();
 ```
 
-**Workaround for SVG interception:** Click the text "Delete selected" directly rather than the menuitem role.
-
-## Common Patterns
-
-### Login Flow
+## Common Selectors
 
 ```typescript
+// Login
 await page.getByRole("textbox", { name: "Username*" }).fill("dev");
 await page.getByRole("textbox", { name: "Password*" }).fill("dev");
 await page.getByRole("button", { name: "Log in" }).click();
-await page.waitForTimeout(3000);
-```
 
-### Open Entity Dialog
-
-```typescript
-// Click the card container, not the toggle button
-await page
-  .locator("div")
-  .filter({ hasText: "Entity Name" })
-  .click();
-```
-
-### Adjust Slider
-
-```typescript
-// Sliders are safe - no SVG interference
+// Sliders (safe - no SVG interference)
 await page.getByRole("slider", { name: "Brightness" }).click();
-```
 
-### Close Dialog
+// Switches
+await page.getByRole("switch", { name: /Debug/i }).click();
 
-```typescript
-// Find close button by label
+// Close dialog
 await page.getByLabel("Close").click();
+// Or: await page.keyboard.press("Escape");
 
-// Or press Escape key
-await page.keyboard.press("Escape");
-```
-
-### Navigate to Settings Page
-
-```typescript
-// Click Settings in sidebar
+// Navigate
 await page.getByRole("link", { name: "Settings" }).click();
-
-// Then navigate to specific section
 await page.getByRole("link", { name: "Devices & services" }).click();
 ```
 
-## Waiting for Stability
-
-### Auto-Wait is Good, But Not Perfect
+## Anti-Patterns
 
 ```typescript
-// ✅ GOOD: Wait for element to be visible
-const tab = page.getByRole("tab", { name: /Configuration/i });
-await tab.waitFor({ state: "visible" });
-await tab.click();
+// ❌ DON'T: Force clicks (bypasses safety checks)
+await page.getByRole("button").click({ force: true });
 
-// ✅ GOOD: Use expect for clearer intent
-import { expect } from "@playwright/test";
-const frame = page.frameLocator("iframe");
-const saveButton = frame.getByRole("button", { name: /^Save$/i });
-await expect(saveButton).toBeVisible();
-await expect(saveButton).toBeEnabled();
+// ❌ DON'T: CSS selectors for shadow DOM content
+const input = page.locator("ha-data-table input");
+
+// ❌ DON'T: Click SVG elements directly
+await page.locator("svg").click();
+
+// ✅ DO: Click parent containers, use role-based selectors, click interactive elements
 ```
-
-### Explicit Waits for Dynamic Content
-
-```typescript
-// Wait for dialog to fully load
-await page.waitForTimeout(3000);
-
-// Wait for entities to become unavailable after stopping add-on
-await page.waitForTimeout(30000);
-```
-
-## Debugging Techniques
-
-### Capture Screenshots
-
-```typescript
-await page.screenshot({ path: "debug.png" });
-
-// Full page screenshot
-await page.screenshot({ path: "full-page.png", fullPage: true });
-```
-
-### Inspect Page Structure
-
-```typescript
-// Use getByRole to discover available roles
-const roles = await page.locator("[role]").all();
-for (const el of roles) {
-  console.log(await el.getAttribute("role"));
-}
-
-// Get accessibility tree
-const snapshot = await page.accessibility.snapshot();
-console.log(JSON.stringify(snapshot, null, 2));
-```
-
-### Run in Headed Mode
-
-```bash
-# Show browser window
-HEADED=1 npm run playwright:test
-
-# Or in script:
-const browser = await chromium.launch({ headless: false });
-```
-
-## Best Practices
-
-### DO's ✅
-
-- ✅ **Use role-based selectors** (`getByRole`, `getByLabel`, `getByText`)
-- ✅ **Click parent containers** instead of buttons with SVG icons
-- ✅ **Wait for elements** to be visible/enabled before interacting
-- ✅ **Use programmatic clicks** as fallback (when user interaction isn't being tested)
-- ✅ **Capture screenshots** during debugging
-- ✅ **Test in headed mode** when developing tests
-
-### DON'Ts ❌
-
-- ❌ **Never use `{force: true}`** unless absolutely necessary - bypasses safety checks
-- ❌ **Don't use CSS selectors** for shadow DOM content
-- ❌ **Don't click SVG elements** directly - click parent containers
-- ❌ **Don't assume immediate readiness** - add explicit waits for dynamic content
-- ❌ **Don't use querySelector** for search inputs - use `getByRole`
 
 ## Credentials
 
-**Location:** `/workspaces/hass-addons/hass-credentials.env`
-
-**Default:**
+- File: `/workspaces/hass-addons/hass-credentials.env`
 - Username: `dev`
 - Password: `dev`
 
-## When to Use Browser Automation
+## When NOT to Use
 
-### Good Use Cases ✅
-
-- Visual verification of UI changes
-- Testing user flows (login → navigate → interact)
-- Entity state verification in UI
-- Screenshot generation for documentation
-- Testing dialogs and modals
-
-### Bad Use Cases ❌
-
-- Configuration changes (use `scripts/configure-addon.sh` instead)
-- Bulk operations (use API or Python scripts)
-- Simple status checks (use `ha` CLI commands)
-- Log inspection (use `ha addons logs`)
+- ❌ Configuration changes (use `scripts/configure-addon.sh`)
+- ❌ Bulk operations (use API or Python scripts)
+- ❌ Simple status checks (use `ha` CLI commands)
+- ❌ Log inspection (use `ha addons logs`)
 
 **Rule:** Prefer API tools over browser automation whenever possible.
-
-## Related
-
-- `docs/developer/browser-automation.md` - Complete patterns and examples
-- `testing-workflows.mdc` - Testing procedures
-- `helper-scripts.mdc` - API-based automation tools
-- `mqtt-entity-cleanup.mdc` - Entity cleanup workflows
