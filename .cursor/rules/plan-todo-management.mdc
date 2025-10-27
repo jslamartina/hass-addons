@@ -17,6 +17,13 @@ description: How to properly use create_plan and todo_write tools
 
 **CRITICAL: NEVER edit plan files directly with search_replace, write, or any other file tool. ALWAYS use create_plan.**
 
+**CRITICAL: DO NOT ADD CHECKBOXES via MARKDOWN. Todos are handled by the Cursor todos system!**
+
+**NOTE: The "### To-dos" section with markdown checkboxes is auto-generated from the structured `todos` array you pass to `create_plan`. You cannot use `old_str`/`new_str` to edit it. To update what checkboxes appear:**
+1. Pass the updated `todos` array to `create_plan` with `plan=""`
+2. The markdown checkbox display will regenerate automatically
+3. The display may not update immediately - check the workspace todos to verify
+
 **First call:**
 ```python
 create_plan(
@@ -30,7 +37,7 @@ create_plan(
 **Updating:**
 - Full replacement: Provide new `plan` string
 - Partial edit: Use `old_str`/`new_str` for specific sections
-- Only todos: Leave `plan=""`, provide `todos` array
+- Only todos: **MUST pass `plan=""`** (required, not optional), provide `todos` array
 
 **WRONG:**
 ```python
@@ -67,7 +74,13 @@ todo_write(merge=False, todos=[...only keep these...])
 create_plan(old_str="## Phase 1\n...", new_str="## Phase 1\n...\n\n## Phase 2\n...", todos=[...keep existing + add new...])
 ```
 
-**Syncing:** Plan todos (`create_plan`) and workspace todos (`todo_write`) are separate—keep them in sync when completing tasks.
+**Syncing todos:** Plan and workspace todos are **separate systems**—updating one doesn't update the other.
+
+```python
+# To sync: call BOTH tools with same todos array
+todo_write(merge=False, todos=[...])      # Updates workspace panel
+create_plan(plan="", todos=[...])         # Updates plan checkboxes
+```
 
 **After task completion:** Update both with completed status.
 

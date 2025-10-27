@@ -24,7 +24,7 @@ create_first_user() {
       "name": "Developer",
       "language": "en"
     }' | jq -r '.auth_token')
-  
+
   echo "$auth_token"
 }
 
@@ -50,19 +50,19 @@ get_ha_auth_token() {
   if [ -n "$ONBOARDING_TOKEN" ]; then
     local new_token=$(EXISTING_TOKEN="$ONBOARDING_TOKEN" \
       node scripts/create-token-from-existing.js)
-    
+
     # Save as long-lived token
     echo "LONG_LIVED_ACCESS_TOKEN=$new_token" >> hass-credentials.env
     HA_AUTH_TOKEN="$new_token"
     return 0
   fi
-  
+
   # Fallback: use existing LLAT if available
   if [ -n "$LONG_LIVED_ACCESS_TOKEN" ]; then
     HA_AUTH_TOKEN="$LONG_LIVED_ACCESS_TOKEN"
     return 0
   fi
-  
+
   echo "❌ No valid token found"
   return 1
 }
@@ -87,7 +87,7 @@ const ws = new WebSocket(`ws://localhost:8123/api/websocket`);
 
 ws.on('message', async (data) => {
   const msg = JSON.parse(data);
-  
+
   if (msg.type === 'auth_required') {
     // 3. Authenticate with existing token
     ws.send(JSON.stringify({
@@ -95,7 +95,7 @@ ws.on('message', async (data) => {
       access_token: EXISTING_TOKEN
     }));
   }
-  
+
   if (msg.type === 'auth_ok') {
     // 4. Request long-lived token
     ws.send(JSON.stringify({
@@ -105,7 +105,7 @@ ws.on('message', async (data) => {
       lifespan: 3650  // 10 years in days
     }));
   }
-  
+
   if (msg.type === 'result' && msg.success) {
     // 5. Extract and output LLAT
     console.log(msg.result);

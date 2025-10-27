@@ -906,25 +906,24 @@ End-to-end tests validate complete user workflows through the Home Assistant UI 
 **Already configured:**
 - ✅ `playwright.config.ts` exists
 - ✅ MCP tools available in Cursor
-- ✅ Test scripts in `scripts/playwright/`
+- ✅ Test scripts in `cync-controller/tests/e2e/`
 
-**Directory Structure:**
+**Current Directory Structure:**
 
 ```
-tests/
-└── e2e/
-    ├── fixtures/
-    │   └── homeassistant/
-    │       └── configuration.yaml
-    ├── helpers/
-    │   ├── auth.ts
-    │   ├── navigation.ts
-    │   └── selectors.ts
-    ├── test_addon_configuration.spec.ts
-    ├── test_device_control.spec.ts
-    ├── test_mqtt_integration.spec.ts
-    └── test_cloud_relay.spec.ts
+cync-controller/tests/e2e/
+├── helpers/
+│   ├── auth.ts                  # Authentication helpers
+│   └── fan-control.ts           # Fan control helpers
+├── happy-path.spec.ts           # Login and discovery test
+├── test-click-shadow-div.spec.ts # Shadow DOM interaction tests
+└── test-fan-speed.spec.ts       # Fan speed control tests
 ```
+
+**Utility Scripts (in `scripts/playwright/`):**
+- `delete-all-mqtt-entities-except-bridge.ts` - Entity cleanup utility
+- `delete-mqtt-entities.ts` - Specific entity deletion
+- `delete-entities.ts` - Generic entity deletion
 
 ### Test Categories
 

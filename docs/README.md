@@ -14,13 +14,17 @@ docs/
 │   ├── cloud-relay.md
 │   └── assets/
 ├── developer/         # Developer & AI agent documentation
+│   ├── architecture.md
+│   ├── automated-token-creation.md
+│   ├── browser-automation.md
 │   ├── cli-reference.md
 │   ├── cloud-relay-implementation.md
 │   ├── entity-management.md
-│   ├── exploration-notes.md
 │   ├── limitations-lifted.md
 │   ├── linting-setup.md
-│   └── test-results.md
+│   ├── mcp-tools.md
+│   ├── test-results.md
+│   └── testing-guide.md
 ├── protocol/          # Protocol research & reverse engineering
 │   ├── findings.md
 │   ├── packet_structure.md
@@ -29,6 +33,9 @@ docs/
 │   ├── mode-change-analysis.md
 │   └── cleanup-summary.md
 └── archive/          # Historical documentation
+    ├── Plans & implementation summaries
+    ├── Completed features & bug fixes
+    └── Historical reference material
 ```
 
 ---
@@ -42,10 +49,11 @@ docs/
 4. **[Troubleshooting](user/troubleshooting.md)** - Common issues
 
 ### For Developers & AI Agents
-1. **[Developer Guide](AGENTS.md)** - **START HERE** - Comprehensive development guide
-2. **[Testing Tools](../scripts/README.md)** - Automated testing and configuration
-3. **[Entity Management](developer/entity-management.md)** - Entity deletion workflows
-4. **[Linting Setup](developer/linting-setup.md)** - Ruff linting configuration and npm scripts
+1. **[Developer Guide](../AGENTS.md)** - **START HERE** - Cursor rules and development workflow
+2. **[Testing Guide](developer/testing-guide.md)** - Unit and E2E testing
+3. **[Testing Tools](../scripts/README.md)** - Automated testing and configuration
+4. **[Entity Management](developer/entity-management.md)** - Entity deletion workflows
+5. **[Linting Setup](developer/linting-setup.md)** - Ruff linting configuration and npm scripts
 
 ### For Protocol Researchers
 1. **[Protocol Findings](protocol/findings.md)** - Cync protocol reverse engineering
@@ -67,14 +75,19 @@ docs/
 
 ### Developer Documentation (`docs/developer/`)
 
-| Document                                                                     | Description                                   |
-| ---------------------------------------------------------------------------- | --------------------------------------------- |
-| **[cli-reference.md](developer/cli-reference.md)**                           | CLI command reference for cync-controller package    |
-| **[cloud-relay-implementation.md](developer/cloud-relay-implementation.md)** | Cloud relay mode implementation details       |
-| **[entity-management.md](developer/entity-management.md)**                   | Guide for managing MQTT entities              |
-| **[exploration-notes.md](developer/exploration-notes.md)**                   | UI navigation and system state reference      |
-| **[limitations-lifted.md](developer/limitations-lifted.md)**                 | Documentation of resolved testing limitations |
-| **[test-results.md](developer/test-results.md)**                             | Comprehensive test execution results          |
+| Document                                                                     | Description                                       |
+| ---------------------------------------------------------------------------- | ------------------------------------------------- |
+| **[architecture.md](developer/architecture.md)**                             | Architecture and protocol details                 |
+| **[automated-token-creation.md](developer/automated-token-creation.md)**     | Automated LLAT creation via WebSocket             |
+| **[browser-automation.md](developer/browser-automation.md)**                 | Playwright browser automation best practices      |
+| **[cli-reference.md](developer/cli-reference.md)**                           | CLI command reference for cync-controller package |
+| **[cloud-relay-implementation.md](developer/cloud-relay-implementation.md)** | Cloud relay mode implementation details           |
+| **[entity-management.md](developer/entity-management.md)**                   | Guide for managing MQTT entities                  |
+| **[limitations-lifted.md](developer/limitations-lifted.md)**                 | Documentation of resolved testing limitations     |
+| **[linting-setup.md](developer/linting-setup.md)**                           | Ruff linting and formatting setup                 |
+| **[mcp-tools.md](developer/mcp-tools.md)**                                   | MCP development tools documentation               |
+| **[test-results.md](developer/test-results.md)**                             | Comprehensive test execution results              |
+| **[testing-guide.md](developer/testing-guide.md)**                           | Unit and E2E testing guide                        |
 
 ### Protocol Research (`docs/protocol/`)
 
@@ -91,29 +104,29 @@ docs/
 
 Historical documentation and completed testing artifacts.
 
-| Document                                                                                                                       | Description                                                    |
-| ------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------- |
-| **[2025-10-14T18-40-00-absorb-cync-controller-repo-plan.md](archive/2025-10-14T18-40-00-absorb-cync-controller-repo-plan.md)**               | Plan: Consolidate cync-controller repo into hass-addons (✅ completed) |
-| **[2025-10-14T18-40-01-remove-symlink-architecture-plan.md](archive/2025-10-14T18-40-01-remove-symlink-architecture-plan.md)** | Plan: Remove symlink to fix semantic search (✅ completed)      |
-| **[2025-10-14T16-13-43-cleanup-unused-scripts-plan.md](archive/2025-10-14T16-13-43-cleanup-unused-scripts-plan.md)**           | Plan: Cleanup unused scripts                                   |
-| **[2025-10-14T15-39-00-cleanup-summary.md](archive/2025-10-14T15-39-00-cleanup-summary.md)**                                   | Documentation cleanup (October 2025)                           |
-| **[2025-10-14T16-00-00-gui-validation-results.md](archive/2025-10-14T16-00-00-gui-validation-results.md)**                     | GUI validation test results                                    |
-| **[2025-10-13T14-00-00-refresh-solution.md](archive/2025-10-13T14-00-00-refresh-solution.md)**                                 | Manual refresh button implementation                           |
-| **[2025-10-13T15-00-00-throttling-solution.md](archive/2025-10-13T15-00-00-throttling-solution.md)**                           | Command throttling solution                                    |
-| **[2025-10-13T13-00-00-gui-validation-phase.md](archive/2025-10-13T13-00-00-gui-validation-phase.md)**                         | Phase 8 GUI testing plan                                       |
-| **[2025-10-11T10-00-00-cloud-relay-testing-plan.md](archive/2025-10-11T10-00-00-cloud-relay-testing-plan.md)**                 | Complete cloud relay testing plan (8/8 phases completed)       |
-| **[2025-10-08T14-00-00-baseline-review.md](archive/2025-10-08T14-00-00-baseline-review.md)**                                   | Historical code review (October 2025)                          |
-| **[2025-10-08T15-00-00-pr-comments.md](archive/2025-10-08T15-00-00-pr-comments.md)**                                           | Historical PR review comments                                  |
+| Document                                                                                                                       | Description                                                           |
+| ------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------- |
+| **[2025-10-14T18-40-00-absorb-cync-controller-repo-plan.md](archive/2025-10-14T18-40-00-absorb-cync-controller-repo-plan.md)** | Plan: Consolidate cync-controller repo into hass-addons (✅ completed) |
+| **[2025-10-14T18-40-01-remove-symlink-architecture-plan.md](archive/2025-10-14T18-40-01-remove-symlink-architecture-plan.md)** | Plan: Remove symlink to fix semantic search (✅ completed)             |
+| **[2025-10-14T16-13-43-cleanup-unused-scripts-plan.md](archive/2025-10-14T16-13-43-cleanup-unused-scripts-plan.md)**           | Plan: Cleanup unused scripts                                          |
+| **[2025-10-14T15-39-00-cleanup-summary.md](archive/2025-10-14T15-39-00-cleanup-summary.md)**                                   | Documentation cleanup (October 2025)                                  |
+| **[2025-10-14T16-00-00-gui-validation-results.md](archive/2025-10-14T16-00-00-gui-validation-results.md)**                     | GUI validation test results                                           |
+| **[2025-10-13T14-00-00-refresh-solution.md](archive/2025-10-13T14-00-00-refresh-solution.md)**                                 | Manual refresh button implementation                                  |
+| **[2025-10-13T15-00-00-throttling-solution.md](archive/2025-10-13T15-00-00-throttling-solution.md)**                           | Command throttling solution                                           |
+| **[2025-10-13T13-00-00-gui-validation-phase.md](archive/2025-10-13T13-00-00-gui-validation-phase.md)**                         | Phase 8 GUI testing plan                                              |
+| **[2025-10-11T10-00-00-cloud-relay-testing-plan.md](archive/2025-10-11T10-00-00-cloud-relay-testing-plan.md)**                 | Complete cloud relay testing plan (8/8 phases completed)              |
+| **[2025-10-08T14-00-00-baseline-review.md](archive/2025-10-08T14-00-00-baseline-review.md)**                                   | Historical code review (October 2025)                                 |
+| **[2025-10-08T15-00-00-pr-comments.md](archive/2025-10-08T15-00-00-pr-comments.md)**                                           | Historical PR review comments                                         |
 
 ### Additional Resources
 
-| Location                                                     | Description                                |
-| ------------------------------------------------------------ | ------------------------------------------ |
-| **[../scripts/README.md](../scripts/README.md)**             | Automated testing and configuration tools  |
-| **[developer/linting-setup.md](developer/linting-setup.md)** | Linting setup summary (Ruff configuration) |
-| **[../cync-controller/README.md](../cync-controller/README.md)**           | Add-on quick start guide                   |
-| **[../cync-controller/CHANGELOG.md](../cync-controller/CHANGELOG.md)**     | Version history and breaking changes       |
-| **[../.devcontainer/README.md](../.devcontainer/README.md)** | Devcontainer setup and quirks              |
+| Location                                                               | Description                                |
+| ---------------------------------------------------------------------- | ------------------------------------------ |
+| **[../scripts/README.md](../scripts/README.md)**                       | Automated testing and configuration tools  |
+| **[developer/linting-setup.md](developer/linting-setup.md)**           | Linting setup summary (Ruff configuration) |
+| **[../cync-controller/README.md](../cync-controller/README.md)**       | Add-on quick start guide                   |
+| **[../cync-controller/CHANGELOG.md](../cync-controller/CHANGELOG.md)** | Version history and breaking changes       |
+| **[../.devcontainer/README.md](../.devcontainer/README.md)**           | Devcontainer setup and quirks              |
 
 ---
 
@@ -123,7 +136,7 @@ Historical documentation and completed testing artifacts.
 → [../README.md](../README.md) + [user/dns-setup.md](user/dns-setup.md) + [../cync-controller/README.md](../cync-controller/README.md)
 
 ### "I'm developing the add-on"
-→ [AGENTS.md](AGENTS.md) - **Complete development guide**
+→ [../AGENTS.md](../AGENTS.md) - **Cursor Rules Guide**
 
 ### "I need to configure cloud relay mode"
 → [../scripts/README.md](../scripts/README.md) (automated tools) or [user/cloud-relay.md](user/cloud-relay.md) (manual)
@@ -141,18 +154,19 @@ Historical documentation and completed testing artifacts.
 → [developer/entity-management.md](developer/entity-management.md)
 
 ### "I'm using AI agents to work on this project"
-→ [AGENTS.md](AGENTS.md) - **Mandatory first read!**
+→ [../AGENTS.md](../AGENTS.md) - **Start with Rules Guide**
 
 ---
 
 ## 🤖 For AI Agents
 
-**Always read [AGENTS.md](AGENTS.md) first!**
+**Always start with [Cursor Rules Guide](../.cursor/RULES_GUIDE.md)!**
 
 It contains:
-- ✅ Mandatory pre-task checklist
-- ✅ Repository structure
-- ✅ Development workflows (rebuild vs restart)
+- ✅ Development workflow (rebuild vs restart)
+- ✅ Critical guardrails
+- ✅ File-specific rules
+- ✅ Common commands reference
 - ✅ Testing procedures
 - ✅ Known issues and solutions
 - ✅ Coding conventions
@@ -198,6 +212,7 @@ npm run lint:python:fix           # Auto-fix Python issues
 - **Markdown docs**: This folder (`docs/`)
 - **Shell scripts**: `../scripts/`
 - **Add-on files**: `../cync-controller/`
+- **Test files**: `../cync-controller/tests/` (unit and E2E tests)
 - **MITM tools**: `../mitm/` (with docs in `docs/protocol/`)
 
 ---
@@ -249,7 +264,7 @@ When adding or updating documentation:
 ## 🆘 Need Help?
 
 - **For usage questions**: See [user/troubleshooting.md](user/troubleshooting.md)
-- **For development questions**: See [AGENTS.md](AGENTS.md)
+- **For development questions**: See [../AGENTS.md](../AGENTS.md) and [../.cursor/RULES_GUIDE.md](../.cursor/RULES_GUIDE.md)
 - **For protocol questions**: See [protocol/findings.md](protocol/findings.md)
 - **Can't find something?**: Check this index or search the repository
 

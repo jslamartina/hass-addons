@@ -172,7 +172,7 @@ CYNC_PERF_THRESHOLD_MS=100
 
 ## Related
 
-- `LOGGING_REFACTORING_GUIDE.md` - Complete refactoring patterns
+- `docs/archive/2025-10-27T02-04-07-logging-refactoring-guide.md` - Complete refactoring patterns
 - `logging-examples.mdc` - Additional examples
 - `src/cync_controller/logging_abstraction.py` - Logger implementation
 - `src/cync_controller/correlation.py` - Correlation tracking
