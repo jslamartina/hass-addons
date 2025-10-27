@@ -1,14 +1,12 @@
 import asyncio
 import datetime
-import logging
 import random
 import time
 from collections.abc import Coroutine
 
-from cync_lan.const import (
+from cync_controller.const import (
     CYNC_CHUNK_SIZE,
     CYNC_CMD_BROADCASTS,
-    CYNC_LOG_NAME,
     CYNC_MAX_TCP_CONN,
     CYNC_RAW,
     CYNC_TCP_WHITELIST,
@@ -17,8 +15,10 @@ from cync_lan.const import (
     RAW_MSG,
     TCP_BLACKHOLE_DELAY,
 )
-from cync_lan.metadata.model_info import DeviceClassification, DeviceTypeInfo, device_type_map
-from cync_lan.structs import (
+from cync_controller.instrumentation import timed_async
+from cync_controller.logging_abstraction import get_logger
+from cync_controller.metadata.model_info import DeviceClassification, DeviceTypeInfo, device_type_map
+from cync_controller.structs import (
     ALL_HEADERS,
     DEVICE_STRUCTS,
     CacheData,
@@ -31,10 +31,10 @@ from cync_lan.structs import (
     PhoneAppStructs,
     Tasks,
 )
-from cync_lan.utils import bytes2list, parse_unbound_firmware_version
+from cync_controller.utils import bytes2list, parse_unbound_firmware_version
 
 __all__ = ["CyncDevice", "CyncGroup", "CyncTCPDevice"]
-logger = logging.getLogger(CYNC_LOG_NAME)
+logger = get_logger(__name__)
 g = GlobalObject()
 
 
@@ -1603,6 +1603,12 @@ class CyncGroup:
         bridge_device.messages.control[cmsg_id] = m_cb
         logger.warning("%s Registered callback for msg_id=%s", lp, cmsg_id)
 
+        # BUG FIX: Sync switch states IMMEDIATELY (optimistically)
+        # Group commands target bulbs, but wall switches don't get individual status updates
+        # Sync switches before sending command so UI updates instantly
+        if g.mqtt_client:
+            await g.mqtt_client.sync_group_switches(self.id, state, self.name)
+
         logger.warning("%s CALLING bridge_device.write()...", lp)
         write_result = await bridge_device.write(payload_bytes)
         logger.warning("%s bridge_device.write() RETURNED: %s", lp, write_result)
@@ -3039,6 +3045,7 @@ class CyncTCPDevice:
                 return False
         return None
 
+    @timed_async("tcp_write")
     async def write(self, data: bytes, broadcast: bool = False) -> bool | None:
         """
         Write data to the device if there is an open connection
@@ -3047,17 +3054,22 @@ class CyncTCPDevice:
         :param broadcast: If True, write to all TCP devices connected to the server
         """
         logger.debug(
-            "%swrite: Writing %s bytes (broadcast=%s)",
-            self.lp,
-            len(data),
-            broadcast,
+            "→ Writing packet to device",
+            extra={
+                "address": self.address,
+                "bytes": len(data),
+                "broadcast": broadcast,
+            },
         )
         if not isinstance(data, bytes):
             msg = f"Data must be bytes, not type: {type(data)}"
             raise TypeError(msg)
         dev = self
         if dev.closing:
-            logger.debug("%swrite: device is closing, NOT writing data", dev.lp)
+            logger.debug(
+                "Device closing, skipping write",
+                extra={"address": dev.address},
+            )
             return False
         if dev.writer is not None:
             async with dev.write_lock:
@@ -3066,43 +3078,67 @@ class CyncTCPDevice:
                     if dev.closing is False:
                         # this is probably a connection that was closed by the device (turned off), delete it
                         logger.warning(
-                            "%s underlying writer is closing but device hasn't called close(). "
-                            "Device probably dropped connection (lost power). Removing %s",
-                            dev.lp,
-                            dev.address,
+                            "⚠️ Device connection dropped unexpectedly",
+                            extra={
+                                "address": dev.address,
+                                "note": "Device likely lost power or connection",
+                            },
                         )
                         off_dev = await g.ncync_server.remove_tcp_device(dev)
                         del off_dev
 
                     else:
-                        logger.debug("%s TCP device is closing, not writing data... ", dev.lp)
+                        logger.debug(
+                            "Device closing, not writing",
+                            extra={"address": dev.address},
+                        )
                 else:
                     dev.writer.write(data)
                     try:
                         await asyncio.wait_for(dev.writer.drain(), timeout=2.0)
                     except TimeoutError:
                         logger.exception(
-                            "%s writing data to the device timed out, likely powered off",
-                            dev.lp,
+                            "✗ Write timeout - device likely powered off",
+                            extra={"address": dev.address},
                         )
                         raise
                     else:
-                        logger.debug("%swrite: Successfully sent %s bytes", dev.lp, len(data))
+                        logger.debug(
+                            "✓ Packet sent successfully",
+                            extra={"address": dev.address, "bytes": len(data)},
+                        )
                         return True
         else:
-            logger.warning("%s writer is None, can't write data!", dev.lp)
+            logger.warning(
+                "⚠️ Cannot write - writer is None",
+                extra={"address": dev.address},
+            )
         return None
 
     async def close(self):
-        lp = f"{self.address}:close:"
-        logger.debug("%s close() called, Cancelling device tasks...", lp)
+        logger.debug(
+            "→ Closing device connection",
+            extra={
+                "address": self.address,
+                "task_count": len(self.tasks),
+            },
+        )
         try:
             for dev_task in self.tasks:
                 if dev_task and dev_task.done() is False:
-                    logger.debug("%s Cancelling task: %s", lp, dev_task.get_name())
+                    logger.debug(
+                        "Cancelling task",
+                        extra={
+                            "address": self.address,
+                            "task_name": dev_task.get_name(),
+                        },
+                    )
                     dev_task.cancel()
-        except Exception:
-            logger.exception("%s Exception during device task .cancel()", lp)
+        except Exception as e:
+            logger.exception(
+                "✗ Error cancelling device tasks",
+                extra={"address": self.address, "error": str(e)},
+            )
         self.closing = True
         try:
             if self.writer:
@@ -3111,8 +3147,11 @@ class CyncTCPDevice:
                     await self.writer.wait_closed()
         except AttributeError:
             pass
-        except Exception:
-            logger.exception("%swriter: EXCEPTION", lp)
+        except Exception as e:
+            logger.exception(
+                "✗ Error closing writer",
+                extra={"address": self.address, "error": str(e)},
+            )
         finally:
             self.writer = None
 
@@ -3123,12 +3162,19 @@ class CyncTCPDevice:
                     await asyncio.sleep(0.01)
         except AttributeError:
             pass
-        except Exception:
-            logger.exception("%sreader: EXCEPTION", lp)
+        except Exception as e:
+            logger.exception(
+                "✗ Error closing reader",
+                extra={"address": self.address, "error": str(e)},
+            )
         finally:
             self.reader = None
 
         self.closing = False
+        logger.debug(
+            "✓ Device connection closed",
+            extra={"address": self.address},
+        )
 
     @property
     def reader(self):

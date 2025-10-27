@@ -1,6 +1,5 @@
 import asyncio
 import json
-import logging
 import random
 import re
 import unicodedata
@@ -11,13 +10,14 @@ from typing import Optional
 
 import aiomqtt
 
-from cync_lan.const import *
-from cync_lan.devices import CyncDevice, CyncGroup
-from cync_lan.metadata.model_info import DeviceClassification, device_type_map
-from cync_lan.structs import DeviceStatus, FanSpeed, GlobalObject
-from cync_lan.utils import send_sigterm
+from cync_controller.const import *
+from cync_controller.devices import CyncDevice, CyncGroup
+from cync_controller.logging_abstraction import get_logger
+from cync_controller.metadata.model_info import DeviceClassification, device_type_map
+from cync_controller.structs import DeviceStatus, FanSpeed, GlobalObject
+from cync_controller.utils import send_sigterm
 
-logger = logging.getLogger(CYNC_LOG_NAME)
+logger = get_logger(__name__)
 g = GlobalObject()
 bridge_device_reg_struct = CYNC_BRIDGE_DEVICE_REGISTRY_CONF
 # Log all loggers in the logger manager
@@ -243,8 +243,8 @@ class MQTTClient:
             await asyncio.sleep(1)
             await self.homeassistant_discovery()
 
-            # Start fast periodic refresh task (15s interval)
-            self.fast_refresh_task = asyncio.create_task(self.periodic_fast_refresh())
+            # TEMPORARILY DISABLED: Start fast periodic refresh task (15s interval)
+            # self.fast_refresh_task = asyncio.create_task(self.periodic_fast_refresh())
 
             return True
         return False
@@ -728,6 +728,46 @@ class MQTTClient:
             "ON" if subgroup_state else "OFF",
         )
         return False
+
+    async def sync_group_switches(self, group_id: int, group_state: int, group_name: str) -> int:
+        """Sync all switch devices in a group to match the group's state.
+
+        This is called after a group command is executed to ensure switches
+        that control the same lights show the correct state in Home Assistant.
+
+        Args:
+            group_id: The group ID
+            group_state: The group's state (0=off, 1=on)
+            group_name: Name of the group (for logging)
+
+        Returns:
+            Number of switches synced
+        """
+        lp = f"{self.lp}sync_group_switches:"
+
+        if group_id not in g.ncync_server.groups:
+            logger.warning("%s Group %s not found in server groups", lp, group_id)
+            return 0
+
+        group = g.ncync_server.groups[group_id]
+        synced_count = 0
+
+        logger.info(
+            "%s Syncing switches for group '%s' (ID: %s) to state: %s",
+            lp,
+            group_name,
+            group_id,
+            "ON" if group_state else "OFF",
+        )
+
+        for member_id in group.member_ids:
+            if member_id in g.ncync_server.devices:
+                device = g.ncync_server.devices[member_id]
+                if await self.update_switch_from_subgroup(device, group_state, group_name):
+                    synced_count += 1
+
+        logger.info("%s Synced %s switches for group '%s'", lp, synced_count, group_name)
+        return synced_count
 
     async def update_brightness(self, device: CyncDevice, bri: int) -> bool:
         """Update the device brightness and publish to MQTT for HASS devices to update."""
