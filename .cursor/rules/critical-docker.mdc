@@ -1,0 +1,30 @@
+---
+alwaysApply: true
+description: Critical Docker and devcontainer rules
+---
+
+# Critical Docker & Devcontainer Rules
+
+## Rule: Don't Start Docker Manually
+
+**Do not start Docker manually in devcontainer scripts** - supervisor already does it.
+
+- Docker is managed by `supervisor_run`
+- Manual Docker start causes conflicts
+- Read `.devcontainer/README.md` for quirks
+
+## Rule: Python Edits Require Rebuild
+
+**Python edits: restart ≠ rebuild.**
+
+- Python files are baked into Docker image at build time
+- Always run `cd cync-controller && ./rebuild.sh` after Python changes
+- Restarting alone will not load Python changes
+
+## Rule: Backup Restore Logic
+
+**Don't change backup restore logic without testing per `.devcontainer/README.md`.**
+
+- Backup restore in `post-start.sh` is disabled by default
+- Only re-enable after thorough testing
+- Commented lines: see `.devcontainer/post-start.sh` lines 131-216

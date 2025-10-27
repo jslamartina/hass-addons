@@ -1,0 +1,78 @@
+---
+description: Debugging commands and techniques
+---
+
+# Debugging Guide
+
+## View Add-on Logs
+
+```bash
+# Standard log viewing
+ha addons logs local_cync-controller
+
+# Follow logs in real-time
+ha addons logs local_cync-controller --follow
+```
+
+## Supervisor Logs
+
+```bash
+# View add-on lifecycle events
+tail -f /tmp/supervisor_run.log
+```
+
+## Container Access
+
+```bash
+# Access add-on container shell
+docker exec -it addon_local_cync-controller /bin/bash
+
+# Check running processes
+docker exec addon_local_cync-controller ps aux
+
+# Check network connections
+docker exec addon_local_cync-controller netstat -an
+```
+
+## Environment Inspection
+
+```bash
+# Verify environment variables loaded correctly
+docker exec addon_local_cync-controller env | grep CYNC_
+
+# Check configuration
+docker exec addon_local_cync-controller cat /data/options.json
+```
+
+## Cloud Relay Packet Injection
+
+When relay mode enabled:
+
+```bash
+# Inject raw packet bytes
+echo "73 00 00 00 1e ..." > /tmp/cync_inject_raw_bytes.txt
+
+# Inject mode change for switches
+echo "smart" > /tmp/cync_inject_command.txt
+# or
+echo "traditional" > /tmp/cync_inject_command.txt
+```
+
+## MQTT Entity Cleanup
+
+```bash
+# Safe deletion with dry-run first
+sudo python3 scripts/delete-mqtt-safe.py --dry-run
+
+# Actually delete stale entities
+sudo python3 scripts/delete-mqtt-safe.py
+ha addons restart local_cync-controller
+```
+
+## Protocol Analysis
+
+**Note:** MITM tools have been archived - see `docs/archive/mitm/` for historical reference. Cloud relay mode is the current recommended approach for protocol analysis.
+
+## Troubleshooting Reference
+
+For common issues and solutions, see `docs/user/troubleshooting.md`.

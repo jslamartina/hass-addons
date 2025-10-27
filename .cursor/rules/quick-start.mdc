@@ -1,17 +1,67 @@
 ---
-alwaysApply: true
+description: Navigation index and quick reference for development
 ---
 
-# Quick Start
+# Quick Start - Rules Navigation
 
-- Read `AGENTS.md` for repo structure, workflows, and critical DON'T rules.
-- Bookmark: `.devcontainer/README.md`, `docs/developer/architecture.md`, `docs/user/troubleshooting.md`.
-- Core commands:
-  ```bash
-  ha addons logs local_cync-controller --follow
-  npm run lint:python:fix && npm run format        # after any edit
-  npm run lint                                     # final check
-  cd cync-controller && ./rebuild.sh               # whenever Python changes
-  ```
-- Workflow: edit → lint & fix → rebuild (if Python) / restart (if config) → verify logs → let user commit.
-- Never hardcode credentials or skip lint/rebuild requirements.
+Quick navigation to essential rules for Cync Controller development.
+
+## Daily Development
+
+Start here for common tasks:
+- **[Daily Dev Cheatsheet](daily-dev-cheatsheet.mdc)** - Most common commands
+- **[Development Workflow](development-workflow.mdc)** - 4-step process (edit → lint → rebuild → verify)
+- **[Linting Mandatory](linting-mandatory.mdc)** - Code quality requirements
+
+## Critical Guardrails
+
+Rules that prevent common mistakes:
+- **[Critical Commands](critical-commands.mdc)** - Command callback patterns
+- **[Critical State Management](critical-state-management.mdc)** - State update patterns
+- **[Critical Credentials](critical-credentials.mdc)** - Security rules
+- **[Critical Docker](critical-docker.mdc)** - Docker/devcontainer rules
+
+## Setup Requirements
+
+Essential setup for add-on to work:
+- **[DNS Requirements](dns-requirements.mdc)** - **REQUIRED** DNS redirection setup
+- **[Token Creation Flow](token-creation-flow.mdc)** - Automated LLAT creation
+
+## Helper Tools
+
+Automation to speed up development:
+- **[Helper Scripts](helper-scripts.mdc)** - Automation scripts and tools
+- **[MQTT Entity Cleanup](mqtt-entity-cleanup.mdc)** - Entity deletion workflows
+- **[Browser Automation](ai-browser-testing.mdc)** - Playwright patterns
+
+## File-Specific Rules
+
+Rules that apply when editing specific file types:
+- **[Python Changes](python-changes-require-rebuild.mdc)** - Rebuild after `.py` edits
+- **[Shell Scripting](shell-scripting.mdc)** - Shell script standards
+- **[MQTT Integration](mqtt-integration.mdc)** - MQTT discovery patterns
+
+## Reference Documentation
+
+On-demand rules for specific topics:
+- **[Common Commands](common-commands.mdc)** - Command reference
+- **[Performance Tuning](performance-tuning.mdc)** - Optimization patterns
+- **[Known Bugs](known-bugs-workarounds.mdc)** - Bug patterns and workarounds
+- **[Cloud Relay Patterns](cloud-relay-patterns.mdc)** - Relay mode usage
+- **[Documentation Archiving](documentation-archiving.mdc)** - How to document work
+
+## Architecture & Testing
+
+- **[Architecture Concepts](architecture-concepts.mdc)** - Key architectural patterns
+- **[Testing Workflows](testing-workflows.mdc)** - Testing procedures
+- **[Debugging Guide](debugging-guide.mdc)** - Debug techniques
+
+## Environment Setup
+
+- **[Devcontainer Quirks](devcontainer-quirks.mdc)** - Dev environment setup
+- **[MCP Tools Guide](mcp-tools-guide.mdc)** - MCP tools usage
+- **[Supervisor API Access](supervisor-api-access.mdc)** - API patterns
+
+## Complete Rule Index
+
+See [RULES_GUIDE.md](../../RULES_GUIDE.md) for complete rule organization and descriptions.

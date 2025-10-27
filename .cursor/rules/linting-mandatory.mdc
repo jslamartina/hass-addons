@@ -1,5 +1,6 @@
 ---
 alwaysApply: true
+description: Linting is mandatory before commits
 ---
 
 # Linting Is Mandatory

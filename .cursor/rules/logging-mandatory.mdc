@@ -1,0 +1,181 @@
+---
+description: Logging standards and patterns
+---
+
+# CRITICAL: LOGGING IS A FIRST-CLASS CITIZEN
+
+# Modern Logging Standards
+
+Always add comprehensive, structured logging to code changes. Proper logging is critical for debugging issues in production.
+
+## New Logging System
+
+We use a dual-format logging system with automatic correlation tracking and performance instrumentation.
+
+### Setup
+
+```python
+from cync_controller.logging_abstraction import get_logger
+from cync_controller.correlation import ensure_correlation_id, correlation_context
+from cync_controller.instrumentation import timed_async
+
+logger = get_logger(__name__)
+```
+
+## When to Log
+
+**Always Log:**
+- Function entry/exit (especially async operations)
+- State changes (with before/after values)
+- External operations (File I/O, network, process spawning)
+- Error paths (all catch blocks with context)
+- Configuration loading
+- Lifecycle events
+- User actions
+- Validation results
+
+**Don't Log:**
+- Sensitive data (tokens, passwords, personal info)
+- Excessive loops (log summary, not every iteration)
+- Already-logged information (avoid duplicates)
+- Redundant "Entering function" logs without context
+
+## Logging Format (Python)
+
+### Simple Messages
+
+```python
+logger.info("→ Starting operation")
+logger.info("✓ Operation completed")
+logger.error("✗ Operation failed")
+logger.warning("⚠️ Unexpected condition")
+```
+
+### Structured Context
+
+```python
+logger.info(
+    "Device state changed",
+    extra={
+        "device_id": device_id,
+        "device_name": device.name,
+        "old_state": "OFF",
+        "new_state": "ON",
+        "brightness": 75,
+    },
+)
+
+logger.error(
+    "✗ Command failed",
+    extra={
+        "device_id": device_id,
+        "command_type": "set_brightness",
+        "error": str(e),
+    },
+)
+```
+
+### Entry/Exit Logging
+
+```python
+async def process_command(device_id, command):
+    ensure_correlation_id()  # Automatic correlation tracking
+
+    logger.info(
+        "→ Processing command",
+        extra={
+            "device_id": device_id,
+            "command_type": command.type,
+        },
+    )
+
+    result = await execute_command(device_id, command)
+
+    logger.info(
+        "✓ Command completed",
+        extra={
+            "device_id": device_id,
+            "command_type": command.type,
+            "duration_ms": elapsed,
+        },
+    )
+    return result
+```
+
+### Performance Timing
+
+```python
+@timed_async("mqtt_publish")
+async def publish_message(topic, payload):
+    await client.publish(topic, payload)
+    # Automatically logs: "⏱️ [mqtt_publish] completed in 45ms"
+```
+
+### Error Handling
+
+```python
+try:
+    await risky_operation()
+except Exception as e:
+    logger.exception(
+        "✗ Operation failed",
+        extra={
+            "operation": "device_connect",
+            "device_id": device_id,
+            "error": str(e),
+        },
+    )
+```
+
+## Log Message Prefixes
+
+Use consistent visual prefixes:
+- `→` - Starting an operation
+- `✓` - Successfully completed
+- `✗` - Failed operation
+- `⚠️` - Warning
+- `⏱️` - Performance timing (auto-added by @timed_async)
+
+## Log Levels
+
+- **DEBUG**: Detailed diagnostic information (packet contents, internal state)
+- **INFO**: Important events (connections, state changes, command execution)
+- **WARNING**: Unexpected situations that don't prevent operation
+- **ERROR**: Errors that prevent specific operations
+- **CRITICAL**: System-wide failures
+
+## Pre-Completion Checklist
+
+- [ ] Used `get_logger(__name__)` instead of old logger
+- [ ] Added correlation tracking with `ensure_correlation_id()` in async entry points
+- [ ] Function entry/exit logged for important operations
+- [ ] All error cases logged with structured context
+- [ ] State changes logged with before/after values
+- [ ] Added performance timing decorators for network operations
+- [ ] Clear, searchable messages with visual prefixes
+- [ ] Relevant context included via `extra` parameter
+- [ ] Removed redundant `lp` variable pattern
+- [ ] Removed low-value logs
+
+## Configuration
+
+Environment variables for logging control:
+
+```bash
+CYNC_LOG_FORMAT=both  # "json", "human", or "both"
+CYNC_LOG_JSON_FILE=/var/log/cync_controller.json
+CYNC_LOG_HUMAN_OUTPUT=stdout
+CYNC_LOG_CORRELATION_ENABLED=true
+CYNC_PERF_TRACKING=true
+CYNC_PERF_THRESHOLD_MS=100
+```
+
+## Related
+
+- `LOGGING_REFACTORING_GUIDE.md` - Complete refactoring patterns
+- `logging-examples.mdc` - Additional examples
+- `src/cync_controller/logging_abstraction.py` - Logger implementation
+- `src/cync_controller/correlation.py` - Correlation tracking
+- `src/cync_controller/instrumentation.py` - Performance timing
+
+**Good logging makes debugging 10x easier.** Structured logging with correlation tracking makes it 100x easier.

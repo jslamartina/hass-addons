@@ -1,11 +1,33 @@
 ---
-globs: scripts/**/*.sh,cync-controller/src/**/*.py
+globs: cync-controller/src/cync_controller/mqtt_client.py,cync-controller/src/cync_controller/devices.py
+description: MQTT discovery and integration patterns
 ---
 
-# MQTT Integration Notes
+# MQTT Integration
 
-- Use Home Assistant MQTT Discovery (`homeassistant/<component>/<node_id>/<object_id>/config`) with exact schema: include `availability`, `stat_t`, `cmd_t`, consistent `suggested_area`.
-- After schema updates, remove stale entities (prefer `sudo python3 scripts/delete-mqtt-safe.py [--dry-run]` then restart add-on).
-- Validate MQTT broker connectivity + auth before debugging code paths.
+## Discovery Protocol
 
-Reference: `cync-controller/src/cync_lan/mqtt_client.py`, `docs/user/troubleshooting.md`, `docs/developer/architecture.md`.
+Use Home Assistant MQTT Discovery with exact schema:
+
+- Topic: `homeassistant/<component>/<node_id>/<object_id>/config`
+- Required fields: `availability`, `stat_t`, `cmd_t`, `suggested_area`
+
+## Schema Updates
+
+After schema updates, remove stale entities:
+
+```bash
+sudo python3 scripts/delete-mqtt-safe.py --dry-run  # Preview
+sudo python3 scripts/delete-mqtt-safe.py             # Delete
+ha addons restart local_cync-controller
+```
+
+## Debugging
+
+Validate MQTT broker connectivity + auth before debugging code paths.
+
+## Reference
+
+- `cync-controller/src/cync_controller/mqtt_client.py` - MQTT client implementation
+- `docs/user/troubleshooting.md` - Common issues
+- `docs/developer/architecture.md` - Protocol details

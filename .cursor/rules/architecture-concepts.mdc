@@ -1,0 +1,46 @@
+---
+description: Key architectural concepts and patterns
+---
+
+# Architecture Concepts
+
+## Core Concept
+
+The add-on intercepts device communications and bridges them to Home Assistant via MQTT.
+
+## DNS Redirection Required
+
+The add-on intercepts device traffic by redirecting DNS queries. Users **MUST** configure DNS redirection for the add-on to work. See `docs/user/dns-setup.md` for setup instructions.
+
+## Command Flow
+
+**MQTT → Callback Registration → TCP Send → ACK → State Update**
+
+1. Command sent via MQTT
+2. Callback registered for response
+3. Command sent via TCP to device
+4. Device sends ACK
+5. State updated in Home Assistant
+
+See `docs/developer/architecture.md` for detailed protocol information.
+
+## Cloud Relay Mode
+
+Optional MITM proxy for protocol analysis (read-only currently).
+
+Features:
+- Intercepts device communications
+- Logs packet structures
+- Packet injection capability
+- Privacy mode option
+
+## Key Documentation
+
+- **Architecture Guide**: `docs/developer/architecture.md` - Detailed protocol and command flow
+- **Protocol Research**: `docs/protocol/findings.md` - Reverse engineering notes
+- **Troubleshooting**: `docs/user/troubleshooting.md` - Known issues and solutions
+
+## External Resources
+
+- [Home Assistant Add-on Documentation](https://developers.home-assistant.io/docs/add-ons/)
+- [MQTT Discovery Schema](https://www.home-assistant.io/integrations/mqtt/#mqtt-discovery)

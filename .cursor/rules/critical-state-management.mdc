@@ -1,0 +1,40 @@
+---
+alwaysApply: true
+description: Critical state management rules
+---
+
+# Critical State Management
+
+## Rule: Device Offline Threshold
+
+**Don't mark devices offline immediately** - use `offline_count` thresholds to avoid cascading refresh storms.
+
+- Marking devices offline too quickly causes them to constantly refresh
+- Use counter-based approach with threshold (e.g., 3 failed pings)
+- Prevents network storms from rapid state changes
+
+## Pattern
+
+```python
+# ✅ CORRECT: Use offline count threshold
+if consecutive_failures >= OFFLINE_THRESHOLD:
+    mark_device_offline(device_id)
+else:
+    increment_offline_count(device_id)
+
+# ❌ WRONG: Immediate offline marking
+if ping_fails:
+    mark_device_offline(device_id)  # Causes flickering
+```
+
+## Rule: No Auto-Refresh After ACKs
+
+**Don't add automatic refresh after command ACKs** - causes cascading refreshes that break subsequent commands.
+
+- Auto-refresh can trigger another refresh
+- Creates refresh storms that block new commands
+- ACK handling should update state only, not trigger mesh refreshes
+
+## Related
+
+See command handling in `critical-commands.mdc` and architecture details in `docs/developer/architecture.md`.

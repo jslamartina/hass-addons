@@ -1,0 +1,229 @@
+---
+description: Known issues, bugs, and their workarounds
+---
+
+# Known Bugs and Workarounds
+
+Document known issues and patterns to avoid repeating past mistakes.
+
+## Pattern Recognition: Common Issues
+
+### Commands Don't Work / Lights Don't Turn On
+
+**Symptoms:**
+- Logs show commands sent, ACKs received, but physical devices don't respond
+- GUI updates but lights don't physically turn on/off
+- "Callback NOT found for msg ID: XX" in logs
+
+**Root Cause:** Missing `ControlMessageCallback` registration before sending command
+
+**Fix:** Always register callback in `bridge_device.messages.control[msg_id]` before calling `bridge_device.write()`
+
+**Pattern:**
+```python
+# ✅ CORRECT: Register callback BEFORE sending
+m_cb = ControlMessageCallback(
+    msg_id=cmsg_id,
+    message=payload_bytes,
+    sent_at=time.time(),
+    callback=your_callback_coroutine,
+    device_id=device.id,
+)
+bridge_device.messages.control[cmsg_id] = m_cb
+
+# THEN send:
+await bridge_device.write(payload_bytes)
+```
+
+**See:** `critical-commands.mdc` for full command handling rules
+
+### Commands Work Once, Then Fail / Need to Click Twice
+
+**Symptoms:**
+- First command after refresh doesn't work
+- Need to toggle twice for commands to take effect
+- Rapid clicking causes commands to stop working
+- Works initially, then stops working after using "Refresh Device Status"
+
+**Root Cause:** Automatic `trigger_status_refresh()` after every ACK was causing cascading refreshes
+
+**Fix:** Removed automatic refresh from ACK handler (fixed in Oct 14, 2025)
+
+**Where it was:** `devices.py` lines 2501-2505 (now removed)
+
+**Lesson learned:** Never auto-refresh after ACKs - it creates refresh storms that block subsequent commands
+
+### Devices Flicker Between Available/Unavailable
+
+**Symptoms:**
+- Device entities show as "unavailable" intermittently
+- Availability status changes rapidly in GUI
+- Commands still work but availability is inconsistent
+
+**Root Cause:** Unreliable `connected_to_mesh` byte in 0x83 packets causing immediate offline marking
+
+**Fix:** Added `offline_count` threshold - devices only marked offline after 3 consecutive offline reports
+
+**Pattern:**
+```python
+# ✅ CORRECT: Use offline count threshold
+if consecutive_failures >= OFFLINE_THRESHOLD:
+    mark_device_offline(device_id)
+else:
+    increment_offline_count(device_id)
+
+# ❌ WRONG: Immediate offline marking
+if ping_fails:
+    mark_device_offline(device_id)  # Causes flickering
+```
+
+**See:** `critical-state-management.mdc` for full state management rules
+
+### Group Commands: Switches Don't Update When Group Turns Off
+
+**Symptoms:**
+- Turning off "Hallway Lights" group turns off bulbs but switches show as ON
+- Individual switch control works fine
+
+**Root Cause:** Group commands don't trigger individual 0x83 status packets from switches
+
+**Fix:** Call `sync_group_switches()` immediately after sending group command (fixed in v0.0.4.13)
+
+**Pattern:**
+```python
+# After sending group command:
+if g.mqtt_client:
+    await g.mqtt_client.sync_group_switches(self.id, state, self.name)
+```
+
+**Respects precedence:** Individual switch commands set `pending_command = True`, and sync skips those switches
+
+### OTP Submission Fails First Time
+
+**Symptoms:**
+- Entering valid OTP and submitting fails with "Invalid OTP. Please try again."
+- Submitting the same OTP a second time succeeds
+
+**Root Cause:** Token written to file before `self.token_cache` set in memory
+
+**Fix:** Set `self.token_cache` in memory FIRST, then attempt file write (fixed in v0.0.4.13)
+
+**Pattern:**
+```python
+# ✅ CORRECT: Memory first, file second
+self.token_cache = computed_token
+logger.info("✓ Token set in memory cache")
+
+# Then attempt file write
+write_success = await self.write_token_cache(computed_token)
+if not write_success:
+    logger.warning("Token set in memory but file write failed - will be lost on restart")
+```
+
+**Lesson learned:** Always set in-memory state first, then persist to disk
+
+## Anti-Patterns to Avoid
+
+### Auto-Refresh After ACKs
+
+```python
+# ❌ DON'T: Creates cascading refresh storms
+async def handle_ack():
+    update_state()
+    await trigger_status_refresh()  # BAD!
+```
+
+### Immediate Offline Marking
+
+```python
+# ❌ DON'T: Causes availability flickering
+if ping_fails:
+    device.online = False  # BAD!
+```
+
+### Missing Callback Registration
+
+```python
+# ❌ DON'T: Silent command failure
+await bridge_device.write(payload_bytes)  # BAD! No callback registered
+```
+
+### File Before Memory
+
+```python
+# ❌ DON'T: Race condition
+await write_token_to_file(token)
+self.token_cache = token  # BAD! Too late if file write was slow
+```
+
+## Debugging Tips
+
+### Check Callback Registration
+
+Look for this log pattern:
+```
+Callback NOT found for msg ID: 12345
+```
+
+**Fix:** Add callback registration before `bridge_device.write()`
+
+### Check Refresh Storms
+
+Look for rapid sequences of:
+```
+Triggering status refresh
+```
+
+**Fix:** Remove automatic refresh calls after ACKs
+
+### Check Offline Count Threshold
+
+Look for devices rapidly toggling:
+```
+Device 1234 offline
+Device 1234 online
+Device 1234 offline
+```
+
+**Fix:** Implement offline count threshold (see `critical-state-management.mdc`)
+
+### Check Token Cache
+
+Look for:
+```
+Token not found in cache
+```
+
+**Fix:** Ensure token set in memory before attempting file operations
+
+## Testing After Fixes
+
+### Test Rapid Toggling
+
+```bash
+# Test command throttling
+# Rapid click device 10 times in 2 seconds
+# Expected: First click works, rest throttled until ACK
+```
+
+### Test Availability Stability
+
+```bash
+# Watch logs for 60 seconds
+ha addons logs local_cync-controller --follow | grep "offline\|online"
+# Expected: No rapid flickering
+```
+
+### Test Group Commands
+
+```bash
+# Turn off group in Home Assistant
+# Expected: All switches and bulbs show OFF
+```
+
+## Related
+
+- `critical-commands.mdc` - Command handling patterns
+- `critical-state-management.mdc` - State management patterns
+- `architecture-concepts.mdc` - Protocol and architecture details
+- `docs/user/troubleshooting.md` - User-facing troubleshooting guide

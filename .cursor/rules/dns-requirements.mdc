@@ -1,0 +1,298 @@
+---
+description: DNS redirection setup requirements and patterns
+---
+
+# DNS Requirements for Cync Controller
+
+**CRITICAL:** The Cync Controller add-on **REQUIRES** DNS redirection to function. Without it, devices will continue using the cloud.
+
+## Why DNS Redirection is Required
+
+Cync devices are hardcoded to connect to specific cloud domains. DNS redirection intercepts these requests and points devices to your local Home Assistant server instead.
+
+## Required Domain Redirects
+
+### Newer Firmware (Most Common)
+```
+cm.gelighting.com → Your Home Assistant IP
+cm-sec.gelighting.com → Your Home Assistant IP
+```
+
+### Older Firmware (Legacy Devices)
+```
+cm-ge.xlink.cn → Your Home Assistant IP
+```
+
+**Note:** Check your DNS logs to determine which domains your devices use. You may need to redirect all three if you have mixed firmware versions.
+
+## Quick Check: Which Domains Do I Need?
+
+```bash
+# Check DNS logs for these patterns
+grep "xlink.cn" /var/log/dns.log
+grep "gelighting.com" /var/log/dns.log
+
+# If you see xlink.cn requests → redirect cm-ge.xlink.cn
+# If you see gelighting.com requests → redirect cm.gelighting.com and cm-sec.gelighting.com
+```
+
+## Implementation Patterns
+
+### Pattern 1: Selective DNS Routing (Recommended)
+
+**Benefits:**
+- ✅ Only affects specific Cync devices
+- ✅ Rest of network unaffected
+- ✅ Can still add new devices via app (phone not redirected)
+- ✅ Optimal for 6+ devices - only redirect always-on devices
+
+**Drawbacks:**
+- ⚠️ More complex setup
+- ⚠️ Router must support selective routing (Unbound views, etc.)
+
+**Best for:**
+- OPNsense with Unbound DNS
+- Networks with many Cync devices
+- When you want to control which devices connect locally
+
+### Pattern 2: Network-Wide Routing (Simple)
+
+**Benefits:**
+- ✅ Simple setup
+- ✅ Works with most DNS servers (Pi-hole, DNSCryptProxy)
+- ✅ All devices automatically redirected
+
+**Drawbacks:**
+- ⚠️ Cannot add new devices without disabling redirect
+- ⚠️ Phone app affected if on same network
+- ⚠️ Must disable to use Cync app
+
+**Best for:**
+- Pi-hole
+- DNSCryptProxy
+- Simple home networks
+- Few devices to manage
+
+## Router-Specific Setup
+
+### OPNsense with Unbound (Selective Routing)
+
+**Configuration:**
+```
+server:
+access-control-view: 10.0.2.216/32 cync-override-hass
+access-control-view: 10.0.2.223/32 cync-override-hass
+access-control-view: 10.0.2.225/32 cync-override-hass
+
+view:
+name: "cync-override-hass"
+local-zone: "homelab" static
+local-data: "cm.gelighting.com. 90 IN A 10.0.1.20"
+local-data: "cm-sec.gelighting.com. 90 IN A 10.0.1.20"
+local-data: "cm-ge.xlink.cn. 90 IN A 10.0.1.20"
+```
+
+**Key Points:**
+- Replace device IPs (10.0.2.x) with your Cync device IPs
+- Replace Home Assistant IP (10.0.1.20) with your HA server IP
+- **IMPORTANT:** Note trailing `.` after domain in `local-data:`
+- **IMPORTANT:** No leading `.` in `local-zone:`
+- Only listed device IPs will have DNS redirected
+
+**Setup Steps:**
+1. Go to Services → Unbound DNS → Custom Options
+2. Paste configuration (adjust IPs)
+3. Go to Services → Unbound DNS → General
+4. Click restart button
+5. Power cycle Cync devices
+
+### OPNsense with Unbound (Network-Wide)
+
+**Setup Steps:**
+1. Go to Services → Unbound DNS → Overrides
+2. Add host override for each domain:
+   - Domain: `cm.gelighting.com`
+   - IP: Your Home Assistant IP
+   - Repeat for `cm-sec.gelighting.com` and `cm-ge.xlink.cn`
+3. Click Save
+4. Power cycle Cync devices
+
+### Pi-hole (Network-Wide Only)
+
+**Setup Steps:**
+1. Navigate to Local DNS → DNS Records
+2. Add DNS record:
+   - Domain: `cm.gelighting.com`
+   - IP: Your Home Assistant IP
+3. Repeat for `cm-sec.gelighting.com` and `cm-ge.xlink.cn`
+4. Click Add
+5. Power cycle Cync devices
+
+**Limitation:** Pi-hole does not support selective DNS routing by requesting device IP.
+
+### DNSCryptProxy (Network-Wide Only)
+
+**Setup Steps:**
+1. Go to Services → DNSCryptProxy → Configuration
+2. Click Overrides tab
+3. Add overrides for each domain
+4. Click Save
+5. Power cycle Cync devices
+
+**Limitation:** Network-wide only, no selective routing.
+
+## Testing DNS Redirection
+
+### Before Power Cycling Devices
+
+```bash
+# Test from a machine on your network
+dig cm.gelighting.com
+
+# Expected output (if redirect is working):
+;; ANSWER SECTION:
+cm.gelighting.com.      3600    IN      A       10.0.1.20
+#                                                ^^^^^^^^^^^^
+#                                                Your HA IP
+
+# If you see a different IP (like 35.196.85.236), redirect is NOT working
+```
+
+### For Selective Routing
+
+```bash
+# If using selective routing, test from the redirected device IP
+# SSH into device or test from that specific IP
+dig cm.gelighting.com
+
+# From other devices, you should still see the cloud IP
+```
+
+### After Power Cycling Devices
+
+```bash
+# Check Home Assistant add-on logs
+ha addons logs local_cync-controller --follow
+
+# Look for connection attempts from devices
+# Should see: "New device connected from 10.0.2.216"
+```
+
+## Common Issues
+
+### Devices Not Connecting
+
+**Symptom:** Devices never appear in Home Assistant after DNS redirect
+
+**Causes:**
+1. DNS redirect not working (test with `dig`)
+2. Devices not power cycled (they cache DNS results)
+3. Wrong IP in DNS redirect (must be Home Assistant IP)
+4. Firewall blocking TCP port 23779
+
+**Fix:**
+```bash
+# 1. Verify DNS redirect
+dig cm.gelighting.com
+
+# 2. Check firewall rules
+# Allow TCP port 23779 from Cync device subnet to HA server
+
+# 3. Power cycle ALL Cync devices (not just restart)
+# - Unplug for 10 seconds
+# - Plug back in
+# - Wait 1-2 minutes for connection
+```
+
+### Cannot Add New Devices
+
+**Symptom:** Adding new devices fails at "Adding to Home" step
+
+**Cause:** DNS redirect prevents phone app from reaching cloud
+
+**Fix:**
+
+**Network-wide routing:**
+```bash
+# 1. Temporarily disable DNS overrides
+# 2. Add device using Cync app
+# 3. Re-enable DNS overrides
+# 4. Export new config from add-on
+# 5. Restart add-on
+# 6. Power cycle new device
+```
+
+**Selective routing:**
+```bash
+# Just add the device - your phone isn't redirected
+# Then add the device IP to your selective routing config
+```
+
+### Mix of New and Old Firmware
+
+**Symptom:** Some devices connect, others don't
+
+**Cause:** Different firmware versions use different domains
+
+**Fix:**
+```bash
+# Add DNS redirects for ALL three domains:
+# - cm.gelighting.com
+# - cm-sec.gelighting.com
+# - cm-ge.xlink.cn
+
+# Check logs to see which domains are being requested
+tail -f /var/log/dns.log | grep -E "(gelighting|xlink)"
+```
+
+## Best Practices
+
+### Device Selection for Selective Routing
+
+**Prefer these devices for local connection:**
+1. **LED strip controllers** ⭐⭐⭐⭐⭐ (best bridges)
+2. **Always-on bulbs** ⭐⭐⭐⭐ (downlights, wafer lights)
+3. **Plugs** ⭐⭐⭐ (good for always-on devices)
+4. **Switches** ⭐⭐⭐ (untested but likely good)
+
+**Target 4-6 always-on devices** for optimal performance.
+
+### Phone App Strategy
+
+**Do NOT redirect your phone's DNS:**
+- Keep phone using cloud for device management
+- Add new devices normally through app
+- Use Bluetooth for local control from app
+- Only redirect when debugging app ↔ cloud communication
+
+### Network Segmentation
+
+**If using VLANs:**
+```bash
+# Ensure Cync devices can reach Home Assistant
+# Allow TCP port 23779 from IoT VLAN to HA server
+
+# Example firewall rule:
+# Source: 192.168.2.0/24 (IoT VLAN)
+# Destination: 192.168.1.100 (HA server)
+# Port: 23779
+# Action: Allow
+```
+
+## Verification Checklist
+
+Before opening an issue, verify:
+
+- [ ] DNS redirect configured for correct domains
+- [ ] DNS test returns Home Assistant IP (`dig cm.gelighting.com`)
+- [ ] All Cync devices power cycled (unplugged 10+ seconds)
+- [ ] Firewall allows TCP 23779 from devices to HA
+- [ ] Add-on is running (`ha addons info local_cync-controller`)
+- [ ] Config file exported and loaded (`/homeassistant/.storage/cync-controller/config/cync_mesh.yaml`)
+- [ ] Waited 2-3 minutes after power cycle for connection attempts
+
+## Related
+
+- `docs/user/dns-setup.md` - Complete DNS setup guide with screenshots
+- `docs/user/troubleshooting.md` - Common DNS-related issues
+- `performance-tuning.mdc` - Optimizing which devices to connect

@@ -1,0 +1,322 @@
+---
+description: Quick reference for most common daily development tasks
+---
+
+# Daily Development Cheatsheet
+
+Most frequently used commands for daily Cync Controller development.
+
+## The 4-Step Workflow
+
+```bash
+# 1. Edit code
+# 2. Lint & fix
+npm run lint:python:fix && npm run format:python
+
+# 3. Rebuild (Python) or Restart (config/scripts)
+cd cync-controller && ./rebuild.sh
+
+# 4. Verify
+ha addons logs local_cync-controller --follow
+```
+
+## Most Common Commands
+
+### Linting (Run After Every Edit)
+
+```bash
+# Auto-fix and format (fastest)
+npm run lint:python:fix && npm run format:python
+
+# Check everything
+npm run lint
+
+# Format all file types
+npm run format
+```
+
+### Build & Restart
+
+```bash
+# Python changes → REBUILD
+cd cync-controller && ./rebuild.sh
+
+# Config/script changes → RESTART
+ha addons restart local_cync-controller
+
+# When in doubt → REBUILD (safer)
+cd cync-controller && ./rebuild.sh
+```
+
+### View Logs
+
+```bash
+# Follow logs in real-time
+ha addons logs local_cync-controller --follow
+
+# Last 100 lines
+ha addons logs local_cync-controller
+
+# Filter for errors
+ha addons logs local_cync-controller | grep -i error
+
+# Filter for specific device
+ha addons logs local_cync-controller --follow | grep "Hallway"
+```
+
+### Check Status
+
+```bash
+# Add-on status
+ha addons info local_cync-controller
+
+# List all add-ons
+ha addons list
+
+# Core status
+ha core info
+```
+
+## Common Development Tasks
+
+### Test Entity Rediscovery
+
+```bash
+# 1. Make changes to MQTT discovery code
+# 2. Rebuild
+cd cync-controller && ./rebuild.sh
+
+# 3. Clean entities
+sudo python3 scripts/delete-mqtt-safe.py --restart
+
+# 4. Verify in UI
+# Settings → Devices & Services → Entities
+```
+
+### Configure Add-on via API
+
+```bash
+# Show current config
+./scripts/configure-addon.sh get
+
+# Restart add-on
+./scripts/configure-addon.sh restart
+
+# View logs
+./scripts/configure-addon.sh logs
+```
+
+### Fresh Home Assistant Setup
+
+```bash
+# Automated complete setup
+./scripts/setup-fresh-ha.sh
+
+# Creates user, installs EMQX, configures add-on
+```
+
+## Quick Fixes
+
+### Fix Linting Errors
+
+```bash
+# Auto-fix most issues
+npm run lint:python:fix
+
+# Format code
+npm run format:python
+
+# Check if fixed
+npm run lint
+```
+
+### Restart Everything
+
+```bash
+# Restart Home Assistant Core
+ha core restart
+
+# Restart Supervisor
+ha supervisor restart
+
+# Restart specific add-on
+ha addons restart local_cync-controller
+```
+
+### Clean MQTT Entities
+
+```bash
+# Preview
+sudo python3 scripts/delete-mqtt-safe.py --dry-run
+
+# Delete and restart
+sudo python3 scripts/delete-mqtt-safe.py --restart
+```
+
+## Git Workflow
+
+```bash
+# Stage changes
+git add -p
+
+# Show status
+git status
+
+# Show diff
+git diff
+
+# Create branch
+git checkout -b feature/my-feature
+
+# NOTE: Agent stages files, user commits
+```
+
+## Testing
+
+### Unit Tests
+
+```bash
+cd cync-controller
+pytest tests/unit/                    # All tests
+pytest tests/unit/test_devices.py     # Specific file
+pytest -k "test_set_power"            # Pattern match
+```
+
+### Browser Tests
+
+```bash
+# Delete specific entities
+npx ts-node scripts/playwright/delete-mqtt-entities.ts "Entity Name"
+```
+
+## Troubleshooting Quick Checks
+
+### Devices Not Connecting
+
+```bash
+# 1. Check DNS
+dig cm.gelighting.com
+# Should return your HA IP
+
+# 2. Check add-on running
+ha addons info local_cync-controller
+
+# 3. Check logs for connection attempts
+ha addons logs local_cync-controller | grep "New device"
+
+# 4. Verify config exists
+ls -la /homeassistant/.storage/cync-controller/config/
+```
+
+### Commands Not Working
+
+```bash
+# Check MQTT client connected
+ha addons logs local_cync-controller | grep "MQTT.*connected"
+
+# Check for callback registration errors
+ha addons logs local_cync-controller | grep "Callback NOT found"
+
+# Verify entities exist
+ha states list | grep cync
+```
+
+### Build Failures
+
+```bash
+# Check Python syntax
+cd cync-controller && ruff check src/
+
+# Check for import errors
+cd cync-controller && python3 -m py_compile src/cync_controller/*.py
+
+# Rebuild from scratch
+cd cync-controller && ha addons rebuild local_cync-controller
+```
+
+## File Locations
+
+```bash
+# Add-on config
+/homeassistant/.storage/cync-controller/config/cync_mesh.yaml
+
+# Add-on logs
+ha addons logs local_cync-controller
+
+# Credentials
+/workspaces/hass-addons/hass-credentials.env
+
+# Python source
+/workspaces/hass-addons/cync-controller/src/cync_controller/
+```
+
+## Environment Variables
+
+```bash
+# Python rebuild detection
+CYNC_MAX_TCP_CONN=8
+CYNC_CMD_BROADCASTS=3
+CYNC_TCP_WHITELIST='10.0.2.20, 10.0.2.24'
+
+# Logging
+CYNC_LOG_FORMAT=both
+CYNC_PERF_TRACKING=true
+
+# Cloud relay
+# (Don't use for normal operation - commands don't work!)
+```
+
+## Quick Reference: When to Rebuild vs Restart
+
+| Change Type | Action | Command |
+|-------------|--------|---------|
+| Python files (`.py`) | **REBUILD** | `cd cync-controller && ./rebuild.sh` |
+| `config.yaml` | Restart | `ha addons restart local_cync-controller` |
+| `run.sh` | Restart | `ha addons restart local_cync-controller` |
+| `static/*` (HTML) | Restart | `ha addons restart local_cync-controller` |
+| `pyproject.toml` | **REBUILD** | `cd cync-controller && ./rebuild.sh` |
+| When unsure | **REBUILD** | `cd cync-controller && ./rebuild.sh` |
+
+## Keyboard Shortcuts (in logs)
+
+```bash
+# Follow logs
+ha addons logs local_cync-controller --follow
+
+# Ctrl+C to stop following
+# Ctrl+Z to background
+# fg to resume
+```
+
+## Time Savers
+
+```bash
+# Alias in your shell
+alias ha-logs='ha addons logs local_cync-controller --follow'
+alias ha-rebuild='cd /workspaces/hass-addons/cync-controller && ./rebuild.sh'
+alias ha-restart='ha addons restart local_cync-controller'
+alias ha-lint='npm run lint:python:fix && npm run format:python'
+
+# Then use:
+ha-lint
+ha-rebuild
+ha-logs
+```
+
+## Common Mistakes to Avoid
+
+- ❌ Forgetting to lint before rebuild
+- ❌ Restarting instead of rebuilding after Python changes
+- ❌ Not checking logs after changes
+- ❌ Hardcoding credentials
+- ❌ Committing without staging files individually
+- ❌ Enabling cloud relay for normal use (commands don't work!)
+- ❌ Trying to delete MQTT entities while add-on running
+
+## Related Rules
+
+- `development-workflow.mdc` - Complete 4-step workflow
+- `linting-mandatory.mdc` - Linting requirements
+- `helper-scripts.mdc` - Automation scripts
+- `common-commands.mdc` - Full command reference
+- `python-changes-require-rebuild.mdc` - Why rebuild is required
