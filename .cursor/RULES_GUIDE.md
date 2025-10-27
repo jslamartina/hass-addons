@@ -1,129 +1,101 @@
 # Cursor Rules Guide
 
-This project uses Cursor Rules to provide AI agents (and human developers) with consistent guidance on code organization, standards, and workflows.
-
-## Available Rules
+This project uses Cursor Rules for all development guidance. These rules replaced the old `AGENTS.md` file to provide more targeted, context-aware guidance.
 
 All rules are stored in `.cursor/rules/` with the `.mdc` extension.
 
-### 🚀 Start Here
+## Rules Index
 
-- **[quick-start.mdc](.cursor/rules/quick-start.mdc)** - Overview for new contributors
-  - Most common commands
-  - Development workflow
-  - Rules to remember
+### Always Apply Rules
 
-### 🔧 Development Guidelines
+These rules are always loaded when working in the repository:
 
-- **[python-changes-require-rebuild.mdc](.cursor/rules/python-changes-require-rebuild.mdc)** - Python workflow
-  - When Python files change, you MUST rebuild
-  - Linting requirements
-  - Verification steps
+1. **[development-workflow.mdc](.cursor/rules/development-workflow.mdc)** - 4-step development process
+2. **[linting-mandatory.mdc](.cursor/rules/linting-mandatory.mdc)** - Code quality requirements
+3. **[git-practices.mdc](.cursor/rules/git-practices.mdc)** - Git and commit guidelines
+4. **[logging-mandatory.mdc](.cursor/rules/logging-mandatory.mdc)** - Modern structured logging requirements
 
-- **[shell-scripting.mdc](.cursor/rules/shell-scripting.mdc)** - Shell script standards
-  - Idempotency requirements
-  - Error handling patterns
-  - Logging conventions
-  - Supervisor API access
+### Critical Guardrails
 
-- **[linting-mandatory.mdc](.cursor/rules/linting-mandatory.mdc)** - Code quality
-  - Linting is required before any commit
-  - Standard commands
-  - What gets checked
+These prevent common mistakes and are always loaded:
 
-### 🏗️ Architecture & Implementation
+5. **[critical-commands.mdc](.cursor/rules/critical-commands.mdc)** - Command handling rules
+6. **[critical-state-management.mdc](.cursor/rules/critical-state-management.mdc)** - State management rules
+7. **[critical-credentials.mdc](.cursor/rules/critical-credentials.mdc)** - Credential handling rules
+8. **[critical-docker.mdc](.cursor/rules/critical-docker.mdc)** - Docker handling rules
 
-- **[token-creation-flow.mdc](.cursor/rules/token-creation-flow.mdc)** - LLAT system
-  - Three-phase token creation
-  - Onboarding bootstrap
-  - Key files and workflows
+### File-Specific Rules
 
-- **[mqtt-integration.mdc](.cursor/rules/mqtt-integration.mdc)** - MQTT & discovery
-  - Discovery protocol details
-  - Entity configuration
-  - Common issues and fixes
+Rules that only apply to specific file types (Python, shell scripts, etc.):
 
-### ⚙️ Environment & Setup
+11. **[python-changes-require-rebuild.mdc](.cursor/rules/python-changes-require-rebuild.mdc)** - Python rebuild workflow
+12. **[shell-scripting.mdc](.cursor/rules/shell-scripting.mdc)** - Shell script standards
+13. **[mqtt-integration.mdc](.cursor/rules/mqtt-integration.mdc)** - MQTT discovery patterns
 
-- **[devcontainer-quirks.mdc](.cursor/rules/devcontainer-quirks.mdc)** - Dev environment
-  - Docker and Supervisor setup
-  - Credentials and access
-  - Supervisor API access patterns
-  - Common commands
+### Reference Rules
 
-- **[mcp-tools-guide.mdc](.cursor/rules/mcp-tools-guide.mdc)** - MCP tools usage
-  - When to use each MCP server
-  - Tool usage priorities
-  - Common patterns
-  - Troubleshooting
+Context-specific rules that can be referenced on demand:
 
-### ✋ Critical Rules
+#### Quick Reference & Navigation
+14. **[quick-start.mdc](.cursor/rules/quick-start.mdc)** - Navigation index to all rules
+15. **[daily-dev-cheatsheet.mdc](.cursor/rules/daily-dev-cheatsheet.mdc)** - Most common daily commands
 
-- **[important-dont-rules.mdc](.cursor/rules/important-dont-rules.mdc)** - Prevent bugs
-  - Don't bypass authentication
-  - Don't auto-refresh after ACKs
-  - Don't hardcode credentials
-  - Other critical "DON'T" rules
+#### Setup & Requirements
+16. **[dns-requirements.mdc](.cursor/rules/dns-requirements.mdc)** - DNS redirection setup (REQUIRED)
+17. **[token-creation-flow.mdc](.cursor/rules/token-creation-flow.mdc)** - Automated LLAT creation
+18. **[devcontainer-quirks.mdc](.cursor/rules/devcontainer-quirks.mdc)** - Dev environment setup
 
-### 📋 Contribution Process
+#### Helper Tools & Automation
+19. **[helper-scripts.mdc](.cursor/rules/helper-scripts.mdc)** - Automation scripts and tools
+20. **[mqtt-entity-cleanup.mdc](.cursor/rules/mqtt-entity-cleanup.mdc)** - Entity deletion workflows
+21. **[common-commands.mdc](.cursor/rules/common-commands.mdc)** - Command reference
+22. **[mcp-tools-guide.mdc](.cursor/rules/mcp-tools-guide.mdc)** - MCP tools usage
 
-- **[pr-checklist.mdc](.cursor/rules/pr-checklist.mdc)** - PR requirements
-  - Code quality checklist
-  - Testing requirements
-  - Documentation updates
-  - Files not to commit
+#### Testing & Debugging
+23. **[testing-workflows.mdc](.cursor/rules/testing-workflows.mdc)** - Testing procedures
+24. **[ai-browser-testing.mdc](.cursor/rules/ai-browser-testing.mdc)** - Playwright browser automation
+25. **[debugging-guide.mdc](.cursor/rules/debugging-guide.mdc)** - Debug techniques
+26. **[known-bugs-workarounds.mdc](.cursor/rules/known-bugs-workarounds.mdc)** - Bug patterns and fixes
+
+#### Architecture & Patterns
+27. **[architecture-concepts.mdc](.cursor/rules/architecture-concepts.mdc)** - Key architectural patterns
+28. **[repository-structure.mdc](.cursor/rules/repository-structure.mdc)** - Project structure
+29. **[supervisor-api-access.mdc](.cursor/rules/supervisor-api-access.mdc)** - Supervisor API patterns
+30. **[cloud-relay-patterns.mdc](.cursor/rules/cloud-relay-patterns.mdc)** - Cloud relay mode usage
+
+#### Performance & Optimization
+31. **[performance-tuning.mdc](.cursor/rules/performance-tuning.mdc)** - Performance tuning and optimization
+32. **[logging-examples.mdc](.cursor/rules/logging-examples.mdc)** - Logging patterns
+
+#### Documentation & Process
+33. **[documentation-archiving.mdc](.cursor/rules/documentation-archiving.mdc)** - Documentation archiving
+34. **[pr-checklist.mdc](.cursor/rules/pr-checklist.mdc)** - PR submission checklist
+
+## When Each Rule Applies
+
+- **Always Apply:** Automatically loaded for all development tasks
+- **Globs:** Auto-applied when editing matching files (e.g., Python files, shell scripts)
+- **Reference:** On-demand, referenced by other rules or when specifically needed
 
 ## How AI Uses These Rules
 
-When the AI agent works on this repository, it will:
+1. **Automatically applies** rules marked with `alwaysApply: true`
+2. **Applies file-specific rules** based on glob patterns when editing those files
+3. **References on demand** for context-specific guidance
 
-1. **Always apply** rules marked with `alwaysApply: true`
-   - These are always visible and enforced
+## Development Workflow
 
-2. **Apply file-specific rules** based on glob patterns
-   - Python files trigger Python rebuild rules
-   - Shell scripts trigger shell scripting rules
-   - etc.
+1. Follow **development-workflow.mdc** for the standard 4-step process
+2. Reference **quick-start.mdc** for navigation overview if needed
+3. Reference specific rules as needed during development
 
-3. **Reference on demand** for manually applied rules
-   - You can ask the AI to reference a specific rule
-   - Helpful for understanding workflow before starting
+## See Also
 
-## How Developers Use These Rules
-
-1. **Bookmark key rules** like [quick-start.mdc](.cursor/rules/quick-start.mdc)
-2. **Reference before starting** work on a specific area
-3. **Share with team** to ensure consistent practices
-4. **Update together** when processes change
-
-## Adding New Rules
-
-To add a new rule:
-
-1. Create a file in `.cursor/rules/` with `.mdc` extension
-2. Add frontmatter with metadata (see examples)
-3. Write the rule in Markdown with relevant details
-4. Reference files using `[filename.ext](mdc:filename.ext)` format
-5. Commit and share with team
-
-## Structure
-
-Each rule file contains:
-
-```markdown
----
-alwaysApply: true          # or globs: pattern
-description: What this is  # Optional description for UI
----
-
-# Title
-
-Rule content in Markdown...
-```
-
-For more details on creating rules, see Cursor's documentation.
+- `CONTRIBUTING.md` - Full contribution guidelines
+- `docs/developer/architecture.md` - Protocol details
+- `docs/user/troubleshooting.md` - Known issues and solutions
+- `.devcontainer/README.md` - Devcontainer setup
 
 ---
 
-**Last Updated:** 2025-10-23  
-**Maintainer:** AI Agent & Development Team
+**Note:** These rules replaced the old `AGENTS.md` file to provide more modular, context-aware guidance.

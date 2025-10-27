@@ -1,0 +1,104 @@
+---
+description: Testing workflows and procedures
+---
+
+# Testing Workflows
+
+## Automated Configuration Testing
+
+**`scripts/configure-addon.sh`** - Programmatic configuration via Supervisor API:
+
+```bash
+# View current configuration
+./scripts/configure-addon.sh get
+
+# Set cloud relay options
+./scripts/configure-addon.sh set-cloud-relay true true false
+
+# Apply test presets
+./scripts/configure-addon.sh preset-baseline              # LAN-only mode
+./scripts/configure-addon.sh preset-relay-with-forward    # Cloud relay enabled
+./scripts/configure-addon.sh preset-relay-debug           # With packet logging
+./scripts/configure-addon.sh preset-lan-only              # Privacy mode
+
+# Utility commands
+./scripts/configure-addon.sh restart
+./scripts/configure-addon.sh logs
+```
+
+## Comprehensive Test Suite
+
+**`scripts/test-cloud-relay.sh`** - Full automated test suite:
+
+```bash
+# Run full automated test suite (all phases)
+./scripts/test-cloud-relay.sh
+
+# Tests:
+# - Phase 1: Baseline LAN-only Mode
+# - Phase 2: Cloud Relay with Forwarding
+# - Phase 3: Debug Packet Logging
+# - Phase 4: LAN-only Relay (Privacy Mode)
+# - Phase 5: Packet Injection
+# - Phase 6: Return to Baseline
+```
+
+**Advantages:**
+- No manual UI interaction required
+- Repeatable and scriptable
+- Fast configuration switching (~15 seconds)
+- Automated validation of expected behaviors
+- Works in devcontainer environment
+
+## Full Rebuild Workflow (For Schema Changes)
+
+When adding new configuration options or changing the schema:
+
+```bash
+# 1. Stop the add-on
+ha addons stop local_cync-controller
+
+# 2. Remove all cached Docker images
+docker rmi -f $(docker images -q local/aarch64-addon-cync-controller)
+
+# 3. Clear Docker build cache
+docker builder prune -af
+
+# 4. Restart Supervisor to clear metadata cache
+ha supervisor restart
+sleep 10  # Wait for supervisor to fully restart
+
+# 5. Rebuild with fresh cache
+ha addons rebuild local_cync-controller
+
+# 6. Verify new version is detected
+ha addons info local_cync-controller | grep -E "^version"
+
+# 7. Update (if version changed)
+ha addons update local_cync-controller
+
+# 8. Test with automated tools
+./scripts/configure-addon.sh get
+./scripts/test-cloud-relay.sh
+```
+
+## Manual UI Verification (Optional)
+
+1. Hard refresh browser (`Ctrl + Shift + R`)
+2. Navigate: Settings → Add-ons → [Your Add-on]
+3. Verify version number matches expected version
+4. Click "Configuration" tab
+5. Verify new configuration sections appear
+6. Make configuration changes and click "Save"
+7. Restart add-on from Info tab
+8. Check logs for configuration being applied
+
+## Browser Automation with Playwright
+
+See `docs/developer/browser-automation.md` for detailed patterns and best practices.
+
+**Key points:**
+- Prefer API tools over browser automation (see `scripts/configure-addon.sh`)
+- Home Assistant UI uses Shadow DOM - use `getByRole` selectors that pierce through
+- Avoid `{force: true}` clicks - they bypass safety checks
+- Credentials: Username `dev`, Password `dev` (see `hass-credentials.env`)

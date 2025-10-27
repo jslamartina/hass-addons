@@ -1,0 +1,77 @@
+---
+alwaysApply: true
+description: 4-step development workflow (edit, lint, rebuild, verify)
+---
+
+# Development Workflow
+
+## Critical: Python vs Config Changes
+
+**Python files (`.py`)** → **MUST REBUILD**:
+
+```bash
+cd cync-controller && ./rebuild.sh
+# Or: ha addons rebuild local_cync-controller
+```
+
+**Config/scripts** (`config.yaml`, `run.sh`, `static/*`) → **JUST RESTART**:
+
+```bash
+ha addons restart local_cync-controller
+```
+
+**Why?** Python packages are baked into the Docker image at build time. Just restarting won't pick up Python changes.
+
+## Standard 4-Step Workflow
+
+### 1. Make Your Changes
+Edit Python, config, or script files as needed.
+
+### 2. Run Linters (MANDATORY)
+```bash
+# Python files
+npm run lint:python:fix    # Auto-fix issues
+npm run format:python      # Auto-format
+
+# Shell scripts
+npm run lint:shell         # Check for warnings
+
+# Everything
+npm run lint               # Check all (Python + Shell + Formatting)
+npm run format             # Format all files
+```
+
+**Fix ALL issues before proceeding** - no exceptions.
+
+### 3. Build or Restart
+```bash
+# If you edited Python files:
+cd cync-controller && ./rebuild.sh
+
+# If you only edited config/scripts:
+ha addons restart local_cync-controller
+```
+
+### 4. Verify
+```bash
+# Check logs
+ha addons logs local_cync-controller --follow
+
+# Check entities (Developer Tools → States → Filter "cync")
+```
+
+## Delete Stale MQTT Entities
+
+Use when you changed `suggested_area` or other discovery fields:
+
+```bash
+# Automated (recommended)
+sudo python3 scripts/delete-mqtt-safe.py [--dry-run]
+ha addons restart local_cync-controller
+```
+
+**Manual UI approach**: Settings → Devices & Services → Entities → Enter selection mode → Select entities → Action → Delete selected
+
+## When In Doubt
+
+**Always rebuild** - it's safer and only takes ~30 seconds more than restart.

@@ -1,0 +1,55 @@
+---
+description: Common development commands reference
+---
+
+# Common Commands Reference
+
+## Add-on Operations
+
+```bash
+ha addons logs local_cync-controller                  # View add-on logs
+ha addons logs local_cync-controller --follow         # Follow logs
+ha addons restart local_cync-controller               # Restart add-on
+ha addons stop local_cync-controller                  # Stop add-on
+ha addons start local_cync-controller                  # Start add-on
+cd cync-controller && ./rebuild.sh                    # Rebuild add-on (after Python changes)
+ha addons rebuild local_cync-controller                 # Alternative rebuild
+docker exec -it addon_local_cync-controller /bin/bash # Access add-on container
+```
+
+## Linting & Formatting
+
+```bash
+npm run lint                                          # Run all linters
+npm run lint:python:fix                               # Auto-fix Python issues
+npm run lint:python                                   # Check Python only
+npm run lint:shell                                    # Check shell scripts
+npm run format                                        # Format all files
+npm run format:python                                 # Format Python
+ruff check .                                          # Check Python with Ruff
+./scripts/lint-all.sh                                # Alternative: via shell script
+```
+
+## Testing
+
+```bash
+npm run test:unit                                     # Run unit tests
+npm run test:unit:cov                                 # With coverage
+npm run test:unit:fast                                # Stop on first failure
+./scripts/test-cloud-relay.sh                        # Cloud relay test suite
+```
+
+## Debugging
+
+```bash
+tail -f /tmp/supervisor_run.log                       # Supervisor logs
+docker exec addon_local_cync-controller env | grep CYNC_  # Check environment
+sudo python3 scripts/delete-mqtt-safe.py --dry-run    # Clean MQTT entities
+```
+
+## Configuration
+
+```bash
+./scripts/configure-addon.sh get                      # View config
+./scripts/configure-addon.sh preset-baseline          # Apply preset
+```

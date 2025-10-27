@@ -1,5 +1,6 @@
 ---
 globs: scripts/**/*.sh,cync-controller/*.sh
+description: Shell script standards and requirements
 ---
 
 # Shell Script Guidelines

@@ -1,4 +1,5 @@
 ---
+alwaysApply: false
 description: PR submission checklist and guidelines
 ---
 
@@ -23,10 +24,10 @@ Before submitting a PR, ensure all items are complete.
 
 ## Documentation
 
-- ✅ Updated [CHANGELOG.md](mdc:CHANGELOG.md) for user-facing changes
+- ✅ Updated `cync-controller/CHANGELOG.md` for user-facing changes
 - ✅ Added comments for complex code sections
-- ✅ Updated [docs/developer/](mdc:docs/developer/) if implementation details changed
-- ✅ Updated [docs/user/](mdc:docs/user/) if user-facing behavior changed
+- ✅ Updated `docs/developer/` if implementation details changed
+- ✅ Updated `docs/user/` if user-facing behavior changed
 
 ## Commits & PR
 
@@ -60,5 +61,6 @@ Before submitting a PR, ensure all items are complete.
 
 ## Related
 
-- [CONTRIBUTING.md](mdc:CONTRIBUTING.md) - Full guidelines
-- [AGENTS.md](mdc:AGENTS.md) - Development workflow
+- See `CONTRIBUTING.md` - Full contribution guidelines
+- See `development-workflow.mdc` - Development process
+- See `linting-mandatory.mdc` - Code quality requirements

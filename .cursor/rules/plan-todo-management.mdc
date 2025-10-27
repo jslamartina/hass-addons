@@ -1,0 +1,79 @@
+---
+alwaysApply: true
+description: How to properly use create_plan and todo_write tools
+---
+
+# Plan and Todo Management
+
+## Core Principle
+
+**One plan per session** - Update the same plan file; don't create new ones.
+
+## Tools
+
+### create_plan
+
+**Purpose:** Manages the plan file (.plan.md) for current session.
+
+**CRITICAL: NEVER edit plan files directly with search_replace, write, or any other file tool. ALWAYS use create_plan.**
+
+**First call:**
+```python
+create_plan(
+    name="Short Name",    # Only on FIRST call
+    overview="1-2 sentence summary",
+    plan="# Title\n\nContent...",
+    todos=[{"id": "task-1", "content": "Task", "status": "pending"}]
+)
+```
+
+**Updating:**
+- Full replacement: Provide new `plan` string
+- Partial edit: Use `old_str`/`new_str` for specific sections
+- Only todos: Leave `plan=""`, provide `todos` array
+
+**WRONG:**
+```python
+# ❌ NEVER DO THIS
+search_replace("/path/to/file.plan.md", old_str="...", new_str="...")
+write("/path/to/file.plan.md", contents="...")
+```
+
+**CORRECT:**
+```python
+# ✅ ALWAYS DO THIS
+create_plan(old_str="...", new_str="...", plan="")
+create_plan(todos=[...])
+```
+
+### todo_write
+
+**Purpose:** Manages workspace task tracking (separate from plan todos).
+
+**Usage:**
+```python
+# Update specific todos
+todo_write(merge=True, todos=[{"id": "x", "content": "...", "status": "completed"}])
+
+# Replace all todos
+todo_write(merge=False, todos=[...only keep these...])
+```
+
+## Workflow
+
+**Adding a phase:** Say "update the plan to add Phase 2" not "create a new plan"
+
+```python
+create_plan(old_str="## Phase 1\n...", new_str="## Phase 1\n...\n\n## Phase 2\n...", todos=[...keep existing + add new...])
+```
+
+**Syncing:** Plan todos (`create_plan`) and workspace todos (`todo_write`) are separate—keep them in sync when completing tasks.
+
+**After task completion:** Update both with completed status.
+
+## Rules
+
+- One plan per session (update, don't create new)
+- Use `old_str`/`new_str` for partial edits; full `plan` for restructuring
+- `todo_write(merge=False)` replaces all todos (use to delete)
+- Keep plan and workspace todos synchronized

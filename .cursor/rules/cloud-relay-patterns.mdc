@@ -1,0 +1,363 @@
+---
+description: Cloud relay mode patterns and limitations
+---
+
+# Cloud Relay Mode Patterns
+
+Cloud relay mode enables the add-on to act as a Man-in-the-Middle (MITM) proxy between devices and Cync cloud for packet inspection and debugging.
+
+## Critical Limitation
+
+**⚠️ Cloud relay mode is READ-ONLY for monitoring and inspection.**
+
+**Commands from Home Assistant DO NOT work in relay mode:**
+- You'll see `No TCP bridges available!` errors in logs
+- Devices connect through relay but ignore command packets
+- Only status updates (0x83 packets) flow correctly
+
+**Rule:** Disable relay mode for normal local control.
+
+## When to Enable Relay Mode
+
+### Good Use Cases ✅
+
+1. **Protocol Analysis**
+   - Reverse engineering packet structures
+   - Understanding device communication patterns
+   - Documenting new packet types
+
+2. **Debugging Device Behavior**
+   - Observing what devices send to cloud
+   - Comparing local vs cloud communication
+   - Testing firmware differences
+
+3. **Packet Inspection with Forwarding**
+   - Keep devices working (forward to cloud)
+   - Monitor traffic in real-time
+   - Log suspicious patterns
+
+4. **LAN-Only with Inspection**
+   - Block cloud access (`forward_to_cloud: false`)
+   - Log what devices attempt to send
+   - Privacy-focused monitoring
+
+### Bad Use Cases ❌
+
+- ❌ Normal local control (commands don't work!)
+- ❌ Production use (read-only limitation)
+- ❌ When you need full bidirectional control
+- ❌ Daily usage of Home Assistant entities
+
+## Operating Modes
+
+### Mode 1: Baseline (Recommended for Daily Use)
+
+```yaml
+cloud_relay:
+  enabled: false
+```
+
+**Behavior:**
+- ✅ Full local control
+- ✅ Commands work from Home Assistant
+- ✅ Devices connect directly to add-on
+- ❌ No packet inspection
+- ❌ No cloud forwarding
+
+**When to use:** Normal operation, daily use
+
+### Mode 2: Relay with Cloud Forwarding
+
+```yaml
+cloud_relay:
+  enabled: true
+  forward_to_cloud: true
+  debug_packet_logging: false
+```
+
+**Behavior:**
+- ✅ Devices still work (cloud receives packets)
+- ✅ Basic packet logging
+- ❌ Commands from HA don't work
+- ⚠️ Devices fall back to cloud if relay fails
+
+**When to use:** 
+- Monitor device traffic while keeping devices functional
+- Cloud backup during testing
+- Observing protocol patterns
+
+### Mode 3: Relay with Debug Logging
+
+```yaml
+cloud_relay:
+  enabled: true
+  forward_to_cloud: true
+  debug_packet_logging: true
+```
+
+**Behavior:**
+- ✅ Detailed packet parsing logs
+- ✅ All packets logged with structure
+- ✅ Cloud still receives packets
+- ❌ Commands from HA don't work
+- ⚠️ Verbose logs (can be overwhelming)
+
+**When to use:**
+- Protocol reverse engineering
+- Understanding specific packet types
+- Debugging unusual device behavior
+
+### Mode 4: LAN-Only with Inspection (Privacy Mode)
+
+```yaml
+cloud_relay:
+  enabled: true
+  forward_to_cloud: false
+  debug_packet_logging: true
+```
+
+**Behavior:**
+- ✅ Blocks all cloud communication
+- ✅ Logs what devices attempt to send
+- ❌ Devices lose cloud functionality
+- ❌ Commands from HA don't work
+- ⚠️ Devices may show as offline in Cync app
+
+**When to use:**
+- Privacy-focused monitoring
+- Preventing cloud telemetry
+- Testing pure LAN operation
+
+## Configuration Reference
+
+```yaml
+cloud_relay:
+  enabled: false                      # Enable relay mode
+  forward_to_cloud: true              # Forward packets to cloud
+  cloud_server: "35.196.85.236"       # Cync cloud server IP
+  cloud_port: 23779                   # Cync cloud port
+  debug_packet_logging: false         # Verbose packet logging
+  disable_ssl_verification: false     # DEBUG MODE ONLY
+```
+
+### Security Warning
+
+**`disable_ssl_verification: true` = DEBUG MODE**
+
+When enabled:
+- ⚠️ No SSL certificate verification
+- ⚠️ Vulnerable to MITM attacks
+- ⚠️ Only use on isolated test networks
+- ⚠️ Never use in production
+
+**Only enable for:**
+- Testing with self-signed certificates
+- Development on isolated networks
+- Protocol debugging
+
+## Switching Modes
+
+### Enable Relay Mode
+
+```bash
+# Using automation script
+./scripts/configure-addon.sh preset-relay-with-forward
+
+# Or with debug logging
+./scripts/configure-addon.sh preset-relay-debug
+
+# Restart is automatic
+```
+
+### Disable Relay Mode (Return to Normal)
+
+```bash
+# Using automation script
+./scripts/configure-addon.sh preset-baseline
+
+# Add-on restarts automatically
+# Commands from HA now work
+```
+
+### Manual Configuration
+
+```bash
+# Edit add-on configuration via UI:
+# Settings → Add-ons → Cync Controller → Configuration tab
+
+# Or use Supervisor API
+./scripts/configure-addon.sh set-cloud-relay false false false
+```
+
+## Packet Inspection Workflow
+
+### Step 1: Enable Relay with Debug Logging
+
+```bash
+./scripts/configure-addon.sh preset-relay-debug
+```
+
+### Step 2: Monitor Logs
+
+```bash
+# Follow logs in real-time
+ha addons logs local_cync-controller --follow
+
+# Filter for packet logs
+ha addons logs local_cync-controller --follow | grep "packet"
+
+# Look for specific packet types
+ha addons logs local_cync-controller --follow | grep "0x83\|0x73\|0x43"
+```
+
+### Step 3: Trigger Device Action
+
+**Example:** Turn on light in Cync app
+
+**Expected logs:**
+```
+[CloudRelay] → Cloud: Packet type 0x73 (Control command)
+[CloudRelay] ← Cloud: Packet type 0x48 (ACK)
+[CloudRelay] ← Cloud: Packet type 0x83 (Status update)
+```
+
+### Step 4: Analyze Packet Structure
+
+```bash
+# Save logs for analysis
+ha addons logs local_cync-controller > relay-capture.log
+
+# Parse packets
+grep "Parsed packet" relay-capture.log
+
+# Export to analysis tools
+```
+
+### Step 5: Return to Normal Mode
+
+```bash
+# Disable relay to restore local control
+./scripts/configure-addon.sh preset-baseline
+```
+
+## Testing Cloud Relay
+
+```bash
+# Automated test suite
+./scripts/test-cloud-relay.sh
+
+# Tests all modes:
+# - Baseline (LAN-only)
+# - Relay with forwarding
+# - Debug packet logging
+# - LAN-only relay
+# - Packet injection
+# - Return to baseline
+```
+
+## Known Issues
+
+### Commands Don't Work in Relay Mode
+
+**Symptom:** Turning on lights in HA has no effect
+
+**Cause:** Relay mode is read-only, commands not forwarded properly
+
+**Fix:** Disable relay mode for normal operation
+```bash
+./scripts/configure-addon.sh preset-baseline
+```
+
+### Devices Show Offline
+
+**Symptom:** Devices appear offline in HA while relay enabled
+
+**Cause:** Relay doesn't maintain bidirectional TCP connections properly
+
+**Fix:** 
+- Keep relay mode temporary
+- Return to baseline for daily use
+- Only use relay for packet capture sessions
+
+### SSL Verification Failures
+
+**Symptom:** Logs show SSL certificate verification errors
+
+**Cause:** Cloud certificate validation failing
+
+**Temporary workaround (INSECURE):**
+```yaml
+cloud_relay:
+  enabled: true
+  disable_ssl_verification: true  # ONLY FOR DEBUGGING
+```
+
+**Proper fix:** Investigate certificate chain, update CA certificates
+
+## Best Practices
+
+### DO's ✅
+
+- ✅ Use relay mode temporarily for specific debugging tasks
+- ✅ Return to baseline mode for daily use
+- ✅ Enable debug logging only when needed
+- ✅ Forward to cloud to keep devices functional during testing
+- ✅ Document findings from packet inspection
+
+### DON'Ts ❌
+
+- ❌ Leave relay mode enabled for normal use
+- ❌ Expect commands to work in relay mode
+- ❌ Use `disable_ssl_verification` outside test environments
+- ❌ Run relay mode 24/7 (temporary debugging only)
+- ❌ Forget to disable relay mode after debugging
+
+## Troubleshooting
+
+### "No TCP bridges available!" in Logs
+
+**Cause:** Relay mode enabled but devices not connecting as TCP bridges
+
+**Fix:** This is expected behavior - disable relay for local control
+
+### High Log Volume
+
+**Cause:** `debug_packet_logging: true` logs every packet
+
+**Fix:** Disable debug logging after capturing needed data
+```bash
+./scripts/configure-addon.sh set-cloud-relay true true false
+```
+
+### Devices Not Connecting Through Relay
+
+**Cause:** 
+1. DNS not pointing to HA server
+2. Firewall blocking port 23779
+3. SSL verification failing
+
+**Fix:**
+```bash
+# Check DNS
+dig cm.gelighting.com
+
+# Check if relay server listening
+netstat -an | grep 23779
+
+# Check logs for SSL errors
+ha addons logs local_cync-controller | grep -i ssl
+```
+
+## Future Enhancement
+
+**Bidirectional command support planned:** Allow both local control AND cloud forwarding/inspection simultaneously.
+
+**Current status:** Read-only limitation prevents this. See `docs/user/cloud-relay.md` for updates.
+
+## Related
+
+- `docs/user/cloud-relay.md` - User-facing cloud relay documentation
+- `docs/developer/cloud-relay-implementation.md` - Implementation details
+- `scripts/test-cloud-relay.sh` - Automated testing script
+- `scripts/configure-addon.sh` - Configuration automation
+- `performance-tuning.mdc` - Performance considerations

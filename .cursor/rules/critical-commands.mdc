@@ -1,0 +1,36 @@
+---
+alwaysApply: true
+description: Critical command handling rules
+---
+
+# Critical Command Handling
+
+**Never skip callback registration or ACK handling** - otherwise devices ignore commands.
+
+## Rule: Always Register Callbacks
+
+Commands that send TCP packets must register callbacks to receive responses:
+
+- Commands send but devices don't respond without proper callback registration
+- Missing callbacks cause silent failures - no errors, but no action
+- All command methods must include callback registration logic
+
+## Rule: Proper ACK Handling
+
+- Wait for ACK before considering command complete
+- Don't assume immediate success
+- Handle timeout cases appropriately
+
+## Pattern
+
+```python
+# ✅ CORRECT: Register callback before sending
+device.register_command_callback(command_id, callback)
+await device.send_command(packet)
+# ACK received → callback fires → state update
+
+# ❌ WRONG: Send without callback
+await device.send_command(packet)  # Device ignores this
+```
+
+See `docs/developer/architecture.md` for command flow details.

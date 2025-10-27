@@ -1,18 +1,46 @@
 ---
-description: Devcontainer quirks
+description: Devcontainer quirks and setup
 ---
 
 # Devcontainer Essentials
 
-- Read `.devcontainer/README.md` first; supervisor + Docker already managed.
-- Never start Docker manually—`supervisor_run` handles lifecycle.
-- Backup restore in `post-start.sh` is disabled by default; only re-enable after testing.
-- Scripts needing Supervisor API must run via `ha` CLI or `docker exec hassio_cli ...`; `supervisor` hostname is not reachable from the devcontainer shell.
-- Credentials: Home Assistant at `http://localhost:8123` (`dev` / `dev`, see `hass-credentials.env`).
-- Common commands:
-  ```bash
-  ha addons logs local_cync-controller --follow
-  ha addons restart local_cync-controller
-  ha addons rebuild local_cync-controller   # after Python edits
-  npm run lint
-  ```
+Read `.devcontainer/README.md` first; supervisor + Docker already managed.
+
+## Docker Management
+
+- **Never start Docker manually** - `supervisor_run` handles lifecycle
+- Docker is managed by supervisor
+- Manual Docker start causes conflicts
+
+## Backup Restore
+
+- Backup restore in `post-start.sh` is currently **disabled**
+- See lines 131-216 in `.devcontainer/post-start.sh`
+- Only re-enable after thorough testing
+
+## Supervisor API Access
+
+Scripts needing Supervisor API must run via `ha` CLI or `docker exec hassio_cli ...`.
+
+**Why:** `supervisor` hostname is not reachable from devcontainer shell. See `supervisor-api-access.mdc` for details.
+
+## Credentials
+
+- Home Assistant: `http://localhost:8123`
+- Username: `dev`, Password: `dev`
+- See `hass-credentials.env`
+
+## Quick Start
+
+For fresh HA setup with EMQX and Cync Controller:
+
+```bash
+cd scripts
+./setup-fresh-ha.sh  # Automated onboarding, EMQX install, addon config
+```
+
+## Related
+
+- `supervisor-api-access.mdc` - How to access Supervisor API
+- `critical-docker.mdc` - Docker handling rules
+- `common-commands.mdc` - Command reference
