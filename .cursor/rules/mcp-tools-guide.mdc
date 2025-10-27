@@ -4,33 +4,65 @@ description: MCP development tools usage and reference
 
 # MCP Tool Basics
 
-Devcontainer exposes three MCP servers (see `.cursor/mcp.json`):
+Devcontainer exposes MCP servers for specialized tasks (see `.cursor/mcp.json`):
 
-1. **sequential-thinking**: log multi-step reasoning, next actions, tool picks.
-2. **python**: run native Python 3.13 with filesystem access for large-file processing, quick analysis, transformations.
-3. **web_fetch**: pull external docs/web pages (markdown or raw HTML).
+1. **python**: Native Python 3.13 with full filesystem access
+2. **web_fetch**: Pull external docs/web pages (markdown or raw HTML)
+3. **sequential-thinking**: Log multi-step reasoning, next actions, tool picks
 
-**Usage order:** prefer standard tools (`read_file`, `grep`, terminal) when faster; reach for MCP when they add value. If an MCP call fails, note it and continue with alternatives.
+## Python MCP - General Purpose Programming
 
-Example snippets:
+**You have a full Python environment for arbitrary data processing.** Use it for:
+
+- ✅ **Data processing & transformations** - Parse, analyze, transform without loading into context
+- ✅ **Calculations & algorithms** - Quick math, logic, prototyping
+- ✅ **File operations** - Bulk read/write, validation, migrations
+- ✅ **JSON/YAML/CSV parsing** - Complex data structure manipulation
+- ✅ **Code generation** - Template processing, code transforms
+- ✅ **Validation & testing** - Test snippets before committing
+
+**Features:**
+- Native CPython 3.13 (not sandboxed)
+- Full filesystem access: `/workspaces/hass-addons` working directory
+- Standard library: `json`, `re`, `pathlib`, `datetime`, `asyncio`, etc.
+- Package installs: `mcp_python_install_package` (temporary per execution)
+
+**When to prefer over standard tools:**
+- Multi-file operations or complex transformations
+- Data analysis requiring computation
+- Processing files too large to tokenize
+- Need Python-specific logic (regex, json, etc.)
+
+**Example: Data Processing**
 ```python
-# Python: transform file
 mcp_python_run_python_code("""
 from pathlib import Path
-text = Path('file.py').read_text()
-...
+import json
+
+# Process multiple files
+for file in Path('cync-controller/src').rglob('*.py'):
+    if 'TODO' in file.read_text():
+        print(f'{file}: contains TODOs')
 """)
-
-# Web fetch: docs
-mcp_web_fetch_fetch(url="https://developers.home-assistant.io/docs/add-ons/", max_length=5000)
-
-# Thought logging
-mcp_sequential-thinking_think(
-  thread_purpose="Investigation",
-  thought="Checked logs; exploring config reload timing",
-  thought_index=2,
-  tool_recommendation="grep"
-)
 ```
 
-Troubleshooting: if a server is unavailable or errors, fall back to local commands and mention the issue. See `docs/developer/mcp-tools.md` for deep dive.
+**Example: Complex Calculation**
+```python
+mcp_python_run_python_code("""
+import statistics
+data = [1, 2, 3, 4, 5, 10, 100]
+print(f'Median: {statistics.median(data)}')
+print(f'Stdev: {statistics.stdev(data):.2f}')
+""")
+```
+
+## Web Fetch - External Documentation
+
+```python
+# Fetch docs
+mcp_web_fetch_fetch(url="https://developers.home-assistant.io/docs/add-ons/", max_length=5000)
+```
+
+## Fallback Strategy
+
+If MCP fails, use standard tools (`read_file`, `grep`, terminal) and note the issue. See `docs/developer/mcp-tools.md` for details.
