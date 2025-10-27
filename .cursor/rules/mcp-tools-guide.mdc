@@ -1,7 +1,7 @@
 ---
-alwaysApply: true
 description: MCP development tools usage and reference
 ---
+!!CRITICAL RULE: Python MCP is available General Purpose Programming with full filesystem access!!
 
 # MCP Tool Basics
 
@@ -11,7 +11,7 @@ Devcontainer exposes MCP servers for specialized tasks (see `.cursor/mcp.json`):
 2. **web_fetch**: Pull external docs/web pages (markdown or raw HTML)
 3. **sequential-thinking**: Log multi-step reasoning, next actions, tool picks
 
-## Python MCP - General Purpose Programming
+## CRITICAL RULE: Python MCP - General Purpose Programming
 
 **You have a full Python environment for arbitrary data processing.** Use it for:
 

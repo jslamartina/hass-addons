@@ -1,6 +1,8 @@
 ---
-alwaysApply: true
 description: Browser testing with Playwright patterns and workarounds
+appliesTo:
+  - "cync-controller/tests/e2e/**/*.ts"
+  - "scripts/playwright/**"
 ---
 
 # Browser Testing with Playwright
@@ -8,15 +10,29 @@ description: Browser testing with Playwright patterns and workarounds
 **When to use:** Manual UI verification or when API tools are insufficient.
 
 ## Critical Patterns
+**!! IT IS CRITICAL TO UNDERSTAND THE ENTIRE UI IS SHADOW-DOM BASED YOU CANNOT USE CONVENTIONAL SELECTORS !!**
+### 1. Stable Selectors - Prefer Accessibility Hierarchy
 
-### 1. Shadow DOM - Use Role-Based Selectors
+**Priority order:**
+1. Role-based: `getByRole("button", { name: "Save" })`
+2. Label-based: `getByLabel("Username")`
+3. Test ID: `getByTestId("submit-btn")` (if added to HA)
+4. Text: `getByText("Exact match")`
+5. **Avoid:** `nth()`, CSS selectors, XPath (brittle)
+
 ```typescript
 // ❌ WRONG: querySelector can't find inputs in shadow roots
 const input = page.locator("ha-data-table input");
 
+// ❌ WRONG: Brittle nth() selector
+await page.locator("div").nth(5).click();
+
 // ✅ CORRECT: Role-based selector pierces shadow DOM
 const searchInput = page.getByRole("textbox", { name: /^Search/i });
 await searchInput.fill("Hallway");
+
+// ✅ CORRECT: Stable, semantic selector
+await page.getByRole("button", { name: /save/i }).click();
 ```
 
 ### 2. SVG Click Interception - Click Parent Containers
@@ -82,6 +98,48 @@ const input = page.locator("ha-data-table input");
 await page.locator("svg").click();
 
 // ✅ DO: Click parent containers, use role-based selectors, click interactive elements
+```
+
+## Test Configuration
+
+### Login State Reuse
+```typescript
+// Save auth state once
+test.use({ storageState: "auth.json" });
+
+// Or login helper
+async function login(page: Page) {
+  await page.getByRole("textbox", { name: "Username*" }).fill("dev");
+  await page.getByRole("textbox", { name: "Password*" }).fill("dev");
+  await page.getByRole("button", { name: "Log in" }).click();
+  await page.context().storageState({ path: "auth.json" });
+}
+```
+
+### Test Defaults
+```typescript
+test.use({
+  baseURL: "http://homeassistant.local:8123",
+  headless: true,  // CI-friendly
+  timezone: "UTC",
+  locale: "en-US",
+});
+```
+
+### Retries and Tracing
+```bash
+# Always use --reporter=list and tracing
+npx playwright test --reporter=list --trace on-first-retry --retries=2
+```
+
+### Assertions Over Waits
+```typescript
+// ❌ WRONG: Arbitrary timeout
+await page.waitForTimeout(5000);
+
+// ✅ CORRECT: Wait for condition
+await expect(page.getByText("Success")).toBeVisible();
+await expect(page).toHaveURL(/dashboard/);
 ```
 
 ## Credentials

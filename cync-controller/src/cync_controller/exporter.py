@@ -114,7 +114,7 @@ async def restart():
     try:
         async with aiohttp.ClientSession() as session, session.post(url, headers=headers) as response:
             if response.status == 200:
-                logger.debug("%s Successfully called the restart API. The add-on will now restart.", lp)
+                logger.info("%s Successfully called the restart API. The add-on will now restart.", lp)
                 return {"success": True, "message": "Add-on is restarting."}
             # Try to get more details from the response if it fails
             error_details = await response.text()

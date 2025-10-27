@@ -1,77 +1,71 @@
 ---
-alwaysApply: true
-description: 4-step development workflow (edit, lint, rebuild, verify)
+description: 3-step development workflow (edit, rebuild, verify) with integrated quality gates
+appliesTo:
+  - "**/*.py"
+  - "**/*.sh"
+  - "cync-controller/**"
 ---
 
 # Development Workflow
 
-## Critical: Python vs Config Changes
+**CRITICAL:** Python edits require rebuild (not restart). See Executive Rule #1 in `_00-exec-rules.mdc`.
 
-**Python files (`.py`)** → **MUST REBUILD**:
+**CRITICAL:** For multi-step (3+) tasks, initialize todos and update status at each phase. See Executive Rule #7.
+
+**Step 0: Todo Tracking** (multi-step tasks only)
+- Initialize todos for all steps
+- Mark current task `in_progress` BEFORE starting
+- Update to `completed` AFTER finishing, communicate to user
+- Explicit progress updates: "✓ Completed X, starting Y..."
+
+**Standard 3-Step Process:**
+
+1. **Edit** - Make your changes
+2. **Rebuild/Restart** - Automatically runs linting, formatting, and unit tests (see table below)
+3. **Verify** - `ha addons logs local_cync-controller --follow`
+
+## Python vs Config Changes
+
+**Why?** Python files are baked into Docker image at build time. Restarting alone won't load Python changes.
+
+**NEVER start Docker manually** - Supervisor manages it. See `critical-docker.mdc` and Executive Rule #5.
+
+**Note:** `rebuild.sh` now automatically runs linting, formatting, and unit tests before building the Docker image.
+
+| Change Type                | Action      | Command                                   |
+| -------------------------- | ----------- | ----------------------------------------- |
+| Python files (`.py`)       | **REBUILD** | `cd cync-controller && ./rebuild.sh`      |
+| `config.yaml`, `run.sh`    | Restart     | `ha addons restart local_cync-controller` |
+| `static/*` (HTML, JS, CSS) | Restart     | `ha addons restart local_cync-controller` |
+| When unsure                | **REBUILD** | `cd cync-controller && ./rebuild.sh`      |
+
+## Manual Linting (Optional)
+
+Run linting manually for spot checks without full rebuild:
 
 ```bash
-cd cync-controller && ./rebuild.sh
-# Or: ha addons rebuild local_cync-controller
-```
-
-**Config/scripts** (`config.yaml`, `run.sh`, `static/*`) → **JUST RESTART**:
-
-```bash
-ha addons restart local_cync-controller
-```
-
-**Why?** Python packages are baked into the Docker image at build time. Just restarting won't pick up Python changes.
-
-## Standard 4-Step Workflow
-
-### 1. Make Your Changes
-Edit Python, config, or script files as needed.
-
-### 2. Run Linters (MANDATORY)
-```bash
-# Python files
-npm run lint:python:fix    # Auto-fix issues
-npm run format:python      # Auto-format
+# Python
+npm run lint:python:fix && npm run format:python
 
 # Shell scripts
-npm run lint:shell         # Check for warnings
+npm run lint:shell
 
 # Everything
-npm run lint               # Check all (Python + Shell + Formatting)
-npm run format             # Format all files
+npm run lint && npm run format
 ```
 
-**Fix ALL issues before proceeding** - no exceptions.
+## MQTT Entity Management
 
-### 3. Build or Restart
-```bash
-# If you edited Python files:
-cd cync-controller && ./rebuild.sh
-
-# If you only edited config/scripts:
-ha addons restart local_cync-controller
-```
-
-### 4. Verify
-```bash
-# Check logs
-ha addons logs local_cync-controller --follow
-
-# Check entities (Developer Tools → States → Filter "cync")
-```
-
-## Delete Stale MQTT Entities
-
-Use when you changed `suggested_area` or other discovery fields:
+When changing `suggested_area` or other discovery fields:
 
 ```bash
-# Automated (recommended)
+# Clean up stale entities
 sudo python3 scripts/delete-mqtt-safe.py [--dry-run]
 ha addons restart local_cync-controller
 ```
 
-**Manual UI approach**: Settings → Devices & Services → Entities → Enter selection mode → Select entities → Action → Delete selected
+## Release Preparation
 
-## When In Doubt
+Before merging to `master`:
 
-**Always rebuild** - it's safer and only takes ~30 seconds more than restart.
+- Uncomment `image:` in `cync-controller/config.yaml`

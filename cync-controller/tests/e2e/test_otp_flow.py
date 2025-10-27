@@ -24,7 +24,7 @@ def test_otp_double_submission(ingress_page: Page):
 
     # Get OTP from user (this would need to be mocked or provided externally)
     # For manual testing, prompt for OTP
-    print("\n⚠️  This test requires manual OTP entry")
+    print("\n  This test requires manual OTP entry")
     print("Check your email for the OTP code and enter it in the browser")
     print("Then press Enter here to continue...")
     input()
@@ -59,22 +59,29 @@ def test_otp_flow_with_cached_token(ingress_page: Page):
     This verifies the fix for Bug 1 - after successful OTP submission and token caching,
     subsequent exports should work without requiring a new OTP.
     """
+    page = ingress_page
+
+    # Get the nested iframe containing the ingress page content
+    outer_iframe = page.frame_locator("iframe[title='Cync Controller']")
+    inner_iframe = outer_iframe.frame_locator("iframe[title='Cync Controller']")
+
     # Click "Start Export" button
-    start_button = ingress_page.locator("#startButton")
+    start_button = inner_iframe.get_by_role("button", name="Start Export")
     start_button.click()
 
     # If token is cached, should go straight to success
-    # If token is expired/missing, OTP section appears
-    otp_section = ingress_page.locator("#otpSection")
-    success_section = ingress_page.locator("#successSection")
-
-    # Wait for either OTP section or success section
-    ingress_page.wait_for_selector("#otpSection, #successSection", timeout=10000)
-
-    # Check which one appeared
-    if otp_section.is_visible():
-        pytest.skip("No cached token - OTP required (this is expected for first run)")
-    else:
-        # Success section should be visible
-        expect(success_section).to_be_visible()
+    # If token is expired/missing, OTP section appears or button text changes
+    try:
+        # Wait for button text to change to "Restart Server" (indicating success)
+        restart_button = inner_iframe.get_by_role("button", name="Restart Server")
+        # If we can find the restart button, export succeeded
+        expect(restart_button).to_be_visible(timeout=5000)
         print("✓ Export succeeded with cached token")
+    except Exception:
+        # OTP section should be visible if no cached token
+        otp_section = inner_iframe.get_by_text("Enter OTP:")
+        if otp_section.is_visible(timeout=2000):
+            pytest.skip("No cached token - OTP required (this is expected for first run)")
+        else:
+            # Something else went wrong
+            pytest.fail("Unexpected state - neither success nor OTP section visible")

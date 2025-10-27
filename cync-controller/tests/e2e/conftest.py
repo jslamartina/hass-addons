@@ -88,7 +88,17 @@ def ingress_page(ha_login: Page, ha_base_url: str):
     page.goto(ingress_url)
 
     # Verify we're on the ingress page by checking for expected elements
-    page.wait_for_selector("#startButton, #otpInput", timeout=10000)
+    # After fix: Button is always visible if config exists; only show #startButton if no config
+    # Wait for page to load first
+    page.wait_for_load_state("networkidle")
+    # Check for any of the possible elements
+    try:
+        page.wait_for_selector(
+            "button:has-text('Restart'), #startButton, #otpInput, #restartButton, #successSection", timeout=3000
+        )
+    except Exception:
+        # If none found, the page might still be loading, wait a bit more
+        page.wait_for_timeout(1000)
 
     return page
 

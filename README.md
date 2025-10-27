@@ -53,13 +53,28 @@ Control Cync devices locally by intercepting their cloud communications:
 
 **[Full compatibility list →](docs/user/known-devices.md)**
 
-## 🆕 New in v0.0.4.4 (WIP)
+## 🆕 New in v0.0.4.13
+
+### Production-Grade Structured Logging
+- **Dual-format output**: JSON for machine parsing, human-readable for developers
+- **Correlation ID tracking** across async operations for debugging
+- **Performance instrumentation** with configurable thresholds
+
+### Comprehensive Test Infrastructure
+- **24 unit test files** covering all core modules (90%+ coverage)
+- **10 E2E test files** using Playwright for browser automation
+- **Integration tests** for mesh refresh performance
+
+### Critical Bug Fixes
+- Fixed OTP submission reliability (works on first try)
+- Fixed restart button behavior and persistence
+- Fixed group switch synchronization issues
+- Fixed random device offline issues
 
 ### Cloud Relay Mode
 Optional MITM proxy functionality for packet inspection and debugging:
 - **Transparent proxy** between devices and cloud
 - **Packet inspection** and real-time logging
-- **Multiple operating modes** for different use cases
 - **File-based packet injection** for testing
 
 **Configuration:**

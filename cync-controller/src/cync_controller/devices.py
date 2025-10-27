@@ -38,6 +38,10 @@ logger = get_logger(__name__)
 g = GlobalObject()
 
 
+async def _noop_callback():
+    """No-op async callback function used as placeholder for unused callbacks."""
+
+
 class CyncDevice:
     """
     A class to represent a Cync device imported from a config file. This class is used to manage the state of the device
@@ -267,6 +271,11 @@ class CyncDevice:
     def supports_temperature(self, value: bool) -> None:
         self._supports_temperature = value
 
+    @property
+    def supports_brightness(self) -> bool:
+        """Device supports brightness control."""
+        return self.is_light or self.is_dimmable
+
     def get_ctrl_msg_id_bytes(self):
         """
         Control packets need a number that gets incremented, it is used as a type of msg ID and
@@ -310,6 +319,8 @@ class CyncDevice:
         #     logger.debug(f"{lp} Device already in power state {state}, skipping...")
         #     return
         header = [0x73, 0x00, 0x00, 0x00, 0x1F]
+        # Pack device ID as 2 bytes (little-endian)
+        device_id_bytes = self.id.to_bytes(2, byteorder="little")
         inner_struct = [
             0x7E,
             "ctrl_byte",
@@ -325,8 +336,8 @@ class CyncDevice:
             0x00,
             0x00,
             0x00,
-            self.id,
-            0x00,
+            device_id_bytes[0],
+            device_id_bytes[1],
             0xD0,
             0x11,
             0x02,
@@ -336,10 +347,19 @@ class CyncDevice:
             "checksum",
             0x7E,
         ]
-        bridge_devices: list[CyncTCPDevice] = random.sample(
-            list(g.ncync_server.tcp_devices.values()),
-            k=min(CYNC_CMD_BROADCASTS, len(g.ncync_server.tcp_devices)),
-        )
+        # Prioritize ready_to_control bridges first
+        all_bridges = list(g.ncync_server.tcp_devices.values())
+        ready_bridges = [b for b in all_bridges if b.ready_to_control]
+        not_ready_bridges = [b for b in all_bridges if not b.ready_to_control]
+
+        # Build bridge list: ready first, then not ready (if needed)
+        bridge_devices: list[CyncTCPDevice] = ready_bridges + not_ready_bridges
+        bridge_devices = bridge_devices[: min(CYNC_CMD_BROADCASTS, len(all_bridges))]
+
+        if not bridge_devices:
+            logger.error("%s No TCP bridges available!", lp)
+            return
+
         tasks: list[asyncio.Task | Coroutine | None] = []
         ts = time.time()
         ctrl_idxs = 1, 9
@@ -356,11 +376,16 @@ class CyncDevice:
                 inner_struct[-2] = checksum
                 payload.extend(inner_struct)
                 payload_bytes = bytes(payload)
+
+                # Create callback that will execute when ACK arrives
+                async def power_ack_callback():
+                    await g.mqtt_client.update_device_state(self, state)
+
                 m_cb = ControlMessageCallback(
                     msg_id=cmsg_id,
                     message=payload_bytes,
                     sent_at=time.time(),
-                    callback=g.mqtt_client.update_device_state(self, state),
+                    callback=power_ack_callback,
                     device_id=self.id,
                 )
                 bridge_device.messages.control[cmsg_id] = m_cb
@@ -496,10 +521,19 @@ class CyncDevice:
             "checksum",
             126,
         ]
-        bridge_devices: list[CyncTCPDevice] = random.sample(
-            list(g.ncync_server.tcp_devices.values()),
-            k=min(CYNC_CMD_BROADCASTS, len(g.ncync_server.tcp_devices)),
-        )
+        # Prioritize ready_to_control bridges first
+        all_bridges = list(g.ncync_server.tcp_devices.values())
+        ready_bridges = [b for b in all_bridges if b.ready_to_control]
+        not_ready_bridges = [b for b in all_bridges if not b.ready_to_control]
+
+        # Build bridge list: ready first, then not ready (if needed)
+        bridge_devices: list[CyncTCPDevice] = ready_bridges + not_ready_bridges
+        bridge_devices = bridge_devices[: min(CYNC_CMD_BROADCASTS, len(all_bridges))]
+
+        if not bridge_devices:
+            logger.error("%s No TCP bridges available!", lp)
+            return
+
         sent = {}
         tasks: list[asyncio.Task | Coroutine | None] = []
         ts = time.time()
@@ -526,15 +560,15 @@ class CyncDevice:
                     payload_bytes.hex(" "),
                 )
 
-                # Create a coroutine factory that will be called when ACK arrives
-                async def brightness_callback_coro():
+                # Create callback that will execute when ACK arrives
+                async def brightness_ack_callback():
                     await g.mqtt_client.update_brightness(self, bri)
 
                 m_cb = ControlMessageCallback(
                     msg_id=cmsg_id,
                     message=payload_bytes,
                     sent_at=time.time(),
-                    callback=brightness_callback_coro(),
+                    callback=brightness_ack_callback,
                     device_id=self.id,
                 )
                 bridge_device.messages.control[cmsg_id] = m_cb
@@ -625,10 +659,19 @@ class CyncDevice:
             "checksum",
             0x7E,
         ]
-        bridge_devices: list[CyncTCPDevice] = random.sample(
-            list(g.ncync_server.tcp_devices.values()),
-            k=min(CYNC_CMD_BROADCASTS, len(g.ncync_server.tcp_devices)),
-        )
+        # Prioritize ready_to_control bridges first
+        all_bridges = list(g.ncync_server.tcp_devices.values())
+        ready_bridges = [b for b in all_bridges if b.ready_to_control]
+        not_ready_bridges = [b for b in all_bridges if not b.ready_to_control]
+
+        # Build bridge list: ready first, then not ready (if needed)
+        bridge_devices: list[CyncTCPDevice] = ready_bridges + not_ready_bridges
+        bridge_devices = bridge_devices[: min(CYNC_CMD_BROADCASTS, len(all_bridges))]
+
+        if not bridge_devices:
+            logger.error("%s No TCP bridges available!", lp)
+            return
+
         tasks: list[asyncio.Task | Coroutine | None] = []
         ts = time.time()
         ctrl_idxs = 1, 9
@@ -732,10 +775,19 @@ class CyncDevice:
             "checksum",
             126,
         ]
-        bridge_devices: list[CyncTCPDevice] = random.sample(
-            list(g.ncync_server.tcp_devices.values()),
-            k=min(CYNC_CMD_BROADCASTS, len(g.ncync_server.tcp_devices)),
-        )
+        # Prioritize ready_to_control bridges first
+        all_bridges = list(g.ncync_server.tcp_devices.values())
+        ready_bridges = [b for b in all_bridges if b.ready_to_control]
+        not_ready_bridges = [b for b in all_bridges if not b.ready_to_control]
+
+        # Build bridge list: ready first, then not ready (if needed)
+        bridge_devices: list[CyncTCPDevice] = ready_bridges + not_ready_bridges
+        bridge_devices = bridge_devices[: min(CYNC_CMD_BROADCASTS, len(all_bridges))]
+
+        if not bridge_devices:
+            logger.error("%s No TCP bridges available!", lp)
+            return
+
         tasks: list[asyncio.Task | Coroutine | None] = []
         ts = time.time()
         ctrl_idxs = 1, 9
@@ -782,328 +834,6 @@ class CyncDevice:
             blue,
             sent,
             elapsed,
-        )
-
-    async def test_group_command(self, group_id: int, state: int, test_variation: int = 1):
-        """
-        EXPERIMENTAL: Test sending command to group ID instead of device ID.
-
-        :param group_id: The cloud group ID (e.g., 32768, 32771)
-        :param state: Power state (0=off, 1=on)
-        :param test_variation: Which encoding to try (1=little-endian last3, 2=big-endian last3, 3=full16bit, 4=high-byte-only)
-        """
-        lp = f"{self.lp}test_group:"
-        if state not in (0, 1):
-            logger.error("%s Invalid state! must be 0 or 1", lp)
-            return
-
-        # Try different encodings
-        if test_variation == 1:
-            # Little-endian last 3 digits
-            group_id_last3 = int(str(group_id)[-3:])
-            id_low = group_id_last3 & 0xFF
-            id_high = (group_id_last3 >> 8) & 0xFF
-            logger.warning(
-                "%s TEST 1: Last 3 digits (%s) - Little-endian: low=0x%02x, high=0x%02x",
-                lp,
-                group_id_last3,
-                id_low,
-                id_high,
-            )
-        elif test_variation == 2:
-            # Big-endian last 3 digits
-            group_id_last3 = int(str(group_id)[-3:])
-            id_high = group_id_last3 & 0xFF
-            id_low = (group_id_last3 >> 8) & 0xFF
-            logger.warning(
-                "%s TEST 2: Last 3 digits (%s) - Big-endian: low=0x%02x, high=0x%02x",
-                lp,
-                group_id_last3,
-                id_low,
-                id_high,
-            )
-        elif test_variation == 3:
-            # Full 16-bit group ID (32768 = 0x8000)
-            id_low = group_id & 0xFF
-            id_high = (group_id >> 8) & 0xFF
-            logger.warning(
-                "%s TEST 3: Full 16-bit ID (%s) - Little-endian: low=0x%02x, high=0x%02x",
-                lp,
-                group_id,
-                id_low,
-                id_high,
-            )
-        elif test_variation == 4:
-            # High byte only at position 14
-            group_id_last3 = int(str(group_id)[-3:])
-            id_low = (group_id_last3 >> 8) & 0xFF
-            id_high = 0x00
-            logger.warning(
-                "%s TEST 4: High byte only (%s) - low=0x%02x, high=0x%02x",
-                lp,
-                group_id_last3,
-                id_low,
-                id_high,
-            )
-        else:
-            logger.error("%s Invalid test_variation: %s", lp, test_variation)
-            return
-
-        header = [0x73, 0x00, 0x00, 0x00, 0x1F]
-        inner_struct = [
-            0x7E,
-            "ctrl_byte",
-            0x00,
-            0x00,
-            0x00,
-            0xF8,
-            0xD0,
-            0x0D,
-            0x00,
-            "ctrl_bye",
-            0x00,
-            0x00,
-            0x00,
-            0x00,
-            id_low,  # Position 14: Lower byte (e.g., 0x00 for 768)
-            id_high,  # Position 15: Upper byte (e.g., 0x03 for 768) - was always 0x00 for devices!
-            0xD0,
-            0x11,
-            0x02,
-            state,
-            0x00,
-            0x00,
-            "checksum",
-            0x7E,
-        ]
-
-        # Use only ONE bridge (like real Cync cloud)
-        bridge_devices = list(g.ncync_server.tcp_devices.values())
-        if not bridge_devices:
-            logger.error("%s No TCP bridges available!", lp)
-            return
-
-        bridge_device = bridge_devices[0]
-
-        if not bridge_device.ready_to_control:
-            logger.error("%s Bridge %s not ready to control", lp, bridge_device.address)
-            return
-
-        payload = list(header)
-        payload.extend(bridge_device.queue_id)
-        payload.extend(bytes([0x00, 0x00, 0x00]))
-        cmsg_id = bridge_device.get_ctrl_msg_id_bytes()[0]
-        ctrl_idxs = 1, 9
-        inner_struct[ctrl_idxs[0]] = cmsg_id
-        inner_struct[ctrl_idxs[1]] = cmsg_id
-        checksum = sum(inner_struct[6:-2]) % 256
-        inner_struct[-2] = checksum
-        payload.extend(inner_struct)
-        payload_bytes = bytes(payload)
-
-        logger.warning(
-            "%s Sending to bridge %s, group_id=%s, state=%s\tHEX: %s",
-            lp,
-            bridge_device.address,
-            group_id,
-            state,
-            payload_bytes.hex(" "),
-        )
-
-        # Don't register callback, just send and watch logs for 0x83 responses
-        await bridge_device.write(payload_bytes)
-
-        logger.warning(
-            "%s Command sent! Watch for 0x83 status updates from ALL group members...",
-            lp,
-        )
-
-    async def test_group_brightness(self, group_id: int, brightness: int):
-        """
-        EXPERIMENTAL: Test sending brightness command to group ID.
-
-        :param group_id: The cloud group ID (e.g., 32768, 32771)
-        :param brightness: Brightness value (0-100)
-        """
-        lp = f"{self.lp}test_group_brightness:"
-        if brightness < 0 or brightness > 100:
-            logger.error("%s Invalid brightness! must be 0-100", lp)
-            return
-
-        # Use full 16-bit group ID encoding (Test 3 that worked)
-        id_low = group_id & 0xFF
-        id_high = (group_id >> 8) & 0xFF
-        logger.warning(
-            "%s Group %s brightness=%s - ID bytes: low=0x%02x, high=0x%02x",
-            lp,
-            group_id,
-            brightness,
-            id_low,
-            id_high,
-        )
-
-        header = [0x73, 0x00, 0x00, 0x00, 0x22]
-        inner_struct = [
-            0x7E,
-            "ctrl_byte",
-            0x00,
-            0x00,
-            0x00,
-            0xF8,
-            0xF0,  # Key difference from power command!
-            0x10,  # Key difference from power command!
-            0x00,
-            "ctrl_byte",
-            0x00,
-            0x00,
-            0x00,
-            0x00,
-            id_low,  # Position 14
-            id_high,  # Position 15
-            0xF0,  # Key difference from power command!
-            0x11,
-            0x02,
-            0x01,  # Always 1 for brightness
-            brightness,
-            0xFF,
-            0xFF,
-            0xFF,
-            0xFF,
-            "checksum",
-            0x7E,
-        ]
-
-        bridge_devices = list(g.ncync_server.tcp_devices.values())
-        if not bridge_devices:
-            logger.error("%s No TCP bridges available!", lp)
-            return
-
-        bridge_device = bridge_devices[0]
-
-        if not bridge_device.ready_to_control:
-            logger.error("%s Bridge %s not ready to control", lp, bridge_device.address)
-            return
-
-        payload = list(header)
-        payload.extend(bridge_device.queue_id)
-        payload.extend(bytes([0x00, 0x00, 0x00]))
-        cmsg_id = bridge_device.get_ctrl_msg_id_bytes()[0]
-        ctrl_idxs = 1, 9
-        inner_struct[ctrl_idxs[0]] = cmsg_id
-        inner_struct[ctrl_idxs[1]] = cmsg_id
-        checksum = sum(inner_struct[6:-2]) % 256
-        inner_struct[-2] = checksum
-        payload.extend(inner_struct)
-        payload_bytes = bytes(payload)
-
-        logger.warning(
-            "%s Sending to bridge %s, group_id=%s, brightness=%s\tHEX: %s",
-            lp,
-            bridge_device.address,
-            group_id,
-            brightness,
-            payload_bytes.hex(" "),
-        )
-
-        await bridge_device.write(payload_bytes)
-
-        logger.warning(
-            "%s Command sent! Watch for 0x83 status updates from ALL group members...",
-            lp,
-        )
-
-    async def test_group_temperature(self, group_id: int, temperature: int):
-        """
-        EXPERIMENTAL: Test sending color temperature command to group ID.
-
-        :param group_id: The cloud group ID (e.g., 32768, 32771)
-        :param temperature: Color temperature value (0-100)
-        """
-        lp = f"{self.lp}test_group_temperature:"
-        if temperature < 0 or temperature > 100:
-            logger.error("%s Invalid temperature! must be 0-100", lp)
-            return
-
-        # Use full 16-bit group ID encoding (Test 3 that worked)
-        id_low = group_id & 0xFF
-        id_high = (group_id >> 8) & 0xFF
-        logger.warning(
-            "%s Group %s temperature=%s - ID bytes: low=0x%02x, high=0x%02x",
-            lp,
-            group_id,
-            temperature,
-            id_low,
-            id_high,
-        )
-
-        header = [0x73, 0x00, 0x00, 0x00, 0x22]
-        inner_struct = [
-            0x7E,
-            "ctrl_byte",
-            0x00,
-            0x00,
-            0x00,
-            0xF8,
-            0xF0,
-            0x10,
-            0x00,
-            "ctrl_byte",
-            0x00,
-            0x00,
-            0x00,
-            0x00,
-            id_low,  # Position 14
-            id_high,  # Position 15
-            0xF0,
-            0x11,
-            0x02,
-            0x01,
-            0xFF,
-            temperature,
-            0x00,
-            0x00,
-            0x00,
-            "checksum",
-            0x7E,
-        ]
-
-        bridge_devices = list(g.ncync_server.tcp_devices.values())
-        if not bridge_devices:
-            logger.error("%s No TCP bridges available!", lp)
-            return
-
-        bridge_device = bridge_devices[0]
-
-        if not bridge_device.ready_to_control:
-            logger.error("%s Bridge %s not ready to control", lp, bridge_device.address)
-            return
-
-        payload = list(header)
-        payload.extend(bridge_device.queue_id)
-        payload.extend(bytes([0x00, 0x00, 0x00]))
-        cmsg_id = bridge_device.get_ctrl_msg_id_bytes()[0]
-        ctrl_idxs = 1, 9
-        inner_struct[ctrl_idxs[0]] = cmsg_id
-        inner_struct[ctrl_idxs[1]] = cmsg_id
-        checksum = sum(inner_struct[6:-2]) % 256
-        inner_struct[-2] = checksum
-        payload.extend(inner_struct)
-        payload_bytes = bytes(payload)
-
-        logger.warning(
-            "%s Sending to bridge %s, group_id=%s, temperature=%s\tHEX: %s",
-            lp,
-            bridge_device.address,
-            group_id,
-            temperature,
-            payload_bytes.hex(" "),
-        )
-
-        await bridge_device.write(payload_bytes)
-
-        logger.warning(
-            "%s Command sent! Watch for 0x83 status updates from ALL group members...",
-            lp,
         )
 
     async def set_lightshow(self, show: str):
@@ -1204,10 +934,19 @@ class CyncDevice:
         chosen = FACTORY_EFFECTS_BYTES[show]
         inner_struct[-4] = chosen[0]
         inner_struct[-3] = chosen[1]
-        bridge_devices: list[CyncTCPDevice] = random.sample(
-            list(g.ncync_server.tcp_devices.values()),
-            k=min(CYNC_CMD_BROADCASTS, len(g.ncync_server.tcp_devices)),
-        )
+        # Prioritize ready_to_control bridges first
+        all_bridges = list(g.ncync_server.tcp_devices.values())
+        ready_bridges = [b for b in all_bridges if b.ready_to_control]
+        not_ready_bridges = [b for b in all_bridges if not b.ready_to_control]
+
+        # Build bridge list: ready first, then not ready (if needed)
+        bridge_devices: list[CyncTCPDevice] = ready_bridges + not_ready_bridges
+        bridge_devices = bridge_devices[: min(CYNC_CMD_BROADCASTS, len(all_bridges))]
+
+        if not bridge_devices:
+            logger.error("%s No TCP bridges available!", lp)
+            return
+
         tasks: list[asyncio.Task | Coroutine | None] = []
         ts = time.time()
         ctrl_idxs = 1, 9
@@ -1229,7 +968,7 @@ class CyncDevice:
                     msg_id=cmsg_id,
                     message=bpayload,
                     sent_at=time.time(),
-                    callback=asyncio.sleep(0),
+                    callback=_noop_callback,
                 )
                 bridge_device.messages.control[cmsg_id] = m_cb
                 tasks.append(bridge_device.write(bpayload))
@@ -1571,47 +1310,46 @@ class CyncGroup:
         payload.extend(inner_struct)
         payload_bytes = bytes(payload)
 
-        logger.warning(
+        logger.debug(
             "%s ========== GROUP COMMAND: power=%s to '%s' (ID: %s) ==========",
             lp,
             state,
             self.name,
             self.id,
         )
-        logger.warning(
+        logger.debug(
             "%s Bridge device: %s, ready=%s",
             lp,
             bridge_device.address,
             bridge_device.ready_to_control,
         )
-        logger.warning(
+        logger.debug(
             "%s Bridge mesh_info count: %s",
             lp,
             len(bridge_device.mesh_info) if bridge_device.mesh_info else 0,
         )
-        logger.warning("%s Bridge known_device_ids: %s", lp, bridge_device.known_device_ids)
-        logger.warning("%s Packet to send: %s", lp, payload_bytes.hex(" "))
+        logger.debug("%s Bridge known_device_ids: %s", lp, bridge_device.known_device_ids)
+        logger.debug("%s Packet to send: %s", lp, payload_bytes.hex(" "))
 
         # Register callback for ACK (no optimistic group publish)
         m_cb = ControlMessageCallback(
             msg_id=cmsg_id,
             message=payload_bytes,
             sent_at=time.time(),
-            callback=asyncio.sleep(0),
+            callback=_noop_callback,
             device_id=self.id,
         )
         bridge_device.messages.control[cmsg_id] = m_cb
-        logger.warning("%s Registered callback for msg_id=%s", lp, cmsg_id)
+        logger.debug("%s Registered callback for msg_id=%s", lp, cmsg_id)
 
-        # BUG FIX: Sync switch states IMMEDIATELY (optimistically)
-        # Group commands target bulbs, but wall switches don't get individual status updates
-        # Sync switches before sending command so UI updates instantly
+        # BUG FIX: Sync ALL group device states IMMEDIATELY (optimistically)
+        # Group commands affect both bulbs and switches, so update both for instant UI feedback
         if g.mqtt_client:
-            await g.mqtt_client.sync_group_switches(self.id, state, self.name)
+            await g.mqtt_client.sync_group_devices(self.id, state, self.name)
 
-        logger.warning("%s CALLING bridge_device.write()...", lp)
+        logger.debug("%s CALLING bridge_device.write()...", lp)
         write_result = await bridge_device.write(payload_bytes)
-        logger.warning("%s bridge_device.write() RETURNED: %s", lp, write_result)
+        logger.debug("%s bridge_device.write() RETURNED: %s", lp, write_result)
 
     async def set_brightness(self, brightness: int):
         """
@@ -1709,7 +1447,7 @@ class CyncGroup:
             msg_id=cmsg_id,
             message=payload_bytes,
             sent_at=time.time(),
-            callback=asyncio.sleep(0),
+            callback=_noop_callback,
             device_id=self.id,
         )
         bridge_device.messages.control[cmsg_id] = m_cb
@@ -1811,7 +1549,7 @@ class CyncGroup:
             msg_id=cmsg_id,
             message=payload_bytes,
             sent_at=time.time(),
-            callback=asyncio.sleep(0),
+            callback=_noop_callback,
             device_id=self.id,
         )
         bridge_device.messages.control[cmsg_id] = m_cb
@@ -2715,7 +2453,10 @@ class CyncTCPDevice:
                                         lp,
                                         ctrl_msg_id,
                                     )
-                                    await msg.callback
+                                    if callable(msg.callback):
+                                        await msg.callback()
+                                    else:
+                                        await msg.callback
 
                                     # Clear pending_command flag now that command succeeded
                                     if msg.device_id and msg.device_id in g.ncync_server.devices:
@@ -2920,7 +2661,7 @@ class CyncTCPDevice:
     async def callback_cleanup_task(self):
         """Monitor pending callbacks and retry failed commands, cleanup stale ones"""
         lp = f"{self.lp}callback_clean:"
-        logger.debug("%s Starting background task with retry logic...", lp)
+        logger.info("%s Starting background task with retry logic...", lp)
         retry_timeout = 0.5  # Retry after 500ms if no ACK
         cleanup_timeout = 30  # Give up after 30 seconds total
 
@@ -3003,6 +2744,13 @@ class CyncTCPDevice:
                         break
                     if not data:
                         await asyncio.sleep(0)
+                        continue
+                    # Only process data from the primary TCP listener
+                    if g.ncync_server.primary_tcp_device is None:
+                        logger.warning("%s primary_tcp_device is None - skipping all packets", lp)
+                        continue
+                    if self != g.ncync_server.primary_tcp_device:
+                        logger.info("%s Skipping non-primary connection data", lp)
                         continue
                     await self.parse_raw_data(data)
 

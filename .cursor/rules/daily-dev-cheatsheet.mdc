@@ -1,82 +1,71 @@
 ---
-alwaysApply: true
 description: Quick reference for most common daily development tasks
+appliesTo:
+  - "**/*.py"
+  - "**/*.sh"
+  - "cync-controller/**"
 ---
 
 # Daily Development Cheatsheet
 
-## The 4-Step Workflow
+## Todo Tracking (Multi-Step Tasks)
+
+**!!CRITICAL!!** Update todos before/after every task:
+```python
+# Before starting: mark in_progress
+todo_write(merge=True, todos=[{"id": "task-x", "status": "in_progress"}])
+
+# After finishing: mark completed, explain to user
+todo_write(merge=True, todos=[{"id": "task-x", "status": "completed"}])
+```
+
+## The 3-Step Workflow
 
 ```bash
 # 1. Edit code
-# 2. Lint & fix
-npm run lint:python:fix && npm run format:python
-
-# 3. Rebuild (Python) or Restart (config/scripts)
+# 2. Rebuild (Python) or Restart (config/scripts)
+#    rebuild.sh automatically runs: lint, format, unit tests
 cd cync-controller && ./rebuild.sh  # Python changes
 ha addons restart local_cync-controller  # Config/scripts only
 
-# 4. Verify
+# 3. Verify
 ha addons logs local_cync-controller --follow
 ```
 
-## Most Common Commands
-
-### Linting (Run After Every Edit)
-```bash
-npm run lint:python:fix && npm run format:python
-npm run lint  # Check everything
-```
-
-### Build & Restart
-```bash
-# Python changes → REBUILD
-cd cync-controller && ./rebuild.sh
-
-# Config/script changes → RESTART
-ha addons restart local_cync-controller
-
-# When in doubt → REBUILD (safer)
-```
-
-### View Logs
-```bash
-ha addons logs local_cync-controller --follow
-ha addons logs local_cync-controller | grep -i error
-ha addons logs local_cync-controller --follow | grep "Hallway"
-```
-
-### Check Status
-```bash
-ha addons info local_cync-controller
-ha core info
-```
-
-## Common Workflows
-
-### Test Entity Rediscovery
-```bash
-cd cync-controller && ./rebuild.sh
-sudo python3 scripts/delete-mqtt-safe.py --restart
-```
-
-### Configure Add-on
-```bash
-./scripts/configure-addon.sh get
-./scripts/configure-addon.sh preset-baseline
-```
-
-### Fresh Setup
-```bash
-./scripts/setup-fresh-ha.sh
-```
-
-## When to Rebuild vs Restart
+## Critical Decision: Rebuild vs Restart
 
 | Change Type          | Action      | Command                                   |
 | -------------------- | ----------- | ----------------------------------------- |
 | Python files (`.py`) | **REBUILD** | `cd cync-controller && ./rebuild.sh`      |
-| `config.yaml`        | Restart     | `ha addons restart local_cync-controller` |
-| `run.sh`             | Restart     | `ha addons restart local_cync-controller` |
-| `static/*` (HTML)    | Restart     | `ha addons restart local_cync-controller` |
+| Config/scripts       | Restart     | `ha addons restart local_cync-controller` |
 | When unsure          | **REBUILD** | `cd cync-controller && ./rebuild.sh`      |
+
+## Quick Commands
+
+```bash
+# Rebuild (includes lint, format, tests)
+cd cync-controller && ./rebuild.sh  # Python changes
+ha addons restart local_cync-controller  # Config changes
+
+# Manual linting (optional, for spot checks)
+npm run lint:python:fix && npm run format:python
+
+# Logs
+ha addons logs local_cync-controller --follow
+```
+
+## Testing
+
+```bash
+npm run test:unit                    # Run unit tests
+npm run test:unit:cov               # With coverage
+./scripts/test-cloud-relay.sh      # Cloud relay test suite
+```
+
+## Debugging
+
+```bash
+tail -f /tmp/supervisor_run.log     # Supervisor logs
+docker exec addon_local_cync-controller env | grep CYNC_  # Check environment
+sudo python3 scripts/delete-mqtt-safe.py --dry-run  # Clean MQTT entities (preview)
+```

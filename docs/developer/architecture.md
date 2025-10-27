@@ -7,6 +7,8 @@ This document covers the architecture, protocol details, and critical implementa
 - [Cloud Relay Mode](#cloud-relay-mode)
 - [Command Flow and ACK Handling](#command-flow-and-ack-handling)
 - [Architecture Overview](#architecture-overview)
+- [Logging Infrastructure](#logging-infrastructure)
+- [Testing Infrastructure](#testing-infrastructure)
 - [DNS Requirement](#dns-requirement)
 - [Critical Implementation Details](#critical-implementation-details)
 
@@ -79,6 +81,100 @@ The Cync Controller add-on has three main components:
 2. **nCync** - Async TCP server that masquerades as Cync cloud (requires DNS redirection)
    - **Optional Cloud Relay Mode** - Can act as MITM proxy to forward traffic to/from real cloud while inspecting packets
 3. **MQTT Client** - Bridges device states to Home Assistant using MQTT discovery
+
+## Logging Infrastructure
+
+**New in v0.0.4.14**: The add-on uses a production-grade structured logging system.
+
+### Architecture
+
+- **Dual-Format Output**: JSON for machine parsing (`/var/log/cync_controller.json`) and human-readable for console
+- **Correlation ID Tracking**: Automatic correlation IDs propagate across async operations for easy log filtering
+- **Performance Instrumentation**: Decorators track timing for network operations with configurable thresholds
+- **Structured Context**: Logs include key=value context pairs for filtering and analysis
+
+### Core Components
+
+Located in `cync-controller/src/cync_controller/`:
+
+- `logging_abstraction.py`: Dual-format logger supporting both printf-style and structured formats
+- `correlation.py`: Async-safe correlation ID tracking using `contextvars`
+- `instrumentation.py`: Performance timing decorators with threshold warnings
+
+### Usage
+
+```python
+from cync_controller.logging_abstraction import get_logger
+from cync_controller.correlation import ensure_correlation_id
+
+logger = get_logger(__name__)
+
+async def my_function():
+    ensure_correlation_id()  # Ensure correlation ID exists
+    logger.info("Operation started", extra={"device_id": device_id})
+```
+
+### Configuration
+
+Set in `config.yaml` via `debug_log_level` (0=INFO, 1=DEBUG):
+- `CYNC_DEBUG`: Enable debug logging
+- `CYNC_LOG_FORMAT`: "json", "human", or "both"
+- `CYNC_PERF_TRACKING`: Enable performance timing
+- `CYNC_PERF_THRESHOLD_MS`: Threshold for warnings (default: 100ms)
+
+### Log Analysis
+
+```bash
+# Filter by correlation ID
+ha addons logs local_cync-controller | grep "correlation-id"
+
+# View JSON logs
+docker exec addon_local_cync-controller cat /var/log/cync_controller.json | jq '.'
+
+# Find slow operations
+docker exec addon_local_cync-controller \
+  sh -c "grep 'performance' /var/log/cync_controller.json | jq 'select(.duration_ms > 100)'"
+```
+
+For detailed logging documentation, see [Logging System Guide](./logging-system.md).
+
+## Testing Infrastructure
+
+**New in v0.0.4.14**: Comprehensive test coverage across three tiers.
+
+### Test Structure
+
+```
+tests/
+├── unit/         # 24 test files (pytest)
+├── e2e/          # 10 test files (Playwright)
+└── integration/  # Performance and mesh refresh tests
+```
+
+### Running Tests
+
+```bash
+# Unit tests
+pytest cync-controller/tests/unit/
+
+# E2E tests
+npx playwright test tests/e2e/
+
+# With coverage
+pytest cync-controller/tests/unit/ --cov=cync_controller --cov-report=html
+```
+
+### Coverage
+
+Target: 90%+ coverage on critical modules
+
+### Test Patterns
+
+**Mock Devices**: Integration tests use `MockTCPDevice` to simulate protocol behavior
+**Async Tests**: Use `@pytest.mark.asyncio` for async function testing
+**E2E Tests**: Playwright for Home Assistant UI automation
+
+For detailed testing documentation, see [Testing Infrastructure Guide](./testing-infrastructure.md).
 
 ## DNS Requirement
 

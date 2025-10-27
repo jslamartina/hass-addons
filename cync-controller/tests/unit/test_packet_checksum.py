@@ -528,7 +528,7 @@ class TestInsertChecksumInPlace:
         """Test that invalid packet raises appropriate error"""
         packet = bytearray([0x00, 0x01, 0x02])
 
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match=r".*"):
             insert_checksum_in_place(packet, checksum_index=1)
 
     def test_insert_checksum_on_minimal_packet(self):
@@ -585,7 +585,7 @@ class TestInsertChecksumInPlace:
                 0x7E,
             ]
         )
-        packet2 = bytearray(packet1)
+        bytearray(packet1)
 
         insert_checksum_in_place(packet1, checksum_index=8)
         first_checksum = packet1[8]

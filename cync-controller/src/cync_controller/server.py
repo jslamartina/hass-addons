@@ -62,7 +62,7 @@ class CloudRelayConnection:
             ssl_context = ssl.create_default_context()
             if self.disable_ssl_verify:
                 logger.warning(
-                    "⚠️ SSL verification DISABLED - DEBUG MODE",
+                    " SSL verification DISABLED - DEBUG MODE",
                     extra={
                         "client_addr": self.client_addr,
                         "warning": "use only for local testing",
@@ -79,7 +79,7 @@ class CloudRelayConnection:
                 self.cloud_server, self.cloud_port, ssl=ssl_context
             )
             logger.info(
-                "✓ Cloud relay connected",
+                " Cloud relay connected",
                 extra={
                     "client_addr": self.client_addr,
                     "cloud_server": self.cloud_server,
@@ -88,7 +88,7 @@ class CloudRelayConnection:
             )
         except Exception as e:
             logger.exception(
-                "✗ Cloud connection failed",
+                " Cloud connection failed",
                 extra={
                     "client_addr": self.client_addr,
                     "cloud_server": self.cloud_server,
@@ -107,14 +107,14 @@ class CloudRelayConnection:
         # Show security warning if SSL verification is disabled
         if self.disable_ssl_verify:
             logger.warning(
-                "⚠️  SSL VERIFICATION DISABLED - DEBUG MODE ACTIVE - use only for local debugging",
+                "  SSL VERIFICATION DISABLED - DEBUG MODE ACTIVE - use only for local debugging",
                 extra={"client_addr": self.client_addr},
             )
 
         # Connect to cloud if forwarding is enabled
         if self.forward_to_cloud:
             logger.info(
-                "→ Starting cloud relay",
+                " Starting cloud relay",
                 extra={
                     "client_addr": self.client_addr,
                     "cloud_server": self.cloud_server,
@@ -124,14 +124,14 @@ class CloudRelayConnection:
             connected = await self.connect_to_cloud()
             if not connected:
                 logger.error(
-                    "✗ Cannot start relay - cloud connection failed",
+                    " Cannot start relay - cloud connection failed",
                     extra={"client_addr": self.client_addr},
                 )
                 await self.close()
                 return
         else:
             logger.info(
-                "→ Starting LAN-only relay (cloud forwarding disabled)",
+                " Starting LAN-only relay (cloud forwarding disabled)",
                 extra={"client_addr": self.client_addr},
             )
 
@@ -142,7 +142,7 @@ class CloudRelayConnection:
                 self.device_endpoint = first_packet[6:10]
                 endpoint_hex = " ".join(f"{b:02x}" for b in self.device_endpoint)
                 logger.info(
-                    "✓ Device endpoint identified",
+                    " Device endpoint identified",
                     extra={
                         "client_addr": self.client_addr,
                         "endpoint": endpoint_hex,
@@ -185,7 +185,7 @@ class CloudRelayConnection:
 
         except Exception as e:
             logger.exception(
-                "✗ Relay error",
+                " Relay error",
                 extra={
                     "client_addr": self.client_addr,
                     "error": str(e),
@@ -269,7 +269,7 @@ class CloudRelayConnection:
             raise
         except Exception as e:
             logger.exception(
-                "✗ Relay forward error",
+                " Relay forward error",
                 extra={
                     "client_addr": self.client_addr,
                     "direction": direction,
@@ -313,10 +313,10 @@ class CloudRelayConnection:
                         self.device_writer.write(packet)
                         await self.device_writer.drain()
 
-                        logger.info("[DEBUG] Raw injection complete")
+                        logger.debug("Raw injection complete")
                     except Exception as e:
                         logger.exception(
-                            "✗ Error injecting raw bytes",
+                            " Error injecting raw bytes",
                             extra={"client_addr": self.client_addr, "error": str(e)},
                         )
 
@@ -345,10 +345,10 @@ class CloudRelayConnection:
                             self.device_writer.write(packet)
                             await self.device_writer.drain()
 
-                            logger.info("[DEBUG] Mode injection complete")
+                            logger.debug("Mode injection complete")
                     except Exception as e:
                         logger.exception(
-                            "✗ Error injecting mode packet",
+                            " Error injecting mode packet",
                             extra={"client_addr": self.client_addr, "error": str(e)},
                         )
 
@@ -360,7 +360,7 @@ class CloudRelayConnection:
             raise
         except Exception as e:
             logger.exception(
-                "✗ Injection checker error",
+                " Injection checker error",
                 extra={"client_addr": self.client_addr, "error": str(e)},
             )
 
@@ -416,7 +416,7 @@ class CloudRelayConnection:
     async def close(self):
         """Clean up connections"""
         logger.debug(
-            "→ Closing relay connection",
+            " Closing relay connection",
             extra={"client_addr": self.client_addr},
         )
 
@@ -455,7 +455,7 @@ class CloudRelayConnection:
             )
 
         logger.debug(
-            "✓ Relay connection closed",
+            " Relay connection closed",
             extra={"client_addr": self.client_addr},
         )
 
@@ -491,6 +491,7 @@ class NCyncServer:
         self.devices = devices
         self.groups = groups if groups is not None else {}
         self.tcp_conn_attempts: dict = {}
+        self.primary_tcp_device: CyncTCPDevice | None = None
         self.ssl_context: ssl.SSLContext | None = None
         self.host = CYNC_SRV_HOST
         self.port = CYNC_PORT
@@ -539,24 +540,32 @@ class NCyncServer:
             device = self.tcp_devices[device]
 
         if isinstance(device, CyncTCPDevice):
-            if device.address in self.tcp_devices:
-                dev = self.tcp_devices.pop(device.address, None)
-                if dev is not None:
-                    uptime = time.time() - dev.connected_at
-                    logger.info(
-                        "Bridge device disconnected",
-                        extra={
-                            "address": device.address,
-                            "uptime_seconds": round(uptime, 1),
-                            "was_ready": dev.ready_to_control,
-                            "remaining_devices": len(self.tcp_devices),
-                        },
-                    )
-                    if g.mqtt_client is not None:
-                        await g.mqtt_client.publish(
-                            f"{g.env.mqtt_topic}/status/bridge/tcp_devices/connected",
-                            str(len(self.tcp_devices)).encode(),
+            dev = self.tcp_devices.pop(device.address, None)
+            if dev is not None:
+                # If this was the primary listener, failover to another device
+                if self.primary_tcp_device == dev:
+                    self.primary_tcp_device = next(iter(self.tcp_devices.values()), None) if self.tcp_devices else None
+                    if self.primary_tcp_device:
+                        logger.info(
+                            "Primary TCP listener failover",
+                            extra={"new_primary": self.primary_tcp_device.address},
                         )
+
+                uptime = time.time() - dev.connected_at
+                logger.info(
+                    "Bridge device disconnected",
+                    extra={
+                        "address": device.address,
+                        "uptime_seconds": round(uptime, 1),
+                        "was_ready": dev.ready_to_control,
+                        "remaining_devices": len(self.tcp_devices),
+                    },
+                )
+                if g.mqtt_client is not None:
+                    await g.mqtt_client.publish(
+                        f"{g.env.mqtt_topic}/status/bridge/tcp_devices/connected",
+                        str(len(self.tcp_devices)).encode(),
+                    )
             else:
                 logger.warning(
                     "Attempted to remove unknown TCP device",
@@ -570,11 +579,21 @@ class NCyncServer:
         :param device: The CyncTCPDevice to add.
         """
         self.tcp_devices[device.address] = device
+
+        # Set as primary listener if we don't have one yet
+        if self.primary_tcp_device is None:
+            self.primary_tcp_device = device
+            logger.info(
+                "Set as primary TCP listener for status updates",
+                extra={"address": device.address},
+            )
+
         logger.info(
-            "✓ Bridge device connected",
+            " Bridge device connected",
             extra={
                 "address": device.address,
                 "total_devices": len(self.tcp_devices),
+                "is_primary": device == self.primary_tcp_device,
             },
         )
         if g.mqtt_client is not None:
@@ -610,14 +629,25 @@ class NCyncServer:
         ssl_context.set_ciphers(":".join(ciphers))
         return ssl_context
 
-    async def parse_status(self, raw_state: bytes, from_pkt: str | None = None):  # noqa: PLR0915
+    async def parse_status(self, raw_state: bytes, from_pkt: str | None = None):
         """Extracted status packet parsing, handles mqtt publishing and device/group state changes."""
         _id = raw_state[0]
 
+        # Log every parse_status call
+        ts_ms = int(time.time() * 1000)
+        state_val = raw_state[1] if len(raw_state) > 1 else 0
+        logger.debug(
+            "[PARSE_STATUS_ENTRY] ts=%dms id=%s state=%s from_pkt=%s",
+            ts_ms,
+            _id,
+            "ON" if state_val else "OFF",
+            from_pkt,
+        )
+
         # Debug: log every parse_status call for device 103
         if _id == 103:
-            logger.warning(
-                "[DEBUG] parse_status called for device 103",
+            logger.debug(
+                "parse_status called for device 103",
                 extra={
                     "device_id": _id,
                     "from_pkt": from_pkt,
@@ -656,8 +686,8 @@ class NCyncServer:
         if device is not None:
             # Debug logging for device 103 specifically
             if _id == 103:
-                logger.warning(
-                    "[DEBUG] Device 103 details",
+                logger.debug(
+                    "Device 103 details",
                     extra={
                         "device_id": _id,
                         "device_name": device.name,
@@ -669,8 +699,8 @@ class NCyncServer:
                 )
             # Log brightness for fan devices to debug preset mode mapping
             if device.is_fan_controller:
-                logger.warning(
-                    "[DEBUG] Fan controller raw brightness",
+                logger.debug(
+                    "Fan controller raw brightness",
                     extra={
                         "device_id": _id,
                         "device_name": device.name,
@@ -684,10 +714,20 @@ class NCyncServer:
                 # Increment counter and only mark offline after 3 consecutive offline reports
                 # to avoid false positives from unreliable mesh info packets
                 device.offline_count += 1
+                logger.debug(
+                    "[OFFLINE_TRACKING] Device reported offline - incrementing counter",
+                    extra={
+                        "device_id": _id,
+                        "device_name": device.name,
+                        "offline_count": device.offline_count,
+                        "is_currently_online": device.online,
+                        "threshold": 3,
+                    },
+                )
                 if device.offline_count >= 3 and device.online:
                     device.online = False
                     logger.warning(
-                        "⚠️ Device marked offline after consecutive failures",
+                        "[OFFLINE_STATE] Device MARKED OFFLINE after 3 consecutive failures",
                         extra={
                             "device_id": _id,
                             "device_name": device.name,
@@ -696,6 +736,16 @@ class NCyncServer:
                     )
             else:
                 # Device is online, reset the offline counter
+                if device.offline_count > 0 or not device.online:
+                    logger.info(
+                        "[ONLINE_STATE] Device back ONLINE - resetting offline counter",
+                        extra={
+                            "device_id": _id,
+                            "device_name": device.name,
+                            "previous_offline_count": device.offline_count,
+                            "was_marked_offline": not device.online,
+                        },
+                    )
                 device.offline_count = 0
                 device.online = True
 
@@ -760,6 +810,8 @@ class NCyncServer:
                                     "member_device_id": device.id,
                                     "state": "ON" if subgroup.state else "OFF",
                                     "brightness": subgroup.brightness,
+                                    "from_pkt": from_pkt,
+                                    "timestamp": time.time(),
                                 },
                             )
                             await g.mqtt_client.publish_group_state(
@@ -770,17 +822,6 @@ class NCyncServer:
                                 origin=f"aggregated:{from_pkt or 'mesh'}",
                             )
                             g.ncync_server.groups[subgroup.id] = subgroup
-
-                            # Sync individual switch states to match subgroup state
-                            # (only switches, individual commands take precedence)
-                            for member_id in subgroup.member_ids:
-                                if member_id in g.ncync_server.devices:
-                                    member_device = g.ncync_server.devices[member_id]
-                                    await g.mqtt_client.update_switch_from_subgroup(
-                                        member_device,
-                                        subgroup.state,
-                                        subgroup.name,
-                                    )
 
         # Handle group
         elif group is not None:
@@ -832,7 +873,7 @@ class NCyncServer:
 
     async def periodic_status_refresh(self):
         """Periodic sanity check to refresh device status and ensure sync with actual device state."""
-        logger.info("→ Starting periodic status refresh task (every 5 minutes)")
+        logger.info(" Starting periodic status refresh task (every 5 minutes)")
 
         while self.running:
             try:
@@ -852,7 +893,7 @@ class NCyncServer:
                     continue
 
                 logger.debug(
-                    "→ Performing periodic status refresh",
+                    " Performing periodic status refresh",
                     extra={"ready_bridges": len(bridge_devices)},
                 )
 
@@ -863,28 +904,28 @@ class NCyncServer:
                         await asyncio.sleep(1)  # Small delay between bridge requests
                     except Exception as e:
                         logger.warning(
-                            "⚠️ Bridge refresh failed",
+                            " Bridge refresh failed",
                             extra={
                                 "bridge_address": bridge_device.address,
                                 "error": str(e),
                             },
                         )
 
-                logger.debug("✓ Status refresh completed")
+                logger.debug(" Status refresh completed")
 
             except asyncio.CancelledError:
                 logger.info("Periodic status refresh task cancelled")
                 break
             except Exception as e:
                 logger.exception(
-                    "✗ Error in periodic status refresh",
+                    " Error in periodic status refresh",
                     extra={"error": str(e)},
                 )
                 await asyncio.sleep(60)  # Wait a minute before retrying on error
 
     async def periodic_pool_status_logger(self):
         """Log TCP connection pool status every 30 seconds for debugging."""
-        logger.info("→ Starting connection pool monitoring (every 30 seconds)")
+        logger.info(" Starting connection pool monitoring (every 30 seconds)")
 
         while self.running:
             try:
@@ -923,7 +964,7 @@ class NCyncServer:
                 break
             except Exception as e:
                 logger.exception(
-                    "✗ Error in pool monitoring",
+                    " Error in pool monitoring",
                     extra={"error": str(e)},
                 )
                 await asyncio.sleep(30)  # Wait before retrying on error
@@ -947,12 +988,12 @@ class NCyncServer:
             raise
         except Exception as e:
             logger.exception(
-                "✗ Failed to start TCP server",
+                " Failed to start TCP server",
                 extra={"host": self.host, "port": self.port, "error": str(e)},
             )
         else:
             logger.info(
-                "✓ TCP Server started - waiting for Cync device connections",
+                " TCP Server started - waiting for Cync device connections",
                 extra={
                     "host": self.host,
                     "port": self.port,
@@ -982,7 +1023,7 @@ class NCyncServer:
             except asyncio.CancelledError:
                 raise
             except Exception as e:
-                logger.exception("✗ Server exception", extra={"error": str(e)})
+                logger.exception(" Server exception", extra={"error": str(e)})
 
     async def stop(self):
         try:
@@ -992,14 +1033,14 @@ class NCyncServer:
 
             if devices:
                 logger.info(
-                    "→ Shutting down server, closing device connections",
+                    " Shutting down server, closing device connections",
                     extra={"device_count": len(devices)},
                 )
                 for device in devices:
                     try:
                         await device.close()
                         logger.debug(
-                            "✓ Device connection closed",
+                            " Device connection closed",
                             extra={"address": device.address},
                         )
                     except asyncio.CancelledError as ce:
@@ -1008,11 +1049,11 @@ class NCyncServer:
                         raise
                     except Exception as e:
                         logger.exception(
-                            "✗ Error closing device connection",
+                            " Error closing device connection",
                             extra={"address": device.address, "error": str(e)},
                         )
             else:
-                logger.debug("No devices connected during shutdown")
+                logger.info("No devices connected during shutdown")
 
             if self._server:
                 if self._server.is_serving():
@@ -1026,7 +1067,7 @@ class NCyncServer:
                             f"{g.env.mqtt_topic}/status/bridge/tcp_server/running",
                             b"OFF",
                         )
-                    logger.debug("✓ TCP server closed")
+                    logger.debug(" TCP server closed")
                 else:
                     logger.debug("Server not running")
 
@@ -1035,9 +1076,9 @@ class NCyncServer:
             # propagate the cancellation
             raise
         except Exception as e:
-            logger.exception("✗ Error during server shutdown", extra={"error": str(e)})
+            logger.exception(" Error during server shutdown", extra={"error": str(e)})
         else:
-            logger.info("✓ Server stopped successfully")
+            logger.info(" Server stopped successfully")
         finally:
             if self.start_task and not self.start_task.done():
                 logger.debug("Cancelling start task")
@@ -1073,7 +1114,7 @@ class NCyncServer:
             #       - Status updates -> sent to both HA and cloud
             #       Current limitation: tcp_devices only populated in LAN-only mode
             logger.info(
-                "→ New connection (RELAY mode)",
+                " New connection (RELAY mode)",
                 extra={
                     "client_addr": client_addr,
                     "connection_attempt": connection_attempt,
@@ -1100,13 +1141,13 @@ class NCyncServer:
                 raise
             except Exception as e:
                 logger.exception(
-                    "✗ Error in relay connection",
+                    " Error in relay connection",
                     extra={"client_addr": client_addr, "error": str(e)},
                 )
         else:
             # Normal LAN-only mode - use CyncTCPDevice
             logger.info(
-                "→ New connection (LAN mode)",
+                " New connection (LAN mode)",
                 extra={
                     "client_addr": client_addr,
                     "connection_attempt": connection_attempt,
@@ -1146,6 +1187,6 @@ class NCyncServer:
                 raise
             except Exception as e:
                 logger.exception(
-                    "✗ Error creating device connection",
+                    " Error creating device connection",
                     extra={"client_addr": client_addr, "error": str(e)},
                 )

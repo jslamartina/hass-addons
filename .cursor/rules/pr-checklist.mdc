@@ -1,5 +1,4 @@
 ---
-alwaysApply: true
 description: PR submission checklist and guidelines
 ---
 
@@ -9,11 +8,19 @@ Before submitting a PR, ensure all items are complete.
 
 ## Code Quality
 
-- ✅ Run `npm run lint` - ALL linting errors fixed
-- ✅ Run `npm run format` - Code properly formatted
+- ✅ Rebuild completed successfully - `rebuild.sh` automatically runs lint/format/tests
+- ✅ No manual linting needed - quality gates enforced by rebuild script
 - ✅ No console.log/print statements left (use logging functions)
 - ✅ Comments added for complex logic
 - ✅ Type hints added for Python functions
+
+## Security Review
+
+- ✅ Secret scan passed - run `gitleaks detect --no-git` or check pre-commit hooks
+- ✅ No sensitive data in logs (tokens, passwords, IPs if private)
+- ✅ Dependency changes reviewed (if `requirements.txt` or `package.json` changed)
+- ✅ Threat modeling note added (if network/auth/credential handling changed)
+- ✅ Input validation added for user-supplied data
 
 ## Testing
 
@@ -21,6 +28,7 @@ Before submitting a PR, ensure all items are complete.
 - ✅ Verified with `ha addons logs` for errors
 - ✅ Fresh HA setup tested (if relevant)
 - ✅ No breaking changes to existing functionality
+- ✅ Test coverage added or rationale documented (if new code paths added)
 
 ## Documentation
 
@@ -39,10 +47,9 @@ Before submitting a PR, ensure all items are complete.
 
 ## Python-Specific
 
-- ✅ Used `npm run lint:python:fix` to auto-fix
+- ✅ Rebuild tested: `cd cync-controller && ./rebuild.sh` (runs lint/format/tests automatically)
 - ✅ Added docstrings to new functions
 - ✅ No unused imports
-- ✅ Rebuild tested: `cd cync-controller && ./rebuild.sh`
 
 ## Shell Script-Specific
 
@@ -59,8 +66,11 @@ Before submitting a PR, ensure all items are complete.
 - ❌ Linting output files
 - ❌ Temporary/debug files
 
+## Release Preparation (master)
+
+- ✅ Uncomment `image:` in `cync-controller/config.yaml` before releasing to `master`
+
 ## Related
 
 - See `CONTRIBUTING.md` - Full contribution guidelines
 - See `development-workflow.mdc` - Development process
-- See `linting-mandatory.mdc` - Code quality requirements

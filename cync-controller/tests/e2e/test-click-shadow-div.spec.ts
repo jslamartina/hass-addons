@@ -49,7 +49,7 @@ test("Click div.row.pointer inside shadow DOM", async ({ page }) => {
       console.log(`  Div ${i + 1} class: "${className}"`);
     }
   } else {
-    console.log("✓ Found div.row.pointer, trying to click it...");
+    console.log(" Found div.row.pointer, trying to click it...");
     await clickableDiv.click();
     await page.waitForTimeout(2000);
 

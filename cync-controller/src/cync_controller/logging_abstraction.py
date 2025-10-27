@@ -113,6 +113,12 @@ class CyncLogger:
         self.logger = logging.getLogger(name)
         self.log_format = log_format
 
+        # Determine initial log level based on CYNC_DEBUG environment variable
+        from cync_controller.const import CYNC_DEBUG  # noqa: PLC0415
+
+        initial_level = logging.DEBUG if CYNC_DEBUG else logging.INFO
+        self.logger.setLevel(initial_level)
+
         # Don't add handlers if already configured (avoid duplicates)
         if not self.logger.handlers:
             self._configure_handlers(json_file, human_output)
@@ -123,6 +129,9 @@ class CyncLogger:
         human_output: str | None,
     ):
         """Configure log handlers based on format settings."""
+        # Use the same level as the logger for handlers
+        handler_level = self.logger.level
+
         # JSON handler (file output)
         if self.log_format in ("json", "both") and json_file:
             try:
@@ -130,6 +139,7 @@ class CyncLogger:
                 json_path.parent.mkdir(parents=True, exist_ok=True)
                 json_handler = logging.FileHandler(json_path, mode="a")
                 json_handler.setFormatter(JSONFormatter())
+                json_handler.setLevel(handler_level)
                 self.logger.addHandler(json_handler)
             except (OSError, PermissionError) as e:
                 # Fallback: log to stderr if file creation fails
@@ -152,6 +162,7 @@ class CyncLogger:
                     human_handler = logging.StreamHandler(sys.stdout)
 
             human_handler.setFormatter(HumanReadableFormatter())
+            human_handler.setLevel(handler_level)
             self.logger.addHandler(human_handler)
 
     def _log(self, level: int, msg: str, *args, extra: dict[str, Any] | None = None, **kwargs):

@@ -9,14 +9,14 @@ test.describe("Cync add-on happy path", () => {
   test("successfully login to Home Assistant", async ({ page }) => {
     // Login via the helper
     await login(page, BASE_URL, USERNAME, PASSWORD);
-    console.log("✓ Login successful");
+    console.log(" Login successful");
 
     // Verify we're on the dashboard (not on auth page)
     expect(page.url()).not.toContain("/auth/");
-    console.log("✓ On dashboard");
+    console.log(" On dashboard");
 
     console.log(
-      "\n✅ Happy path PASSED: Successfully authenticated to Home Assistant!",
+      "\n Happy path PASSED: Successfully authenticated to Home Assistant!",
     );
   });
 });

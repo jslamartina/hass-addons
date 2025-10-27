@@ -1,5 +1,4 @@
 ---
-alwaysApply: true
 description: Critical command handling rules
 ---
 
@@ -31,6 +30,56 @@ await device.send_command(packet)
 
 # ❌ WRONG: Send without callback
 await device.send_command(packet)  # Device ignores this
+```
+
+## Timeout and Retry
+
+```python
+import asyncio
+import random
+
+async def send_with_retry(device, packet, max_retries=3, base_delay=0.5):
+    """Send command with exponential backoff + jitter."""
+    for attempt in range(max_retries):
+        try:
+            result = await asyncio.wait_for(
+                device.send_command(packet),
+                timeout=5.0  # 5s timeout
+            )
+            return result
+        except asyncio.TimeoutError:
+            if attempt == max_retries - 1:
+                raise
+            # Exponential backoff with jitter
+            delay = base_delay * (2 ** attempt) + random.uniform(0, 0.1)
+            await asyncio.sleep(delay)
+```
+
+## Idempotency
+
+- Commands should be safe to retry (same result if sent multiple times)
+- Use unique command IDs to detect duplicates
+- Don't assume device state changed without ACK
+
+## Correlation and Logging
+
+```python
+from cync_controller.correlation import ensure_correlation_id
+
+async def send_command(device_id, command):
+    correlation_id = ensure_correlation_id()
+    logger.info("→ Sending command", extra={
+        "correlation_id": correlation_id,
+        "device_id": device_id,
+        "command": command,
+    })
+
+    # ... send ...
+
+    logger.info("✓ ACK received", extra={
+        "correlation_id": correlation_id,
+        "device_id": device_id,
+    })
 ```
 
 See `docs/developer/architecture.md` for command flow details.

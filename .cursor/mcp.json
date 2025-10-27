@@ -12,6 +12,15 @@
         "--python-path",
         "/usr/local/bin/python3"
       ]
+    },
+    "sequential-thinking": {
+    "command": "uv",
+    "args": [
+      "run",
+      "--with",
+      "mcp-sequential-thinking-server",
+      "mcp-sequential-thinking-server"
+    ]
     }
   }
 }

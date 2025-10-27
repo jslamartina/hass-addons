@@ -1,5 +1,4 @@
 ---
-alwaysApply: true
 description: MQTT entity cleanup workflows and best practices
 ---
 

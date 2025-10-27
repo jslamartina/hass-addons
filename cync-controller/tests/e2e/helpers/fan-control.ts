@@ -95,7 +95,7 @@ export async function selectFanPreset(
 
   if ((await presetSelect.count()) === 0) {
     console.log(
-      `  ⚠️  Preset dropdown not found - preset feature may not be available`,
+      `    Preset dropdown not found - preset feature may not be available`,
     );
     return;
   }
@@ -110,7 +110,7 @@ export async function selectFanPreset(
   });
 
   if ((await presetOption.count()) === 0) {
-    console.log(`  ⚠️  Preset option '${preset}' not found in dropdown`);
+    console.log(`    Preset option '${preset}' not found in dropdown`);
     return;
   }
 
@@ -206,7 +206,7 @@ export async function getFanStateFromDevTools(
   percentage?: number;
   preset_mode?: string;
 }> {
-  // Navigate to Developer Tools → States
+  // Navigate to Developer Tools  States
   await page.goto("/developer-tools/state");
   await page.waitForLoadState("networkidle");
 

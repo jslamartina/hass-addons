@@ -101,6 +101,24 @@ case "${1:-}" in
     show_logs | tail -50
     ;;
 
+  set-debug)
+    debug_enabled="${2:-true}"
+
+    echo "$LP Setting debug_log_level to: $debug_enabled"
+
+    # Get current config and merge changes
+    current_config=$(get_config)
+
+    new_config=$(echo "$current_config" | jq \
+      --argjson debug "$debug_enabled" \
+      '.debug_log_level = $debug')
+
+    update_config "$(echo "{\"options\": $new_config}" | jq -c '.')"
+    restart_addon
+    sleep 5
+    show_logs | tail -50
+    ;;
+
   preset-baseline)
     echo "$LP Applying preset: Baseline (LAN-only, relay disabled)"
     current_config=$(get_config)
@@ -167,6 +185,7 @@ $LP Usage: $0 <command> [args...]
 
 Commands:
   get                           Show current configuration
+  set-debug <true|false>        Enable or disable debug log level
   set-cloud-relay <enabled> <forward> <debug>
                                 Set cloud relay options (true/false values)
   preset-baseline               Disable cloud relay (backward compatibility test)
@@ -179,6 +198,12 @@ Commands:
 Examples:
   # Check current config
   $0 get
+
+  # Enable debug logs
+  $0 set-debug true
+
+  # Disable debug logs
+  $0 set-debug false
 
   # Enable cloud relay with forwarding
   $0 set-cloud-relay true true false

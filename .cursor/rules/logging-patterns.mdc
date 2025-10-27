@@ -1,0 +1,128 @@
+---
+description: Python logging configuration patterns and anti-patterns
+appliesTo:
+  - "**/*.py"
+---
+
+# Logging Configuration Patterns
+
+**CRITICAL: Both logger AND handler levels must be set correctly for DEBUG logs to appear.**
+
+## Python Logging Hierarchy
+
+The Python logging system has TWO levels of filtering:
+
+1. **Logger Level** - Filters messages FIRST (determines which messages the logger will process)
+2. **Handler Level** - Filters messages SECOND (determines which messages each handler will output)
+
+If EITHER level is set to INFO, DEBUG messages will be dropped at that stage and never reach the output.
+
+## Pattern: Configuration-Driven Log Levels
+
+**Never hardcode log levels** - always respect configuration-driven settings from environment variables.
+
+### Correct Pattern
+
+```python
+import logging
+from cync_controller.const import CYNC_DEBUG
+
+def __init__(self, name: str, ...):
+    self.logger = logging.getLogger(name)
+
+    # Set level based on configuration
+    initial_level = logging.DEBUG if CYNC_DEBUG else logging.INFO
+    self.logger.setLevel(initial_level)
+
+    # Handlers must use the same level
+    for handler in self._configure_handlers():
+        handler.setLevel(initial_level)
+```
+
+### Anti-Patterns
+
+```python
+# WRONG: Hardcoded INFO level (will drop DEBUG messages)
+self.logger.setLevel(logging.INFO)
+handler.setLevel(logging.INFO)
+
+# WRONG: Only setting logger level (handlers still filter)
+self.logger.setLevel(logging.DEBUG)
+handler.setLevel(logging.INFO)  # DEBUG messages dropped here
+
+# WRONG: Only setting handler level (logger still filters)
+self.logger.setLevel(logging.INFO)  # DEBUG messages dropped here
+handler.setLevel(logging.DEBUG)
+```
+
+## Configuration Sources
+
+The `CYNC_DEBUG` value comes from:
+
+1. **Add-on UI**: Settings → Add-ons → Cync Controller → Configuration → debug_log_level
+2. **Environment variable**: `CYNC_DEBUG` (set by `run.sh` from config.yaml)
+3. **Imported in const.py**: Line 134 - `CYNC_DEBUG = os.environ.get("CYNC_DEBUG", "0").casefold() in YES_ANSWER`
+
+## Preventing Duplicate Handlers
+
+```python
+import logging
+
+def configure_logger(name: str, level: int):
+    logger = logging.getLogger(name)
+
+    # Prevent duplicate handlers
+    if logger.hasHandlers():
+        logger.handlers.clear()
+
+    # OR: Use propagate=False and configure at root
+    logger.propagate = False
+
+    handler = logging.StreamHandler()
+    handler.setLevel(level)
+    logger.addHandler(handler)
+    logger.setLevel(level)
+
+    return logger
+```
+
+**Anti-Pattern:**
+```python
+# ❌ WRONG: Adds handler every call (duplicates logs)
+logger.addHandler(handler)
+logger.addHandler(handler)  # Now every log appears twice
+```
+
+## JSON Logging and Field Invariants
+
+```python
+import json
+import logging
+
+class JSONFormatter(logging.Formatter):
+    def format(self, record):
+        log_data = {
+            "timestamp": self.formatTime(record),
+            "level": record.levelname,
+            "message": record.getMessage(),
+            # Invariants: always include these
+            "correlation_id": getattr(record, "correlation_id", None),
+            "device_id": getattr(record, "device_id", None),
+        }
+        return json.dumps(log_data)
+
+handler = logging.StreamHandler()
+handler.setFormatter(JSONFormatter())
+```
+
+**Field Invariants (always log when available):**
+- `correlation_id` - Request/command trace ID
+- `device_id` - Device identifier
+- `timestamp` - ISO 8601 format
+- `level` - Log level
+
+## Related
+
+- See `logging_abstraction.py` for implementation details
+- See `common-commands.mdc` for logging command reference
+- See `debugging-guide.mdc` for log inspection techniques

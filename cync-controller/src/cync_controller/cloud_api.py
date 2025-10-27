@@ -84,7 +84,7 @@ class CyncCloudAPI:
             if not token_data:
                 logger.debug("%s Cached token data is EMPTY!", lp)
                 return None
-            logger.debug("%s Cached token data read successfully", lp)
+            logger.info("%s Cached token data read successfully", lp)
             return token_data
             # add issued_at to the token data for computing the expiration datetime
             # iat = datetime.datetime.now(datetime.UTC)
@@ -188,7 +188,7 @@ class CyncCloudAPI:
             # CRITICAL: Set token in memory FIRST before attempting file write
             # This ensures subsequent calls can use the token even if file write fails
             self.token_cache = computed_token
-            logger.info("%s ✓ Token set in memory cache (user_id: %s)", lp, computed_token.user_id)
+            logger.info("%s  Token set in memory cache (user_id: %s)", lp, computed_token.user_id)
 
             # Then attempt to write to persistent cache file
             write_success = await self.write_token_cache(computed_token)
@@ -213,7 +213,7 @@ class CyncCloudAPI:
             logger.exception("%s Failed to write token cache", lp)
             return False
         else:
-            logger.info("%s ✓ Token cache written successfully to file: %s", lp, self.auth_cache_file)
+            logger.info("%s  Token cache written successfully to file: %s", lp, self.auth_cache_file)
             # Note: self.token_cache should already be set by caller before this function
             return True
 
