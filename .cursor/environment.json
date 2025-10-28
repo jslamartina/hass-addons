@@ -1,10 +1,17 @@
 {
-  "agentCanUpdateSnapshot": true,
-  "install": "python -m pip install --upgrade pip setuptools wheel && pip install -e '.[dev]'",
+  "install": "npm ci && cd cync-controller && pip install -e '.[dev,test]'",
   "terminals": [
     {
       "name": "bash",
       "command": "bash"
+    },
+    {
+      "name": "zsh",
+      "command": "zsh"
     }
-  ]
+  ],
+  "build": {
+    "context": ".",
+    "dockerfile": "Dockerfile"
+  }
 }

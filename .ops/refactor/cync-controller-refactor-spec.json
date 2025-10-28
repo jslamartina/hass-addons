@@ -1,0 +1,143 @@
+{
+  "schema": "refactor-spec/v1",
+  "plan_id": "rf-2025-10-28-cync-controller-python-refactor",
+  "goal": "Split monolithic cync-controller Python modules into focused packages without changing external interfaces; reduce file size and lint debt.",
+  "scope": {
+    "include": ["cync-controller/**", "cync-controller/src/cync_controller/**"],
+    "exclude": ["**/vendor/**", "**/gen/**", "**/__pycache__/**", "**/site-packages/**", "**/node_modules/**"]
+  },
+  "invariants": [
+    "External-facing interfaces (import paths, class/function names) MUST NOT change.",
+    "Behavior MUST remain identical; this is a structural refactor only.",
+    "All existing tests MUST pass; coverage MUST NOT drop by more than 0.5%.",
+    "No changes to runtime configuration, environment variables, or network protocol.",
+    "Public re-exports MUST preserve backward compatibility for prior import paths."
+  ],
+  "changes": [
+    {
+      "type": "file.split",
+      "from": "cync-controller/devices.py",
+      "to": [
+        "cync-controller/devices/__init__.py",
+        "cync-controller/devices/base_device.py",
+        "cync-controller/devices/device_commands.py",
+        "cync-controller/devices/group.py",
+        "cync-controller/devices/tcp_device.py",
+        "cync-controller/devices/tcp_connection.py",
+        "cync-controller/devices/tcp_packet_handler.py"
+      ],
+      "selection_hints": [
+        "CyncDevice core and state → base_device.py",
+        "Command methods → device_commands.py",
+        "CyncGroup → group.py",
+        "TCPDevice core lifecycle → tcp_device.py",
+        "Networking I/O → tcp_connection.py",
+        "Packet parsing → tcp_packet_handler.py"
+      ]
+    },
+    {
+      "type": "file.split",
+      "from": "cync-controller/mqtt_client.py",
+      "to": [
+        "cync-controller/mqtt/__init__.py",
+        "cync-controller/mqtt/client.py",
+        "cync-controller/mqtt/commands.py",
+        "cync-controller/mqtt/discovery.py",
+        "cync-controller/mqtt/command_routing.py",
+        "cync-controller/mqtt/state_updates.py"
+      ],
+      "selection_hints": [
+        "MQTTClient connection/lifecycle → client.py",
+        "Command classes and processor → commands.py",
+        "Home Assistant discovery → discovery.py",
+        "Message routing → command_routing.py",
+        "State publishing → state_updates.py"
+      ]
+    },
+    {
+      "type": "codemod.reexports",
+      "file": "cync-controller/devices/__init__.py",
+      "exports": ["CyncDevice", "CyncGroup", "CyncTCPDevice"]
+    },
+    {
+      "type": "codemod.updateImports",
+      "where": ["cync-controller/**", "tests/**"],
+      "strategy": "prefer-local-module-imports",
+      "preserve_public_api_via_init": true
+    },
+    {
+      "type": "codemod.extractFunctions",
+      "from": "cync-controller/devices.py",
+      "selection_hint": "TCP packet parsing helpers",
+      "new_file": "cync-controller/devices/tcp_packet_handler.py"
+    },
+    {
+      "type": "codemod.extractFunctions",
+      "from": "cync-controller/src/cync_controller/devices.py",
+      "functions": ["parse_packet", "parse_raw_data"],
+      "target_file": "cync-controller/src/cync_controller/devices/tcp_packet_handler.py",
+      "goal": "Reduce PLR0912/PLR0915 by moving branching to handler functions"
+    },
+    {
+      "type": "codemod.extractFunctions",
+      "from": "cync-controller/src/cync_controller/mqtt_client.py",
+      "functions": [
+        "start_receiver_task",
+        "homeassistant_discovery",
+        "parse_device_status",
+        "register_single_device",
+        "create_bridge_device",
+        "start"
+      ],
+      "targets": {
+        "start_receiver_task": "cync-controller/src/cync_controller/mqtt/command_routing.py",
+        "parse_device_status": "cync-controller/src/cync_controller/mqtt/state_updates.py",
+        "homeassistant_discovery": "cync-controller/src/cync_controller/mqtt/discovery.py",
+        "register_single_device": "cync-controller/src/cync_controller/mqtt/discovery.py",
+        "create_bridge_device": "cync-controller/src/cync_controller/mqtt/discovery.py",
+        "start": "cync-controller/src/cync_controller/mqtt/client.py"
+      },
+      "goal": "Lower cognitive complexity in MQTT flows without changing behavior"
+    },
+    {
+      "type": "codemod.replaceBranchesWithDispatchTable",
+      "from": "cync-controller/src/cync_controller/packet_parser.py",
+      "function": "parse_cync_packet",
+      "strategy": "dispatch-table",
+      "target_file": "cync-controller/src/cync_controller/packet_parser.py",
+      "goal": "Replace long if/elif chains with header->handler map; reduce PLR0912/PLR0915"
+    }
+  ],
+  "batches": {
+    "strategy": "by-module",
+    "size_limits": { "files_max": 20, "diff_lines_max": 1200 }
+  },
+  "checks": {
+    "commands": [
+      { "name": "lint", "run": "npm run format && npm run lint --silent --max-warnings=0" }
+    ],
+    "must_pass": ["lint"]
+  },
+  "telemetry": [
+    "count files > 600 lines before vs after",
+    "cyclomatic complexity delta for cync-controller/**",
+    "ruff/flake8 issue count delta",
+    "PLR0912/PLR0915 counts before vs after"
+  ],
+  "abort_if": [
+    "Any file modified outside of cync-controller/src/cync_controller/**."
+  ],
+  "fallbacks": [
+    "If public import paths shift, add re-exports to __init__.py to restore compatibility.",
+    "If complexity does not drop by >=10% after splits, adjust split boundaries."
+  ],
+  "execution": {
+    "risk_tolerance": "aggressive",
+    "dry_run": true,
+    "max_retries_per_step": 2,
+    "confirm_each_batch": true,
+    "output_policy": "minimal_diff_with_rationale"
+  }
+}
+
+

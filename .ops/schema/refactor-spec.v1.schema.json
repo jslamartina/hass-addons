@@ -1,0 +1,30 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Refactor Spec v1",
+  "type": "object",
+  "required": ["plan_id", "goal", "scope", "changes"],
+  "properties": {
+    "plan_id": { "type": "string" },
+    "goal": { "type": "string" },
+    "scope": {
+      "type": "object",
+      "required": ["include"],
+      "properties": {
+        "include": { "type": "array", "items": { "type": "string" } },
+        "exclude": { "type": "array", "items": { "type": "string" } }
+      },
+      "additionalProperties": false
+    },
+    "invariants": { "type": "array", "items": { "type": "string" } },
+    "changes": { "type": "array", "items": { "type": "object" } },
+    "batches": { "type": "object" },
+    "checks": { "type": "object" },
+    "telemetry": { "type": "array", "items": { "type": "string" } },
+    "abort_if": { "type": "array", "items": { "type": "string" } },
+    "fallbacks": { "type": "array", "items": { "type": "string" } },
+    "rollback": { "type": "object" },
+    "artifacts": { "type": "object" },
+    "execution": { "type": "object" }
+  },
+  "additionalProperties": true
+}
