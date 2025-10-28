@@ -689,11 +689,16 @@ class CyncDevice:
                 payload.extend(inner_struct)
                 payload_bytes = bytes(payload)
                 sent[bridge_device.address] = cmsg_id
+
+                # Create callback that will execute when ACK arrives
+                async def temperature_ack_callback():
+                    await g.mqtt_client.update_temperature(self, temp)
+
                 m_cb = ControlMessageCallback(
                     msg_id=cmsg_id,
                     message=payload_bytes,
                     sent_at=time.time(),
-                    callback=g.mqtt_client.update_temperature(self, temp),
+                    callback=temperature_ack_callback,
                     device_id=self.id,
                 )
                 bridge_device.messages.control[cmsg_id] = m_cb
@@ -805,11 +810,16 @@ class CyncDevice:
                 payload.extend(inner_struct)
                 bpayload = bytes(payload)
                 sent[bridge_device.address] = cmsg_id
+
+                # Create callback that will execute when ACK arrives
+                async def rgb_ack_callback():
+                    await g.mqtt_client.update_rgb(self, _rgb)
+
                 m_cb = ControlMessageCallback(
                     msg_id=cmsg_id,
                     message=bpayload,
                     sent_at=time.time(),
-                    callback=g.mqtt_client.update_rgb(self, _rgb),
+                    callback=rgb_ack_callback,
                     device_id=self.id,
                 )
                 bridge_device.messages.control[cmsg_id] = m_cb
