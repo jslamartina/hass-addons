@@ -218,3 +218,4 @@ dist/
 
 code-reviews/**
 .ruff_cache/
+**/__pycache__/
