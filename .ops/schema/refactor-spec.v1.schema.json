@@ -24,7 +24,45 @@
     "fallbacks": { "type": "array", "items": { "type": "string" } },
     "rollback": { "type": "object" },
     "artifacts": { "type": "object" },
-    "execution": { "type": "object" }
+    "execution": {
+      "type": "object",
+      "default": {
+        "dry_run": true,
+        "confirm_each_batch": true,
+        "max_retries_per_step": 2,
+        "output_policy": "minimal_diff_with_rationale",
+        "overrides": {
+          "max_files_per_batch": 20,
+          "max_diff_lines_per_batch": 800,
+          "extra_exclude_globs": ["**/*.snap"]
+        }
+      },
+      "properties": {
+        "dry_run": { "type": "boolean", "default": true },
+        "confirm_each_batch": { "type": "boolean", "default": true },
+        "max_retries_per_step": { "type": "integer", "minimum": 0, "default": 2 },
+        "output_policy": { "type": "string", "default": "minimal_diff_with_rationale" },
+        "overrides": {
+          "type": "object",
+          "default": {
+            "max_files_per_batch": 20,
+            "max_diff_lines_per_batch": 800,
+            "extra_exclude_globs": ["**/*.snap"]
+          },
+          "properties": {
+            "max_files_per_batch": { "type": "integer", "minimum": 1, "default": 20 },
+            "max_diff_lines_per_batch": { "type": "integer", "minimum": 1, "default": 800 },
+            "extra_exclude_globs": {
+              "type": "array",
+              "items": { "type": "string" },
+              "default": ["**/*.snap"]
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": true
+    }
   },
   "additionalProperties": true
 }
