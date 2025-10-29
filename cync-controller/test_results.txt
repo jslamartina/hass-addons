@@ -1,0 +1,1175 @@
+[1m============================= test session starts ==============================[0m
+platform linux -- Python 3.13.9, pytest-8.4.2, pluggy-1.6.0 -- /usr/local/bin/python
+cachedir: .pytest_cache
+rootdir: /workspace/cync-controller
+configfile: pytest.ini
+plugins: anyio-4.11.0, xdist-3.8.0, base-url-2.1.0, playwright-0.7.1, asyncio-1.2.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=function, asyncio_default_test_loop_scope=function
+[1mcollecting ... [0mcollected 721 items
+
+tests/unit/test_cloud_api.py::TestCyncCloudAPIInitialization::test_init_default_params [32mPASSED[0m[32m [  0%][0m
+tests/unit/test_cloud_api.py::TestCyncCloudAPIInitialization::test_init_custom_params [32mPASSED[0m[32m [  0%][0m
+tests/unit/test_cloud_api.py::TestCyncCloudAPIInitialization::test_init_creates_singleton [32mPASSED[0m[32m [  0%][0m
+tests/unit/test_cloud_api.py::TestCyncCloudAPISession::test_check_session_creates_new_session [32mPASSED[0m[32m [  0%][0m
+tests/unit/test_cloud_api.py::TestCyncCloudAPISession::test_check_session_reuses_open_session [32mPASSED[0m[32m [  0%][0m
+tests/unit/test_cloud_api.py::TestCyncCloudAPISession::test_close_session [32mPASSED[0m[32m [  0%][0m
+tests/unit/test_cloud_api.py::TestCyncCloudAPITokenManagement::test_read_token_cache_not_found [32mPASSED[0m[32m [  0%][0m
+tests/unit/test_cloud_api.py::TestCyncCloudAPITokenManagement::test_read_token_cache_success [32mPASSED[0m[32m [  1%][0m
+tests/unit/test_cloud_api.py::TestCyncCloudAPITokenManagement::test_write_token_cache [32mPASSED[0m[32m [  1%][0m
+tests/unit/test_cloud_api.py::TestCyncCloudAPITokenManagement::test_check_token_valid [32mPASSED[0m[32m [  1%][0m
+tests/unit/test_cloud_api.py::TestCyncCloudAPITokenManagement::test_check_token_expired [32mPASSED[0m[32m [  1%][0m
+tests/unit/test_cloud_api.py::TestCyncCloudAPITokenManagement::test_check_token_not_found [32mPASSED[0m[32m [  1%][0m
+tests/unit/test_cloud_api.py::TestCyncCloudAPIAuthentication::test_request_otp_success [32mPASSED[0m[32m [  1%][0m
+tests/unit/test_cloud_api.py::TestCyncCloudAPIAuthentication::test_request_otp_no_credentials [32mPASSED[0m[32m [  1%][0m
+tests/unit/test_cloud_api.py::TestCyncCloudAPIAuthentication::test_request_otp_http_error [32mPASSED[0m[32m [  2%][0m
+tests/unit/test_cloud_api.py::TestCyncCloudAPIAuthentication::test_send_otp_success [32mPASSED[0m[32m [  2%][0m
+tests/unit/test_cloud_api.py::TestCyncCloudAPIAuthentication::test_send_otp_invalid_code [32mPASSED[0m[32m [  2%][0m
+tests/unit/test_cloud_api.py::TestCyncCloudAPIAuthentication::test_send_otp_string_conversion [32mPASSED[0m[32m [  2%][0m
+tests/unit/test_cloud_api.py::TestCyncCloudAPIDeviceOperations::test_request_devices_success [32mPASSED[0m[32m [  2%][0m
+tests/unit/test_cloud_api.py::TestCyncCloudAPIDeviceOperations::test_request_devices_no_token [32mPASSED[0m[32m [  2%][0m
+tests/unit/test_cloud_api.py::TestCyncCloudAPIDeviceOperations::test_get_properties_success [32mPASSED[0m[32m [  2%][0m
+tests/unit/test_cloud_api.py::TestCyncCloudAPIDeviceOperations::test_get_properties_access_token_expired [32mPASSED[0m[32m [  3%][0m
+tests/unit/test_cloud_api.py::TestCyncCloudAPIDeviceOperations::test_get_properties_no_properties_error [32mPASSED[0m[32m [  3%][0m
+tests/unit/test_cloud_api.py::TestCyncCloudAPIDeviceOperations::test_get_properties_json_decode_error [32mPASSED[0m[32m [  3%][0m
+tests/unit/test_cloud_api.py::TestCyncCloudAPIDeviceOperations::test_export_config_full_mesh [32mPASSED[0m[32m [  3%][0m
+tests/unit/test_cloud_api.py::TestCyncCloudAPIDeviceOperations::test_export_config_skip_unnamed_mesh [32mPASSED[0m[32m [  3%][0m
+tests/unit/test_cloud_api.py::TestCyncCloudAPIDeviceOperations::test_export_config_skip_no_properties [32mPASSED[0m[32m [  3%][0m
+tests/unit/test_cloud_api.py::TestCyncCloudAPIDeviceOperations::test_export_config_skip_no_bulbs_array [32mPASSED[0m[32m [  3%][0m
+tests/unit/test_cloud_api.py::TestCyncCloudAPIDeviceOperations::test_export_config_device_with_hvac [32mPASSED[0m[32m [  4%][0m
+tests/unit/test_cloud_api.py::TestCyncCloudAPIDeviceOperations::test_export_config_skip_invalid_device [32mPASSED[0m[32m [  4%][0m
+tests/unit/test_cloud_api.py::TestCyncCloudAPIDeviceOperations::test_export_config_groups_parsing [32mPASSED[0m[32m [  4%][0m
+tests/unit/test_cloud_api.py::TestCyncCloudAPIDeviceOperations::test_export_config_skip_empty_groups [32mPASSED[0m[32m [  4%][0m
+tests/unit/test_cloud_relay.py::TestCloudRelayConnectionInitialization::test_relay_initialization_with_forwarding [32mPASSED[0m[32m [  4%][0m
+tests/unit/test_cloud_relay.py::TestCloudRelayConnectionInitialization::test_relay_initialization_without_forwarding [32mPASSED[0m[32m [  4%][0m
+tests/unit/test_cloud_relay.py::TestCloudConnection::test_connect_to_cloud_success [32mPASSED[0m[32m [  4%][0m
+tests/unit/test_cloud_relay.py::TestCloudConnection::test_connect_to_cloud_failure [32mPASSED[0m[32m [  4%][0m
+tests/unit/test_cloud_relay.py::TestCloudConnection::test_connect_to_cloud_timeout [32mPASSED[0m[32m [  5%][0m
+tests/unit/test_cloud_relay.py::TestCloudConnection::test_connect_to_cloud_ssl_verify_disabled [32mPASSED[0m[32m [  5%][0m
+tests/unit/test_cloud_relay.py::TestRelayStartup::test_start_relay_with_cloud_forwarding [32mPASSED[0m[32m [  5%][0m
+tests/unit/test_cloud_relay.py::TestRelayStartup::test_start_relay_cloud_connection_fails [32mPASSED[0m[32m [  5%][0m
+tests/unit/test_cloud_relay.py::TestRelayStartup::test_start_relay_lan_only_mode [32mPASSED[0m[32m [  5%][0m
+tests/unit/test_cloud_relay.py::TestSSLWarnings::test_ssl_verification_disabled_warning [32mPASSED[0m[32m [  5%][0m
+tests/unit/test_cloud_relay.py::TestPacketInjection::test_injection_checker_raw_bytes_injection [32mPASSED[0m[32m [  5%][0m
+tests/unit/test_cloud_relay.py::TestPacketInjection::test_injection_checker_mode_injection_smart [32mPASSED[0m[32m [  6%][0m
+tests/unit/test_cloud_relay.py::TestPacketInjection::test_injection_checker_mode_injection_traditional [32mPASSED[0m[32m [  6%][0m
+tests/unit/test_cloud_relay.py::TestPacketInjection::test_injection_checker_invalid_mode [32mPASSED[0m[32m [  6%][0m
+tests/unit/test_cloud_relay.py::TestPacketInjection::test_injection_checker_file_cleanup [32mPASSED[0m[32m [  6%][0m
+tests/unit/test_cloud_relay.py::TestRelayClosedown::test_relay_close_cleanup [32mPASSED[0m[32m [  6%][0m
+tests/unit/test_cloud_relay.py::TestRelayErrorHandling::test_relay_handles_connection_errors [32mPASSED[0m[32m [  6%][0m
+tests/unit/test_cloud_relay.py::TestRelayErrorHandling::test_relay_handles_ssl_errors [32mPASSED[0m[32m [  6%][0m
+tests/unit/test_command_processor.py::TestCommandProcessorExecution::test_command_processor_sequential_execution [32mPASSED[0m[32m [  7%][0m
+tests/unit/test_command_processor.py::TestCommandProcessorExecution::test_command_processor_optimistic_before_execute [32mPASSED[0m[32m [  7%][0m
+tests/unit/test_command_processor.py::TestCommandProcessorExecution::test_command_processor_handles_execute_failure [32mPASSED[0m[32m [  7%][0m
+tests/unit/test_command_processor.py::TestCommandProcessorExecution::test_command_processor_multiple_queued_commands [32mPASSED[0m[32m [  7%][0m
+tests/unit/test_command_processor.py::TestCommandProcessorExecution::test_command_processor_queue_empties [32mPASSED[0m[32m [  7%][0m
+tests/unit/test_command_processor.py::TestCommandProcessorExecution::test_command_processor_enqueue_starts_processing [32mPASSED[0m[32m [  7%][0m
+tests/unit/test_command_processor.py::TestCommandProcessorExecution::test_command_processor_optimistic_update_published_first [32mPASSED[0m[32m [  7%][0m
+tests/unit/test_command_processor.py::TestCommandProcessorExecution::test_command_processor_continues_after_exception [32mPASSED[0m[32m [  8%][0m
+tests/unit/test_correlation.py::TestGenerateCorrelationId::test_generates_unique_id [32mPASSED[0m[32m [  8%][0m
+tests/unit/test_correlation.py::TestGenerateCorrelationId::test_generates_valid_uuid_format [32mPASSED[0m[32m [  8%][0m
+tests/unit/test_correlation.py::TestGenerateCorrelationId::test_multiple_generations_are_unique [32mPASSED[0m[32m [  8%][0m
+tests/unit/test_correlation.py::TestGetSetCorrelationId::test_get_returns_none_initially [32mPASSED[0m[32m [  8%][0m
+tests/unit/test_correlation.py::TestGetSetCorrelationId::test_set_and_get_correlation_id [32mPASSED[0m[32m [  8%][0m
+tests/unit/test_correlation.py::TestGetSetCorrelationId::test_set_multiple_times [32mPASSED[0m[32m [  8%][0m
+tests/unit/test_correlation.py::TestGetSetCorrelationId::test_set_none_clears_id [32mPASSED[0m[32m [  9%][0m
+tests/unit/test_correlation.py::TestCorrelationContext::test_context_auto_generates_id [32mPASSED[0m[32m [  9%][0m
+tests/unit/test_correlation.py::TestCorrelationContext::test_context_with_custom_id [32mPASSED[0m[32m [  9%][0m
+tests/unit/test_correlation.py::TestCorrelationContext::test_context_restores_previous_id [32mPASSED[0m[32m [  9%][0m
+tests/unit/test_correlation.py::TestCorrelationContext::test_context_restores_none_if_not_set [32mPASSED[0m[32m [  9%][0m
+tests/unit/test_correlation.py::TestCorrelationContext::test_context_with_auto_generate_false [32mPASSED[0m[32m [  9%][0m
+tests/unit/test_correlation.py::TestCorrelationContext::test_nested_contexts [32mPASSED[0m[32m [  9%][0m
+tests/unit/test_correlation.py::TestEnsureCorrelationId::test_creates_id_if_missing [32mPASSED[0m[32m [  9%][0m
+tests/unit/test_correlation.py::TestEnsureCorrelationId::test_returns_existing_id [32mPASSED[0m[32m [ 10%][0m
+tests/unit/test_correlation.py::TestEnsureCorrelationId::test_ensures_id_stays_in_context [32mPASSED[0m[32m [ 10%][0m
+tests/unit/test_device_commands.py::TestCyncDeviceFanCommands::test_set_fan_speed_valid_execution [32mPASSED[0m[32m [ 10%][0m
+tests/unit/test_device_commands.py::TestCyncDeviceFanCommands::test_set_fan_speed_not_fan_controller [32mPASSED[0m[32m [ 10%][0m
+tests/unit/test_device_commands.py::TestCyncDeviceLightshowCommand::test_set_lightshow_creates_packet [32mPASSED[0m[32m [ 10%][0m
+tests/unit/test_device_commands.py::TestCyncDeviceLightshowCommand::test_set_lightshow_no_tcp_bridges [32mPASSED[0m[32m [ 10%][0m
+tests/unit/test_device_commands.py::TestCyncDeviceLightshowCommand::test_set_lightshow_various_shows [32mPASSED[0m[32m [ 10%][0m
+tests/unit/test_device_commands.py::TestCyncDeviceErrorPathsCommands::test_set_temperature_no_tcp_bridges [32mPASSED[0m[32m [ 11%][0m
+tests/unit/test_device_commands.py::TestCyncDeviceErrorPathsCommands::test_set_temperature_invalid_value_returns_early [32mPASSED[0m[32m [ 11%][0m
+tests/unit/test_device_commands.py::TestCyncDeviceErrorPathsCommands::test_set_rgb_no_tcp_bridges [32mPASSED[0m[32m [ 11%][0m
+tests/unit/test_device_commands.py::TestCyncDeviceErrorPathsCommands::test_set_rgb_invalid_color_returns_early [32mPASSED[0m[32m [ 11%][0m
+tests/unit/test_device_commands.py::TestCyncDeviceErrorPathsCommands::test_group_set_power_no_bridges [32mPASSED[0m[32m [ 11%][0m
+tests/unit/test_device_commands.py::TestCyncDeviceErrorPathsCommands::test_group_set_power_bridge_not_ready [32mPASSED[0m[32m [ 11%][0m
+tests/unit/test_device_commands.py::TestDeviceBridgeSelection::test_device_prefers_ready_bridges [32mPASSED[0m[32m [ 11%][0m
+tests/unit/test_device_commands.py::TestDeviceErrorPaths::test_device_invalid_brightness_range [32mPASSED[0m[32m [ 12%][0m
+tests/unit/test_device_edge_cases.py::TestCyncDeviceErrorPaths::test_device_state_setter_with_float [32mPASSED[0m[32m [ 12%][0m
+tests/unit/test_device_edge_cases.py::TestCyncDeviceErrorPaths::test_device_brightness_edge_values [32mPASSED[0m[32m [ 12%][0m
+tests/unit/test_device_edge_cases.py::TestCyncDeviceErrorPaths::test_device_temperature_edge_values [32mPASSED[0m[32m [ 12%][0m
+tests/unit/test_device_edge_cases.py::TestCyncDeviceErrorPaths::test_device_rgb_edge_values [32mPASSED[0m[32m [ 12%][0m
+tests/unit/test_device_edge_cases.py::TestCyncDeviceErrorPaths::test_group_aggregate_with_none_brightness [32mPASSED[0m[32m [ 12%][0m
+tests/unit/test_device_edge_cases.py::TestCyncDeviceErrorPaths::test_group_aggregate_with_partial_member_data [32mPASSED[0m[32m [ 12%][0m
+tests/unit/test_device_edge_cases.py::TestCyncDeviceEdgeCases::test_device_with_metadata_and_type [32mPASSED[0m[32m [ 13%][0m
+tests/unit/test_device_edge_cases.py::TestCyncDeviceEdgeCases::test_device_hass_id_formatting [32mPASSED[0m[32m [ 13%][0m
+tests/unit/test_device_edge_cases.py::TestCyncDeviceEdgeCases::test_device_version_parsing_with_dots [32mPASSED[0m[32m [ 13%][0m
+tests/unit/test_device_edge_cases.py::TestCyncDeviceEdgeCases::test_device_version_parsing_with_nulls [32mPASSED[0m[32m [ 13%][0m
+tests/unit/test_device_edge_cases.py::TestCyncDeviceEdgeCases::test_device_initialization_with_empty_name [32mPASSED[0m[32m [ 13%][0m
+tests/unit/test_device_edge_cases.py::TestCyncDeviceEdgeCases::test_set_power_pending_command_set [32mPASSED[0m[32m [ 13%][0m
+tests/unit/test_device_edge_cases.py::TestCyncDeviceEdgeCases::test_set_power_pending_command_reset [32mPASSED[0m[32m [ 13%][0m
+tests/unit/test_device_metadata.py::TestDeviceMetadata::test_device_with_metadata [32mPASSED[0m[32m [ 14%][0m
+tests/unit/test_device_metadata.py::TestDeviceMetadata::test_device_without_metadata [32mPASSED[0m[32m [ 14%][0m
+tests/unit/test_device_metadata.py::TestDeviceMetadata::test_metadata_type_classification [32mPASSED[0m[32m [ 14%][0m
+tests/unit/test_device_metadata.py::TestCyncDevicePropertyClassification::test_is_hvac_property [32mPASSED[0m[32m [ 14%][0m
+tests/unit/test_device_metadata.py::TestCyncDevicePropertyClassification::test_is_light_property [32mPASSED[0m[32m [ 14%][0m
+tests/unit/test_device_metadata.py::TestCyncDevicePropertyClassification::test_is_switch_property [32mPASSED[0m[32m [ 14%][0m
+tests/unit/test_device_metadata.py::TestCyncDevicePropertyClassification::test_is_plug_property [32mPASSED[0m[32m [ 14%][0m
+tests/unit/test_device_metadata.py::TestCyncDevicePropertyClassification::test_is_fan_controller_property [32mPASSED[0m[32m [ 14%][0m
+tests/unit/test_device_metadata.py::TestCyncDevicePropertyClassification::test_has_wifi_property [32mPASSED[0m[32m [ 15%][0m
+tests/unit/test_device_metadata.py::TestCyncDevicePropertyClassification::test_bt_only_property_with_specific_mac [32mPASSED[0m[32m [ 15%][0m
+tests/unit/test_device_metadata.py::TestCyncDevicePropertyClassification::test_bt_only_property_with_other_mac [32mPASSED[0m[32m [ 15%][0m
+tests/unit/test_device_metadata.py::TestCyncDevicePropertyClassification::test_mac_property_getter_and_setter [32mPASSED[0m[32m [ 15%][0m
+tests/unit/test_device_properties.py::TestCyncDeviceCurrentStatus::test_current_status_returns_list [32mPASSED[0m[32m [ 15%][0m
+tests/unit/test_device_properties.py::TestCyncDeviceStateConversion::test_state_setter_with_strings [32mPASSED[0m[32m [ 15%][0m
+tests/unit/test_device_properties.py::TestCyncDeviceStateConversion::test_state_setter_with_integers [32mPASSED[0m[32m [ 15%][0m
+tests/unit/test_device_properties.py::TestCyncDeviceStateConversion::test_state_setter_with_booleans [32mPASSED[0m[32m [ 16%][0m
+tests/unit/test_device_properties.py::TestCyncDeviceStateConversion::test_state_setter_invalid_value [32mPASSED[0m[32m [ 16%][0m
+tests/unit/test_device_properties.py::TestCyncDeviceStateConversion::test_state_setter_invalid_type [32mPASSED[0m[32m [ 16%][0m
+tests/unit/test_device_properties.py::TestCyncDeviceStatusObject::test_status_setter_and_getter [32mPASSED[0m[32m [ 16%][0m
+tests/unit/test_device_properties.py::TestCyncDeviceVersionProperty::test_version_setter_with_string [32mPASSED[0m[32m [ 16%][0m
+tests/unit/test_device_properties.py::TestCyncDeviceVersionProperty::test_version_setter_with_integer [32mPASSED[0m[32m [ 16%][0m
+tests/unit/test_device_properties.py::TestCyncDeviceVersionProperty::test_version_setter_with_empty_string [32mPASSED[0m[32m [ 16%][0m
+tests/unit/test_device_properties.py::TestCyncDeviceVersionProperty::test_version_setter_with_invalid_string [32mPASSED[0m[32m [ 17%][0m
+tests/unit/test_device_properties.py::TestCyncDevicePropertyEdgeCases::test_is_light_setter_with_non_boolean [32mPASSED[0m[32m [ 17%][0m
+tests/unit/test_device_properties.py::TestCyncDevicePropertyEdgeCases::test_is_switch_setter_with_non_boolean [32mPASSED[0m[32m [ 17%][0m
+tests/unit/test_device_properties.py::TestCyncDevicePropertyEdgeCases::test_version_setter_with_invalid_string [32mPASSED[0m[32m [ 17%][0m
+tests/unit/test_device_properties.py::TestCyncDevicePropertyEdgeCases::test_mac_setter_with_conversion [32mPASSED[0m[32m [ 17%][0m
+tests/unit/test_device_properties.py::TestCyncDevicePropertyEdgeCases::test_has_wifi_property_without_metadata [32mPASSED[0m[32m [ 17%][0m
+tests/unit/test_device_properties.py::TestCyncDevicePropertyEdgeCases::test_bt_only_property_with_wifi_mac [32mPASSED[0m[32m [ 17%][0m
+tests/unit/test_device_properties.py::TestCyncDevicePropertyEdgeCases::test_bt_only_property_without_metadata [32mPASSED[0m[32m [ 18%][0m
+tests/unit/test_devices_cync_device.py::TestCyncDeviceInitialization::test_init_with_required_params [32mPASSED[0m[32m [ 18%][0m
+tests/unit/test_devices_cync_device.py::TestCyncDeviceInitialization::test_init_with_all_params [32mPASSED[0m[32m [ 18%][0m
+tests/unit/test_devices_cync_device.py::TestCyncDeviceInitialization::test_init_without_id_raises_error [32mPASSED[0m[32m [ 18%][0m
+tests/unit/test_devices_cync_device.py::TestCyncDeviceInitialization::test_metadata_assignment [32mPASSED[0m[32m [ 18%][0m
+tests/unit/test_devices_cync_device.py::TestCyncDeviceInitialization::test_hvac_initialization [32mPASSED[0m[32m [ 18%][0m
+tests/unit/test_devices_cync_device.py::TestCyncDeviceProperties::test_state_property [32mPASSED[0m[32m [ 18%][0m
+tests/unit/test_devices_cync_device.py::TestCyncDeviceProperties::test_brightness_property [32mPASSED[0m[32m [ 19%][0m
+tests/unit/test_devices_cync_device.py::TestCyncDeviceProperties::test_brightness_validation [32mPASSED[0m[32m [ 19%][0m
+tests/unit/test_devices_cync_device.py::TestCyncDeviceProperties::test_temperature_property [32mPASSED[0m[32m [ 19%][0m
+tests/unit/test_devices_cync_device.py::TestCyncDeviceProperties::test_temperature_validation [32mPASSED[0m[32m [ 19%][0m
+tests/unit/test_devices_cync_device.py::TestCyncDeviceProperties::test_rgb_properties [32mPASSED[0m[32m [ 19%][0m
+tests/unit/test_devices_cync_device.py::TestCyncDeviceProperties::test_rgb_validation [32mPASSED[0m[32m [ 19%][0m
+tests/unit/test_devices_cync_device.py::TestCyncDeviceProperties::test_rgb_property_list [32mPASSED[0m[32m [ 19%][0m
+tests/unit/test_devices_cync_device.py::TestCyncDeviceProperties::test_rgb_list_validation [32mPASSED[0m[32m [ 19%][0m
+tests/unit/test_devices_cync_device.py::TestCyncDeviceProperties::test_online_property [32mPASSED[0m[32m [ 20%][0m
+tests/unit/test_devices_cync_device.py::TestCyncDeviceProperties::test_online_validation [32mPASSED[0m[32m [ 20%][0m
+tests/unit/test_devices_cync_device.py::TestCyncDeviceProperties::test_version_property_from_string [32mPASSED[0m[32m [ 20%][0m
+tests/unit/test_devices_cync_device.py::TestCyncDeviceProperties::test_version_property_from_int [32mPASSED[0m[32m [ 20%][0m
+tests/unit/test_devices_cync_device.py::TestCyncDeviceProperties::test_mac_property [32mPASSED[0m[32m [ 20%][0m
+tests/unit/test_devices_cync_device.py::TestCyncDeviceProperties::test_bt_only_property [32mPASSED[0m[32m [ 20%][0m
+tests/unit/test_devices_cync_device.py::TestCyncDeviceOfflineTracking::test_offline_count_initialization [32mPASSED[0m[32m [ 20%][0m
+tests/unit/test_devices_cync_device.py::TestCyncDeviceOfflineTracking::test_offline_count_increment [32mPASSED[0m[32m [ 21%][0m
+tests/unit/test_devices_cync_device.py::TestCyncDeviceOfflineTracking::test_offline_threshold_pattern [32mPASSED[0m[32m [ 21%][0m
+tests/unit/test_devices_cync_device.py::TestCyncDeviceOfflineTracking::test_offline_count_reset_on_online [32mPASSED[0m[32m [ 21%][0m
+tests/unit/test_devices_cync_device.py::TestCyncDevicePendingCommand::test_pending_command_initialization [32mPASSED[0m[32m [ 21%][0m
+tests/unit/test_devices_cync_device.py::TestCyncDevicePendingCommand::test_pending_command_flag [32mPASSED[0m[32m [ 21%][0m
+tests/unit/test_devices_cync_device.py::TestCyncDeviceCommands::test_set_power_creates_packet [32mPASSED[0m[32m [ 21%][0m
+tests/unit/test_devices_cync_device.py::TestCyncDeviceCommands::test_set_power_invalid_state [32mPASSED[0m[32m [ 21%][0m
+tests/unit/test_devices_cync_device.py::TestCyncDeviceCommands::test_set_brightness_creates_packet [32mPASSED[0m[32m [ 22%][0m
+tests/unit/test_devices_cync_device.py::TestCyncDeviceTemperatureCommands::test_set_temperature_valid_execution [32mPASSED[0m[32m [ 22%][0m
+tests/unit/test_devices_cync_device.py::TestCyncDeviceTemperatureCommands::test_set_temperature_invalid_value_negative [32mPASSED[0m[32m [ 22%][0m
+tests/unit/test_devices_cync_device.py::TestCyncDeviceTemperatureCommands::test_set_temperature_invalid_value_too_high [32mPASSED[0m[32m [ 22%][0m
+tests/unit/test_devices_cync_device.py::TestCyncDeviceTemperatureCommands::test_set_temperature_special_values_allowed [32mPASSED[0m[32m [ 22%][0m
+tests/unit/test_devices_cync_device.py::TestCyncDeviceTemperatureCommands::test_set_temperature_no_tcp_bridges [32mPASSED[0m[32m [ 22%][0m
+tests/unit/test_devices_cync_device.py::TestCyncDeviceTemperatureCommands::test_set_temperature_callback_registration [32mPASSED[0m[32m [ 22%][0m
+tests/unit/test_devices_cync_device.py::TestCyncDeviceRGBCommands::test_set_rgb_valid_execution [32mPASSED[0m[32m [ 23%][0m
+tests/unit/test_devices_cync_device.py::TestCyncDeviceRGBCommands::test_set_rgb_invalid_red [32mPASSED[0m[32m [ 23%][0m
+tests/unit/test_devices_cync_device.py::TestCyncDeviceRGBCommands::test_set_rgb_invalid_green [32mPASSED[0m[32m [ 23%][0m
+tests/unit/test_devices_cync_device.py::TestCyncDeviceRGBCommands::test_set_rgb_invalid_blue [32mPASSED[0m[32m [ 23%][0m
+tests/unit/test_devices_cync_device.py::TestCyncDeviceRGBCommands::test_set_rgb_no_tcp_bridges [32mPASSED[0m[32m [ 23%][0m
+tests/unit/test_devices_cync_device.py::TestCyncDeviceRGBCommands::test_set_rgb_callback_registration [32mPASSED[0m[32m [ 23%][0m
+tests/unit/test_devices_cync_device.py::TestCyncDevicePropertyMethods::test_is_dimmable_with_metadata [32mPASSED[0m[32m [ 23%][0m
+tests/unit/test_devices_cync_device.py::TestCyncDevicePropertyMethods::test_is_dimmable_without_metadata [32mPASSED[0m[32m [ 23%][0m
+tests/unit/test_devices_cync_device.py::TestCyncDevicePropertyMethods::test_supports_rgb_with_explicit_setter [32mPASSED[0m[32m [ 24%][0m
+tests/unit/test_devices_cync_device.py::TestCyncDevicePropertyMethods::test_supports_rgb_with_metadata [32mPASSED[0m[32m [ 24%][0m
+tests/unit/test_devices_cync_device.py::TestCyncDevicePropertyMethods::test_supports_temperature_with_explicit_setter [32mPASSED[0m[32m [ 24%][0m
+tests/unit/test_devices_cync_device.py::TestCyncDevicePropertyMethods::test_supports_temperature_with_metadata [32mPASSED[0m[32m [ 24%][0m
+tests/unit/test_devices_cync_device.py::TestCyncDevicePropertyMethods::test_get_ctrl_msg_id_bytes_increments [32mPASSED[0m[32m [ 24%][0m
+tests/unit/test_devices_cync_device.py::TestCyncDevicePropertyMethods::test_get_ctrl_msg_id_bytes_rollover [32mPASSED[0m[32m [ 24%][0m
+tests/unit/test_devices_cync_device.py::TestCyncDevicePropertyMethods::test_get_ctrl_msg_id_bytes_mod_256 [32mPASSED[0m[32m [ 24%][0m
+tests/unit/test_devices_cync_device.py::TestCyncDeviceCommandErrorPaths::test_set_fan_speed_not_fan_controller [32mPASSED[0m[32m [ 25%][0m
+tests/unit/test_devices_cync_device.py::TestCyncDeviceCommandErrorPaths::test_set_fan_speed_invalid_speed [32mPASSED[0m[32m [ 25%][0m
+tests/unit/test_devices_cync_device.py::TestCyncDeviceCommandErrorPaths::test_set_brightness_invalid_range [32mPASSED[0m[32m [ 25%][0m
+tests/unit/test_devices_cync_group.py::TestCyncGroup::test_group_init_with_required_params [32mPASSED[0m[32m [ 25%][0m
+tests/unit/test_devices_cync_group.py::TestCyncGroup::test_group_init_without_id_raises_error [32mPASSED[0m[32m [ 25%][0m
+tests/unit/test_devices_cync_group.py::TestCyncGroup::test_group_init_with_home_id [32mPASSED[0m[32m [ 25%][0m
+tests/unit/test_devices_cync_group.py::TestCyncGroup::test_group_init_as_subgroup [32mPASSED[0m[32m [ 25%][0m
+tests/unit/test_devices_cync_group.py::TestCyncGroup::test_group_state_properties [32mPASSED[0m[32m [ 26%][0m
+tests/unit/test_devices_cync_group.py::TestCyncGroup::test_group_members_property [32mPASSED[0m[32m [ 26%][0m
+tests/unit/test_devices_cync_group.py::TestCyncGroup::test_group_supports_rgb_property [32mPASSED[0m[32m [ 26%][0m
+tests/unit/test_devices_cync_group.py::TestCyncGroup::test_group_supports_temperature_property [32mPASSED[0m[32m [ 26%][0m
+tests/unit/test_devices_cync_group.py::TestCyncGroup::test_group_aggregate_member_states [32mPASSED[0m[32m [ 26%][0m
+tests/unit/test_devices_cync_group.py::TestCyncGroup::test_group_aggregate_no_online_members [32mPASSED[0m[32m [ 26%][0m
+tests/unit/test_devices_cync_group.py::TestCyncGroup::test_group_set_power [32mPASSED[0m[32m [ 26%][0m
+tests/unit/test_devices_cync_group.py::TestCyncGroup::test_group_set_power_invalid_state [32mPASSED[0m[32m [ 27%][0m
+tests/unit/test_devices_cync_group.py::TestCyncGroup::test_group_set_brightness [32mPASSED[0m[32m [ 27%][0m
+tests/unit/test_devices_cync_group.py::TestCyncGroup::test_group_set_temperature_valid_execution [32mPASSED[0m[32m [ 27%][0m
+tests/unit/test_devices_cync_group.py::TestCyncGroup::test_group_set_temperature_invalid_value [32mPASSED[0m[32m [ 27%][0m
+tests/unit/test_devices_cync_group.py::TestCyncGroup::test_group_set_temperature_no_tcp_bridges [32mPASSED[0m[32m [ 27%][0m
+tests/unit/test_devices_cync_group.py::TestCyncGroupAdvancedCommands::test_group_aggregate_with_mixed_states [32mPASSED[0m[32m [ 27%][0m
+tests/unit/test_devices_cync_group.py::TestCyncGroupAdvancedCommands::test_group_aggregate_with_one_online_member [32mPASSED[0m[32m [ 27%][0m
+tests/unit/test_devices_cync_group.py::TestCyncGroupAdvancedCommands::test_group_supports_rgb_when_no_members [32mPASSED[0m[32m [ 28%][0m
+tests/unit/test_devices_cync_group.py::TestCyncGroupAdvancedCommands::test_group_supports_temperature_when_no_members [32mPASSED[0m[32m [ 28%][0m
+tests/unit/test_devices_cync_group.py::TestCyncGroupAdvancedCommands::test_group_aggregate_returns_none_when_all_offline [32mPASSED[0m[32m [ 28%][0m
+tests/unit/test_devices_cync_group.py::TestCyncGroupAdvancedCommands::test_group_aggregate_filters_invalid_temperatures [32mPASSED[0m[32m [ 28%][0m
+tests/unit/test_devices_cync_group.py::TestCyncGroupAdvancedCommands::test_group_aggregate_averages_multiple_devices [32mPASSED[0m[32m [ 28%][0m
+tests/unit/test_devices_cync_group.py::TestCyncGroupAdvancedCommands::test_group_set_brightness_updates_pending_flags [32mPASSED[0m[32m [ 28%][0m
+tests/unit/test_devices_cync_group.py::TestCyncGroupAdvancedCommands::test_group_str_representation [32mPASSED[0m[32m [ 28%][0m
+tests/unit/test_devices_cync_group.py::TestCyncGroupErrorHandling::test_group_set_brightness_error_no_tcp_bridges [32mPASSED[0m[32m [ 28%][0m
+tests/unit/test_devices_cync_group.py::TestCyncGroupErrorHandling::test_group_set_temperature_error_no_tcp_bridges [32mPASSED[0m[32m [ 29%][0m
+tests/unit/test_devices_cync_group.py::TestCyncGroupErrorHandling::test_group_set_temperature_invalid_value [32mPASSED[0m[32m [ 29%][0m
+tests/unit/test_devices_cync_group.py::TestCyncGroupOperations::test_group_set_brightness_success [32mPASSED[0m[32m [ 29%][0m
+tests/unit/test_devices_cync_group.py::TestCyncGroupOperations::test_group_set_brightness_bridge_not_ready [32mPASSED[0m[32m [ 29%][0m
+tests/unit/test_devices_cync_group.py::TestCyncGroupOperations::test_group_set_brightness_invalid_range [32mPASSED[0m[32m [ 29%][0m
+tests/unit/test_devices_cync_group.py::TestCyncGroupOperations::test_group_set_power_all_members [32mPASSED[0m[32m [ 29%][0m
+tests/unit/test_devices_cync_group.py::TestCyncGroupOperations::test_group_aggregate_member_states_all_on [32mPASSED[0m[32m [ 29%][0m
+tests/unit/test_devices_cync_group.py::TestCyncGroupOperations::test_group_aggregate_member_states_all_off [32mPASSED[0m[32m [ 30%][0m
+tests/unit/test_devices_cync_group.py::TestCyncGroupOperations::test_group_aggregate_member_states_mixed [32mPASSED[0m[32m [ 30%][0m
+tests/unit/test_exporter.py::TestExportServerInitialization::test_init_is_singleton [32mPASSED[0m[32m [ 30%][0m
+tests/unit/test_exporter.py::TestExportServerInitialization::test_init_creates_uvicorn_server [32mPASSED[0m[32m [ 30%][0m
+tests/unit/test_exporter.py::TestExportServerLifecycle::test_start_sets_running_flag [32mPASSED[0m[32m [ 30%][0m
+tests/unit/test_exporter.py::TestExportServerLifecycle::test_start_with_cancelled_error [32mPASSED[0m[32m [ 30%][0m
+tests/unit/test_exporter.py::TestExportServerLifecycle::test_stop_shuts_down_server [32mPASSED[0m[32m [ 30%][0m
+tests/unit/test_exporter.py::TestExportServerLifecycle::test_stop_publishes_mqtt_message [32mPASSED[0m[32m [ 31%][0m
+tests/unit/test_exporter.py::TestFastAPIEndpoints::test_get_index [32mPASSED[0m[32m [ 31%][0m
+tests/unit/test_exporter.py::TestFastAPIEndpoints::test_start_export_success [32mPASSED[0m[32m [ 31%][0m
+tests/unit/test_exporter.py::TestFastAPIEndpoints::test_start_export_requires_otp [32mPASSED[0m[32m [ 31%][0m
+tests/unit/test_exporter.py::TestFastAPIEndpoints::test_start_export_failure [32mPASSED[0m[32m [ 31%][0m
+tests/unit/test_exporter.py::TestFastAPIEndpoints::test_request_otp_success [32mPASSED[0m[32m [ 31%][0m
+tests/unit/test_exporter.py::TestFastAPIEndpoints::test_request_otp_failure [32mPASSED[0m[32m [ 31%][0m
+tests/unit/test_exporter.py::TestFastAPIEndpoints::test_submit_otp_success [32mPASSED[0m[32m [ 32%][0m
+tests/unit/test_exporter.py::TestFastAPIEndpoints::test_submit_otp_invalid_code [32mPASSED[0m[32m [ 32%][0m
+tests/unit/test_exporter.py::TestFastAPIEndpoints::test_submit_otp_export_failure [32mPASSED[0m[32m [ 32%][0m
+tests/unit/test_exporter.py::TestFastAPIEndpoints::test_health_check [32mPASSED[0m[32m [ 32%][0m
+tests/unit/test_exporter.py::TestFastAPIEndpoints::test_download_config_file_exists [32mPASSED[0m[32m [ 32%][0m
+tests/unit/test_exporter.py::TestFastAPIEndpoints::test_download_config_file_missing [32mPASSED[0m[32m [ 32%][0m
+tests/unit/test_exporter.py::TestFastAPIEndpoints::test_restart_success [32mPASSED[0m[32m [ 32%][0m
+tests/unit/test_exporter.py::TestFastAPIEndpoints::test_restart_no_token [32mPASSED[0m[32m [ 33%][0m
+tests/unit/test_exporter.py::TestFastAPIEndpoints::test_restart_api_error [32mPASSED[0m[32m [ 33%][0m
+tests/unit/test_instrumentation.py::TestMeasureTime::test_measure_time_returns_milliseconds [32mPASSED[0m[32m [ 33%][0m
+tests/unit/test_instrumentation.py::TestMeasureTime::test_measure_time_precision [32mPASSED[0m[32m [ 33%][0m
+tests/unit/test_instrumentation.py::TestMeasureTime::test_measure_time_zero_elapsed [32mPASSED[0m[32m [ 33%][0m
+tests/unit/test_instrumentation.py::TestTimedDecorator::test_timed_decorator_wrapped_function_executes [32mPASSED[0m[32m [ 33%][0m
+tests/unit/test_instrumentation.py::TestTimedDecorator::test_timed_decorator_preserves_function_name [32mPASSED[0m[32m [ 33%][0m
+tests/unit/test_instrumentation.py::TestTimedDecorator::test_timed_decorator_with_arguments [32mPASSED[0m[32m [ 33%][0m
+tests/unit/test_instrumentation.py::TestTimedDecorator::test_timed_decorator_with_kwargs [32mPASSED[0m[32m [ 34%][0m
+tests/unit/test_instrumentation.py::TestTimedAsyncDecorator::test_timed_async_decorator_preserved_function_name [32mPASSED[0m[32m [ 34%][0m
+tests/unit/test_instrumentation.py::TestTimedAsyncDecorator::test_timed_async_decorator_with_arguments [32mPASSED[0m[32m [ 34%][0m
+tests/unit/test_instrumentation.py::TestTimingThresholds::test_timed_decorator_executes_successfully [32mPASSED[0m[32m [ 34%][0m
+tests/unit/test_instrumentation.py::TestTimingThresholds::test_timed_async_decorator_executes_successfully [32mPASSED[0m[32m [ 34%][0m
+tests/unit/test_main.py::TestCyncControllerInitialization::test_init_is_singleton [32mPASSED[0m[32m [ 34%][0m
+tests/unit/test_main.py::TestCyncControllerInitialization::test_init_configures_signal_handlers [32mPASSED[0m[32m [ 34%][0m
+tests/unit/test_main.py::TestCyncControllerInitialization::test_init_sets_event_loop_policy [32mPASSED[0m[32m [ 35%][0m
+tests/unit/test_main.py::TestCyncControllerStartup::test_start_with_missing_config_file [31mFAILED[0m[31m [ 35%][0m
+tests/unit/test_main.py::TestCyncControllerStartup::test_start_loads_config_and_creates_services [31mFAILED[0m[31m [ 35%][0m
+tests/unit/test_main.py::TestCyncControllerStartup::test_start_with_export_server_enabled [31mFAILED[0m[31m [ 35%][0m
+tests/unit/test_main.py::TestCyncControllerStartup::test_start_failure_calls_stop [31mFAILED[0m[31m [ 35%][0m
+tests/unit/test_main.py::TestCyncControllerShutdown::test_stop_sends_sigterm [31mFAILED[0m[31m [ 35%][0m
+tests/unit/test_main.py::TestParseCLI::test_parse_cli_export_server_enabled [32mPASSED[0m[31m [ 35%][0m
+tests/unit/test_main.py::TestParseCLI::test_parse_cli_debug_mode [32mPASSED[0m[31m  [ 36%][0m
+tests/unit/test_main.py::TestParseCLI::test_parse_cli_env_file [32mPASSED[0m[31m    [ 36%][0m
+tests/unit/test_main.py::TestParseCLI::test_parse_cli_without_optional_deps [32mPASSED[0m[31m [ 36%][0m
+tests/unit/test_main.py::TestMainFunction::test_main_exists_and_callable [32mPASSED[0m[31m [ 36%][0m
+tests/unit/test_mqtt_client.py::TestSlugify::test_slugify_basic [32mPASSED[0m[31m   [ 36%][0m
+tests/unit/test_mqtt_client.py::TestSlugify::test_slugify_multiple_spaces [32mPASSED[0m[31m [ 36%][0m
+tests/unit/test_mqtt_client.py::TestSlugify::test_slugify_special_characters [32mPASSED[0m[31m [ 36%][0m
+tests/unit/test_mqtt_client.py::TestSlugify::test_slugify_numbers [32mPASSED[0m[31m [ 37%][0m
+tests/unit/test_mqtt_client.py::TestSlugify::test_slugify_unicode [32mPASSED[0m[31m [ 37%][0m
+tests/unit/test_mqtt_client.py::TestSlugify::test_slugify_leading_trailing_spaces [32mPASSED[0m[31m [ 37%][0m
+tests/unit/test_mqtt_client.py::TestSlugify::test_slugify_hyphens [32mPASSED[0m[31m [ 37%][0m
+tests/unit/test_mqtt_client.py::TestSlugify::test_slugify_mixed [32mPASSED[0m[31m   [ 37%][0m
+tests/unit/test_mqtt_client.py::TestMQTTClientInitialization::test_init_creates_singleton [32mPASSED[0m[31m [ 37%][0m
+tests/unit/test_mqtt_client.py::TestMQTTClientInitialization::test_init_with_default_topics [32mPASSED[0m[31m [ 37%][0m
+tests/unit/test_mqtt_client.py::TestMQTTClientInitialization::test_init_with_custom_topics [32mPASSED[0m[31m [ 38%][0m
+tests/unit/test_mqtt_client.py::TestMQTTClientInitialization::test_init_sets_broker_config [32mPASSED[0m[31m [ 38%][0m
+tests/unit/test_mqtt_client.py::TestMQTTClientInitialization::test_init_creates_client_id [32mPASSED[0m[31m [ 38%][0m
+tests/unit/test_mqtt_client.py::TestMQTTClientConnection::test_connect_success [32mPASSED[0m[31m [ 38%][0m
+tests/unit/test_mqtt_client.py::TestMQTTClientConnection::test_connect_failure [32mPASSED[0m[31m [ 38%][0m
+tests/unit/test_mqtt_client.py::TestMQTTClientConnection::test_connect_bad_credentials [32mPASSED[0m[31m [ 38%][0m
+tests/unit/test_mqtt_client.py::TestMQTTClientPublishing::test_publish [32mPASSED[0m[31m [ 38%][0m
+tests/unit/test_mqtt_client.py::TestMQTTClientPublishing::test_publish_json_msg [32mPASSED[0m[31m [ 38%][0m
+tests/unit/test_mqtt_client.py::TestMQTTClientPublishing::test_publish_json_msg_error_handling [32mPASSED[0m[31m [ 39%][0m
+tests/unit/test_mqtt_client.py::TestMQTTClientAvailability::test_pub_online_true [32mPASSED[0m[31m [ 39%][0m
+tests/unit/test_mqtt_client.py::TestMQTTClientAvailability::test_pub_online_false [32mPASSED[0m[31m [ 39%][0m
+tests/unit/test_mqtt_client.py::TestMQTTClientAvailability::test_pub_online_device_not_found [32mPASSED[0m[31m [ 39%][0m
+tests/unit/test_mqtt_client.py::TestMQTTClientStateUpdates::test_update_device_state_on [32mPASSED[0m[31m [ 39%][0m
+tests/unit/test_mqtt_client.py::TestMQTTClientStateUpdates::test_update_device_state_off [32mPASSED[0m[31m [ 39%][0m
+tests/unit/test_mqtt_client.py::TestMQTTClientStateUpdates::test_update_brightness [32mPASSED[0m[31m [ 39%][0m
+tests/unit/test_mqtt_client.py::TestMQTTClientStateUpdates::test_update_temperature [32mPASSED[0m[31m [ 40%][0m
+tests/unit/test_mqtt_client.py::TestMQTTClientStateUpdates::test_update_rgb [32mPASSED[0m[31m [ 40%][0m
+tests/unit/test_mqtt_client.py::TestMQTTClientBirthWill::test_send_birth_msg [32mPASSED[0m[31m [ 40%][0m
+tests/unit/test_mqtt_client.py::TestMQTTClientBirthWill::test_send_will_msg [32mPASSED[0m[31m [ 40%][0m
+tests/unit/test_mqtt_client.py::TestMQTTClientTemperatureConversion::test_kelvin2cync [32mPASSED[0m[31m [ 40%][0m
+tests/unit/test_mqtt_client.py::TestMQTTClientTemperatureConversion::test_cync2kelvin [32mPASSED[0m[31m [ 40%][0m
+tests/unit/test_mqtt_client.py::TestMQTTClientTemperatureConversion::test_temperature_conversion_roundtrip [32mPASSED[0m[31m [ 40%][0m
+tests/unit/test_mqtt_client.py::TestMQTTClientBrightnessConversion::test_brightness_to_percentage_255_scale [32mPASSED[0m[31m [ 41%][0m
+tests/unit/test_mqtt_client.py::TestMQTTClientBrightnessConversion::test_brightness_to_preset [32mPASSED[0m[31m [ 41%][0m
+tests/unit/test_mqtt_client.py::TestMQTTClientDiscovery::test_homeassistant_discovery_light [32mPASSED[0m[31m [ 41%][0m
+tests/unit/test_mqtt_client.py::TestMQTTClientDiscovery::test_homeassistant_discovery_empty [32mPASSED[0m[31m [ 41%][0m
+tests/unit/test_mqtt_client.py::TestDeviceCommand::test_device_command_initialization [32mPASSED[0m[31m [ 41%][0m
+tests/unit/test_mqtt_client.py::TestDeviceCommand::test_device_command_with_multiple_params [32mPASSED[0m[31m [ 41%][0m
+tests/unit/test_mqtt_client.py::TestDeviceCommand::test_device_command_with_no_params [32mPASSED[0m[31m [ 41%][0m
+tests/unit/test_mqtt_client.py::TestDeviceCommand::test_device_command_timestamp_uniqueness [32mPASSED[0m[31m [ 42%][0m
+tests/unit/test_mqtt_client.py::TestDeviceCommand::test_device_command_publish_optimistic_raises [32mPASSED[0m[31m [ 42%][0m
+tests/unit/test_mqtt_client.py::TestDeviceCommand::test_device_command_execute_raises [32mPASSED[0m[31m [ 42%][0m
+tests/unit/test_mqtt_client.py::TestDeviceCommand::test_device_command_repr [32mPASSED[0m[31m [ 42%][0m
+tests/unit/test_mqtt_client.py::TestDeviceCommand::test_device_command_repr_without_params [32mPASSED[0m[31m [ 42%][0m
+tests/unit/test_mqtt_client.py::TestCommandProcessor::test_command_processor_singleton_pattern [32mPASSED[0m[31m [ 42%][0m
+tests/unit/test_mqtt_client.py::TestCommandProcessor::test_command_processor_initialization [32mPASSED[0m[31m [ 42%][0m
+tests/unit/test_mqtt_client.py::TestCommandProcessor::test_command_processor_initialization_idempotent [32mPASSED[0m[31m [ 42%][0m
+tests/unit/test_mqtt_client.py::TestCommandProcessor::test_command_processor_enqueue_command [32mPASSED[0m[31m [ 43%][0m
+tests/unit/test_mqtt_client.py::TestCommandProcessor::test_command_processor_queue_fifo_ordering [32mPASSED[0m[31m [ 43%][0m
+tests/unit/test_mqtt_client.py::TestCommandProcessor::test_command_processor_initial_processing_state [32mPASSED[0m[31m [ 43%][0m
+tests/unit/test_mqtt_client.py::TestMQTTClientKelvinConversion::test_kelvin2cync_min_value [32mPASSED[0m[31m [ 43%][0m
+tests/unit/test_mqtt_client.py::TestMQTTClientKelvinConversion::test_kelvin2cync_max_value [32mPASSED[0m[31m [ 43%][0m
+tests/unit/test_mqtt_client.py::TestMQTTClientKelvinConversion::test_kelvin2cync_below_minimum [32mPASSED[0m[31m [ 43%][0m
+tests/unit/test_mqtt_client.py::TestMQTTClientKelvinConversion::test_kelvin2cync_above_maximum [32mPASSED[0m[31m [ 43%][0m
+tests/unit/test_mqtt_client.py::TestMQTTClientKelvinConversion::test_kelvin2cync_middle_value [32mPASSED[0m[31m [ 44%][0m
+tests/unit/test_mqtt_client.py::TestMQTTClientKelvinConversion::test_cync2kelvin_min_value [32mPASSED[0m[31m [ 44%][0m
+tests/unit/test_mqtt_client.py::TestMQTTClientKelvinConversion::test_cync2kelvin_max_value [32mPASSED[0m[31m [ 44%][0m
+tests/unit/test_mqtt_client.py::TestMQTTClientKelvinConversion::test_cync2kelvin_below_zero [32mPASSED[0m[31m [ 44%][0m
+tests/unit/test_mqtt_client.py::TestMQTTClientKelvinConversion::test_cync2kelvin_above_100 [32mPASSED[0m[31m [ 44%][0m
+tests/unit/test_mqtt_client.py::TestMQTTClientKelvinConversion::test_cync2kelvin_middle_value [32mPASSED[0m[31m [ 44%][0m
+tests/unit/test_mqtt_client.py::TestMQTTClientKelvinConversion::test_kelvin_roundtrip_conversion [32mPASSED[0m[31m [ 44%][0m
+tests/unit/test_mqtt_client.py::TestSetPowerCommand::test_set_power_command_initialization [32mPASSED[0m[31m [ 45%][0m
+tests/unit/test_mqtt_client.py::TestSetPowerCommand::test_set_power_command_execute_calls_set_power [32mPASSED[0m[31m [ 45%][0m
+tests/unit/test_mqtt_client.py::TestSetPowerCommand::test_set_power_command_optimistic_update_device [32mPASSED[0m[31m [ 45%][0m
+tests/unit/test_mqtt_client.py::TestSetPowerCommand::test_set_power_command_optimistic_update_switch [32mPASSED[0m[31m [ 45%][0m
+tests/unit/test_mqtt_client.py::TestSetPowerCommand::test_set_power_command_optimistic_update_group [32mPASSED[0m[31m [ 45%][0m
+tests/unit/test_mqtt_client.py::TestSetBrightnessCommand::test_set_brightness_command_initialization [32mPASSED[0m[31m [ 45%][0m
+tests/unit/test_mqtt_client.py::TestSetBrightnessCommand::test_set_brightness_command_execute_calls_set_brightness [32mPASSED[0m[31m [ 45%][0m
+tests/unit/test_mqtt_client.py::TestSetBrightnessCommand::test_set_brightness_command_optimistic_update_device [32mPASSED[0m[31m [ 46%][0m
+tests/unit/test_mqtt_client.py::TestSetBrightnessCommand::test_set_brightness_command_optimistic_update_group [32mPASSED[0m[31m [ 46%][0m
+tests/unit/test_mqtt_client.py::TestCommandProcessorQueue::test_enqueue_adds_command_to_queue [32mPASSED[0m[31m [ 46%][0m
+tests/unit/test_mqtt_client.py::TestCommandProcessorQueue::test_enqueue_starts_processing [32mPASSED[0m[31m [ 46%][0m
+tests/unit/test_mqtt_client.py::TestCommandProcessorQueue::test_enqueue_doesnt_duplicate_processing_task [32mPASSED[0m[31m [ 46%][0m
+tests/unit/test_mqtt_client.py::TestCommandProcessorExecution::test_process_next_executes_command [32mPASSED[0m[31m [ 46%][0m
+tests/unit/test_mqtt_client.py::TestCommandProcessorExecution::test_process_next_publishes_optimistic [32mPASSED[0m[31m [ 46%][0m
+tests/unit/test_mqtt_client.py::TestCommandProcessorExecution::test_process_next_triggers_status_refresh [32mPASSED[0m[31m [ 47%][0m
+tests/unit/test_mqtt_client.py::TestCommandProcessorExecution::test_process_next_handles_command_failure [32mPASSED[0m[31m [ 47%][0m
+tests/unit/test_mqtt_client.py::TestCommandProcessorExecution::test_process_next_processes_multiple_commands_sequentially [32mPASSED[0m[31m [ 47%][0m
+tests/unit/test_mqtt_client.py::TestCommandProcessorExecution::test_process_next_sets_processing_flag [32mPASSED[0m[31m [ 47%][0m
+tests/unit/test_mqtt_client.py::TestMQTTUpdateDeviceFromSubgroup::test_update_switch_from_subgroup_success [32mPASSED[0m[31m [ 47%][0m
+tests/unit/test_mqtt_client.py::TestMQTTUpdateDeviceFromSubgroup::test_update_switch_from_subgroup_not_switch [32mPASSED[0m[31m [ 47%][0m
+tests/unit/test_mqtt_client.py::TestMQTTUpdateDeviceFromSubgroup::test_update_switch_from_subgroup_pending_command [32mPASSED[0m[31m [ 47%][0m
+tests/unit/test_mqtt_client.py::TestMQTTUpdateDeviceFromSubgroup::test_update_switch_from_subgroup_publishes_off_state [32mPASSED[0m[31m [ 47%][0m
+tests/unit/test_mqtt_client.py::TestMQTTSyncGroupSwitches::test_sync_group_switches_success [32mPASSED[0m[31m [ 48%][0m
+tests/unit/test_mqtt_client.py::TestMQTTSyncGroupSwitches::test_sync_group_switches_group_not_found [32mPASSED[0m[31m [ 48%][0m
+tests/unit/test_mqtt_client.py::TestMQTTSyncGroupSwitches::test_sync_group_switches_member_not_in_devices [32mPASSED[0m[31m [ 48%][0m
+tests/unit/test_mqtt_client.py::TestMQTTSyncGroupDevices::test_sync_group_devices_success [32mPASSED[0m[31m [ 48%][0m
+tests/unit/test_mqtt_client.py::TestMQTTSyncGroupDevices::test_sync_group_devices_group_not_found [32mPASSED[0m[31m [ 48%][0m
+tests/unit/test_mqtt_client.py::TestMQTTSyncGroupDevices::test_sync_group_devices_mixed_types [32mPASSED[0m[31m [ 48%][0m
+tests/unit/test_mqtt_client.py::TestMQTTReceiverTask::test_start_receiver_task_handles_empty_payload [32mPASSED[0m[31m [ 48%][0m
+tests/unit/test_mqtt_client.py::TestMQTTReceiverTask::test_start_receiver_task_handles_none_payload [32mPASSED[0m[31m [ 49%][0m
+tests/unit/test_mqtt_client.py::TestMQTTReceiverTask::test_start_receiver_task_handles_bridge_command [32mPASSED[0m[31m [ 49%][0m
+tests/unit/test_mqtt_client.py::TestMQTTGroupCommandHandling::test_group_power_on_command [32mPASSED[0m[31m [ 49%][0m
+tests/unit/test_mqtt_client.py::TestMQTTGroupCommandHandling::test_group_brightness_command [32mPASSED[0m[31m [ 49%][0m
+tests/unit/test_mqtt_client.py::TestMQTTGroupCommandHandling::test_group_not_found_handling [32mPASSED[0m[31m [ 49%][0m
+tests/unit/test_mqtt_client.py::TestMQTTFanCommands::test_fan_percentage_command_low [32mPASSED[0m[31m [ 49%][0m
+tests/unit/test_mqtt_client.py::TestMQTTFanCommands::test_fan_percentage_command_medium [32mPASSED[0m[31m [ 49%][0m
+tests/unit/test_mqtt_client.py::TestMQTTFanCommands::test_fan_percentage_command_high [32mPASSED[0m[31m [ 50%][0m
+tests/unit/test_mqtt_client.py::TestMQTTFanCommands::test_fan_percentage_command_max [32mPASSED[0m[31m [ 50%][0m
+tests/unit/test_mqtt_client.py::TestMQTTRefreshStatus::test_refresh_status_triggers_refresh [32mPASSED[0m[31m [ 50%][0m
+tests/unit/test_mqtt_client.py::TestMQTTParseDeviceStatus::test_parse_device_status_light_with_brightness [32mPASSED[0m[31m [ 50%][0m
+tests/unit/test_mqtt_client.py::TestMQTTParseDeviceStatus::test_parse_device_status_with_rgb_color [32mPASSED[0m[31m [ 50%][0m
+tests/unit/test_mqtt_client.py::TestMQTTParseDeviceStatus::test_parse_device_status_with_color_temp [32mPASSED[0m[31m [ 50%][0m
+tests/unit/test_mqtt_client.py::TestMQTTParseDeviceStatus::test_parse_device_status_switch_skips_mesh_info [32mPASSED[0m[31m [ 50%][0m
+tests/unit/test_mqtt_client.py::TestMQTTParseDeviceStatus::test_parse_device_status_device_not_found [32mPASSED[0m[31m [ 51%][0m
+tests/unit/test_mqtt_client.py::TestMQTTParseDeviceStatus::test_parse_device_status_switch_with_onoff_payload [32mPASSED[0m[31m [ 51%][0m
+tests/unit/test_mqtt_client.py::TestMQTTParseDeviceStatus::test_parse_device_status_fan_preset_mode [32mPASSED[0m[31m [ 51%][0m
+tests/unit/test_mqtt_client.py::TestMQTTTriggerStatusRefresh::test_trigger_status_refresh_no_server [32mPASSED[0m[31m [ 51%][0m
+tests/unit/test_mqtt_client.py::TestMQTTTriggerStatusRefresh::test_trigger_status_refresh_no_bridges [32mPASSED[0m[31m [ 51%][0m
+tests/unit/test_mqtt_client.py::TestMQTTTriggerStatusRefresh::test_trigger_status_refresh_refresh_in_progress [32mPASSED[0m[31m [ 51%][0m
+tests/unit/test_mqtt_client.py::TestMQTTTriggerStatusRefresh::test_trigger_status_refresh_with_bridge [32mPASSED[0m[31m [ 51%][0m
+tests/unit/test_mqtt_client.py::TestMQTTUpdateDeviceStateEdgeCases::test_update_device_state_plug_device [32mPASSED[0m[31m [ 52%][0m
+tests/unit/test_mqtt_client.py::TestMQTTUpdateDeviceStateEdgeCases::test_update_device_state_supports_temperature [32mPASSED[0m[31m [ 52%][0m
+tests/unit/test_mqtt_client.py::TestMQTTUpdateDeviceStateEdgeCases::test_update_device_state_supports_rgb [32mPASSED[0m[31m [ 52%][0m
+tests/unit/test_mqtt_client.py::TestRegisterSingleDevice::test_register_light_device_with_brightness_and_rgb [32mPASSED[0m[31m [ 52%][0m
+tests/unit/test_mqtt_client.py::TestRegisterSingleDevice::test_register_device_without_connection [32mPASSED[0m[31m [ 52%][0m
+tests/unit/test_mqtt_client.py::TestRegisterSingleDevice::test_register_switch_device [32mPASSED[0m[31m [ 52%][0m
+tests/unit/test_mqtt_client.py::TestRegisterSingleDevice::test_register_device_with_suggested_area_from_group [32mPASSED[0m[31m [ 52%][0m
+tests/unit/test_mqtt_client.py::TestRegisterSingleDevice::test_register_device_with_area_from_name_fallback [32mPASSED[0m[31m [ 52%][0m
+tests/unit/test_mqtt_command_routing.py::TestGroupCommandRouting::test_group_command_valid_group_routing [32mPASSED[0m[31m [ 53%][0m
+tests/unit/test_mqtt_command_routing.py::TestGroupCommandRouting::test_group_command_invalid_group_warning [32mPASSED[0m[31m [ 53%][0m
+tests/unit/test_mqtt_command_routing.py::TestGroupCommandRouting::test_group_command_parses_group_id_correctly [32mPASSED[0m[31m [ 53%][0m
+tests/unit/test_mqtt_command_routing.py::TestDeviceCommandRouting::test_device_command_valid_device_routing [32mPASSED[0m[31m [ 53%][0m
+tests/unit/test_mqtt_command_routing.py::TestDeviceCommandRouting::test_device_command_invalid_device_warning [32mPASSED[0m[31m [ 53%][0m
+tests/unit/test_mqtt_command_routing.py::TestDeviceCommandRouting::test_device_command_parses_device_id_correctly [32mPASSED[0m[31m [ 53%][0m
+tests/unit/test_mqtt_command_routing.py::TestFanControllerCommands::test_fan_percentage_0_maps_to_brightness_0 [32mPASSED[0m[31m [ 53%][0m
+tests/unit/test_mqtt_command_routing.py::TestFanControllerCommands::test_fan_percentage_1_to_25_maps_to_brightness_25 [32mPASSED[0m[31m [ 54%][0m
+tests/unit/test_mqtt_command_routing.py::TestFanControllerCommands::test_fan_percentage_26_to_50_maps_to_brightness_50 [32mPASSED[0m[31m [ 54%][0m
+tests/unit/test_mqtt_command_routing.py::TestFanControllerCommands::test_fan_percentage_51_to_75_maps_to_brightness_75 [32mPASSED[0m[31m [ 54%][0m
+tests/unit/test_mqtt_command_routing.py::TestFanControllerCommands::test_fan_percentage_76_to_100_maps_to_brightness_100 [32mPASSED[0m[31m [ 54%][0m
+tests/unit/test_mqtt_command_routing.py::TestFanControllerCommands::test_fan_preset_off_maps_to_fanspeed_off [32mPASSED[0m[31m [ 54%][0m
+tests/unit/test_mqtt_command_routing.py::TestFanControllerCommands::test_fan_preset_low_maps_to_fanspeed_low [32mPASSED[0m[31m [ 54%][0m
+tests/unit/test_mqtt_command_routing.py::TestFanControllerCommands::test_fan_preset_medium_maps_to_fanspeed_medium [32mPASSED[0m[31m [ 54%][0m
+tests/unit/test_mqtt_command_routing.py::TestFanControllerCommands::test_fan_preset_high_maps_to_fanspeed_high [32mPASSED[0m[31m [ 55%][0m
+tests/unit/test_mqtt_command_routing.py::TestFanControllerCommands::test_fan_preset_max_maps_to_fanspeed_max [32mPASSED[0m[31m [ 55%][0m
+tests/unit/test_mqtt_command_routing.py::TestFanControllerCommands::test_fan_preset_invalid_triggers_warning [32mPASSED[0m[31m [ 55%][0m
+tests/unit/test_mqtt_command_routing.py::TestFanControllerCommands::test_fan_command_on_non_fan_device_warning [32mPASSED[0m[31m [ 55%][0m
+tests/unit/test_mqtt_command_routing.py::TestFanCommandEdgeCases::test_fan_percentage_boundary_0 [32mPASSED[0m[31m [ 55%][0m
+tests/unit/test_mqtt_command_routing.py::TestFanCommandEdgeCases::test_fan_percentage_boundary_25 [32mPASSED[0m[31m [ 55%][0m
+tests/unit/test_mqtt_command_routing.py::TestFanCommandEdgeCases::test_fan_percentage_boundary_50 [32mPASSED[0m[31m [ 55%][0m
+tests/unit/test_mqtt_command_routing.py::TestFanCommandEdgeCases::test_fan_percentage_boundary_75 [32mPASSED[0m[31m [ 56%][0m
+tests/unit/test_mqtt_command_routing.py::TestFanCommandEdgeCases::test_fan_percentage_boundary_100 [32mPASSED[0m[31m [ 56%][0m
+tests/unit/test_mqtt_command_routing.py::TestFanCommandEdgeCases::test_fan_percentage_invalid_negative [32mPASSED[0m[31m [ 56%][0m
+tests/unit/test_mqtt_command_routing.py::TestFanCommandEdgeCases::test_fan_percentage_exceeds_100 [32mPASSED[0m[31m [ 56%][0m
+tests/unit/test_mqtt_connection_lifecycle.py::TestMQTTClientConnectionLifecycle::test_start_main_loop_basic [32mPASSED[0m[31m [ 56%][0m
+tests/unit/test_mqtt_connection_lifecycle.py::TestMQTTClientConnectionLifecycle::test_start_reconnects_on_disconnect [32mPASSED[0m[31m [ 56%][0m
+tests/unit/test_mqtt_connection_lifecycle.py::TestMQTTClientConnectionLifecycle::test_start_handles_mqtt_error [32mPASSED[0m[31m [ 56%][0m
+tests/unit/test_mqtt_connection_lifecycle.py::TestMQTTClientConnectionLifecycle::test_start_creates_receiver_task [32mPASSED[0m[31m [ 57%][0m
+tests/unit/test_mqtt_connection_lifecycle.py::TestMQTTClientConnectionLifecycle::test_start_resilience_multiple_failures [32mPASSED[0m[31m [ 57%][0m
+tests/unit/test_mqtt_device_discovery.py::TestMQTTDeviceDiscovery::test_homeassistant_discovery_light_with_rgb [32mPASSED[0m[31m [ 57%][0m
+tests/unit/test_mqtt_device_discovery.py::TestMQTTDeviceDiscovery::test_homeassistant_discovery_light_with_temperature [32mPASSED[0m[31m [ 57%][0m
+tests/unit/test_mqtt_device_discovery.py::TestMQTTDeviceDiscovery::test_homeassistant_discovery_switch [32mPASSED[0m[31m [ 57%][0m
+tests/unit/test_mqtt_device_discovery.py::TestMQTTDeviceDiscovery::test_homeassistant_discovery_fan [32mPASSED[0m[31m [ 57%][0m
+tests/unit/test_mqtt_device_discovery.py::TestMQTTDeviceDiscovery::test_homeassistant_discovery_plug [32mPASSED[0m[31m [ 57%][0m
+tests/unit/test_mqtt_device_discovery.py::TestMQTTDeviceDiscovery::test_homeassistant_discovery_group [32mPASSED[0m[31m [ 57%][0m
+tests/unit/test_mqtt_device_discovery.py::TestMQTTDeviceDiscovery::test_homeassistant_discovery_device_naming [32mPASSED[0m[31m [ 58%][0m
+tests/unit/test_mqtt_device_discovery.py::TestMQTTDeviceDiscovery::test_homeassistant_discovery_suggested_area [32mPASSED[0m[31m [ 58%][0m
+tests/unit/test_mqtt_device_discovery.py::TestMQTTDeviceDiscovery::test_homeassistant_discovery_device_info [32mPASSED[0m[31m [ 58%][0m
+tests/unit/test_mqtt_device_discovery.py::TestMQTTDeviceDiscovery::test_homeassistant_discovery_duplicate_device [32mPASSED[0m[31m [ 58%][0m
+tests/unit/test_mqtt_discovery.py::TestDeviceRegistration::test_register_single_device_not_connected [32mPASSED[0m[31m [ 58%][0m
+tests/unit/test_mqtt_discovery.py::TestDeviceRegistration::test_register_single_device_publishes_discovery [32mPASSED[0m[31m [ 58%][0m
+tests/unit/test_mqtt_discovery.py::TestDeviceRegistration::test_register_single_device_sets_suggested_area_from_group [32mPASSED[0m[31m [ 58%][0m
+tests/unit/test_mqtt_discovery.py::TestDeviceRegistration::test_register_single_device_extracts_area_from_device_name [32mPASSED[0m[31m [ 59%][0m
+tests/unit/test_mqtt_discovery.py::TestDeviceRegistration::test_register_single_device_handles_switch_device [32mPASSED[0m[31m [ 59%][0m
+tests/unit/test_mqtt_discovery.py::TestDeviceRediscovery::test_trigger_device_rediscovery_not_connected [32mPASSED[0m[31m [ 59%][0m
+tests/unit/test_mqtt_discovery.py::TestDeviceRediscovery::test_trigger_device_rediscovery_registers_all_devices [32mPASSED[0m[31m [ 59%][0m
+tests/unit/test_mqtt_discovery.py::TestDeviceRediscovery::test_trigger_device_rediscovery_handles_registration_failure [32mPASSED[0m[31m [ 59%][0m
+tests/unit/test_mqtt_discovery.py::TestEntityIDGeneration::test_entity_id_from_simple_device_name [32mPASSED[0m[31m [ 59%][0m
+tests/unit/test_mqtt_discovery.py::TestEntityIDGeneration::test_entity_id_from_complex_device_name [32mPASSED[0m[31m [ 59%][0m
+tests/unit/test_mqtt_discovery.py::TestEntityIDGeneration::test_entity_id_from_unicode_device_name [32mPASSED[0m[31m [ 60%][0m
+tests/unit/test_mqtt_discovery.py::TestAreaExtraction::test_area_extraction_from_group_name [32mPASSED[0m[31m [ 60%][0m
+tests/unit/test_mqtt_discovery.py::TestAreaExtraction::test_area_extraction_removes_suffixes [32mPASSED[0m[31m [ 60%][0m
+tests/unit/test_mqtt_discovery.py::TestAreaExtraction::test_area_extraction_removes_trailing_numbers [32mPASSED[0m[31m [ 60%][0m
+tests/unit/test_mqtt_discovery.py::TestAreaExtraction::test_area_extraction_skips_subgroups [32mPASSED[0m[31m [ 60%][0m
+tests/unit/test_mqtt_group_sync.py::TestMQTTClientGroupSync::test_sync_group_devices_all_on [32mPASSED[0m[31m [ 60%][0m
+tests/unit/test_mqtt_group_sync.py::TestMQTTClientGroupSync::test_sync_group_devices_mixed_state [32mPASSED[0m[31m [ 60%][0m
+tests/unit/test_mqtt_group_sync.py::TestMQTTClientGroupSync::test_sync_group_devices_empty_group [32mPASSED[0m[31m [ 61%][0m
+tests/unit/test_mqtt_group_sync.py::TestMQTTClientGroupSync::test_sync_group_devices_publishes_states [32mPASSED[0m[31m [ 61%][0m
+tests/unit/test_mqtt_group_sync.py::TestMQTTClientGroupSync::test_sync_group_switches_after_group_command [32mPASSED[0m[31m [ 61%][0m
+tests/unit/test_mqtt_group_sync.py::TestMQTTClientGroupSync::test_sync_group_devices_with_unavailable_members [32mPASSED[0m[31m [ 61%][0m
+tests/unit/test_mqtt_group_sync.py::TestMQTTClientGroupSync::test_sync_group_returns_sync_count [32mPASSED[0m[31m [ 61%][0m
+tests/unit/test_mqtt_message_handling.py::TestMQTTClientMessageHandling::test_receiver_handles_set_power_command [32mPASSED[0m[31m [ 61%][0m
+tests/unit/test_mqtt_message_handling.py::TestMQTTClientMessageHandling::test_receiver_handles_set_brightness_command [32mPASSED[0m[31m [ 61%][0m
+tests/unit/test_mqtt_message_handling.py::TestMQTTClientMessageHandling::test_receiver_handles_set_rgb_command [32mPASSED[0m[31m [ 61%][0m
+tests/unit/test_mqtt_message_handling.py::TestMQTTClientMessageHandling::test_receiver_handles_malformed_json [32mPASSED[0m[31m [ 62%][0m
+tests/unit/test_mqtt_message_handling.py::TestMQTTClientMessageHandling::test_receiver_handles_unknown_topic [32mPASSED[0m[31m [ 62%][0m
+tests/unit/test_mqtt_message_handling.py::TestMQTTClientMessageHandling::test_receiver_handles_unknown_device_id [32mPASSED[0m[31m [ 62%][0m
+tests/unit/test_mqtt_message_handling.py::TestMQTTClientMessageHandling::test_receiver_handles_group_commands [32mPASSED[0m[31m [ 62%][0m
+tests/unit/test_mqtt_message_handling.py::TestMQTTClientMessageHandling::test_receiver_handles_task_exception [32mPASSED[0m[31m [ 62%][0m
+tests/unit/test_mqtt_message_handling.py::TestMQTTClientMessageHandling::test_receiver_executes_tasks_concurrently [32mPASSED[0m[31m [ 62%][0m
+tests/unit/test_mqtt_message_handling.py::TestMQTTClientMessageHandling::test_receiver_command_payload_parsing [32mPASSED[0m[31m [ 62%][0m
+tests/unit/test_mqtt_state_updates.py::TestMQTTClientStateUpdates::test_update_switch_from_subgroup [32mPASSED[0m[31m [ 63%][0m
+tests/unit/test_mqtt_state_updates.py::TestMQTTClientStateUpdates::test_update_brightness_percentage_conversion [32mPASSED[0m[31m [ 63%][0m
+tests/unit/test_mqtt_state_updates.py::TestMQTTClientStateUpdates::test_update_temperature_kelvin_conversion [32mPASSED[0m[31m [ 63%][0m
+tests/unit/test_mqtt_state_updates.py::TestMQTTClientStateUpdates::test_update_temperature_reverse_conversion [32mPASSED[0m[31m [ 63%][0m
+tests/unit/test_mqtt_state_updates.py::TestMQTTClientStateUpdates::test_update_rgb_zero_values [32mPASSED[0m[31m [ 63%][0m
+tests/unit/test_mqtt_state_updates.py::TestMQTTClientStateUpdates::test_update_rgb_color_values [32mPASSED[0m[31m [ 63%][0m
+tests/unit/test_mqtt_state_updates.py::TestMQTTClientStateUpdates::test_parse_device_status_all_capabilities [32mPASSED[0m[31m [ 63%][0m
+tests/unit/test_mqtt_state_updates.py::TestMQTTClientStateUpdates::test_update_device_state_offline_device [32mPASSED[0m[31m [ 64%][0m
+tests/unit/test_mqtt_state_updates.py::TestMQTTClientStateUpdates::test_update_device_state_online_device [32mPASSED[0m[31m [ 64%][0m
+tests/unit/test_packet_checksum.py::TestCalculateChecksumBetweenMarkers::test_calculate_checksum_simple_packet [32mPASSED[0m[31m [ 64%][0m
+tests/unit/test_packet_checksum.py::TestCalculateChecksumBetweenMarkers::test_calculate_checksum_with_larger_sum [32mPASSED[0m[31m [ 64%][0m
+tests/unit/test_packet_checksum.py::TestCalculateChecksumBetweenMarkers::test_calculate_checksum_modulo_256 [32mPASSED[0m[31m [ 64%][0m
+tests/unit/test_packet_checksum.py::TestCalculateChecksumBetweenMarkers::test_calculate_checksum_all_zeros [32mPASSED[0m[31m [ 64%][0m
+tests/unit/test_packet_checksum.py::TestCalculateChecksumBetweenMarkers::test_calculate_checksum_all_ones [32mPASSED[0m[31m [ 64%][0m
+tests/unit/test_packet_checksum.py::TestCalculateChecksumBetweenMarkers::test_calculate_checksum_custom_offset [32mPASSED[0m[31m [ 65%][0m
+tests/unit/test_packet_checksum.py::TestCalculateChecksumBetweenMarkers::test_calculate_checksum_with_zero_offset [32mPASSED[0m[31m [ 65%][0m
+tests/unit/test_packet_checksum.py::TestCalculateChecksumBetweenMarkers::test_calculate_checksum_minimal_valid_packet [32mPASSED[0m[31m [ 65%][0m
+tests/unit/test_packet_checksum.py::TestCalculateChecksumBetweenMarkers::test_calculate_checksum_long_data_section [32mPASSED[0m[31m [ 65%][0m
+tests/unit/test_packet_checksum.py::TestCalculateChecksumBetweenMarkers::test_calculate_checksum_marker_at_start [32mPASSED[0m[31m [ 65%][0m
+tests/unit/test_packet_checksum.py::TestCalculateChecksumBetweenMarkers::test_calculate_checksum_raises_on_no_markers [32mPASSED[0m[31m [ 65%][0m
+tests/unit/test_packet_checksum.py::TestCalculateChecksumBetweenMarkers::test_calculate_checksum_raises_on_packet_too_short [32mPASSED[0m[31m [ 65%][0m
+tests/unit/test_packet_checksum.py::TestCalculateChecksumBetweenMarkers::test_calculate_checksum_raises_on_insufficient_offset [32mPASSED[0m[31m [ 66%][0m
+tests/unit/test_packet_checksum.py::TestCalculateChecksumBetweenMarkers::test_calculate_checksum_with_large_offset [32mPASSED[0m[31m [ 66%][0m
+tests/unit/test_packet_checksum.py::TestCalculateChecksumBetweenMarkers::test_calculate_checksum_default_offset_constant [32mPASSED[0m[31m [ 66%][0m
+tests/unit/test_packet_checksum.py::TestCalculateChecksumBetweenMarkers::test_calculate_checksum_empty_data_section [32mPASSED[0m[31m [ 66%][0m
+tests/unit/test_packet_checksum.py::TestInsertChecksumInPlace::test_insert_checksum_basic [32mPASSED[0m[31m [ 66%][0m
+tests/unit/test_packet_checksum.py::TestInsertChecksumInPlace::test_insert_checksum_modifies_packet_in_place [32mPASSED[0m[31m [ 66%][0m
+tests/unit/test_packet_checksum.py::TestInsertChecksumInPlace::test_insert_checksum_with_custom_offset [32mPASSED[0m[31m [ 66%][0m
+tests/unit/test_packet_checksum.py::TestInsertChecksumInPlace::test_insert_checksum_at_different_indices [32mPASSED[0m[31m [ 66%][0m
+tests/unit/test_packet_checksum.py::TestInsertChecksumInPlace::test_insert_checksum_overwrites_existing_value [32mPASSED[0m[31m [ 67%][0m
+tests/unit/test_packet_checksum.py::TestInsertChecksumInPlace::test_insert_checksum_zero_result [32mPASSED[0m[31m [ 67%][0m
+tests/unit/test_packet_checksum.py::TestInsertChecksumInPlace::test_insert_checksum_with_large_sum [32mPASSED[0m[31m [ 67%][0m
+tests/unit/test_packet_checksum.py::TestInsertChecksumInPlace::test_insert_checksum_preserves_other_bytes [32mPASSED[0m[31m [ 67%][0m
+tests/unit/test_packet_checksum.py::TestInsertChecksumInPlace::test_insert_checksum_raises_on_invalid_packet [32mPASSED[0m[31m [ 67%][0m
+tests/unit/test_packet_checksum.py::TestInsertChecksumInPlace::test_insert_checksum_on_minimal_packet [32mPASSED[0m[31m [ 67%][0m
+tests/unit/test_packet_checksum.py::TestInsertChecksumInPlace::test_insert_checksum_with_zero_offset [32mPASSED[0m[31m [ 67%][0m
+tests/unit/test_packet_checksum.py::TestInsertChecksumInPlace::test_insert_checksum_idempotent [32mPASSED[0m[31m [ 68%][0m
+tests/unit/test_packet_parser.py::TestParseCyncPacket::test_parse_returns_none_for_empty_packet [32mPASSED[0m[31m [ 68%][0m
+tests/unit/test_packet_parser.py::TestParseCyncPacket::test_parse_returns_none_for_too_short_packet [32mPASSED[0m[31m [ 68%][0m
+tests/unit/test_packet_parser.py::TestParseCyncPacket::test_parse_returns_none_for_none_input [32mPASSED[0m[31m [ 68%][0m
+tests/unit/test_packet_parser.py::TestParseCyncPacket::test_parse_minimal_valid_packet [32mPASSED[0m[31m [ 68%][0m
+tests/unit/test_packet_parser.py::TestParseCyncPacket::test_parse_handshake_packet [32mPASSED[0m[31m [ 68%][0m
+tests/unit/test_packet_parser.py::TestParseCyncPacket::test_parse_data_channel_packet [32mPASSED[0m[31m [ 68%][0m
+tests/unit/test_packet_parser.py::TestParseCyncPacket::test_parse_status_broadcast_packet [32mPASSED[0m[31m [ 69%][0m
+tests/unit/test_packet_parser.py::TestParseCyncPacket::test_parse_device_info_packet [32mPASSED[0m[31m [ 69%][0m
+tests/unit/test_packet_parser.py::TestParseCyncPacket::test_parse_device_info_rgb_mode [32mPASSED[0m[31m [ 69%][0m
+tests/unit/test_packet_parser.py::TestParseCyncPacket::test_parse_packet_with_large_length [32mPASSED[0m[31m [ 69%][0m
+tests/unit/test_packet_parser.py::TestParseCyncPacket::test_parse_keepalive_packet [32mPASSED[0m[31m [ 69%][0m
+tests/unit/test_packet_parser.py::TestParseCyncPacket::test_parse_heartbeat_dev_packet [32mPASSED[0m[31m [ 69%][0m
+tests/unit/test_packet_parser.py::TestParseCyncPacket::test_parse_heartbeat_cloud_packet [32mPASSED[0m[31m [ 69%][0m
+tests/unit/test_packet_parser.py::TestParseCyncPacket::test_parse_unknown_packet_type [32mPASSED[0m[31m [ 70%][0m
+tests/unit/test_packet_parser.py::TestParseCyncPacket::test_parse_direction_parameter [32mPASSED[0m[31m [ 70%][0m
+tests/unit/test_packet_parser.py::TestParseCyncPacket::test_parse_data_channel_with_7e_markers [32mPASSED[0m[31m [ 70%][0m
+tests/unit/test_packet_parser.py::TestParseCyncPacket::test_parse_query_status_command [32mPASSED[0m[31m [ 70%][0m
+tests/unit/test_packet_parser.py::TestParseCyncPacket::test_parse_multiple_device_statuses [32mPASSED[0m[31m [ 70%][0m
+tests/unit/test_packet_parser.py::TestParseCyncPacket::test_parse_all_known_packet_types[35-HANDSHAKE] [32mPASSED[0m[31m [ 70%][0m
+tests/unit/test_packet_parser.py::TestParseCyncPacket::test_parse_all_known_packet_types[40-HELLO_ACK] [32mPASSED[0m[31m [ 70%][0m
+tests/unit/test_packet_parser.py::TestParseCyncPacket::test_parse_all_known_packet_types[67-DEVICE_INFO] [32mPASSED[0m[31m [ 71%][0m
+tests/unit/test_packet_parser.py::TestParseCyncPacket::test_parse_all_known_packet_types[72-INFO_ACK] [32mPASSED[0m[31m [ 71%][0m
+tests/unit/test_packet_parser.py::TestParseCyncPacket::test_parse_all_known_packet_types[115-DATA_CHANNEL] [32mPASSED[0m[31m [ 71%][0m
+tests/unit/test_packet_parser.py::TestParseCyncPacket::test_parse_all_known_packet_types[120-KEEPALIVE] [32mPASSED[0m[31m [ 71%][0m
+tests/unit/test_packet_parser.py::TestParseCyncPacket::test_parse_all_known_packet_types[123-DATA_ACK] [32mPASSED[0m[31m [ 71%][0m
+tests/unit/test_packet_parser.py::TestParseCyncPacket::test_parse_all_known_packet_types[131-STATUS_BROADCAST] [32mPASSED[0m[31m [ 71%][0m
+tests/unit/test_packet_parser.py::TestParseCyncPacket::test_parse_all_known_packet_types[136-STATUS_ACK] [32mPASSED[0m[31m [ 71%][0m
+tests/unit/test_packet_parser.py::TestParseCyncPacket::test_parse_all_known_packet_types[211-HEARTBEAT_DEV] [32mPASSED[0m[31m [ 71%][0m
+tests/unit/test_packet_parser.py::TestParseCyncPacket::test_parse_all_known_packet_types[216-HEARTBEAT_CLOUD] [32mPASSED[0m[31m [ 72%][0m
+tests/unit/test_packet_parser.py::TestFormatPacketLog::test_format_none_input [32mPASSED[0m[31m [ 72%][0m
+tests/unit/test_packet_parser.py::TestFormatPacketLog::test_format_empty_dict [32mPASSED[0m[31m [ 72%][0m
+tests/unit/test_packet_parser.py::TestFormatPacketLog::test_format_minimal_packet [32mPASSED[0m[31m [ 72%][0m
+tests/unit/test_packet_parser.py::TestFormatPacketLog::test_format_with_endpoint_and_counter [32mPASSED[0m[31m [ 72%][0m
+tests/unit/test_packet_parser.py::TestFormatPacketLog::test_format_with_command [32mPASSED[0m[31m [ 72%][0m
+tests/unit/test_packet_parser.py::TestFormatPacketLog::test_format_with_devices [32mPASSED[0m[31m [ 72%][0m
+tests/unit/test_packet_parser.py::TestFormatPacketLog::test_format_with_device_statuses_verbose [32mPASSED[0m[31m [ 73%][0m
+tests/unit/test_packet_parser.py::TestFormatPacketLog::test_format_with_device_statuses_non_verbose [32mPASSED[0m[31m [ 73%][0m
+tests/unit/test_packet_parser.py::TestFormatPacketLog::test_format_with_short_data_payload [32mPASSED[0m[31m [ 73%][0m
+tests/unit/test_packet_parser.py::TestFormatPacketLog::test_format_with_long_data_payload [32mPASSED[0m[31m [ 73%][0m
+tests/unit/test_packet_parser.py::TestFormatPacketLog::test_format_with_very_long_raw_hex [32mPASSED[0m[31m [ 73%][0m
+tests/unit/test_packet_parser.py::TestFormatPacketLog::test_format_non_verbose_mode [32mPASSED[0m[31m [ 73%][0m
+tests/unit/test_periodic_tasks.py::TestPeriodicStatusRefresh::test_periodic_refresh_with_ready_bridges [32mPASSED[0m[31m [ 73%][0m
+tests/unit/test_periodic_tasks.py::TestPeriodicStatusRefresh::test_periodic_refresh_skips_when_no_ready_bridges [32mPASSED[0m[31m [ 74%][0m
+tests/unit/test_periodic_tasks.py::TestPeriodicStatusRefresh::test_periodic_refresh_multiple_bridges [32mPASSED[0m[31m [ 74%][0m
+tests/unit/test_periodic_tasks.py::TestPeriodicStatusRefresh::test_periodic_refresh_handles_bridge_exceptions [32mPASSED[0m[31m [ 74%][0m
+tests/unit/test_periodic_tasks.py::TestPeriodicStatusRefresh::test_periodic_refresh_stops_when_not_running [32mPASSED[0m[31m [ 74%][0m
+tests/unit/test_periodic_tasks.py::TestPeriodicStatusRefresh::test_periodic_refresh_task_cancellation [32mPASSED[0m[31m [ 74%][0m
+tests/unit/test_periodic_tasks.py::TestPeriodicPoolStatusLogging::test_pool_status_logger_logs_metrics [32mPASSED[0m[31m [ 74%][0m
+tests/unit/test_periodic_tasks.py::TestPeriodicPoolStatusLogging::test_pool_status_logger_empty_pool [32mPASSED[0m[31m [ 74%][0m
+tests/unit/test_periodic_tasks.py::TestPeriodicPoolStatusLogging::test_pool_status_logger_mixed_ready_offline [32mPASSED[0m[31m [ 75%][0m
+tests/unit/test_periodic_tasks.py::TestPeriodicPoolStatusLogging::test_pool_status_logger_tracks_uptime [32mPASSED[0m[31m [ 75%][0m
+tests/unit/test_periodic_tasks.py::TestPeriodicPoolStatusLogging::test_pool_status_logger_stops_when_not_running [32mPASSED[0m[31m [ 75%][0m
+tests/unit/test_periodic_tasks.py::TestPeriodicPoolStatusLogging::test_pool_status_logger_handles_exceptions [32mPASSED[0m[31m [ 75%][0m
+tests/unit/test_periodic_tasks.py::TestPeriodicPoolStatusLogging::test_pool_status_logger_task_cancellation [32mPASSED[0m[31m [ 75%][0m
+tests/unit/test_periodic_tasks.py::TestBackgroundTaskEdgeCases::test_refresh_with_none_device [32mPASSED[0m[31m [ 75%][0m
+tests/unit/test_periodic_tasks.py::TestBackgroundTaskEdgeCases::test_pool_logger_with_missing_attributes [32mPASSED[0m[31m [ 75%][0m
+tests/unit/test_periodic_tasks.py::TestBackgroundTaskEdgeCases::test_concurrent_task_operations [32mPASSED[0m[31m [ 76%][0m
+tests/unit/test_periodic_tasks.py::TestTaskIntegration::test_refresh_and_pool_monitoring_coexist [32mPASSED[0m[31m [ 76%][0m
+tests/unit/test_server.py::TestCloudRelayConnectionInitialization::test_init_with_required_params [32mPASSED[0m[31m [ 76%][0m
+tests/unit/test_server.py::TestCloudRelayConnectionInitialization::test_init_with_custom_params [32mPASSED[0m[31m [ 76%][0m
+tests/unit/test_server.py::TestCloudRelayConnectionInitialization::test_init_sets_logging_prefix [32mPASSED[0m[31m [ 76%][0m
+tests/unit/test_server.py::TestCloudRelayConnectionCloud::test_connect_to_cloud_success [32mPASSED[0m[31m [ 76%][0m
+tests/unit/test_server.py::TestCloudRelayConnectionCloud::test_connect_to_cloud_failure [32mPASSED[0m[31m [ 76%][0m
+tests/unit/test_server.py::TestCloudRelayConnectionCloud::test_connect_to_cloud_with_ssl_disabled [32mPASSED[0m[31m [ 76%][0m
+tests/unit/test_server.py::TestNCyncServerInitialization::test_init_with_devices [32mPASSED[0m[31m [ 77%][0m
+tests/unit/test_server.py::TestNCyncServerInitialization::test_init_without_groups [32mPASSED[0m[31m [ 77%][0m
+tests/unit/test_server.py::TestNCyncServerInitialization::test_init_creates_singleton [32mPASSED[0m[31m [ 77%][0m
+tests/unit/test_server.py::TestNCyncServerInitialization::test_init_cloud_relay_configuration [32mPASSED[0m[31m [ 77%][0m
+tests/unit/test_server.py::TestNCyncServerTCPDeviceManagement::test_add_tcp_device [32mPASSED[0m[31m [ 77%][0m
+tests/unit/test_server.py::TestNCyncServerTCPDeviceManagement::test_remove_tcp_device_by_object [32mPASSED[0m[31m [ 77%][0m
+tests/unit/test_server.py::TestNCyncServerTCPDeviceManagement::test_remove_tcp_device_by_address [32mPASSED[0m[31m [ 77%][0m
+tests/unit/test_server.py::TestNCyncServerSSL::test_create_ssl_context_without_certs [32mPASSED[0m[31m [ 78%][0m
+tests/unit/test_server.py::TestNCyncServerSSL::test_create_ssl_context_with_certs [32mPASSED[0m[31m [ 78%][0m
+tests/unit/test_server.py::TestNCyncServerCloudRelay::test_cloud_relay_disabled_by_default [32mPASSED[0m[31m [ 78%][0m
+tests/unit/test_server.py::TestNCyncServerCloudRelay::test_cloud_relay_configuration [32mPASSED[0m[31m [ 78%][0m
+tests/unit/test_server.py::TestNCyncServerState::test_server_initial_state [32mPASSED[0m[31m [ 78%][0m
+tests/unit/test_server.py::TestNCyncServerState::test_server_host_and_port_config [32mPASSED[0m[31m [ 78%][0m
+tests/unit/test_server.py::TestPrimaryDeviceSelection::test_first_device_becomes_primary [32mPASSED[0m[31m [ 78%][0m
+tests/unit/test_server.py::TestPrimaryDeviceSelection::test_second_device_not_primary [32mPASSED[0m[31m [ 79%][0m
+tests/unit/test_server.py::TestPrimaryDeviceSelection::test_primary_failover_on_disconnect [32mPASSED[0m[31m [ 79%][0m
+tests/unit/test_server.py::TestPrimaryDeviceSelection::test_primary_set_to_none_when_no_devices [32mPASSED[0m[31m [ 79%][0m
+tests/unit/test_server.py::TestTCPDeviceCleanup::test_remove_unknown_device_returns_none [32mPASSED[0m[31m [ 79%][0m
+tests/unit/test_server.py::TestTCPDeviceCleanup::test_remove_device_publishes_mqtt_update [32mPASSED[0m[31m [ 79%][0m
+tests/unit/test_server.py::TestCloudRelayConfiguration::test_cloud_relay_disabled_on_new_server [32mPASSED[0m[31m [ 79%][0m
+tests/unit/test_server.py::TestConnectionRegistration::test_register_new_connection_tracks_attempts [32mPASSED[0m[31m [ 79%][0m
+tests/unit/test_server.py::TestConnectionRegistration::test_register_new_connection_increments_attempts [32mPASSED[0m[31m [ 80%][0m
+tests/unit/test_server.py::TestConnectionRegistration::test_register_new_connection_replaces_existing_device [32mPASSED[0m[31m [ 80%][0m
+tests/unit/test_server.py::TestConnectionRegistration::test_register_connection_relay_mode [32mPASSED[0m[31m [ 80%][0m
+tests/unit/test_server.py::TestConnectionRegistration::test_register_connection_lan_mode [32mPASSED[0m[31m [ 80%][0m
+tests/unit/test_server.py::TestServerParseStatus::test_parse_status_device_unknown_id [32mPASSED[0m[31m [ 80%][0m
+tests/unit/test_server.py::TestServerParseStatus::test_parse_status_device_state_update [32mPASSED[0m[31m [ 80%][0m
+tests/unit/test_server.py::TestServerParseStatus::test_parse_status_device_offline_tracking [32mPASSED[0m[31m [ 80%][0m
+tests/unit/test_server.py::TestServerParseStatus::test_parse_status_device_online_recovery [32mPASSED[0m[31m [ 80%][0m
+tests/unit/test_server.py::TestServerParseStatus::test_parse_status_group_state_update [32mPASSED[0m[31m [ 81%][0m
+tests/unit/test_server.py::TestServerParseStatus::test_parse_status_without_online_byte [32mPASSED[0m[31m [ 81%][0m
+tests/unit/test_server.py::TestServerParseStatus::test_parse_status_subgroup_aggregation [32mPASSED[0m[31m [ 81%][0m
+tests/unit/test_server.py::TestServerParseStatus::test_parse_status_fan_controller_brightness_logging [32mPASSED[0m[31m [ 81%][0m
+tests/unit/test_server.py::TestServerParseStatus::test_parse_status_group_offline [32mPASSED[0m[31m [ 81%][0m
+tests/unit/test_structs.py::TestGlobalObjEnv::test_global_obj_env_creates_instance [32mPASSED[0m[31m [ 81%][0m
+tests/unit/test_structs.py::TestGlobalObjEnv::test_global_obj_env_default_values [32mPASSED[0m[31m [ 81%][0m
+tests/unit/test_structs.py::TestGlobalObjEnv::test_global_obj_env_with_values [32mPASSED[0m[31m [ 82%][0m
+tests/unit/test_structs.py::TestGlobalObject::test_global_object_creates_instance [32mPASSED[0m[31m [ 82%][0m
+tests/unit/test_structs.py::TestGlobalObject::test_global_object_has_env [32mPASSED[0m[31m [ 82%][0m
+tests/unit/test_structs.py::TestTasks::test_tasks_initialization [32mPASSED[0m[31m  [ 82%][0m
+tests/unit/test_structs.py::TestTasks::test_tasks_iteration [32mPASSED[0m[31m       [ 82%][0m
+tests/unit/test_structs.py::TestControlMessageCallback::test_control_message_callback_creation [32mPASSED[0m[31m [ 82%][0m
+tests/unit/test_structs.py::TestControlMessageCallback::test_control_message_callback_elapsed_property [32mPASSED[0m[31m [ 82%][0m
+tests/unit/test_structs.py::TestControlMessageCallback::test_control_message_callback_string_representation [32mPASSED[0m[31m [ 83%][0m
+tests/unit/test_structs.py::TestControlMessageCallback::test_control_message_callback_equality [32mPASSED[0m[31m [ 83%][0m
+tests/unit/test_structs.py::TestControlMessageCallback::test_control_message_callback_hash [32mPASSED[0m[31m [ 83%][0m
+tests/unit/test_structs.py::TestControlMessageCallback::test_control_message_callback_call [32mPASSED[0m[31m [ 83%][0m
+tests/unit/test_structs.py::TestControlMessageCallback::test_control_message_callback_call_without_callback [32mPASSED[0m[31m [ 83%][0m
+tests/unit/test_structs.py::TestControlMessageCallback::test_control_message_callback_retry_count [32mPASSED[0m[31m [ 83%][0m
+tests/unit/test_structs.py::TestMessages::test_messages_initialization [32mPASSED[0m[31m [ 83%][0m
+tests/unit/test_structs.py::TestMessages::test_messages_add_control_message [32mPASSED[0m[31m [ 84%][0m
+tests/unit/test_structs.py::TestCacheData::test_cache_data_initialization [32mPASSED[0m[31m [ 84%][0m
+tests/unit/test_structs.py::TestCacheData::test_cache_data_with_values [32mPASSED[0m[31m [ 84%][0m
+tests/unit/test_structs.py::TestDeviceStatus::test_device_status_initialization [32mPASSED[0m[31m [ 84%][0m
+tests/unit/test_structs.py::TestDeviceStatus::test_device_status_with_values [32mPASSED[0m[31m [ 84%][0m
+tests/unit/test_structs.py::TestDeviceStatus::test_device_status_partial_values [32mPASSED[0m[31m [ 84%][0m
+tests/unit/test_structs.py::TestMeshInfo::test_mesh_info_initialization [32mPASSED[0m[31m [ 84%][0m
+tests/unit/test_structs.py::TestMeshInfo::test_mesh_info_with_complex_status [32mPASSED[0m[31m [ 85%][0m
+tests/unit/test_structs.py::TestMeshInfo::test_mesh_info_with_empty_status [32mPASSED[0m[31m [ 85%][0m
+tests/unit/test_tcp_device_0x83_packets.py::TestCyncTCPDevicePacketParsing0x83Advanced::test_parse_0x83_firmware_device_version [32mPASSED[0m[31m [ 85%][0m
+tests/unit/test_tcp_device_0x83_packets.py::TestCyncTCPDevicePacketParsing0x83Advanced::test_parse_0x83_firmware_network_version [32mPASSED[0m[31m [ 85%][0m
+tests/unit/test_tcp_device_0x83_packets.py::TestCyncTCPDevicePacketParsing0x83Advanced::test_parse_0x83_internal_status_fa_db_13 [32mPASSED[0m[31m [ 85%][0m
+tests/unit/test_tcp_device_0x83_packets.py::TestCyncTCPDevicePacketParsing0x83Advanced::test_parse_0x83_app_device_skip [32mPASSED[0m[31m [ 85%][0m
+tests/unit/test_tcp_device_0x83_packets.py::TestCyncTCPDevicePacketParsing0x83Advanced::test_parse_raw_data_partial_packet [32mPASSED[0m[31m [ 85%][0m
+tests/unit/test_tcp_device_0x83_packets.py::TestCyncTCPDevicePacketParsing0x83Advanced::test_parse_raw_data_complete_packet [32mPASSED[0m[31m [ 85%][0m
+tests/unit/test_tcp_device_0x83_packets.py::TestCyncTCPDevicePacketParsing0x83Advanced::test_parse_raw_data_empty [32mPASSED[0m[31m [ 86%][0m
+tests/unit/test_tcp_device_0x83_packets.py::TestCyncTCPDevicePacketParsing0x83Advanced::test_parse_raw_data_multiple_packets [32mPASSED[0m[31m [ 86%][0m
+tests/unit/test_tcp_device_0x83_packets.py::TestCyncTCPDevicePacketParsing0x83Advanced::test_parse_raw_data_unknown_header [32mPASSED[0m[31m [ 86%][0m
+tests/unit/test_tcp_device_async_tasks.py::TestCyncTCPDeviceAsyncTasks::test_callback_cleanup_task_retry_logic [33mSKIPPED[0m[31m [ 86%][0m
+tests/unit/test_tcp_device_async_tasks.py::TestCyncTCPDeviceAsyncTasks::test_callback_cleanup_task_timeout [33mSKIPPED[0m[31m [ 86%][0m
+tests/unit/test_tcp_device_async_tasks.py::TestCyncTCPDeviceAsyncTasks::test_receive_task_reads_data [33mSKIPPED[0m[31m [ 86%][0m
+tests/unit/test_tcp_device_async_tasks.py::TestCyncTCPDeviceAsyncTasks::test_receive_task_skips_non_primary [33mSKIPPED[0m[31m [ 86%][0m
+tests/unit/test_tcp_device_async_tasks.py::TestCyncTCPDeviceAsyncTasks::test_read_method_with_closing_device [32mPASSED[0m[31m [ 87%][0m
+tests/unit/test_tcp_device_async_tasks.py::TestCyncTCPDeviceAsyncTasks::test_read_method_at_eof [32mPASSED[0m[31m [ 87%][0m
+tests/unit/test_tcp_device_async_tasks.py::TestCyncTCPDeviceAsyncTasks::test_read_method_reads_data [32mPASSED[0m[31m [ 87%][0m
+tests/unit/test_tcp_device_async_tasks.py::TestCyncTCPDeviceAsyncTasks::test_read_method_no_reader [32mPASSED[0m[31m [ 87%][0m
+tests/unit/test_tcp_device_basic.py::TestCyncTCPDevice::test_tcp_device_init [32mPASSED[0m[31m [ 87%][0m
+tests/unit/test_tcp_device_basic.py::TestCyncTCPDevice::test_tcp_device_init_without_address_raises_error [32mPASSED[0m[31m [ 87%][0m
+tests/unit/test_tcp_device_basic.py::TestCyncTCPDevice::test_tcp_device_properties [32mPASSED[0m[31m [ 87%][0m
+tests/unit/test_tcp_device_basic.py::TestCyncTCPDevice::test_tcp_device_write_success [32mPASSED[0m[31m [ 88%][0m
+tests/unit/test_tcp_device_basic.py::TestCyncTCPDevice::test_tcp_device_get_ctrl_msg_id_bytes [32mPASSED[0m[31m [ 88%][0m
+tests/unit/test_tcp_device_basic.py::TestCyncTCPDevice::test_tcp_device_write_while_closing [32mPASSED[0m[31m [ 88%][0m
+tests/unit/test_tcp_device_basic.py::TestCyncTCPDevice::test_tcp_device_write_with_writer_closing [32mPASSED[0m[31m [ 88%][0m
+tests/unit/test_tcp_device_basic.py::TestCyncTCPDevice::test_tcp_device_write_with_invalid_data_type [32mPASSED[0m[31m [ 88%][0m
+tests/unit/test_tcp_device_basic.py::TestCyncTCPDevice::test_tcp_device_send_a3 [32mPASSED[0m[31m [ 88%][0m
+tests/unit/test_tcp_device_basic.py::TestCyncTCPDevice::test_tcp_device_close_cancels_tasks [32mPASSED[0m[31m [ 88%][0m
+tests/unit/test_tcp_device_basic.py::TestCyncTCPDevice::test_tcp_device_close_with_no_tasks [32mPASSED[0m[31m [ 89%][0m
+tests/unit/test_tcp_device_basic.py::TestCyncTCPDevice::test_tcp_device_queue_id_property [32mPASSED[0m[31m [ 89%][0m
+tests/unit/test_tcp_device_basic.py::TestCyncTCPDevice::test_tcp_device_messages_initialization [32mPASSED[0m[31m [ 89%][0m
+tests/unit/test_tcp_device_can_connect.py::TestCyncTCPDeviceCanConnect::test_can_connect_accepts_when_under_limit [32mPASSED[0m[31m [ 89%][0m
+tests/unit/test_tcp_device_can_connect.py::TestCyncTCPDeviceCanConnect::test_can_connect_rejects_when_max_connections_reached [32mPASSED[0m[31m [ 89%][0m
+tests/unit/test_tcp_device_can_connect.py::TestCyncTCPDeviceCanConnect::test_can_connect_rejects_when_not_in_whitelist [32mPASSED[0m[31m [ 89%][0m
+tests/unit/test_tcp_device_can_connect.py::TestCyncTCPDeviceCanConnect::test_can_connect_accepts_when_in_whitelist [32mPASSED[0m[31m [ 89%][0m
+tests/unit/test_tcp_device_can_connect.py::TestCyncTCPDeviceCanConnect::test_can_connect_rejects_when_server_shutting_down [32mPASSED[0m[31m [ 90%][0m
+tests/unit/test_tcp_device_can_connect.py::TestCyncTCPDeviceCanConnect::test_can_connect_logs_warning_on_rejection [32mPASSED[0m[31m [ 90%][0m
+tests/unit/test_tcp_device_can_connect.py::TestCyncTCPDeviceCanConnect::test_can_connect_creates_receive_task [32mPASSED[0m[31m [ 90%][0m
+tests/unit/test_tcp_device_can_connect.py::TestCyncTCPDeviceCanConnect::test_can_connect_creates_callback_cleanup_task [32mPASSED[0m[31m [ 90%][0m
+tests/unit/test_tcp_device_packet_parsing.py::TestCyncTCPDevicePacketParsing::test_parse_packet_0x23_identification [32mPASSED[0m[31m [ 90%][0m
+tests/unit/test_tcp_device_packet_parsing.py::TestCyncTCPDevicePacketParsing::test_parse_packet_0xc3_connection_request [32mPASSED[0m[31m [ 90%][0m
+tests/unit/test_tcp_device_packet_parsing.py::TestCyncTCPDevicePacketParsing::test_parse_packet_0xd3_ping [32mPASSED[0m[31m [ 90%][0m
+tests/unit/test_tcp_device_packet_parsing.py::TestCyncTCPDevicePacketParsing::test_parse_packet_0xa3_app_announcement [32mPASSED[0m[31m [ 90%][0m
+tests/unit/test_tcp_device_packet_parsing.py::TestCyncTCPDevicePacketParsing::test_parse_packet_0x43_with_timestamp [32mPASSED[0m[31m [ 91%][0m
+tests/unit/test_tcp_device_packet_parsing.py::TestCyncTCPDevicePacketParsing::test_parse_packet_0x43_with_status_broadcast [32mPASSED[0m[31m [ 91%][0m
+tests/unit/test_tcp_device_packet_parsing.py::TestCyncTCPDevicePacketParsing::test_parse_packet_0x83_firmware_version [32mPASSED[0m[31m [ 91%][0m
+tests/unit/test_tcp_device_packet_parsing.py::TestCyncTCPDevicePacketParsing::test_parse_packet_0x83_internal_status [32mPASSED[0m[31m [ 91%][0m
+tests/unit/test_tcp_device_packet_parsing.py::TestCyncTCPDevicePacketParsing::test_parse_raw_data_empty [32mPASSED[0m[31m [ 91%][0m
+tests/unit/test_tcp_device_packet_parsing.py::TestCyncTCPDevicePacketParsing::test_parse_raw_data_complete_packet [32mPASSED[0m[31m [ 91%][0m
+tests/unit/test_tcp_device_packet_parsing.py::TestCyncTCPDevicePacketParsing::test_parse_raw_data_partial_packet [32mPASSED[0m[31m [ 91%][0m
+tests/unit/test_tcp_device_packet_parsing.py::TestCyncTCPDevicePacketParsing::test_parse_raw_data_multiple_packets [32mPASSED[0m[31m [ 92%][0m
+tests/unit/test_tcp_device_packet_parsing.py::TestCyncTCPDevicePacketParsing::test_parse_packet_0x43_no_data [33mSKIPPED[0m[31m [ 92%][0m
+tests/unit/test_tcp_device_packet_parsing.py::TestCyncTCPDevicePacketParsing::test_parse_packet_0x43_timestamp_with_version [33mSKIPPED[0m[31m [ 92%][0m
+tests/unit/test_tcp_device_packet_parsing.py::TestCyncTCPDevicePacketParsing::test_parse_packet_0x43_multiple_status_structs [32mPASSED[0m[31m [ 92%][0m
+tests/unit/test_tcp_device_packet_parsing.py::TestCyncTCPDevicePacketParsing::test_parse_packet_0x83_skip_app [33mSKIPPED[0m[31m [ 92%][0m
+tests/unit/test_tcp_device_packet_parsing.py::TestCyncTCPDevicePacketParsing::test_parse_packet_0x43_indexerror_handling [32mPASSED[0m[31m [ 92%][0m
+tests/unit/test_utils.py::TestSignalHandling::test_send_signal_sends_signal [32mPASSED[0m[31m [ 92%][0m
+tests/unit/test_utils.py::TestSignalHandling::test_send_sigterm_calls_send_signal [32mPASSED[0m[31m [ 93%][0m
+tests/unit/test_utils.py::TestSignalHandling::test_send_sigint_calls_send_signal [32mPASSED[0m[31m [ 93%][0m
+tests/unit/test_utils.py::TestSignalHandling::test_send_signal_handles_os_error [32mPASSED[0m[31m [ 93%][0m
+tests/unit/test_utils.py::TestByteConversions::test_bytes2list_basic [32mPASSED[0m[31m [ 93%][0m
+tests/unit/test_utils.py::TestByteConversions::test_bytes2list_empty [32mPASSED[0m[31m [ 93%][0m
+tests/unit/test_utils.py::TestByteConversions::test_bytes2list_preserves_values [32mPASSED[0m[31m [ 93%][0m
+tests/unit/test_utils.py::TestByteConversions::test_hex2list_basic [32mPASSED[0m[31m [ 93%][0m
+tests/unit/test_utils.py::TestByteConversions::test_hex2list_with_spaces [32mPASSED[0m[31m [ 94%][0m
+tests/unit/test_utils.py::TestByteConversions::test_hex2list_uppercase [32mPASSED[0m[31m [ 94%][0m
+tests/unit/test_utils.py::TestByteConversions::test_ints2bytes_basic [32mPASSED[0m[31m [ 94%][0m
+tests/unit/test_utils.py::TestByteConversions::test_ints2bytes_empty [32mPASSED[0m[31m [ 94%][0m
+tests/unit/test_utils.py::TestByteConversions::test_ints2hex_basic [32mPASSED[0m[31m [ 94%][0m
+tests/unit/test_utils.py::TestByteConversions::test_ints2hex_single_values [32mPASSED[0m[31m [ 94%][0m
+tests/unit/test_utils.py::TestByteConversions::test_conversion_roundtrip [32mPASSED[0m[31m [ 94%][0m
+tests/unit/test_utils.py::TestPythonVersionCheck::test_check_python_version_exists [32mPASSED[0m[31m [ 95%][0m
+tests/unit/test_utils.py::TestPythonVersionCheck::test_check_python_version_with_old_version [32mPASSED[0m[31m [ 95%][0m
+tests/unit/test_utils.py::TestHexListRoundtrips::test_ints2hex_to_hex2list_roundtrip[int_list0] [32mPASSED[0m[31m [ 95%][0m
+tests/unit/test_utils.py::TestHexListRoundtrips::test_ints2hex_to_hex2list_roundtrip[int_list1] [32mPASSED[0m[31m [ 95%][0m
+tests/unit/test_utils.py::TestHexListRoundtrips::test_ints2hex_to_hex2list_roundtrip[int_list2] [32mPASSED[0m[31m [ 95%][0m
+tests/unit/test_utils.py::TestHexListRoundtrips::test_ints2hex_to_hex2list_roundtrip[int_list3] [32mPASSED[0m[31m [ 95%][0m
+tests/unit/test_utils.py::TestHexListRoundtrips::test_ints2hex_to_hex2list_roundtrip[int_list4] [32mPASSED[0m[31m [ 95%][0m
+tests/unit/test_utils.py::TestHexListRoundtrips::test_bytes2list_to_ints2bytes_roundtrip[] [32mPASSED[0m[31m [ 95%][0m
+tests/unit/test_utils.py::TestHexListRoundtrips::test_bytes2list_to_ints2bytes_roundtrip[\x00] [32mPASSED[0m[31m [ 96%][0m
+tests/unit/test_utils.py::TestHexListRoundtrips::test_bytes2list_to_ints2bytes_roundtrip[\xff] [32mPASSED[0m[31m [ 96%][0m
+tests/unit/test_utils.py::TestHexListRoundtrips::test_bytes2list_to_ints2bytes_roundtrip[\x01\x02\x03] [32mPASSED[0m[31m [ 96%][0m
+tests/unit/test_utils.py::TestHexListRoundtrips::test_bytes2list_to_ints2bytes_roundtrip[\xaa\xbb\xcc\xdd] [32mPASSED[0m[31m [ 96%][0m
+tests/unit/test_utils.py::TestFirmwareVersionParsing::test_parse_device_firmware_version [32mPASSED[0m[31m [ 96%][0m
+tests/unit/test_utils.py::TestFirmwareVersionParsing::test_parse_network_firmware_version [32mPASSED[0m[31m [ 96%][0m
+tests/unit/test_utils.py::TestFirmwareVersionParsing::test_parse_invalid_first_byte [32mPASSED[0m[31m [ 96%][0m
+tests/unit/test_utils.py::TestFirmwareVersionParsing::test_parse_empty_firmware_data [32mPASSED[0m[31m [ 97%][0m
+tests/unit/test_utils.py::TestFirmwareVersionParsing::test_parse_truncated_data [32mPASSED[0m[31m [ 97%][0m
+tests/unit/test_utils.py::TestUUIDManagement::test_check_for_uuid_creates_new_uuid_when_missing [32mPASSED[0m[31m [ 97%][0m
+tests/unit/test_utils.py::TestUUIDManagement::test_check_for_uuid_loads_existing_uuid [32mPASSED[0m[31m [ 97%][0m
+tests/unit/test_utils.py::TestUUIDManagement::test_check_for_uuid_creates_uuid_when_invalid_version [32mPASSED[0m[31m [ 97%][0m
+tests/unit/test_utils.py::TestUUIDManagement::test_check_for_uuid_creates_uuid_when_empty_file [32mPASSED[0m[31m [ 97%][0m
+tests/unit/test_utils.py::TestDatetimeUtilities::test_utc_to_local_converts_timezone [32mPASSED[0m[31m [ 97%][0m
+tests/unit/test_utils.py::TestAsyncSignalCleanup::test_async_signal_cleanup_with_ncync_server [32mPASSED[0m[31m [ 98%][0m
+tests/unit/test_utils.py::TestAsyncSignalCleanup::test_async_signal_cleanup_with_multiple_services [32mPASSED[0m[31m [ 98%][0m
+tests/unit/test_utils.py::TestAsyncSignalCleanup::test_async_signal_cleanup_cancels_tasks [32mPASSED[0m[31m [ 98%][0m
+tests/unit/test_utils.py::TestSignalHandler::test_signal_handler_with_loop [32mPASSED[0m[31m [ 98%][0m
+tests/unit/test_utils.py::TestSignalHandler::test_signal_handler_falls_back_to_get_loop [32mPASSED[0m[31m [ 98%][0m
+tests/unit/test_utils.py::TestCheckForUUID::test_check_for_uuid_creates_directory_if_missing [32mPASSED[0m[31m [ 98%][0m
+tests/unit/test_utils.py::TestCheckForUUID::test_check_for_uuid_reads_existing_uuid [32mPASSED[0m[31m [ 98%][0m
+tests/unit/test_utils.py::TestCheckForUUID::test_check_for_uuid_creates_new_uuid_when_invalid [32mPASSED[0m[31m [ 99%][0m
+tests/unit/test_utils.py::TestCheckForUUID::test_check_for_uuid_creates_new_uuid_when_file_empty [32mPASSED[0m[31m [ 99%][0m
+tests/unit/test_utils.py::TestUTCLocalConversion::test_utc_to_local_converts_timezone [32mPASSED[0m[31m [ 99%][0m
+tests/unit/test_utils.py::TestParseConfig::test_parse_config_basic_structure [32mPASSED[0m[31m [ 99%][0m
+tests/unit/test_utils.py::TestParseConfig::test_parse_config_disabled_device_skipped [32mPASSED[0m[31m [ 99%][0m
+tests/unit/test_utils.py::TestParseConfig::test_parse_config_no_devices_skips [32mPASSED[0m[31m [ 99%][0m
+tests/unit/test_utils.py::TestParseConfig::test_parse_config_int_mac_warns [32mPASSED[0m[31m [ 99%][0m
+tests/unit/test_utils.py::TestParseConfig::test_parse_config_error_handling [32mPASSED[0m[31m [100%][0m
+
+=================================== FAILURES ===================================
+[31m[1m________ TestCyncControllerStartup.test_start_with_missing_config_file _________[0m
+[1m[31m/usr/local/lib/python3.13/pathlib/_local.py[0m:722: in mkdir
+    [0mos.mkdir([96mself[39;49;00m, mode)[90m[39;49;00m
+[1m[31mE   FileNotFoundError: [Errno 2] No such file or directory: '/homeassistant/.storage/cync-controller/config'[0m
+        exist_ok   = True
+        mode       = 511
+        parents    = True
+        self       = PosixPath('/homeassistant/.storage/cync-controller/config')
+
+[33mDuring handling of the above exception, another exception occurred:[0m
+[1m[31m/usr/local/lib/python3.13/pathlib/_local.py[0m:722: in mkdir
+    [0mos.mkdir([96mself[39;49;00m, mode)[90m[39;49;00m
+[1m[31mE   FileNotFoundError: [Errno 2] No such file or directory: '/homeassistant/.storage/cync-controller'[0m
+        exist_ok   = True
+        mode       = 511
+        parents    = True
+        self       = PosixPath('/homeassistant/.storage/cync-controller')
+
+[33mDuring handling of the above exception, another exception occurred:[0m
+[1m[31m/usr/local/lib/python3.13/pathlib/_local.py[0m:722: in mkdir
+    [0mos.mkdir([96mself[39;49;00m, mode)[90m[39;49;00m
+[1m[31mE   FileNotFoundError: [Errno 2] No such file or directory: '/homeassistant/.storage'[0m
+        exist_ok   = True
+        mode       = 511
+        parents    = True
+        self       = PosixPath('/homeassistant/.storage')
+
+[33mDuring handling of the above exception, another exception occurred:[0m
+[1m[31m/workspace/cync-controller/src/cync_controller/utils.py[0m:279: in check_for_uuid
+    [0mpersistent_dir.mkdir(parents=[94mTrue[39;49;00m, exist_ok=[94mTrue[39;49;00m)[90m[39;49;00m
+        lp         = 'check_uuid:'
+        persistent_dir = PosixPath('/homeassistant/.storage/cync-controller/config')
+[1m[31m/usr/local/lib/python3.13/pathlib/_local.py[0m:726: in mkdir
+    [0m[96mself[39;49;00m.parent.mkdir(parents=[94mTrue[39;49;00m, exist_ok=[94mTrue[39;49;00m)[90m[39;49;00m
+        exist_ok   = True
+        mode       = 511
+        parents    = True
+        self       = PosixPath('/homeassistant/.storage/cync-controller/config')
+[1m[31m/usr/local/lib/python3.13/pathlib/_local.py[0m:726: in mkdir
+    [0m[96mself[39;49;00m.parent.mkdir(parents=[94mTrue[39;49;00m, exist_ok=[94mTrue[39;49;00m)[90m[39;49;00m
+        exist_ok   = True
+        mode       = 511
+        parents    = True
+        self       = PosixPath('/homeassistant/.storage/cync-controller')
+[1m[31m/usr/local/lib/python3.13/pathlib/_local.py[0m:726: in mkdir
+    [0m[96mself[39;49;00m.parent.mkdir(parents=[94mTrue[39;49;00m, exist_ok=[94mTrue[39;49;00m)[90m[39;49;00m
+        exist_ok   = True
+        mode       = 511
+        parents    = True
+        self       = PosixPath('/homeassistant/.storage')
+[1m[31m/usr/local/lib/python3.13/pathlib/_local.py[0m:722: in mkdir
+    [0mos.mkdir([96mself[39;49;00m, mode)[90m[39;49;00m
+[1m[31mE   PermissionError: [Errno 13] Permission denied: '/homeassistant'[0m
+        exist_ok   = True
+        mode       = 511
+        parents    = True
+        self       = PosixPath('/homeassistant')
+
+[33mDuring handling of the above exception, another exception occurred:[0m
+[1m[31m/workspace/cync-controller/tests/unit/test_main.py[0m:76: in test_start_with_missing_config_file
+    [0mcontroller = CyncController()[90m[39;49;00m
+                 ^^^^^^^^^^^^^^^^[90m[39;49;00m
+        mock_global_object = <MagicMock name='g' id='140625532885312'>
+        mock_path_exists = <MagicMock name='exists' id='140625532891360'>
+        self       = <tests.unit.test_main.TestCyncControllerStartup object at 0x7fe5ef655810>
+[1m[31m/workspace/cync-controller/src/cync_controller/main.py[0m:78: in __init__
+    [0mcheck_for_uuid()[90m[39;49;00m
+        self       = <cync_controller.main.CyncController object at 0x7fe5eeef1fd0>
+[1m[31m/workspace/cync-controller/src/cync_controller/utils.py[0m:283: in check_for_uuid
+    [0msys.exit([94m1[39;49;00m)[90m[39;49;00m
+[1m[31mE   SystemExit: 1[0m
+        lp         = 'check_uuid:'
+        persistent_dir = PosixPath('/homeassistant/.storage/cync-controller/config')
+----------------------------- Captured stdout call -----------------------------
+10/29/25 02:42:11.774 ERROR [logging_abstraction:175] [b8dd1e46] > check_uuid: Failed to create persistent directory: /homeassistant/.storage/cync-controller/config - Exiting...
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.13/pathlib/_local.py", line 722, in mkdir
+    os.mkdir(self, mode)
+    ~~~~~~~~^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: '/homeassistant/.storage/cync-controller/config'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.13/pathlib/_local.py", line 722, in mkdir
+    os.mkdir(self, mode)
+    ~~~~~~~~^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: '/homeassistant/.storage/cync-controller'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.13/pathlib/_local.py", line 722, in mkdir
+    os.mkdir(self, mode)
+    ~~~~~~~~^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: '/homeassistant/.storage'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/workspace/cync-controller/src/cync_controller/utils.py", line 279, in check_for_uuid
+    persistent_dir.mkdir(parents=True, exist_ok=True)
+    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.13/pathlib/_local.py", line 726, in mkdir
+    self.parent.mkdir(parents=True, exist_ok=True)
+    ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.13/pathlib/_local.py", line 726, in mkdir
+    self.parent.mkdir(parents=True, exist_ok=True)
+    ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.13/pathlib/_local.py", line 726, in mkdir
+    self.parent.mkdir(parents=True, exist_ok=True)
+    ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.13/pathlib/_local.py", line 722, in mkdir
+    os.mkdir(self, mode)
+    ~~~~~~~~^^^^^^^^^^^^
+PermissionError: [Errno 13] Permission denied: '/homeassistant'
+------------------------------ Captured log call -------------------------------
+[1m[31mERROR   [0m cync_controller.utils:logging_abstraction.py:175 check_uuid: Failed to create persistent directory: /homeassistant/.storage/cync-controller/config - Exiting...
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.13/pathlib/_local.py", line 722, in mkdir
+    os.mkdir(self, mode)
+    ~~~~~~~~^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: '/homeassistant/.storage/cync-controller/config'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.13/pathlib/_local.py", line 722, in mkdir
+    os.mkdir(self, mode)
+    ~~~~~~~~^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: '/homeassistant/.storage/cync-controller'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.13/pathlib/_local.py", line 722, in mkdir
+    os.mkdir(self, mode)
+    ~~~~~~~~^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: '/homeassistant/.storage'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/workspace/cync-controller/src/cync_controller/utils.py", line 279, in check_for_uuid
+    persistent_dir.mkdir(parents=True, exist_ok=True)
+    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.13/pathlib/_local.py", line 726, in mkdir
+    self.parent.mkdir(parents=True, exist_ok=True)
+    ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.13/pathlib/_local.py", line 726, in mkdir
+    self.parent.mkdir(parents=True, exist_ok=True)
+    ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.13/pathlib/_local.py", line 726, in mkdir
+    self.parent.mkdir(parents=True, exist_ok=True)
+    ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.13/pathlib/_local.py", line 722, in mkdir
+    os.mkdir(self, mode)
+    ~~~~~~~~^^^^^^^^^^^^
+PermissionError: [Errno 13] Permission denied: '/homeassistant'
+[31m[1m____ TestCyncControllerStartup.test_start_loads_config_and_creates_services ____[0m
+[1m[31mtests/unit/test_main.py[0m:107: in test_start_loads_config_and_creates_services
+    [0mcontroller = CyncController()[90m[39;49;00m
+                 ^^^^^^^^^^^^^^^^[90m[39;49;00m
+        mock_devices = {1: <MagicMock id='140625536482816'>, 2: <MagicMock id='140625536478448'>}
+        mock_global_object = <MagicMock name='g' id='140625532887664'>
+        mock_groups = {'group1': <MagicMock id='140625536481472'>,
+ 'group2': <MagicMock id='140625536482144'>}
+        mock_mqtt  = <MagicMock name='MQTTClient()' id='140625536470720'>
+        mock_mqtt_class = <MagicMock name='MQTTClient' id='140625536468368'>
+        mock_parse = <AsyncMock name='parse_config' id='140625536479456'>
+        mock_path_exists = <MagicMock name='exists' id='140625536482480'>
+        mock_server = <MagicMock name='NCyncServer()' id='140625536472400'>
+        mock_server_class = <MagicMock name='NCyncServer' id='140625536481808'>
+        self       = <tests.unit.test_main.TestCyncControllerStartup object at 0x7fe5ef655950>
+[1m[31msrc/cync_controller/main.py[0m:78: in __init__
+    [0mcheck_for_uuid()[90m[39;49;00m
+        self       = <cync_controller.main.CyncController object at 0x7fe5ef42ca50>
+[1m[31msrc/cync_controller/utils.py[0m:289: in check_for_uuid
+    [0m[94mwith[39;49;00m uuid_file.open([33m"[39;49;00m[33mr[39;49;00m[33m"[39;49;00m) [94mas[39;49;00m f:[90m[39;49;00m
+         ^^^^^^^^^^^^^^^^^^^[90m[39;49;00m
+        create_uuid = False
+        lp         = 'check_uuid:'
+        persistent_dir = PosixPath('/homeassistant/.storage/cync-controller/config')
+        uuid_file  = PosixPath('/homeassistant/.storage/cync-controller/config/uuid.txt')
+        uuid_from_disk = ''
+[1m[31m/usr/local/lib/python3.13/pathlib/_local.py[0m:537: in open
+    [0m[94mreturn[39;49;00m io.open([96mself[39;49;00m, mode, buffering, encoding, errors, newline)[90m[39;49;00m
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[90m[39;49;00m
+[1m[31mE   FileNotFoundError: [Errno 2] No such file or directory: '/homeassistant/.storage/cync-controller/config/uuid.txt'[0m
+        buffering  = -1
+        encoding   = 'utf-8'
+        errors     = None
+        mode       = 'r'
+        newline    = None
+        self       = PosixPath('/homeassistant/.storage/cync-controller/config/uuid.txt')
+[31m[1m_______ TestCyncControllerStartup.test_start_with_export_server_enabled ________[0m
+[1m[31mtests/unit/test_main.py[0m:162: in test_start_with_export_server_enabled
+    [0mcontroller = CyncController()[90m[39;49;00m
+                 ^^^^^^^^^^^^^^^^[90m[39;49;00m
+        mock_cloud_api = <MagicMock name='CyncCloudAPI()' id='140625536475424'>
+        mock_cloud_api_class = <MagicMock name='CyncCloudAPI' id='140625536477104'>
+        mock_devices = {1: <MagicMock id='140625536479120'>}
+        mock_export = <MagicMock id='140625536476768'>
+        mock_export_class = <MagicMock name='ExportServer' id='140625536477776'>
+        mock_global_object = <MagicMock name='g' id='140625536480128'>
+        mock_groups = {}
+        mock_mqtt  = <MagicMock name='MQTTClient()' id='140625536467360'>
+        mock_mqtt_class = <MagicMock name='MQTTClient' id='140625536476096'>
+        mock_parse = <AsyncMock name='parse_config' id='140625536474080'>
+        mock_path_exists = <MagicMock name='exists' id='140625536469376'>
+        mock_server = <MagicMock name='NCyncServer()' id='140625536479792'>
+        mock_server_class = <MagicMock name='NCyncServer' id='140625536480464'>
+        self       = <tests.unit.test_main.TestCyncControllerStartup object at 0x7fe5ef605e00>
+        set_export_server = <function TestCyncControllerStartup.test_start_with_export_server_enabled.<locals>.set_export_server at 0x7fe5ef3d56c0>
+[1m[31msrc/cync_controller/main.py[0m:78: in __init__
+    [0mcheck_for_uuid()[90m[39;49;00m
+        self       = <cync_controller.main.CyncController object at 0x7fe5ef42cb90>
+[1m[31msrc/cync_controller/utils.py[0m:289: in check_for_uuid
+    [0m[94mwith[39;49;00m uuid_file.open([33m"[39;49;00m[33mr[39;49;00m[33m"[39;49;00m) [94mas[39;49;00m f:[90m[39;49;00m
+         ^^^^^^^^^^^^^^^^^^^[90m[39;49;00m
+        create_uuid = False
+        lp         = 'check_uuid:'
+        persistent_dir = PosixPath('/homeassistant/.storage/cync-controller/config')
+        uuid_file  = PosixPath('/homeassistant/.storage/cync-controller/config/uuid.txt')
+        uuid_from_disk = ''
+[1m[31m/usr/local/lib/python3.13/pathlib/_local.py[0m:537: in open
+    [0m[94mreturn[39;49;00m io.open([96mself[39;49;00m, mode, buffering, encoding, errors, newline)[90m[39;49;00m
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[90m[39;49;00m
+[1m[31mE   FileNotFoundError: [Errno 2] No such file or directory: '/homeassistant/.storage/cync-controller/config/uuid.txt'[0m
+        buffering  = -1
+        encoding   = 'utf-8'
+        errors     = None
+        mode       = 'r'
+        newline    = None
+        self       = PosixPath('/homeassistant/.storage/cync-controller/config/uuid.txt')
+[31m[1m___________ TestCyncControllerStartup.test_start_failure_calls_stop ____________[0m
+[1m[31mtests/unit/test_main.py[0m:199: in test_start_failure_calls_stop
+    [0mcontroller = CyncController()[90m[39;49;00m
+                 ^^^^^^^^^^^^^^^^[90m[39;49;00m
+        mock_devices = {1: <MagicMock id='140625533276512'>}
+        mock_global_object = <MagicMock name='g' id='140625536472736'>
+        mock_groups = {}
+        mock_mqtt  = <MagicMock name='MQTTClient()' id='140625533275504'>
+        mock_mqtt_class = <MagicMock name='MQTTClient' id='140625533283568'>
+        mock_parse = <AsyncMock name='parse_config' id='140625533283904'>
+        mock_path_exists = <MagicMock name='exists' id='140625536481136'>
+        mock_server = <MagicMock name='NCyncServer()' id='140625533276176'>
+        mock_server_class = <MagicMock name='NCyncServer' id='140625533284240'>
+        self       = <tests.unit.test_main.TestCyncControllerStartup object at 0x7fe5ef605a70>
+[1m[31msrc/cync_controller/main.py[0m:78: in __init__
+    [0mcheck_for_uuid()[90m[39;49;00m
+        self       = <cync_controller.main.CyncController object at 0x7fe5eed1c770>
+[1m[31msrc/cync_controller/utils.py[0m:289: in check_for_uuid
+    [0m[94mwith[39;49;00m uuid_file.open([33m"[39;49;00m[33mr[39;49;00m[33m"[39;49;00m) [94mas[39;49;00m f:[90m[39;49;00m
+         ^^^^^^^^^^^^^^^^^^^[90m[39;49;00m
+        create_uuid = False
+        lp         = 'check_uuid:'
+        persistent_dir = PosixPath('/homeassistant/.storage/cync-controller/config')
+        uuid_file  = PosixPath('/homeassistant/.storage/cync-controller/config/uuid.txt')
+        uuid_from_disk = ''
+[1m[31m/usr/local/lib/python3.13/pathlib/_local.py[0m:537: in open
+    [0m[94mreturn[39;49;00m io.open([96mself[39;49;00m, mode, buffering, encoding, errors, newline)[90m[39;49;00m
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[90m[39;49;00m
+[1m[31mE   FileNotFoundError: [Errno 2] No such file or directory: '/homeassistant/.storage/cync-controller/config/uuid.txt'[0m
+        buffering  = -1
+        encoding   = 'utf-8'
+        errors     = None
+        mode       = 'r'
+        newline    = None
+        self       = PosixPath('/homeassistant/.storage/cync-controller/config/uuid.txt')
+[31m[1m______________ TestCyncControllerShutdown.test_stop_sends_sigterm ______________[0m
+[1m[31m/usr/local/lib/python3.13/pathlib/_local.py[0m:722: in mkdir
+    [0mos.mkdir([96mself[39;49;00m, mode)[90m[39;49;00m
+[1m[31mE   FileNotFoundError: [Errno 2] No such file or directory: '/homeassistant/.storage/cync-controller/config'[0m
+        exist_ok   = True
+        mode       = 511
+        parents    = True
+        self       = PosixPath('/homeassistant/.storage/cync-controller/config')
+
+[33mDuring handling of the above exception, another exception occurred:[0m
+[1m[31m/usr/local/lib/python3.13/pathlib/_local.py[0m:722: in mkdir
+    [0mos.mkdir([96mself[39;49;00m, mode)[90m[39;49;00m
+[1m[31mE   FileNotFoundError: [Errno 2] No such file or directory: '/homeassistant/.storage/cync-controller'[0m
+        exist_ok   = True
+        mode       = 511
+        parents    = True
+        self       = PosixPath('/homeassistant/.storage/cync-controller')
+
+[33mDuring handling of the above exception, another exception occurred:[0m
+[1m[31m/usr/local/lib/python3.13/pathlib/_local.py[0m:722: in mkdir
+    [0mos.mkdir([96mself[39;49;00m, mode)[90m[39;49;00m
+[1m[31mE   FileNotFoundError: [Errno 2] No such file or directory: '/homeassistant/.storage'[0m
+        exist_ok   = True
+        mode       = 511
+        parents    = True
+        self       = PosixPath('/homeassistant/.storage')
+
+[33mDuring handling of the above exception, another exception occurred:[0m
+[1m[31msrc/cync_controller/utils.py[0m:279: in check_for_uuid
+    [0mpersistent_dir.mkdir(parents=[94mTrue[39;49;00m, exist_ok=[94mTrue[39;49;00m)[90m[39;49;00m
+        lp         = 'check_uuid:'
+        persistent_dir = PosixPath('/homeassistant/.storage/cync-controller/config')
+[1m[31m/usr/local/lib/python3.13/pathlib/_local.py[0m:726: in mkdir
+    [0m[96mself[39;49;00m.parent.mkdir(parents=[94mTrue[39;49;00m, exist_ok=[94mTrue[39;49;00m)[90m[39;49;00m
+        exist_ok   = True
+        mode       = 511
+        parents    = True
+        self       = PosixPath('/homeassistant/.storage/cync-controller/config')
+[1m[31m/usr/local/lib/python3.13/pathlib/_local.py[0m:726: in mkdir
+    [0m[96mself[39;49;00m.parent.mkdir(parents=[94mTrue[39;49;00m, exist_ok=[94mTrue[39;49;00m)[90m[39;49;00m
+        exist_ok   = True
+        mode       = 511
+        parents    = True
+        self       = PosixPath('/homeassistant/.storage/cync-controller')
+[1m[31m/usr/local/lib/python3.13/pathlib/_local.py[0m:726: in mkdir
+    [0m[96mself[39;49;00m.parent.mkdir(parents=[94mTrue[39;49;00m, exist_ok=[94mTrue[39;49;00m)[90m[39;49;00m
+        exist_ok   = True
+        mode       = 511
+        parents    = True
+        self       = PosixPath('/homeassistant/.storage')
+[1m[31m/usr/local/lib/python3.13/pathlib/_local.py[0m:722: in mkdir
+    [0mos.mkdir([96mself[39;49;00m, mode)[90m[39;49;00m
+[1m[31mE   PermissionError: [Errno 13] Permission denied: '/homeassistant'[0m
+        exist_ok   = True
+        mode       = 511
+        parents    = True
+        self       = PosixPath('/homeassistant')
+
+[33mDuring handling of the above exception, another exception occurred:[0m
+[1m[31mtests/unit/test_main.py[0m:219: in test_stop_sends_sigterm
+    [0mcontroller = CyncController()[90m[39;49;00m
+                 ^^^^^^^^^^^^^^^^[90m[39;49;00m
+        mock_global_object = <MagicMock name='g' id='140625536470048'>
+        mock_sigterm = <MagicMock name='send_sigterm' id='140625536475424'>
+        self       = <tests.unit.test_main.TestCyncControllerShutdown object at 0x7fe5ef655a90>
+[1m[31msrc/cync_controller/main.py[0m:78: in __init__
+    [0mcheck_for_uuid()[90m[39;49;00m
+        self       = <cync_controller.main.CyncController object at 0x7fe5ef0175c0>
+[1m[31msrc/cync_controller/utils.py[0m:283: in check_for_uuid
+    [0msys.exit([94m1[39;49;00m)[90m[39;49;00m
+[1m[31mE   SystemExit: 1[0m
+        lp         = 'check_uuid:'
+        persistent_dir = PosixPath('/homeassistant/.storage/cync-controller/config')
+----------------------------- Captured stdout call -----------------------------
+10/29/25 02:42:12.014 ERROR [logging_abstraction:175] [b8dd1e46] > check_uuid: Failed to create persistent directory: /homeassistant/.storage/cync-controller/config - Exiting...
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.13/pathlib/_local.py", line 722, in mkdir
+    os.mkdir(self, mode)
+    ~~~~~~~~^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: '/homeassistant/.storage/cync-controller/config'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.13/pathlib/_local.py", line 722, in mkdir
+    os.mkdir(self, mode)
+    ~~~~~~~~^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: '/homeassistant/.storage/cync-controller'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.13/pathlib/_local.py", line 722, in mkdir
+    os.mkdir(self, mode)
+    ~~~~~~~~^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: '/homeassistant/.storage'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/workspace/cync-controller/src/cync_controller/utils.py", line 279, in check_for_uuid
+    persistent_dir.mkdir(parents=True, exist_ok=True)
+    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.13/pathlib/_local.py", line 726, in mkdir
+    self.parent.mkdir(parents=True, exist_ok=True)
+    ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.13/pathlib/_local.py", line 726, in mkdir
+    self.parent.mkdir(parents=True, exist_ok=True)
+    ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.13/pathlib/_local.py", line 726, in mkdir
+    self.parent.mkdir(parents=True, exist_ok=True)
+    ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.13/pathlib/_local.py", line 722, in mkdir
+    os.mkdir(self, mode)
+    ~~~~~~~~^^^^^^^^^^^^
+PermissionError: [Errno 13] Permission denied: '/homeassistant'
+------------------------------ Captured log call -------------------------------
+[1m[31mERROR   [0m cync_controller.utils:logging_abstraction.py:175 check_uuid: Failed to create persistent directory: /homeassistant/.storage/cync-controller/config - Exiting...
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.13/pathlib/_local.py", line 722, in mkdir
+    os.mkdir(self, mode)
+    ~~~~~~~~^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: '/homeassistant/.storage/cync-controller/config'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.13/pathlib/_local.py", line 722, in mkdir
+    os.mkdir(self, mode)
+    ~~~~~~~~^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: '/homeassistant/.storage/cync-controller'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.13/pathlib/_local.py", line 722, in mkdir
+    os.mkdir(self, mode)
+    ~~~~~~~~^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: '/homeassistant/.storage'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/workspace/cync-controller/src/cync_controller/utils.py", line 279, in check_for_uuid
+    persistent_dir.mkdir(parents=True, exist_ok=True)
+    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.13/pathlib/_local.py", line 726, in mkdir
+    self.parent.mkdir(parents=True, exist_ok=True)
+    ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.13/pathlib/_local.py", line 726, in mkdir
+    self.parent.mkdir(parents=True, exist_ok=True)
+    ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.13/pathlib/_local.py", line 726, in mkdir
+    self.parent.mkdir(parents=True, exist_ok=True)
+    ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.13/pathlib/_local.py", line 722, in mkdir
+    os.mkdir(self, mode)
+    ~~~~~~~~^^^^^^^^^^^^
+PermissionError: [Errno 13] Permission denied: '/homeassistant'
+[36m[1m=========================== short test summary info ============================[0m
+[33mSKIPPED[0m [1] tests/unit/test_tcp_device_async_tasks.py:26: Complex async task mocking requires extensive global state setup
+[33mSKIPPED[0m [1] tests/unit/test_tcp_device_async_tasks.py:65: Complex async task mocking requires extensive global state setup
+[33mSKIPPED[0m [1] tests/unit/test_tcp_device_async_tasks.py:100: Complex async task mocking requires extensive global state setup
+[33mSKIPPED[0m [1] tests/unit/test_tcp_device_async_tasks.py:144: Complex async task mocking requires extensive global state setup
+[33mSKIPPED[0m [1] tests/unit/test_tcp_device_packet_parsing.py:204: Complex packet data edge case - integration tests cover this
+[33mSKIPPED[0m [1] tests/unit/test_tcp_device_packet_parsing.py:210: Timestamp parsing edge case - integration tests cover this
+[33mSKIPPED[0m [1] tests/unit/test_tcp_device_packet_parsing.py:242: App device skip logic edge case - integration tests cover this
+[31mFAILED[0m tests/unit/test_main.py::[1mTestCyncControllerStartup::test_start_with_missing_config_file[0m - SystemExit: 1
+[31mFAILED[0m tests/unit/test_main.py::[1mTestCyncControllerStartup::test_start_loads_config_and_creates_services[0m - FileNotFoundError: [Errno 2] No such file or directory: '/homeassistant/.storage/cync-controller/config/uuid.txt'
+[31mFAILED[0m tests/unit/test_main.py::[1mTestCyncControllerStartup::test_start_with_export_server_enabled[0m - FileNotFoundError: [Errno 2] No such file or directory: '/homeassistant/.storage/cync-controller/config/uuid.txt'
+[31mFAILED[0m tests/unit/test_main.py::[1mTestCyncControllerStartup::test_start_failure_calls_stop[0m - FileNotFoundError: [Errno 2] No such file or directory: '/homeassistant/.storage/cync-controller/config/uuid.txt'
+[31mFAILED[0m tests/unit/test_main.py::[1mTestCyncControllerShutdown::test_stop_sends_sigterm[0m - SystemExit: 1
+[31m================== [31m[1m5 failed[0m, [32m709 passed[0m, [33m7 skipped[0m[31m in 54.04s[0m[31m ===================[0m
