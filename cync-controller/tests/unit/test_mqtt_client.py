@@ -633,7 +633,7 @@ class TestMQTTClientDiscovery:
     @pytest.mark.asyncio
     async def test_homeassistant_discovery_light(self):
         """Test Home Assistant discovery for light device"""
-        with patch("cync_controller.mqtt.discovery.g") as mock_g, patch("cync_controller.mqtt.discovery.device_type_map", {}):
+        with patch("cync_controller.mqtt_client.g") as mock_g, patch("cync_controller.metadata.model_info.device_type_map", {}):
             mock_g.uuid = "test-uuid"
             mock_g.ncync_server = MagicMock()
 
