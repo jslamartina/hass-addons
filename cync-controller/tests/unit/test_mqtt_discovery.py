@@ -22,7 +22,7 @@ def reset_mqtt_singleton():
 @pytest.fixture
 def mock_global_state():
     """Mock global state for discovery tests"""
-    with patch("cync_controller.mqtt_client.g") as mock_g:
+    with patch("cync_controller.mqtt.discovery.g") as mock_g:
         mock_g.uuid = "test-uuid-1234"
         mock_g.ncync_server = MagicMock()
         mock_g.ncync_server.devices = {}
@@ -219,7 +219,7 @@ class TestDeviceRediscovery:
 
         with (
             patch("cync_controller.mqtt_client.aiomqtt.Client"),
-            patch("cync_controller.mqtt_client.MQTTClient.register_single_device") as mock_register,
+            patch("cync_controller.mqtt.discovery.DiscoveryHelper.register_single_device") as mock_register,
         ):
             mock_register.return_value = True
 
@@ -244,7 +244,7 @@ class TestDeviceRediscovery:
 
         with (
             patch("cync_controller.mqtt_client.aiomqtt.Client"),
-            patch("cync_controller.mqtt_client.MQTTClient.register_single_device") as mock_register,
+            patch("cync_controller.mqtt.discovery.DiscoveryHelper.register_single_device") as mock_register,
         ):
             mock_register.side_effect = Exception("Registration failed")
 

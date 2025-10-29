@@ -77,9 +77,10 @@ class TestCyncControllerStartup:
     async def test_start_with_missing_config_file(self, mock_global_object, mock_path_exists):
         """Test startup when config file doesn't exist"""
         mock_path_exists.return_value = False
-        controller = CyncController()
+        with patch("cync_controller.main.check_for_uuid"):
+            controller = CyncController()
 
-        await controller.start()
+            await controller.start()
 
         # Should not create any services
         assert mock_global_object.ncync_server is None
@@ -94,6 +95,7 @@ class TestCyncControllerStartup:
         mock_groups = {"group1": MagicMock(), "group2": MagicMock()}
 
         with (
+            patch("cync_controller.main.check_for_uuid"),
             patch("cync_controller.main.parse_config") as mock_parse,
             patch("cync_controller.main.NCyncServer") as mock_server_class,
             patch("cync_controller.main.MQTTClient") as mock_mqtt_class,
@@ -133,6 +135,7 @@ class TestCyncControllerStartup:
         mock_groups = {}
 
         with (
+            patch("cync_controller.main.check_for_uuid"),
             patch("cync_controller.main.parse_config") as mock_parse,
             patch("cync_controller.main.NCyncServer") as mock_server_class,
             patch("cync_controller.main.MQTTClient") as mock_mqtt_class,
@@ -185,6 +188,7 @@ class TestCyncControllerStartup:
         mock_groups = {}
 
         with (
+            patch("cync_controller.main.check_for_uuid"),
             patch("cync_controller.main.parse_config") as mock_parse,
             patch("cync_controller.main.NCyncServer") as mock_server_class,
             patch("cync_controller.main.MQTTClient") as mock_mqtt_class,
@@ -219,7 +223,11 @@ class TestCyncControllerShutdown:
     @pytest.mark.asyncio
     async def test_stop_sends_sigterm(self, mock_global_object):  # noqa: ARG002
         """Test that stop calls send_sigterm"""
-        with patch("cync_controller.main.send_sigterm") as mock_sigterm, patch("cync_controller.main.logger"):
+        with (
+            patch("cync_controller.main.check_for_uuid"),
+            patch("cync_controller.main.send_sigterm") as mock_sigterm,
+            patch("cync_controller.main.logger"),
+        ):
             controller = CyncController()
             await controller.stop()
 

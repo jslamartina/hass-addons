@@ -18,8 +18,8 @@ from cync_controller.mqtt_client import (
     MQTTClient,
     SetBrightnessCommand,
     SetPowerCommand,
-    slugify,
 )
+from cync_controller.mqtt.discovery import slugify
 
 # Filter deprecation warning from aiomqtt.client module
 pytestmark = pytest.mark.filterwarnings("ignore:There is no current event loop:DeprecationWarning:aiomqtt.client")
@@ -668,18 +668,22 @@ class TestMQTTClientDiscovery:
             client.publish_json_msg = AsyncMock(return_value=True)
             client.pub_online = AsyncMock(return_value=True)
             client.register_single_device = AsyncMock(return_value=True)
-            client.create_bridge_device = AsyncMock(return_value=True)
+            # Mock the discovery's create_bridge_device method
+            client.discovery.create_bridge_device = AsyncMock(return_value=True)
+            # Mock the client's publish method to avoid connection errors
+            client.client = AsyncMock()
+            client.client.publish = AsyncMock()
 
             await client.homeassistant_discovery()
 
             # Discovery should succeed when connected
             # The actual result depends on whether exceptions were raised during processing
-            assert client.create_bridge_device.called
+            assert client.discovery.create_bridge_device.called
 
     @pytest.mark.asyncio
     async def test_homeassistant_discovery_empty(self):
         """Test Home Assistant discovery with no devices"""
-        with patch("cync_controller.mqtt_client.g") as mock_g:
+        with patch("cync_controller.mqtt.discovery.g") as mock_g:
             mock_g.uuid = "test-uuid"
             mock_g.ncync_server = MagicMock()
             mock_g.ncync_server.devices = {}
@@ -688,12 +692,16 @@ class TestMQTTClientDiscovery:
             client = MQTTClient()
             client._connected = True
             client.publish_json_msg = AsyncMock(return_value=True)
-            client.create_bridge_device = AsyncMock(return_value=True)
+            # Mock the discovery's create_bridge_device method
+            client.discovery.create_bridge_device = AsyncMock(return_value=True)
+            # Mock the client's publish method to avoid connection errors
+            client.client = AsyncMock()
+            client.client.publish = AsyncMock()
 
             result = await client.homeassistant_discovery()
 
             # Discovery should call create_bridge_device and succeed
-            assert client.create_bridge_device.called
+            assert client.discovery.create_bridge_device.called
             # When no devices, should still succeed
             assert result is True
 
@@ -2411,7 +2419,7 @@ class TestRegisterSingleDevice:
     @pytest.mark.asyncio
     async def test_register_device_with_suggested_area_from_group(self):
         """Test that device gets suggested_area from group membership"""
-        with patch("cync_controller.mqtt_client.g") as mock_g:
+        with patch("cync_controller.mqtt.discovery.g") as mock_g:
             mock_g.uuid = "test-uuid-123"
 
             # Create a room group
@@ -2440,7 +2448,9 @@ class TestRegisterSingleDevice:
             device.brightness = None
             device.metadata = None
 
-            mock_g.ncync_server.groups = {100: mock_group}
+            mock_ncync_server = MagicMock()
+            mock_ncync_server.groups = {100: mock_group}
+            mock_g.ncync_server = mock_ncync_server
 
             client = MQTTClient()
             client.topic = "cync_lan"

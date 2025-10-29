@@ -453,13 +453,14 @@ class DiscoveryHelper:
                             # The first word is the area name
                             if name_parts:
                                 suggested_area = name_parts[0]
-                            logger.debug(
-                                "%s Extracted area '%s' from device name '%s' (fallback, not in any room group)",
-                                lp,
-                                suggested_area,
-                                device.name,
-                            )
-
+<<<<<<< HEAD
+                                logger.debug(
+                                    "%s Extracted area '%s' from device name '%s' (fallback, not in any room group)",
+                                    lp,
+                                    suggested_area,
+                                    device.name,
+                                )
+    
                         device_registry_struct = {
                             "identifiers": [unique_id],
                             "manufacturer": CYNC_MANUFACTURER,
@@ -469,11 +470,11 @@ class DiscoveryHelper:
                             "model": model_str,
                             "via_device": str(g.uuid),
                         }
-
+    
                         # Add suggested_area if we successfully extracted one
                         if suggested_area:
                             device_registry_struct["suggested_area"] = suggested_area
-
+    
                         entity_registry_struct = {
                             "default_entity_id": default_entity_id,
                             # set to None if only device name is relevant, this sets entity name
@@ -496,10 +497,10 @@ class DiscoveryHelper:
                         if device.is_switch:
                             dev_type = "switch"
                             logger.debug(
-                            "%s Device '%s' classified as switch (type: %s)",
-                            lp,
-                            device.name,
-                            device.metadata.type if device.metadata else "None",
+                                "%s Device '%s' classified as switch (type: %s)",
+                                lp,
+                                device.name,
+                                device.metadata.type if device.metadata else "None",
                             )
                             if device.metadata and device.metadata.capabilities.fan:
                                 dev_type = "fan"
@@ -602,12 +603,12 @@ class DiscoveryHelper:
                             retain=False,
                         )
                             logger.info(
-                            "%s Registered %s: %s (ID: %s)",
-                            lp,
-                            dev_type,
-                            device.name,
-                            device.id,
-                        )
+                                "%s Registered %s: %s (ID: %s)",
+                                lp,
+                                dev_type,
+                                device.name,
+                                device.id,
+                            )
 
                             # For fan entities, publish initial preset mode state
                             if device.is_fan_controller and device.brightness is not None:
