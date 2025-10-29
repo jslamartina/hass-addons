@@ -77,7 +77,7 @@ class TestDeviceRegistration:
         """Test that register_single_device publishes MQTT discovery message"""
         with (
             patch("cync_controller.mqtt_client.aiomqtt.Client") as mock_client_class,
-            patch("cync_controller.mqtt_client.device_type_map"),
+            patch("cync_controller.mqtt.discovery.device_type_map"),
         ):
             mock_client = MagicMock()
             mock_client.publish = AsyncMock()
