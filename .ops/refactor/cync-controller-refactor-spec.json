@@ -114,9 +114,17 @@
   },
   "checks": {
     "commands": [
-      { "name": "lint", "run": "npm run format && npm run lint --silent --max-warnings=0" }
+      {
+        "name": "lint",
+        "run": "npm run format && npm run lint --silent --max-warnings=0"
+      },
+      {
+        "name": "unit",
+        "run": "pytest -q --disable-warnings --maxfail=1"
+      }
     ],
-    "must_pass": ["lint"]
+    "must_pass": ["lint", "unit"],
+    "batch_policy": "per-batch"
   },
   "telemetry": [
     "count files > 600 lines before vs after",
