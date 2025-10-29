@@ -4,7 +4,13 @@
   "goal": "Split monolithic cync-controller Python modules into focused packages without changing external interfaces; reduce file size and lint debt.",
   "scope": {
     "include": ["cync-controller/**", "cync-controller/src/cync_controller/**"],
-    "exclude": ["**/vendor/**", "**/gen/**", "**/__pycache__/**", "**/site-packages/**", "**/node_modules/**"]
+    "exclude": [
+      "**/vendor/**",
+      "**/gen/**",
+      "**/__pycache__/**",
+      "**/site-packages/**",
+      "**/node_modules/**"
+    ]
   },
   "invariants": [
     "External-facing interfaces (import paths, class/function names) MUST NOT change.",
@@ -114,7 +120,10 @@
   },
   "checks": {
     "commands": [
-      { "name": "lint", "run": "npm run format && npm run lint --silent --max-warnings=0" }
+      {
+        "name": "lint",
+        "run": "npm run format && npm run lint --silent --max-warnings=0"
+      }
     ],
     "must_pass": ["lint"]
   },
@@ -139,5 +148,3 @@
     "output_policy": "minimal_diff_with_rationale"
   }
 }
-
-
