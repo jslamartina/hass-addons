@@ -170,7 +170,15 @@
       "function": "complete_batch_1",
       "line": 0,
       "extra_data": {
-        "files_created": ["devices/__init__.py", "devices/base_device.py", "devices/device_commands.py", "devices/group.py", "devices/tcp_device.py", "devices/tcp_packet_handler.py", "devices/shared.py"],
+        "files_created": [
+          "devices/__init__.py",
+          "devices/base_device.py",
+          "devices/device_commands.py",
+          "devices/group.py",
+          "devices/tcp_device.py",
+          "devices/tcp_packet_handler.py",
+          "devices/shared.py"
+        ],
         "test_results": "all_passing",
         "line_count_reduction": "from 700+ lines to <200 per file"
       }
@@ -200,7 +208,12 @@
       "extra_data": {
         "file_created": "mqtt/commands.py",
         "line_count": 186,
-        "methods_extracted": ["DeviceCommand", "CommandProcessor", "SetPowerCommand", "SetBrightnessCommand"],
+        "methods_extracted": [
+          "DeviceCommand",
+          "CommandProcessor",
+          "SetPowerCommand",
+          "SetBrightnessCommand"
+        ],
         "test_results": "all_passing"
       }
     },
@@ -215,7 +228,14 @@
       "extra_data": {
         "file_created": "mqtt/discovery.py",
         "line_count": 1017,
-        "methods_extracted": ["DiscoveryHelper", "slugify", "register_single_device", "trigger_device_rediscovery", "homeassistant_discovery", "create_bridge_device"],
+        "methods_extracted": [
+          "DiscoveryHelper",
+          "slugify",
+          "register_single_device",
+          "trigger_device_rediscovery",
+          "homeassistant_discovery",
+          "create_bridge_device"
+        ],
         "mqtt_client_line_count_after": 1588,
         "lines_reduced": 956
       }
@@ -254,8 +274,14 @@
       "extra_data": {
         "completion_percentage": "40%",
         "completed_modules": ["commands.py"],
-        "partial_modules": ["discovery.py - structure created but syntax errors"],
-        "pending_modules": ["state_updates.py", "command_routing.py", "client.py"],
+        "partial_modules": [
+          "discovery.py - structure created but syntax errors"
+        ],
+        "pending_modules": [
+          "state_updates.py",
+          "command_routing.py",
+          "client.py"
+        ],
         "meets_completion_gates": false,
         "escalation": "manual_intervention_required"
       }
