@@ -55,8 +55,6 @@ class DiscoveryHelper:
         """Initialize discovery helper."""
         self.client = mqtt_client
 
-    async def register_single_device(self, device):
-        """Register a single device with Home Assistant via MQTT discovery."""
     async def register_single_device(self, device) -> bool:
         """Register a single device with Home Assistant via MQTT discovery."""
         lp = f"{self.client.lp}hass:"
@@ -455,12 +453,12 @@ class DiscoveryHelper:
                             # The first word is the area name
                             if name_parts:
                                 suggested_area = name_parts[0]
-                                logger.debug(
-                                    "%s Extracted area '%s' from device name '%s' (fallback, not in any room group)",
-                                    lp,
-                                    suggested_area,
-                                    device.name,
-                                )
+                            logger.debug(
+                                "%s Extracted area '%s' from device name '%s' (fallback, not in any room group)",
+                                lp,
+                                suggested_area,
+                                device.name,
+                            )
 
                         device_registry_struct = {
                             "identifiers": [unique_id],
@@ -476,191 +474,190 @@ class DiscoveryHelper:
                         if suggested_area:
                             device_registry_struct["suggested_area"] = suggested_area
 
-                    entity_registry_struct = {
-                        "default_entity_id": default_entity_id,
-                        # set to None if only device name is relevant, this sets entity name
-                        "name": None,
-                        "command_topic": f"{self.client.topic}/set/{device_uuid}",
-                        "state_topic": f"{self.client.topic}/status/{device_uuid}",
-                        "avty_t": f"{self.client.topic}/availability/{device_uuid}",
-                        "pl_avail": "online",
-                        "pl_not_avail": "offline",
-                        "state_on": "ON",
-                        "state_off": "OFF",
-                        "unique_id": unique_id,
-                        "schema": "json",
-                        "origin": ORIGIN_STRUCT,
-                        "device": device_registry_struct,
-                        "optimistic": False,
-                    }
-                    # Determine device type (same logic as register_single_device)
-                    dev_type = "light"  # Default fallback
-                    if device.is_switch:
-                        dev_type = "switch"
-                        logger.debug(
-                        "%s Device '%s' classified as switch (type: %s)",
-                        lp,
-                        device.name,
-                        device.metadata.type if device.metadata else "None",
-                        )
-                        if device.metadata and device.metadata.capabilities.fan:
-                            dev_type = "fan"
-                            logger.debug("%s Device '%s' reclassified as fan", lp, device.name)
-                    elif device.is_light:
-                        dev_type = "light"
-                        logger.debug("%s Device '%s' classified as light", lp, device.name)
-                    # For unknown devices, try to infer from device type if available
-                    elif device.type is not None and device.type in device_type_map:
-                        # This shouldn't happen if metadata is properly set, but just in case
-                        metadata_type = device_type_map[device.type].type
-                        if metadata_type == DeviceClassification.SWITCH:
+                        entity_registry_struct = {
+                            "default_entity_id": default_entity_id,
+                            # set to None if only device name is relevant, this sets entity name
+                            "name": None,
+                            "command_topic": f"{self.client.topic}/set/{device_uuid}",
+                            "state_topic": f"{self.client.topic}/status/{device_uuid}",
+                            "avty_t": f"{self.client.topic}/availability/{device_uuid}",
+                            "pl_avail": "online",
+                            "pl_not_avail": "offline",
+                            "state_on": "ON",
+                            "state_off": "OFF",
+                            "unique_id": unique_id,
+                            "schema": "json",
+                            "origin": ORIGIN_STRUCT,
+                            "device": device_registry_struct,
+                            "optimistic": False,
+                        }
+                        # Determine device type (same logic as register_single_device)
+                        dev_type = "light"  # Default fallback
+                        if device.is_switch:
                             dev_type = "switch"
                             logger.debug(
-                                "%s Device '%s' classified as switch from device_type_map",
-                                lp,
-                                device.name,
+                            "%s Device '%s' classified as switch (type: %s)",
+                            lp,
+                            device.name,
+                            device.metadata.type if device.metadata else "None",
                             )
-                        elif metadata_type == DeviceClassification.LIGHT:
+                            if device.metadata and device.metadata.capabilities.fan:
+                                dev_type = "fan"
+                                logger.debug("%s Device '%s' reclassified as fan", lp, device.name)
+                        elif device.is_light:
                             dev_type = "light"
-                            logger.debug(
-                                "%s Device '%s' classified as light from device_type_map",
-                                lp,
-                                device.name,
-                            )
+                            logger.debug("%s Device '%s' classified as light", lp, device.name)
+                        # For unknown devices, try to infer from device type if available
+                        elif device.type is not None and device.type in device_type_map:
+                            # This shouldn't happen if metadata is properly set, but just in case
+                            metadata_type = device_type_map[device.type].type
+                            if metadata_type == DeviceClassification.SWITCH:
+                                dev_type = "switch"
+                                logger.debug(
+                                    "%s Device '%s' classified as switch from device_type_map",
+                                    lp,
+                                    device.name,
+                                )
+                            elif metadata_type == DeviceClassification.LIGHT:
+                                dev_type = "light"
+                                logger.debug(
+                                    "%s Device '%s' classified as light from device_type_map",
+                                    lp,
+                                    device.name,
+                                )
+                            else:
+                                logger.debug(
+                                    "%s Device '%s' unknown metadata type: %s, defaulting to light",
+                                    lp,
+                                    device.name,
+                                    metadata_type,
+                                )
                         else:
                             logger.debug(
-                                "%s Device '%s' unknown metadata type: %s, defaulting to light",
-                            lp,
-                            device.name,
-                            metadata_type,
-                        )
-                    else:
-                        logger.debug(
-                            "%s Device '%s' unknown device type %s, defaulting to light (is_light: %s, is_switch: %s)",
-                            lp,
-                            device.name,
-                            device.type,
-                            device.is_light,
-                            device.is_switch,
-                        )
+                                "%s Device '%s' unknown device type %s, defaulting to light (is_light: %s, is_switch: %s)",
+                                lp,
+                                device.name,
+                                device.type,
+                                device.is_light,
+                                device.is_switch,
+                            )
 
-                    tpc_str_template = "{0}/{1}/{2}/config"
+                        tpc_str_template = "{0}/{1}/{2}/config"
 
-                    if dev_type == "light":
-                        entity_registry_struct.update({"brightness": True, "brightness_scale": 100})
-                        # ALL lights with brightness must declare color modes
-                        entity_registry_struct["supported_color_modes"] = []
-                        if device.supports_temperature:
-                            entity_registry_struct["supported_color_modes"].append("color_temp")
-                            entity_registry_struct["color_temp_kelvin"] = True
-                            entity_registry_struct["min_kelvin"] = CYNC_MINK
-                            entity_registry_struct["max_kelvin"] = CYNC_MAXK
-                        if device.supports_rgb:
-                            entity_registry_struct["supported_color_modes"].append("rgb")
+                        if dev_type == "light":
+                            entity_registry_struct.update({"brightness": True, "brightness_scale": 100})
+                            # ALL lights with brightness must declare color modes
+                            entity_registry_struct["supported_color_modes"] = []
+                            if device.supports_temperature:
+                                entity_registry_struct["supported_color_modes"].append("color_temp")
+                                entity_registry_struct["color_temp_kelvin"] = True
+                                entity_registry_struct["min_kelvin"] = CYNC_MINK
+                                entity_registry_struct["max_kelvin"] = CYNC_MAXK
+                            if device.supports_rgb:
+                                entity_registry_struct["supported_color_modes"].append("rgb")
                             entity_registry_struct["effect"] = True
-                        entity_registry_struct["effect_list"] = list(FACTORY_EFFECTS_BYTES.keys())
-                        # If no color support, default to brightness-only mode
-                        if not entity_registry_struct["supported_color_modes"]:
-                            entity_registry_struct["supported_color_modes"] = ["brightness"]
-                    elif dev_type == "switch":
-                        # Switch entities should not declare JSON schema
-                        entity_registry_struct.pop("schema", None)
-                    elif dev_type == "fan":
-                        entity_registry_struct["platform"] = "fan"
-                        # fan can be controlled via light control structs: brightness -> max=255, high=191, medium=128, low=50, off=0
-                        entity_registry_struct.pop("state_on", None)
-                        entity_registry_struct.pop("state_off", None)
-                        entity_registry_struct.pop("schema", None)
-                        entity_registry_struct["state_topic"] = f"{self.client.topic}/status/{device_uuid}"
-                        entity_registry_struct["command_topic"] = f"{self.client.topic}/set/{device_uuid}"
-                        entity_registry_struct["payload_on"] = "ON"
-                        entity_registry_struct["payload_off"] = "OFF"
-                        entity_registry_struct["preset_mode_command_topic"] = f"{self.client.topic}/set/{device_uuid}/preset"
-                        entity_registry_struct["preset_mode_state_topic"] = f"{self.client.topic}/status/{device_uuid}/preset"
-                        entity_registry_struct["preset_modes"] = [
-                        "off",
-                        "low",
-                        "medium",
-                        "high",
-                        "max",
-                        ]
+                            entity_registry_struct["effect_list"] = list(FACTORY_EFFECTS_BYTES.keys())
+                            # If no color support, default to brightness-only mode
+                            if not entity_registry_struct["supported_color_modes"]:
+                                entity_registry_struct["supported_color_modes"] = ["brightness"]
+                        elif dev_type == "switch":
+                            # Switch entities should not declare JSON schema
+                            entity_registry_struct.pop("schema", None)
+                        elif dev_type == "fan":
+                            entity_registry_struct["platform"] = "fan"
+                            # fan can be controlled via light control structs: brightness -> max=255, high=191, medium=128, low=50, off=0
+                            entity_registry_struct.pop("state_on", None)
+                            entity_registry_struct.pop("state_off", None)
+                            entity_registry_struct.pop("schema", None)
+                            entity_registry_struct["state_topic"] = f"{self.client.topic}/status/{device_uuid}"
+                            entity_registry_struct["command_topic"] = f"{self.client.topic}/set/{device_uuid}"
+                            entity_registry_struct["payload_on"] = "ON"
+                            entity_registry_struct["payload_off"] = "OFF"
+                            entity_registry_struct["preset_mode_command_topic"] = f"{self.client.topic}/set/{device_uuid}/preset"
+                            entity_registry_struct["preset_mode_state_topic"] = f"{self.client.topic}/status/{device_uuid}/preset"
+                            entity_registry_struct["preset_modes"] = [
+                            "off",
+                            "low",
+                            "medium",
+                            "high",
+                            "max",
+                            ]
 
-                    # Conditionally publish device discovery: skip device-level lights if feature flag is off
-                    if dev_type == "light" and not CYNC_EXPOSE_DEVICE_LIGHTS:
-                        logger.info(
-                        "%s Skipping device light discovery for '%s' due to feature flag",
-                        lp,
-                        device.name,
-                        )
-                        # Skip this device and continue to next one
-                        continue
-
-                    tpc = tpc_str_template.format(self.client.ha_topic, dev_type, device_uuid)
-                    try:
-                        json_payload = json.dumps(entity_registry_struct, indent=2)
-                        _ = await self.client.client.publish(
-                        tpc,
-                        json_payload.encode(),
-                        qos=0,
-                        retain=False,
-                        )
-                        logger.info(
-                        "%s Registered %s: %s (ID: %s)",
-                        lp,
-                        dev_type,
-                        device.name,
-                        device.id,
-                        )
-
-                        # For fan entities, publish initial preset mode state
-                        if device.is_fan_controller and device.brightness is not None:
-                            bri = device.brightness
-                            # Map brightness (1-100 scale) to preset mode
-                            if bri == 0:
-                                preset_mode = "off"
-                            elif bri == 25:
-                                preset_mode = "low"
-                            elif bri == 50:
-                                preset_mode = "medium"
-                            elif bri == 75:
-                                preset_mode = "high"
-                            elif bri == 100:
-                                preset_mode = "max"
-                            # For any other value, find closest preset
-                            elif bri < 25:
-                                preset_mode = "low"
-                            elif bri < 50:
-                                preset_mode = "medium"
-                            elif bri < 75:
-                                preset_mode = "high"
-                            else:
-                                preset_mode = "max"
-
-                        preset_mode_topic = f"{self.client.topic}/status/{device_uuid}/preset"
-                        try:
-                            await self.client.client.publish(
-                                preset_mode_topic,
-                                preset_mode.encode(),
-                                qos=0,
-                                retain=True,
-                                timeout=3.0,
-                            )
+                        # Conditionally publish device discovery: skip device-level lights if feature flag is off
+                        if dev_type == "light" and not CYNC_EXPOSE_DEVICE_LIGHTS:
                             logger.info(
-                                "%s >>> FAN INITIAL PRESET: Published '%s' (brightness=%s) for '%s'",
-                                lp,
-                                preset_mode,
-                                bri,
-                                device.name,
-                            )
-                        except Exception:
-                            logger.warning(
-                                "%s Failed to publish initial fan preset mode for '%s'",
+                                "%s Skipping device light discovery for '%s' due to feature flag",
                                 lp,
                                 device.name,
                             )
+                            continue
 
-                    except Exception:
-                        logger.exception("%s - Unable to publish mqtt message... skipped", lp)
+                        tpc = tpc_str_template.format(self.client.ha_topic, dev_type, device_uuid)
+                        try:
+                            json_payload = json.dumps(entity_registry_struct, indent=2)
+                            _ = await self.client.client.publish(
+                            tpc,
+                            json_payload.encode(),
+                            qos=0,
+                            retain=False,
+                        )
+                            logger.info(
+                            "%s Registered %s: %s (ID: %s)",
+                            lp,
+                            dev_type,
+                            device.name,
+                            device.id,
+                        )
+
+                            # For fan entities, publish initial preset mode state
+                            if device.is_fan_controller and device.brightness is not None:
+                                bri = device.brightness
+                                # Map brightness (1-100 scale) to preset mode
+                                if bri == 0:
+                                    preset_mode = "off"
+                                elif bri == 25:
+                                    preset_mode = "low"
+                                elif bri == 50:
+                                    preset_mode = "medium"
+                                elif bri == 75:
+                                    preset_mode = "high"
+                                elif bri == 100:
+                                    preset_mode = "max"
+                                # For any other value, find closest preset
+                                elif bri < 25:
+                                    preset_mode = "low"
+                                elif bri < 50:
+                                    preset_mode = "medium"
+                                elif bri < 75:
+                                    preset_mode = "high"
+                                else:
+                                    preset_mode = "max"
+
+                                preset_mode_topic = f"{self.client.topic}/status/{device_uuid}/preset"
+                                try:
+                                    await self.client.client.publish(
+                                        preset_mode_topic,
+                                        preset_mode.encode(),
+                                        qos=0,
+                                        retain=True,
+                                        timeout=3.0,
+                                    )
+                                    logger.info(
+                                        "%s >>> FAN INITIAL PRESET: Published '%s' (brightness=%s) for '%s'",
+                                        lp,
+                                        preset_mode,
+                                        bri,
+                                        device.name,
+                                    )
+                                except Exception:
+                                    logger.warning(
+                                        "%s Failed to publish initial fan preset mode for '%s'",
+                                        lp,
+                                        device.name,
+                                    )
+
+                        except Exception:
+                            logger.exception("%s - Unable to publish mqtt message... skipped", lp)
 
                 # Register groups (only subgroups)
                 subgroups = [g for g in g.ncync_server.groups.values() if g.is_subgroup]
