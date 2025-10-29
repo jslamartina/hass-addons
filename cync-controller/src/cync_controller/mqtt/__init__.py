@@ -18,13 +18,13 @@ from cync_controller.mqtt.discovery import HomeAssistantDiscovery
 from cync_controller.mqtt.state_updates import MQTTStateUpdater
 
 __all__ = [
+    "CommandProcessor",
+    "DeviceCommand",
+    "HomeAssistantDiscovery",
     "MQTTClient",
     "MQTTCommandRouter",
     "MQTTStateUpdater",
-    "HomeAssistantDiscovery",
-    "CommandProcessor",
-    "DeviceCommand",
-    "SetPowerCommand",
     "SetBrightnessCommand",
+    "SetPowerCommand",
     "slugify",
 ]

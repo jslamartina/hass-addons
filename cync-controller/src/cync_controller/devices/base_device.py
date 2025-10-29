@@ -1,12 +1,10 @@
-import asyncio
-
+from cync_controller.devices.device_commands import DeviceCommandsMixin
 from cync_controller.logging_abstraction import get_logger
-from cync_controller.metadata.model_info import DeviceClassification, DeviceTypeInfo, device_type_map
+from cync_controller.metadata.model_info import DeviceClassification, device_type_map
 from cync_controller.structs import (
     DeviceStatus,
     GlobalObject,
 )
-from cync_controller.devices.device_commands import DeviceCommandsMixin
 
 logger = get_logger(__name__)
 g = GlobalObject()
@@ -26,7 +24,7 @@ class CyncDevice(DeviceCommandsMixin):
     id: int = None
     name: str = None
     cync_type: int | None = None
-    mac: str | None = None
+    _mac: str | None = None
     wifi_mac: str | None = None
     fw_version: str | None = None
     home_id: int | None = None
@@ -52,7 +50,7 @@ class CyncDevice(DeviceCommandsMixin):
         self.id = cync_id
         self.name = name
         self.cync_type = cync_type
-        self.mac = mac
+        self._mac = mac
         self.wifi_mac = wifi_mac
         self.fw_version = fw_version
         self.home_id = home_id
@@ -76,12 +74,12 @@ class CyncDevice(DeviceCommandsMixin):
     @property
     def mac(self) -> str | None:
         """Get the device MAC address."""
-        return self.mac
+        return self._mac
 
     @mac.setter
     def mac(self, value: str | None):
         """Set the device MAC address."""
-        self.mac = value
+        self._mac = value
 
     @property
     def bt_only(self) -> bool:

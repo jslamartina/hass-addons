@@ -2,7 +2,7 @@ import asyncio
 import re
 import unicodedata
 
-from cync_controller.devices import CyncDevice, CyncGroup
+from cync_controller.devices import CyncGroup
 from cync_controller.logging_abstraction import get_logger
 from cync_controller.structs import GlobalObject
 

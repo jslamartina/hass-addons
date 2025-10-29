@@ -15,11 +15,11 @@ from cync_controller.devices.tcp_packet_handler import TCPPacketHandler, packet_
 
 __all__ = [
     "CyncDevice",
-    "DeviceCommandsMixin",
     "CyncGroup",
     "CyncTCPDevice",
+    "DeviceCommandsMixin",
     "TCPConnectionManager",
-    "connection_manager",
     "TCPPacketHandler",
+    "connection_manager",
     "packet_handler",
 ]

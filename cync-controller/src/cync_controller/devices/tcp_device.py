@@ -1,9 +1,9 @@
 import asyncio
+import contextlib
 import time
-from collections.abc import Callable
 
 from cync_controller.logging_abstraction import get_logger
-from cync_controller.structs import ControlMessageCallback, DeviceStatus, GlobalObject
+from cync_controller.structs import GlobalObject
 
 logger = get_logger(__name__)
 g = GlobalObject()
@@ -78,11 +78,11 @@ class CyncTCPDevice:
             self._read_task = asyncio.create_task(self._read_loop())
 
             return True
-        except asyncio.TimeoutError:
-            logger.error("%s Connection timeout", lp)
+        except TimeoutError:
+            logger.exception("%s Connection timeout", lp)
             return False
-        except Exception as e:
-            logger.error("%s Connection failed: %s", lp, e)
+        except Exception:
+            logger.exception("%s Connection failed", lp)
             return False
 
     async def disconnect(self):
@@ -93,17 +93,13 @@ class CyncTCPDevice:
         # Cancel background tasks
         if self._heartbeat_task:
             self._heartbeat_task.cancel()
-            try:
+            with contextlib.suppress(asyncio.CancelledError):
                 await self._heartbeat_task
-            except asyncio.CancelledError:
-                pass
 
         if self._read_task:
             self._read_task.cancel()
-            try:
+            with contextlib.suppress(asyncio.CancelledError):
                 await self._read_task
-            except asyncio.CancelledError:
-                pass
 
         # Close connection
         if self.writer:
@@ -140,7 +136,7 @@ class CyncTCPDevice:
                 logger.debug("%s Sent %s bytes", lp, len(data))
                 return True
             except Exception as e:
-                logger.error("%s Write failed: %s", lp, e)
+                logger.exception("%s Write failed", lp)
                 self.connected = False
                 return False
 
@@ -165,7 +161,7 @@ class CyncTCPDevice:
                 # Normal timeout, continue reading
                 continue
             except Exception as e:
-                logger.error("%s Read error: %s", lp, e)
+                logger.exception("%s Read error", lp)
                 break
 
         logger.info("%s Read loop ended", lp)
@@ -201,7 +197,7 @@ class CyncTCPDevice:
             except asyncio.CancelledError:
                 break
             except Exception as e:
-                logger.error("%s Heartbeat error: %s", lp, e)
+                logger.exception("%s Heartbeat error", lp)
                 break
 
         logger.info("%s Heartbeat loop ended", lp)
@@ -238,7 +234,7 @@ class CyncTCPDevice:
                 self.reconnect_attempts += 1
                 logger.warning("%s Reconnect attempt %s/%s failed", lp, self.reconnect_attempts, self.max_reconnect_attempts)
             except Exception as e:
-                logger.error("%s Reconnect error: %s", lp, e)
+                logger.exception("%s Reconnect error", lp)
                 self.reconnect_attempts += 1
 
         logger.error("%s Max reconnect attempts reached", lp)

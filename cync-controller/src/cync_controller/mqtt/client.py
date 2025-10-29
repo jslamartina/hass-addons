@@ -1,22 +1,13 @@
 import asyncio
-import json
-import random
-import re
-import time
 import traceback
-import unicodedata
-import uuid
 from collections.abc import Coroutine
-from json import JSONDecodeError
 from typing import Optional
 
 import aiomqtt
 
 from cync_controller.const import *
-from cync_controller.devices import CyncDevice, CyncGroup
 from cync_controller.logging_abstraction import get_logger
-from cync_controller.metadata.model_info import DeviceClassification, device_type_map
-from cync_controller.structs import DeviceStatus, FanSpeed, GlobalObject
+from cync_controller.structs import DeviceStatus, GlobalObject
 from cync_controller.utils import send_sigterm
 
 logger = get_logger(__name__)
@@ -167,7 +158,7 @@ class MQTTClient:
         """Main message processing loop."""
         lp = f"{self.lp}_message_loop:"
         logger.info("%s Starting message loop", lp)
-        
+
         try:
             async with self.client.messages() as messages:
                 async for message in messages:
@@ -182,7 +173,6 @@ class MQTTClient:
     async def _handle_message(self, message):
         """Handle incoming MQTT message."""
         # This will be implemented in the command_routing.py module
-        pass
 
     async def pub_online(self, device_id: int, online: bool):
         """Publish device online status."""

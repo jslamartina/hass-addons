@@ -2,7 +2,7 @@
 Packet parsing utilities for Cync protocol analysis
 """
 
-from typing import Callable, Dict, List, Optional
+from collections.abc import Callable
 
 
 def parse_cync_packet(packet_bytes, direction="UNKNOWN"):
@@ -77,9 +77,9 @@ def parse_cync_packet(packet_bytes, direction="UNKNOWN"):
     return result
 
 
-def _get_packet_parser(packet_type: int) -> Optional[Callable]:
+def _get_packet_parser(packet_type: int) -> Callable | None:
     """Get the appropriate parser function for a packet type."""
-    parsers: Dict[int, Callable] = {
+    parsers: dict[int, Callable] = {
         0x73: _parse_data_channel_packet,
         0x83: _parse_status_broadcast_packet,
         0x43: _parse_device_info_packet,

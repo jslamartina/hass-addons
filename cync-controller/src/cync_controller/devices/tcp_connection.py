@@ -1,6 +1,7 @@
 import asyncio
-from typing import Optional
+import contextlib
 
+from cync_controller.devices.tcp_device import CyncTCPDevice
 from cync_controller.logging_abstraction import get_logger
 from cync_controller.structs import GlobalObject
 
@@ -15,12 +16,12 @@ class TCPConnectionManager:
     """
 
     def __init__(self):
-        self.connections: dict[str, object] = {}
+        self.connections: dict[str, CyncTCPDevice] = {}
         self.health_check_interval: float = 30.0
         self.health_check_task: asyncio.Task | None = None
         self._lock = asyncio.Lock()
 
-    async def add_connection(self, address: str, port: int = 443, **kwargs) -> object:
+    async def add_connection(self, address: str, port: int = 443, **kwargs) -> CyncTCPDevice:
         """
         Add a new TCP connection to the manager.
 
@@ -30,15 +31,13 @@ class TCPConnectionManager:
             **kwargs: Additional arguments for CyncTCPDevice
 
         Returns:
-            object: The created connection object
+            CyncTCPDevice: The created connection object
         """
         lp = "TCPConnectionManager:add_connection:"
         async with self._lock:
             if address in self.connections:
                 logger.warning("%s Connection to %s already exists", lp, address)
                 return self.connections[address]
-
-            from cync_controller.devices.tcp_device import CyncTCPDevice
 
             connection = CyncTCPDevice(address, port, **kwargs)
             self.connections[address] = connection
@@ -69,15 +68,13 @@ class TCPConnectionManager:
             # Stop health check if no connections remain
             if not self.connections and self.health_check_task:
                 self.health_check_task.cancel()
-                try:
+                with contextlib.suppress(asyncio.CancelledError):
                     await self.health_check_task
-                except asyncio.CancelledError:
-                    pass
                 self.health_check_task = None
 
             logger.info("%s Removed connection to %s", lp, address)
 
-    async def get_connection(self, address: str) -> object | None:
+    async def get_connection(self, address: str) -> CyncTCPDevice | None:
         """
         Get a TCP connection by address.
 
@@ -85,16 +82,16 @@ class TCPConnectionManager:
             address: Bridge device IP address
 
         Returns:
-            object or None if not found
+            CyncTCPDevice or None if not found
         """
         return self.connections.get(address)
 
-    async def get_any_connection(self) -> object | None:
+    async def get_any_connection(self) -> CyncTCPDevice | None:
         """
         Get any available TCP connection.
 
         Returns:
-            object or None if no connections available
+            CyncTCPDevice or None if no connections available
         """
         for connection in self.connections.values():
             if connection.connected and connection.ready_to_control:
@@ -119,8 +116,8 @@ class TCPConnectionManager:
                     logger.info("%s Connected to %s", lp, address)
                 else:
                     logger.error("%s Failed to connect to %s", lp, address)
-            except Exception as e:
-                logger.error("%s Error connecting to %s: %s", lp, address, e)
+            except Exception:
+                logger.exception("%s Error connecting to %s", lp, address)
 
         logger.info("%s Connected to %s/%s devices", lp, connected_count, len(self.connections))
         return connected_count
@@ -134,16 +131,14 @@ class TCPConnectionManager:
             try:
                 await connection.disconnect()
                 logger.info("%s Disconnected from %s", lp, address)
-            except Exception as e:
-                logger.error("%s Error disconnecting from %s: %s", lp, address, e)
+            except Exception:
+                logger.exception("%s Error disconnecting from %s", lp, address)
 
         # Stop health check
         if self.health_check_task:
             self.health_check_task.cancel()
-            try:
+            with contextlib.suppress(asyncio.CancelledError):
                 await self.health_check_task
-            except asyncio.CancelledError:
-                pass
             self.health_check_task = None
 
     async def _health_check_loop(self):
@@ -157,8 +152,8 @@ class TCPConnectionManager:
                 await self._check_connection_health()
             except asyncio.CancelledError:
                 break
-            except Exception as e:
-                logger.error("%s Health check error: %s", lp, e)
+            except Exception:
+                logger.exception("%s Health check error", lp)
 
         logger.info("%s Health check loop ended", lp)
 
@@ -176,8 +171,8 @@ class TCPConnectionManager:
                     logger.warning("%s Connection to %s is not ready to control", lp, address)
                 else:
                     logger.debug("%s Connection to %s is healthy", lp, address)
-            except Exception as e:
-                logger.error("%s Error checking health of %s: %s", lp, address, e)
+            except Exception:
+                logger.exception("%s Error checking health of %s", lp, address)
 
     def get_connection_stats(self) -> dict:
         """
@@ -207,10 +202,8 @@ class TCPConnectionManager:
 
         if self.health_check_task:
             self.health_check_task.cancel()
-            try:
+            with contextlib.suppress(asyncio.CancelledError):
                 await self.health_check_task
-            except asyncio.CancelledError:
-                pass
             self.health_check_task = None
 
         logger.info("%s Cleanup complete", lp)

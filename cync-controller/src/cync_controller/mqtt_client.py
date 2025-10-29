@@ -8,25 +8,25 @@ cync_controller.mqtt package.
 
 # Re-export all classes from the mqtt package for backward compatibility
 from cync_controller.mqtt import (
+    CommandProcessor,
+    DeviceCommand,
+    HomeAssistantDiscovery,
     MQTTClient,
     MQTTCommandRouter,
     MQTTStateUpdater,
-    HomeAssistantDiscovery,
-    CommandProcessor,
-    DeviceCommand,
-    SetPowerCommand,
     SetBrightnessCommand,
+    SetPowerCommand,
     slugify,
 )
 
 __all__ = [
+    "CommandProcessor",
+    "DeviceCommand",
+    "HomeAssistantDiscovery",
     "MQTTClient",
     "MQTTCommandRouter",
     "MQTTStateUpdater",
-    "HomeAssistantDiscovery",
-    "CommandProcessor",
-    "DeviceCommand",
-    "SetPowerCommand",
     "SetBrightnessCommand",
+    "SetPowerCommand",
     "slugify",
 ]

@@ -1,7 +1,5 @@
 import asyncio
-import time
 from collections.abc import Callable
-from typing import Any, Dict, Optional
 
 from cync_controller.logging_abstraction import get_logger
 from cync_controller.structs import ControlMessageCallback, GlobalObject
@@ -17,8 +15,8 @@ class TCPPacketHandler:
     """
 
     def __init__(self):
-        self.packet_handlers: Dict[str, Callable] = {}
-        self.message_callbacks: Dict[int, ControlMessageCallback] = {}
+        self.packet_handlers: dict[str, Callable] = {}
+        self.message_callbacks: dict[int, ControlMessageCallback] = {}
         self._lock = asyncio.Lock()
 
     def register_packet_handler(self, packet_type: str, handler: Callable):
@@ -70,15 +68,14 @@ class TCPPacketHandler:
                 await handler(data, source_address)
                 logger.debug("%s Packet processed by handler: %s", lp, packet_type)
                 return True
-            else:
-                logger.warning("%s No handler for packet type: %s", lp, packet_type)
-                return False
+            logger.warning("%s No handler for packet type: %s", lp, packet_type)
+            return False
 
         except Exception as e:
             logger.error("%s Error processing packet from %s: %s", lp, source_address, e)
             return False
 
-    def _parse_packet_type(self, data: bytes) -> Optional[str]:
+    def _parse_packet_type(self, data: bytes) -> str | None:
         """
         Parse packet type from raw data.
 
@@ -93,17 +90,16 @@ class TCPPacketHandler:
 
         # Basic packet type detection based on header
         header = data[:5]
-        
+
         if header[0] == 0x73:  # Control message
             return "control"
-        elif header[0] == 0x74:  # Status message
+        if header[0] == 0x74:  # Status message
             return "status"
-        elif header[0] == 0x75:  # Heartbeat message
+        if header[0] == 0x75:  # Heartbeat message
             return "heartbeat"
-        elif header[0] == 0x76:  # Mesh info message
+        if header[0] == 0x76:  # Mesh info message
             return "mesh_info"
-        else:
-            return None
+        return None
 
     async def register_message_callback(self, msg_id: int, callback: ControlMessageCallback):
         """
@@ -151,7 +147,7 @@ class TCPPacketHandler:
             if msg_id in self.message_callbacks:
                 callback = self.message_callbacks[msg_id]
                 logger.debug("%s Executing callback for message ID: %s", lp, msg_id)
-                
+
                 # Execute callback
                 if asyncio.iscoroutinefunction(callback.callback):
                     await callback.callback()
@@ -235,7 +231,7 @@ class TCPPacketHandler:
         except Exception as e:
             logger.error("%s Error handling mesh info: %s", lp, e)
 
-    def _extract_message_id(self, data: bytes) -> Optional[int]:
+    def _extract_message_id(self, data: bytes) -> int | None:
         """
         Extract message ID from packet data.
 

@@ -13,8 +13,8 @@ from cync_controller.devices import (
     CyncTCPDevice,
     DeviceCommandsMixin,
     TCPConnectionManager,
-    connection_manager,
     TCPPacketHandler,
+    connection_manager,
     packet_handler,
 )
 
@@ -24,7 +24,7 @@ __all__ = [
     "CyncTCPDevice",
     "DeviceCommandsMixin",
     "TCPConnectionManager",
-    "connection_manager",
     "TCPPacketHandler",
+    "connection_manager",
     "packet_handler",
 ]

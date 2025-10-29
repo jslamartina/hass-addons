@@ -1,8 +1,7 @@
 import json
-import uuid
 
 from cync_controller.const import *
-from cync_controller.devices import CyncDevice, CyncGroup
+from cync_controller.devices import CyncDevice
 from cync_controller.logging_abstraction import get_logger
 from cync_controller.metadata.model_info import DeviceClassification, device_type_map
 from cync_controller.mqtt.commands import slugify
@@ -48,12 +47,12 @@ class HomeAssistantDiscovery:
         lp = f"{self.lp}_discover_device:"
         device_uuid = device.hass_id
         unique_id = f"{device.home_id}_{device.id}"
-        
+
         # Generate entity ID from device name
         entity_slug = slugify(device.name) if device.name else f"device_{device.id}"
         platform = "switch" if device.is_switch else "light"
         default_entity_id = f"{platform}.{entity_slug}"
-        
+
         # Parse firmware version
         dev_fw_version = str(device.version)
         ver_str = "Unknown"
@@ -63,20 +62,20 @@ class HomeAssistantDiscovery:
                 ver_str = f"{dev_fw_version[0]}.{dev_fw_version[1]}.{dev_fw_version[2:]}"
         elif fw_len == 2:
             ver_str = f"{dev_fw_version[0]}.{dev_fw_version[1]}"
-        
+
         # Get model string
         model_str = "Unknown"
         if device.type in device_type_map:
             model_str = device_type_map[device.type].model_string
-        
+
         # Build device connections
         dev_connections = [("bluetooth", device.mac.casefold())]
         if not device.bt_only:
             dev_connections.append(("mac", device.wifi_mac.casefold()))
-        
+
         # Extract suggested area from group membership
         suggested_area = self._extract_suggested_area(device)
-        
+
         # Build device registry structure
         device_registry_struct = {
             "identifiers": [unique_id],
@@ -87,10 +86,10 @@ class HomeAssistantDiscovery:
             "model": model_str,
             "via_device": str(g.uuid),
         }
-        
+
         if suggested_area:
             device_registry_struct["suggested_area"] = suggested_area
-        
+
         # Build entity registry structure
         entity_registry_struct = {
             "default_entity_id": default_entity_id,
@@ -108,22 +107,22 @@ class HomeAssistantDiscovery:
             "device": device_registry_struct,
             "optimistic": False,
         }
-        
+
         # Determine device type and configure accordingly
         dev_type = self._determine_device_type(device)
         await self._configure_entity_for_type(entity_registry_struct, device, dev_type)
-        
+
         # Publish discovery message
         tpc_str_template = "{0}/{1}/{2}/config"
         topic = tpc_str_template.format(self.mqtt_client.ha_topic, dev_type, device_uuid)
-        
+
         await self.mqtt_client.publish(topic, json.dumps(entity_registry_struct), retain=True)
         logger.debug("%s Published discovery for %s: %s", lp, device.name, dev_type)
 
     def _extract_suggested_area(self, device: CyncDevice) -> str | None:
         """Extract suggested area from group membership or device name."""
         lp = f"{self.lp}_extract_suggested_area:"
-        
+
         # First, check if device belongs to any non-subgroup (room group)
         for group in g.ncync_server.groups.values():
             if not group.is_subgroup and device.id in group.member_ids:
@@ -136,25 +135,25 @@ class HomeAssistantDiscovery:
                     device.id,
                 )
                 return suggested_area
-        
+
         # Fallback: Extract area from device name if not in any room group
         if device.name:
             suffixes = [
-                "Switch", "Light", "Floodlight", "Lamp", "Bulb", 
+                "Switch", "Light", "Floodlight", "Lamp", "Bulb",
                 "Dimmer", "Plug", "Outlet", "Fan"
             ]
             name_parts = device.name.strip().split()
-            
+
             # Remove trailing numbers
             if name_parts and name_parts[-1].isdigit():
                 name_parts = name_parts[:-1]
-            
+
             # Remove device type suffix
             for suffix in suffixes:
                 if name_parts and name_parts[-1] == suffix:
                     name_parts = name_parts[:-1]
                     break
-            
+
             # The first word is the area name
             if name_parts:
                 suggested_area = name_parts[0]
@@ -165,13 +164,13 @@ class HomeAssistantDiscovery:
                     device.name,
                 )
                 return suggested_area
-        
+
         return None
 
     def _determine_device_type(self, device: CyncDevice) -> str:
         """Determine the Home Assistant device type for a Cync device."""
         lp = f"{self.lp}_determine_device_type:"
-        
+
         if device.is_switch:
             dev_type = "switch"
             logger.debug(
@@ -218,7 +217,7 @@ class HomeAssistantDiscovery:
                 device.type,
             )
             dev_type = "light"
-        
+
         return dev_type
 
     async def _configure_entity_for_type(self, entity_registry_struct: dict, device: CyncDevice, dev_type: str):
@@ -226,26 +225,26 @@ class HomeAssistantDiscovery:
         if dev_type == "light":
             entity_registry_struct.update({"brightness": True, "brightness_scale": 100})
             entity_registry_struct["supported_color_modes"] = []
-            
+
             if device.supports_temperature:
                 entity_registry_struct["supported_color_modes"].append("color_temp")
                 entity_registry_struct["color_temp_kelvin"] = True
                 entity_registry_struct["min_kelvin"] = CYNC_MINK
                 entity_registry_struct["max_kelvin"] = CYNC_MAXK
-            
+
             if device.supports_rgb:
                 entity_registry_struct["supported_color_modes"].append("rgb")
                 entity_registry_struct["effect"] = True
                 entity_registry_struct["effect_list"] = list(FACTORY_EFFECTS_BYTES.keys())
-            
+
             # If no color support, default to brightness-only mode
             if not entity_registry_struct["supported_color_modes"]:
                 entity_registry_struct["supported_color_modes"] = ["brightness"]
-        
+
         elif dev_type == "switch":
             # Switch entities should not declare JSON schema
             entity_registry_struct.pop("schema", None)
-        
+
         elif dev_type == "fan":
             entity_registry_struct["platform"] = "fan"
             entity_registry_struct.pop("state_on", None)
@@ -264,7 +263,7 @@ class HomeAssistantDiscovery:
     async def create_bridge_device(self):
         """Create the bridge device for Home Assistant."""
         lp = f"{self.lp}create_bridge_device:"
-        
+
         bridge_device_registry_struct = {
             "identifiers": [str(g.uuid)],
             "manufacturer": CYNC_MANUFACTURER,
@@ -272,7 +271,7 @@ class HomeAssistantDiscovery:
             "sw_version": "1.0.0",
             "model": "Cync LAN Bridge",
         }
-        
+
         bridge_entity_registry_struct = {
             "default_entity_id": "sensor.cync_lan_bridge_status",
             "name": "Bridge Status",
@@ -280,7 +279,7 @@ class HomeAssistantDiscovery:
             "unique_id": str(g.uuid),
             "device": bridge_device_registry_struct,
         }
-        
+
         topic = f"{self.mqtt_client.ha_topic}/sensor/{g.uuid}/config"
         await self.mqtt_client.publish(topic, json.dumps(bridge_entity_registry_struct), retain=True)
         logger.debug("%s Published bridge device discovery", lp)

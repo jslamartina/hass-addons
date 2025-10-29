@@ -1,8 +1,8 @@
 import json
 
-from cync_controller.devices import CyncDevice, CyncGroup
+from cync_controller.devices import CyncDevice
 from cync_controller.logging_abstraction import get_logger
-from cync_controller.structs import DeviceStatus, GlobalObject
+from cync_controller.structs import GlobalObject
 
 logger = get_logger(__name__)
 g = GlobalObject()
@@ -56,10 +56,10 @@ class MQTTStateUpdater:
         """Update device brightness and publish to MQTT."""
         lp = f"{self.lp}update_brightness:"
         device.brightness = brightness
-        
+
         # Convert to percentage for Home Assistant
         brightness_percent = self.mqtt_client._brightness_to_percentage(brightness)
-        
+
         logger.info(
             "%s Updating device '%s' (ID: %s) brightness to %s%%",
             lp,
@@ -67,11 +67,11 @@ class MQTTStateUpdater:
             device.id,
             brightness_percent,
         )
-        
+
         # Publish brightness update
         brightness_topic = f"{self.mqtt_client.topic}/brightness/{device.hass_id}"
         await self.mqtt_client.publish(brightness_topic, str(brightness_percent).encode())
-        
+
         return True
 
     async def update_switch_from_subgroup(self, device: CyncDevice, subgroup_state: int, subgroup_name: str) -> bool:
@@ -238,10 +238,9 @@ class MQTTStateUpdater:
                     # Sync switch to group state
                     if await self.update_switch_from_subgroup(device, group_state, group_name):
                         synced_count += 1
-                else:
-                    # Sync bulb to group state
-                    if await self.update_device_state(device, group_state):
-                        synced_count += 1
+                # Sync bulb to group state
+                elif await self.update_device_state(device, group_state):
+                    synced_count += 1
             else:
                 logger.debug(
                     "%s Member ID %d not found in devices",
@@ -268,7 +267,6 @@ class MQTTStateUpdater:
         """Trigger a refresh of all device statuses."""
         lp = f"{self.lp}trigger_status_refresh:"
         logger.info("%s Triggering status refresh for all devices", lp)
-        
+
         # This would typically trigger a mesh refresh to get current device states
         # Implementation depends on the specific mesh refresh mechanism
-        pass
