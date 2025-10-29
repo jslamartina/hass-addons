@@ -55,8 +55,6 @@ class DiscoveryHelper:
         """Initialize discovery helper."""
         self.client = mqtt_client
 
-    async def register_single_device(self, device):
-        """Register a single device with Home Assistant via MQTT discovery."""
     async def register_single_device(self, device) -> bool:
         """Register a single device with Home Assistant via MQTT discovery."""
         lp = f"{self.client.lp}hass:"
@@ -412,7 +410,7 @@ class DiscoveryHelper:
                         dev_connections = [("bluetooth", device.mac.casefold())]
                         if not device.bt_only:
                             dev_connections.append(("mac", device.wifi_mac.casefold()))
-    
+
                         # Extract suggested area from group membership
                         # First, check if device belongs to any non-subgroup (room group)
                         suggested_area = None
@@ -428,7 +426,7 @@ class DiscoveryHelper:
                                         device.id,
                                     )
                                     break
-    
+
                         # Fallback: Extract area from device name if not in any room group
                         if not suggested_area and device.name:
                             # Common device type suffixes to remove
@@ -455,6 +453,7 @@ class DiscoveryHelper:
                             # The first word is the area name
                             if name_parts:
                                 suggested_area = name_parts[0]
+<<<<<<< HEAD
                                 logger.debug(
                                     "%s Extracted area '%s' from device name '%s' (fallback, not in any room group)",
                                     lp,
@@ -543,9 +542,9 @@ class DiscoveryHelper:
                                 device.is_light,
                                 device.is_switch,
                             )
-    
+
                         tpc_str_template = "{0}/{1}/{2}/config"
-    
+
                         if dev_type == "light":
                             entity_registry_struct.update({"brightness": True, "brightness_scale": 100})
                             # ALL lights with brightness must declare color modes
@@ -557,8 +556,8 @@ class DiscoveryHelper:
                                 entity_registry_struct["max_kelvin"] = CYNC_MAXK
                             if device.supports_rgb:
                                 entity_registry_struct["supported_color_modes"].append("rgb")
-                                entity_registry_struct["effect"] = True
-                                entity_registry_struct["effect_list"] = list(FACTORY_EFFECTS_BYTES.keys())
+                            entity_registry_struct["effect"] = True
+                            entity_registry_struct["effect_list"] = list(FACTORY_EFFECTS_BYTES.keys())
                             # If no color support, default to brightness-only mode
                             if not entity_registry_struct["supported_color_modes"]:
                                 entity_registry_struct["supported_color_modes"] = ["brightness"]
@@ -584,7 +583,7 @@ class DiscoveryHelper:
                             "high",
                             "max",
                             ]
-    
+
                         # Conditionally publish device discovery: skip device-level lights if feature flag is off
                         if dev_type == "light" and not CYNC_EXPOSE_DEVICE_LIGHTS:
                             logger.info(
@@ -593,7 +592,7 @@ class DiscoveryHelper:
                                 device.name,
                             )
                             continue
-    
+
                         tpc = tpc_str_template.format(self.client.ha_topic, dev_type, device_uuid)
                         try:
                             json_payload = json.dumps(entity_registry_struct, indent=2)
@@ -602,15 +601,15 @@ class DiscoveryHelper:
                             json_payload.encode(),
                             qos=0,
                             retain=False,
-                            )
+                        )
                             logger.info(
-                            "%s Registered %s: %s (ID: %s)",
-                            lp,
-                            dev_type,
-                            device.name,
-                            device.id,
+                                "%s Registered %s: %s (ID: %s)",
+                                lp,
+                                dev_type,
+                                device.name,
+                                device.id,
                             )
-    
+
                             # For fan entities, publish initial preset mode state
                             if device.is_fan_controller and device.brightness is not None:
                                 bri = device.brightness
@@ -634,7 +633,7 @@ class DiscoveryHelper:
                                     preset_mode = "high"
                                 else:
                                     preset_mode = "max"
-    
+
                                 preset_mode_topic = f"{self.client.topic}/status/{device_uuid}/preset"
                                 try:
                                     await self.client.client.publish(
@@ -657,10 +656,10 @@ class DiscoveryHelper:
                                         lp,
                                         device.name,
                                     )
-    
+
                         except Exception:
                             logger.exception("%s - Unable to publish mqtt message... skipped", lp)
-    
+
                 # Register groups (only subgroups)
                 subgroups = [g for g in g.ncync_server.groups.values() if g.is_subgroup]
                 logger.info("%s Registering %s subgroups...", lp, len(subgroups))

@@ -14,7 +14,7 @@ import aiomqtt
 from cync_controller.const import *
 from cync_controller.devices import CyncDevice, CyncGroup
 from cync_controller.logging_abstraction import get_logger
-from cync_controller.mqtt.discovery import DiscoveryHelper
+from cync_controller.mqtt.discovery import DiscoveryHelper, slugify
 from cync_controller.structs import DeviceStatus, FanSpeed, GlobalObject
 from cync_controller.utils import send_sigterm
 
