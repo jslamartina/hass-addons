@@ -453,14 +453,13 @@ class DiscoveryHelper:
                             # The first word is the area name
                             if name_parts:
                                 suggested_area = name_parts[0]
-<<<<<<< HEAD
                                 logger.debug(
                                     "%s Extracted area '%s' from device name '%s' (fallback, not in any room group)",
                                     lp,
                                     suggested_area,
                                     device.name,
                                 )
-    
+
                         device_registry_struct = {
                             "identifiers": [unique_id],
                             "manufacturer": CYNC_MANUFACTURER,
