@@ -2,8 +2,8 @@
   "folders": [
     {
       "name": "hass-addons",
-      "path": "."
-    }
+      "path": ".",
+    },
   ],
   "settings": {
     "editor.formatOnSave": false,

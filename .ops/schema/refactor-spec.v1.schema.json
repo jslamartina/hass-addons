@@ -17,8 +17,84 @@
     },
     "invariants": { "type": "array", "items": { "type": "string" } },
     "changes": { "type": "array", "items": { "type": "object" } },
-    "batches": { "type": "object" },
-    "checks": { "type": "object" },
+    "batches": {
+      "type": "object",
+      "properties": {
+        "strategy": {
+          "type": "string",
+          "enum": ["by-module", "by-change", "by-size"]
+        },
+        "size_limits": {
+          "type": "object",
+          "properties": {
+            "files_max": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "diff_lines_max": {
+              "type": "integer",
+              "minimum": 1
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "checks": {
+      "type": "object",
+      "properties": {
+        "commands": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["name", "run"],
+            "properties": {
+              "name": { "type": "string" },
+              "run": { "type": "string" },
+              "description": { "type": "string" }
+            },
+            "additionalProperties": false
+          }
+        },
+        "must_pass": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "batch_policy": {
+          "type": "string",
+          "enum": ["per-batch", "per-change", "final-only"]
+        },
+        "batch_completion_gates": {
+          "type": "object",
+          "required": ["required", "failure_threshold"],
+          "properties": {
+            "required": {
+              "type": "array",
+              "items": { "type": "string" }
+            },
+            "failure_threshold": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "retry_policy": {
+              "type": "string",
+              "enum": ["fix_and_retry", "skip_and_continue", "halt_execution"]
+            },
+            "escalation": {
+              "type": "string",
+              "enum": [
+                "manual_intervention_required",
+                "auto_retry",
+                "abort_execution"
+              ]
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
     "telemetry": { "type": "array", "items": { "type": "string" } },
     "abort_if": { "type": "array", "items": { "type": "string" } },
     "fallbacks": { "type": "array", "items": { "type": "string" } },
@@ -40,8 +116,15 @@
       "properties": {
         "dry_run": { "type": "boolean", "default": true },
         "confirm_each_batch": { "type": "boolean", "default": true },
-        "max_retries_per_step": { "type": "integer", "minimum": 0, "default": 2 },
-        "output_policy": { "type": "string", "default": "minimal_diff_with_rationale" },
+        "max_retries_per_step": {
+          "type": "integer",
+          "minimum": 0,
+          "default": 2
+        },
+        "output_policy": {
+          "type": "string",
+          "default": "minimal_diff_with_rationale"
+        },
         "overrides": {
           "type": "object",
           "default": {
@@ -50,8 +133,16 @@
             "extra_exclude_globs": ["**/*.snap"]
           },
           "properties": {
-            "max_files_per_batch": { "type": "integer", "minimum": 1, "default": 20 },
-            "max_diff_lines_per_batch": { "type": "integer", "minimum": 1, "default": 800 },
+            "max_files_per_batch": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 20
+            },
+            "max_diff_lines_per_batch": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 800
+            },
             "extra_exclude_globs": {
               "type": "array",
               "items": { "type": "string" },
@@ -62,6 +153,23 @@
         }
       },
       "additionalProperties": true
+    },
+    "batch_logs": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "batch_number": { "type": "integer" },
+          "message": { "type": "string" },
+          "timestamp": { "type": "string" },
+          "level": { "type": "string" },
+          "module": { "type": "string" },
+          "function": { "type": "string" },
+          "line": { "type": "integer" },
+          "extra_data": { "type": "object" }
+        },
+        "additionalProperties": false
+      }
     }
   },
   "additionalProperties": true

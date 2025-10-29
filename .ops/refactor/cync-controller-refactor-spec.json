@@ -4,7 +4,13 @@
   "goal": "Split monolithic cync-controller Python modules into focused packages without changing external interfaces; reduce file size and lint debt.",
   "scope": {
     "include": ["cync-controller/**", "cync-controller/src/cync_controller/**"],
-    "exclude": ["**/vendor/**", "**/gen/**", "**/__pycache__/**", "**/site-packages/**", "**/node_modules/**"]
+    "exclude": [
+      "**/vendor/**",
+      "**/gen/**",
+      "**/__pycache__/**",
+      "**/site-packages/**",
+      "**/node_modules/**"
+    ]
   },
   "invariants": [
     "External-facing interfaces (import paths, class/function names) MUST NOT change.",
@@ -119,12 +125,18 @@
         "run": "npm run format && npm run lint --silent --max-warnings=0"
       },
       {
-        "name": "unit",
-        "run": "pytest -q --disable-warnings --maxfail=1"
+        "name": "unit-all",
+        "run": "npm run test:unit"
       }
     ],
-    "must_pass": ["lint", "unit"],
-    "batch_policy": "per-batch"
+    "must_pass": ["lint", "unit-all"],
+    "batch_policy": "per-batch",
+    "batch_completion_gates": {
+      "required": ["lint", "unit-all"],
+      "failure_threshold": 0,
+      "retry_policy": "fix_and_retry",
+      "escalation": "manual_intervention_required"
+    }
   },
   "telemetry": [
     "count files > 600 lines before vs after",
@@ -133,7 +145,9 @@
     "PLR0912/PLR0915 counts before vs after"
   ],
   "abort_if": [
-    "Any file modified outside of cync-controller/src/cync_controller/**."
+    "Any file modified outside of cync-controller/src/cync_controller/**.",
+    "Batch completion requirements not met before proceeding to next batch.",
+    "Any failures in a full unit test run detected in current batch."
   ],
   "fallbacks": [
     "If public import paths shift, add re-exports to __init__.py to restore compatibility.",
@@ -141,11 +155,117 @@
   ],
   "execution": {
     "risk_tolerance": "aggressive",
-    "dry_run": true,
+    "dry_run": false,
     "max_retries_per_step": 2,
     "confirm_each_batch": true,
     "output_policy": "minimal_diff_with_rationale"
+  },
+  "batch_logs": [
+    {
+      "batch_number": 1,
+      "message": "Batch 1 completed: Split devices.py into focused modules",
+      "timestamp": "2025-10-29T00:00:00Z",
+      "level": "info",
+      "module": "batch_execution",
+      "function": "complete_batch_1",
+      "line": 0,
+      "extra_data": {
+        "files_created": ["devices/__init__.py", "devices/base_device.py", "devices/device_commands.py", "devices/group.py", "devices/tcp_device.py", "devices/tcp_packet_handler.py", "devices/shared.py"],
+        "test_results": "all_passing",
+        "line_count_reduction": "from 700+ lines to <200 per file"
+      }
+    },
+    {
+      "batch_number": 2,
+      "message": "Batch 2 started: MQTT client modularization - commands.py extraction",
+      "timestamp": "2025-10-29T02:30:00Z",
+      "level": "info",
+      "module": "batch_execution",
+      "function": "start_batch_2",
+      "line": 0,
+      "extra_data": {
+        "target": "mqtt_client.py split",
+        "initial_line_count": 2544,
+        "strategy": "extract by responsibility"
+      }
+    },
+    {
+      "batch_number": 2,
+      "message": "commands.py created successfully - extracted DeviceCommand, CommandProcessor, SetPowerCommand, SetBrightnessCommand",
+      "timestamp": "2025-10-29T02:35:00Z",
+      "level": "success",
+      "module": "batch_execution",
+      "function": "extract_commands",
+      "line": 0,
+      "extra_data": {
+        "file_created": "mqtt/commands.py",
+        "line_count": 186,
+        "methods_extracted": ["DeviceCommand", "CommandProcessor", "SetPowerCommand", "SetBrightnessCommand"],
+        "test_results": "all_passing"
+      }
+    },
+    {
+      "batch_number": 2,
+      "message": "discovery.py extraction in progress - DiscoveryHelper class created with slugify, register_single_device, homeassistant_discovery, create_bridge_device methods",
+      "timestamp": "2025-10-29T02:45:00Z",
+      "level": "info",
+      "module": "batch_execution",
+      "function": "extract_discovery",
+      "line": 0,
+      "extra_data": {
+        "file_created": "mqtt/discovery.py",
+        "line_count": 1017,
+        "methods_extracted": ["DiscoveryHelper", "slugify", "register_single_device", "trigger_device_rediscovery", "homeassistant_discovery", "create_bridge_device"],
+        "mqtt_client_line_count_after": 1588,
+        "lines_reduced": 956
+      }
+    },
+    {
+      "batch_number": 2,
+      "message": "BLOCKER: discovery.py has indentation errors from automated extraction - needs manual correction",
+      "timestamp": "2025-10-29T02:50:50Z",
+      "level": "warning",
+      "module": "batch_execution",
+      "function": "verify_batch_2",
+      "line": 0,
+      "extra_data": {
+        "issue": "IndentationError in discovery.py due to incorrect nested block handling during extraction",
+        "affected_lines": "multiple (primarily nested if/for blocks)",
+        "error_pattern": "expected an indented block after 'if' statement",
+        "root_cause": "Automated extraction with sed/python lost proper indentation when transforming self. to self.client.",
+        "fix_required": "Manual indentation correction or re-extraction with proper Python AST parsing",
+        "test_status": "cannot_run_tests_due_to_syntax_errors",
+        "files_blocking": ["mqtt/discovery.py"],
+        "next_steps": [
+          "Option 1: Fix indentation manually using Python AST tools",
+          "Option 2: Re-extract discovery.py with more careful transformation logic",
+          "Option 3: Use black/autopep8 to auto-format after correcting basic structure"
+        ]
+      }
+    },
+    {
+      "batch_number": 2,
+      "message": "Batch 2 incomplete - blocking on discovery.py indentation issues. 2/5 sub-modules extracted successfully (commands.py ✓, discovery.py ✗, state_updates.py pending, command_routing.py pending, client.py pending)",
+      "timestamp": "2025-10-29T02:50:50Z",
+      "level": "error",
+      "module": "batch_execution",
+      "function": "check_batch_completion",
+      "line": 0,
+      "extra_data": {
+        "completion_percentage": "40%",
+        "completed_modules": ["commands.py"],
+        "partial_modules": ["discovery.py - structure created but syntax errors"],
+        "pending_modules": ["state_updates.py", "command_routing.py", "client.py"],
+        "meets_completion_gates": false,
+        "escalation": "manual_intervention_required"
+      }
+    }
+  ],
+  "artifacts": {
+    "expected": [
+      "PR title/description per batch with summary of changes and metrics",
+      "Changelog entry under CHANGELOG.md",
+      "Diffstat and complexity report"
+    ]
   }
 }
-
-

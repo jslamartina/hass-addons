@@ -5,7 +5,7 @@ description: ACK pattern - MUST acknowledge rules before acting
 
 # Guard: ACK Required Before Action
 
-**CRITICAL:** On your first reply in any new thread/phase, acknowledge rules before taking any action.
+**CRITICAL:** On your first reply in any new thread/phase, state your LLM model name and that you acknowledge rules before taking any action.
 
 ## Required ACK Format
 

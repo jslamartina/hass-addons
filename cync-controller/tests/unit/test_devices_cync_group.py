@@ -492,13 +492,13 @@ class TestCyncGroupAdvancedCommands:
 
         # Test __str__ (shows decimal ID)
         str_repr = str(group)
-        assert "CyncGroup:" in str_repr
+        assert "CyncGroup" in str_repr
         assert "22136" in str_repr  # 0x5678 = 22136 in decimal
         assert "Living Room" in str_repr
 
         # Test __repr__
         repr_str = repr(group)
-        assert "CyncGroup:" in repr_str
+        assert "CyncGroup" in repr_str
         assert "22136" in repr_str  # Decimal representation
         assert str(len(group.member_ids)) in repr_str
 

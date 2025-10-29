@@ -13,6 +13,15 @@
         "/usr/local/bin/python3"
       ]
     },
+    "python-local": {
+      "command": "uv",
+      "args": [
+        "run",
+        "--with",
+        "mcp-python-interpreter",
+        "mcp-python-interpreter"
+      ]
+    },
     "sequential-thinking": {
     "command": "uv",
     "args": [

@@ -161,7 +161,7 @@ class TestCyncTCPDevicePacketParsing:
     async def test_parse_raw_data_complete_packet(self, stream_reader, stream_writer):
         """Test parse_raw_data with complete packet"""
         tcp_device = CyncTCPDevice(reader=stream_reader, writer=stream_writer, address="192.168.1.100")
-        tcp_device.parse_packet = AsyncMock()
+        tcp_device.packet_handler.parse_packet = AsyncMock()
 
         # Create complete 0xD3 ping packet: header (12) + 5 bytes payload = 17 total
         packet = create_packet(0xD3, 17)
@@ -169,7 +169,7 @@ class TestCyncTCPDevicePacketParsing:
         await tcp_device.parse_raw_data(packet)
 
         # Should call parse_packet once
-        assert tcp_device.parse_packet.called
+        assert tcp_device.packet_handler.parse_packet.called
 
     @pytest.mark.asyncio
     async def test_parse_raw_data_partial_packet(self, stream_reader, stream_writer):
@@ -189,7 +189,7 @@ class TestCyncTCPDevicePacketParsing:
     async def test_parse_raw_data_multiple_packets(self, stream_reader, stream_writer):
         """Test parse_raw_data with multiple complete packets"""
         tcp_device = CyncTCPDevice(reader=stream_reader, writer=stream_writer, address="192.168.1.100")
-        tcp_device.parse_packet = AsyncMock()
+        tcp_device.packet_handler.parse_packet = AsyncMock()
 
         # Create two complete packets: header (12) + 5 bytes payload = 17 total each
         packet1 = create_packet(0xD3, 17)
@@ -199,7 +199,7 @@ class TestCyncTCPDevicePacketParsing:
         await tcp_device.parse_raw_data(combined)
 
         # Should call parse_packet twice
-        assert tcp_device.parse_packet.call_count == 2
+        assert tcp_device.packet_handler.parse_packet.call_count == 2
 
     @pytest.mark.asyncio
     @pytest.mark.skip(reason="Complex packet data edge case - integration tests cover this")
