@@ -3,3 +3,4 @@ node_modules/
 *.md
 cync-controller/htmlcov/
 cync-controller/coverage.json
+.cursor/Dockerfile
