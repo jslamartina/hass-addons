@@ -55,8 +55,6 @@ class DiscoveryHelper:
         """Initialize discovery helper."""
         self.client = mqtt_client
 
-    async def register_single_device(self, device):
-        """Register a single device with Home Assistant via MQTT discovery."""
     async def register_single_device(self, device) -> bool:
         """Register a single device with Home Assistant via MQTT discovery."""
         lp = f"{self.client.lp}hass:"
@@ -433,15 +431,15 @@ class DiscoveryHelper:
                         if not suggested_area and device.name:
                             # Common device type suffixes to remove
                             suffixes = [
-                            "Switch",
-                            "Light",
-                            "Floodlight",
-                            "Lamp",
-                            "Bulb",
-                            "Dimmer",
-                            "Plug",
-                            "Outlet",
-                            "Fan",
+                                "Switch",
+                                "Light",
+                                "Floodlight",
+                                "Lamp",
+                                "Bulb",
+                                "Dimmer",
+                                "Plug",
+                                "Outlet",
+                                "Fan",
                             ]
                             name_parts = device.name.strip().split()
                             # Remove trailing numbers (e.g., "Floodlight 1" -> "Floodlight")
