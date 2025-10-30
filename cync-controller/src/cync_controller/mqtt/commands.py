@@ -137,7 +137,7 @@ class SetPowerCommand(DeviceCommand):
             pass
         else:
             # For individual devices: publish optimistic state immediately
-            await g.mqtt_client.update_device_state(self.device_or_group, self.state)
+            await g.mqtt_client.state_updater.update_device_state(self.device_or_group, self.state)
 
             # If this is a switch, also sync its group
             try:
@@ -147,7 +147,7 @@ class SetPowerCommand(DeviceCommand):
                         for group_id, group in g.ncync_server.groups.items():
                             if device.id in group.member_ids:
                                 # Sync all group devices to match this switch's new state
-                                await g.mqtt_client.sync_group_devices(group_id, self.state, group.name)
+                                await g.mqtt_client.state_updater.sync_group_devices(group_id, self.state, group.name)
             except Exception as e:
                 logger.warning("Group sync failed for switch: %s", e)
 
@@ -178,7 +178,7 @@ class SetBrightnessCommand(DeviceCommand):
             pass
         else:
             # For individual devices: publish optimistic brightness immediately
-            await g.mqtt_client.update_brightness(self.device_or_group, self.brightness)
+            await g.mqtt_client.state_updater.update_brightness(self.device_or_group, self.brightness)
 
     async def execute(self):
         """Execute the actual set_brightness command."""
