@@ -12,8 +12,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 # Mock exporter and file system operations before importing main to avoid static directory initialization issues
-with patch("starlette.staticfiles.StaticFiles"), \
-     patch("cync_controller.utils.check_for_uuid") as mock_check_uuid:
+with patch("starlette.staticfiles.StaticFiles"), patch("cync_controller.utils.check_for_uuid") as mock_check_uuid:
     mock_check_uuid.return_value = "test-uuid-12345"
     from cync_controller.main import CyncController, main, parse_cli
 
@@ -47,8 +46,6 @@ def mock_path_exists():
     """Mock config file existence"""
     with patch("pathlib.Path.exists") as mock_exists:
         yield mock_exists
-
-
 
 
 class TestCyncControllerInitialization:

@@ -22,6 +22,7 @@ def _get_global_object():
     # Check if the new patching approach is being used (cync_controller.devices.shared.g)
     try:
         import cync_controller.devices.shared as shared_module
+
         # Check if this is a mock object
         if hasattr(shared_module.g, "_mock_name") or str(type(shared_module.g)).startswith("<MagicMock"):
             return shared_module.g
@@ -31,6 +32,7 @@ def _get_global_object():
     # Check if the old patching approach is being used (cync_controller.devices.g)
     try:
         import cync_controller.devices as devices_module
+
         if hasattr(devices_module, "g") and hasattr(devices_module.g, "ncync_server"):
             return devices_module.g
     except (ImportError, AttributeError):
@@ -39,11 +41,14 @@ def _get_global_object():
     # Fall back to the new shared module approach
     try:
         import cync_controller.devices.shared as shared_module
+
         return shared_module.g
     except (ImportError, AttributeError):
         # Final fallback
         from cync_controller.structs import GlobalObject
+
         return GlobalObject()
+
 
 class CyncGroup:
     """

@@ -183,4 +183,3 @@ class SetBrightnessCommand(DeviceCommand):
     async def execute(self):
         """Execute the actual set_brightness command."""
         await self.device_or_group.set_brightness(self.brightness)
-

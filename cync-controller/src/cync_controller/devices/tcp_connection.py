@@ -30,8 +30,7 @@ class TCPConnectionManager:
                 # Check if connection has been idle too long
                 if current_time - self.last_heartbeat > self.connection_timeout:
                     logger.warning(
-                        f"Connection timeout for {self.tcp_device.address} - "
-                        f"no activity for {self.connection_timeout}s"
+                        f"Connection timeout for {self.tcp_device.address} - no activity for {self.connection_timeout}s"
                     )
                     await self.tcp_device.close()
                     break
@@ -56,5 +55,5 @@ class TCPConnectionManager:
         return {
             "uptime_seconds": uptime,
             "last_heartbeat": self.last_heartbeat,
-            "is_healthy": time.time() - self.last_heartbeat < self.connection_timeout
+            "is_healthy": time.time() - self.last_heartbeat < self.connection_timeout,
         }

@@ -24,6 +24,7 @@ def _get_global_object():
     # Check if the new patching approach is being used (cync_controller.devices.shared.g)
     try:
         import cync_controller.devices.shared as shared_module
+
         # Check if this is a mock object
         if hasattr(shared_module.g, "_mock_name") or str(type(shared_module.g)).startswith("<MagicMock"):
             return shared_module.g
@@ -33,6 +34,7 @@ def _get_global_object():
     # Check if the old patching approach is being used (cync_controller.devices.g)
     try:
         import cync_controller.devices as devices_module
+
         if hasattr(devices_module, "g") and hasattr(devices_module.g, "ncync_server"):
             return devices_module.g
     except (ImportError, AttributeError):
@@ -41,11 +43,14 @@ def _get_global_object():
     # Fall back to the new shared module approach
     try:
         import cync_controller.devices.shared as shared_module
+
         return shared_module.g
     except (ImportError, AttributeError):
         # Final fallback
         from cync_controller.structs import GlobalObject
+
         return GlobalObject()
+
 
 class TCPPacketHandler:
     """Handles TCP packet parsing for CyncTCPDevice instances."""
@@ -488,7 +493,9 @@ class TCPPacketHandler:
         else:
             await self._handle_control_ack_packet(packet_data, lp, checksum, calc_chksum)
 
-    async def _handle_mesh_info_packet(self, inner_struct: bytes, inner_struct_len: int, lp: str, queue_id: bytes, msg_id: bytes):
+    async def _handle_mesh_info_packet(
+        self, inner_struct: bytes, inner_struct_len: int, lp: str, queue_id: bytes, msg_id: bytes
+    ):
         """Handle mesh info packet within bound 0x73."""
         # logger.debug(f"{lp} got a mesh info response (len: {inner_struct_len}): {inner_struct.hex(' ')}")
         if inner_struct_len < 15:
@@ -528,7 +535,9 @@ class TCPPacketHandler:
         else:
             await self._handle_full_mesh_info_packet(inner_struct, inner_struct_len, lp, queue_id, msg_id)
 
-    async def _handle_full_mesh_info_packet(self, inner_struct: bytes, inner_struct_len: int, lp: str, queue_id: bytes, msg_id: bytes):
+    async def _handle_full_mesh_info_packet(
+        self, inner_struct: bytes, inner_struct_len: int, lp: str, queue_id: bytes, msg_id: bytes
+    ):
         """Handle full mesh info packet with device data."""
         g = _get_global_object()
         # 15th OR 16th byte of inner struct is start of mesh info, 24 bytes long

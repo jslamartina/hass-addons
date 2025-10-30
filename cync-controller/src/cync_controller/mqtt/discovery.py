@@ -89,11 +89,11 @@ class DiscoveryHelper:
                     if not group.is_subgroup and device.id in group.member_ids:
                         suggested_area = group.name
                         logger.debug(
-                        "%s Using group '%s' as area for device '%s' (ID: %s)",
-                        lp,
-                        suggested_area,
-                        device.name,
-                        device.id,
+                            "%s Using group '%s' as area for device '%s' (ID: %s)",
+                            lp,
+                            suggested_area,
+                            device.name,
+                            device.id,
                         )
                         break
 
@@ -230,9 +230,9 @@ class DiscoveryHelper:
                 switch_dimmable = (
                     bool(
                         getattr(
-                        getattr(device.metadata, "capabilities", None),
-                        "dimmable",
-                        False,
+                            getattr(device.metadata, "capabilities", None),
+                            "dimmable",
+                            False,
                         )
                     )
                     if device.is_switch
@@ -333,25 +333,25 @@ class DiscoveryHelper:
                     preset_mode_topic = f"{self.client.topic}/status/{device.hass_id}/preset"
                     try:
                         await self.client.client.publish(
-                        preset_mode_topic,
-                        preset_mode.encode(),
-                        qos=0,
-                        retain=True,
-                        timeout=3.0,
+                            preset_mode_topic,
+                            preset_mode.encode(),
+                            qos=0,
+                            retain=True,
+                            timeout=3.0,
                         )
                         logger.info(
-                        "%s FAN INITIAL PRESET: Published '%s' (brightness=%s) for '%s' to %s",
-                        lp,
-                        preset_mode,
-                        bri,
-                        device.name,
-                        preset_mode_topic,
+                            "%s FAN INITIAL PRESET: Published '%s' (brightness=%s) for '%s' to %s",
+                            lp,
+                            preset_mode,
+                            bri,
+                            device.name,
+                            preset_mode_topic,
                         )
                     except Exception:
                         logger.warning(
-                        "%s Failed to publish initial fan preset mode for '%s'",
-                        lp,
-                        device.name,
+                            "%s Failed to publish initial fan preset mode for '%s'",
+                            lp,
+                            device.name,
                         )
 
             except Exception:
@@ -362,6 +362,7 @@ class DiscoveryHelper:
         except Exception:
             logger.exception("%s Error registering device %s", lp, device.name)
             return False
+
     async def trigger_device_rediscovery(self) -> bool:
         """Trigger rediscovery of all devices currently in the devices dictionary."""
         lp = f"{self.client.lp}hass:"
@@ -379,6 +380,7 @@ class DiscoveryHelper:
         else:
             logger.info("%s Device rediscovery completed", lp)
             return True
+
     async def homeassistant_discovery(self) -> bool:
         """Build each configured Cync device for HASS device registry"""
         lp = f"{self.client.lp}hass:"
@@ -469,11 +471,11 @@ class DiscoveryHelper:
                             "model": model_str,
                             "via_device": str(g.uuid),
                         }
-    
+
                         # Add suggested_area if we successfully extracted one
                         if suggested_area:
                             device_registry_struct["suggested_area"] = suggested_area
-    
+
                         entity_registry_struct = {
                             "default_entity_id": default_entity_id,
                             # set to None if only device name is relevant, this sets entity name
@@ -573,14 +575,18 @@ class DiscoveryHelper:
                             entity_registry_struct["command_topic"] = f"{self.client.topic}/set/{device_uuid}"
                             entity_registry_struct["payload_on"] = "ON"
                             entity_registry_struct["payload_off"] = "OFF"
-                            entity_registry_struct["preset_mode_command_topic"] = f"{self.client.topic}/set/{device_uuid}/preset"
-                            entity_registry_struct["preset_mode_state_topic"] = f"{self.client.topic}/status/{device_uuid}/preset"
+                            entity_registry_struct["preset_mode_command_topic"] = (
+                                f"{self.client.topic}/set/{device_uuid}/preset"
+                            )
+                            entity_registry_struct["preset_mode_state_topic"] = (
+                                f"{self.client.topic}/status/{device_uuid}/preset"
+                            )
                             entity_registry_struct["preset_modes"] = [
-                            "off",
-                            "low",
-                            "medium",
-                            "high",
-                            "max",
+                                "off",
+                                "low",
+                                "medium",
+                                "high",
+                                "max",
                             ]
 
                         # Conditionally publish device discovery: skip device-level lights if feature flag is off
@@ -596,11 +602,11 @@ class DiscoveryHelper:
                         try:
                             json_payload = json.dumps(entity_registry_struct, indent=2)
                             _ = await self.client.client.publish(
-                            tpc,
-                            json_payload.encode(),
-                            qos=0,
-                            retain=False,
-                        )
+                                tpc,
+                                json_payload.encode(),
+                                qos=0,
+                                retain=False,
+                            )
                             logger.info(
                                 "%s Registered %s: %s (ID: %s)",
                                 lp,
@@ -686,10 +692,10 @@ class DiscoveryHelper:
 
                     if not has_light_devices:
                         logger.info(
-                        "%s Skipping light entity for group '%s' (ID: %s) - no light-compatible devices",
-                        lp,
-                        group.name,
-                        group.id,
+                            "%s Skipping light entity for group '%s' (ID: %s) - no light-compatible devices",
+                            lp,
+                            group.name,
+                            group.id,
                         )
                         continue
 
@@ -743,35 +749,35 @@ class DiscoveryHelper:
                         json_payload = json.dumps(entity_registry_struct, indent=2)
                         logger.debug("%s GROUP JSON for %s:\n%s", lp, group.name, json_payload)
                         logger.info(
-                        "[SUBGROUP_PUBLISHING] Publishing group '%s' to topic: %s",
-                        group.name,
-                        tpc,
+                            "[SUBGROUP_PUBLISHING] Publishing group '%s' to topic: %s",
+                            group.name,
+                            tpc,
                         )
                         publish_result = await self.client.client.publish(
-                        tpc,
-                        json_payload.encode(),
-                        qos=0,
-                        retain=False,
+                            tpc,
+                            json_payload.encode(),
+                            qos=0,
+                            retain=False,
                         )
                         logger.info(
-                        "[SUBGROUP_PUBLISHED] ✓ Group '%s' (ID: %s) published successfully. Result: %s",
-                        group.name,
-                        group.id,
-                        publish_result,
+                            "[SUBGROUP_PUBLISHED] ✓ Group '%s' (ID: %s) published successfully. Result: %s",
+                            group.name,
+                            group.id,
+                            publish_result,
                         )
                         logger.info(
-                        "%s Registered group '%s' (ID: %s) with %s devices",
-                        lp,
-                        group.name,
-                        group.id,
-                        len(group.member_ids),
+                            "%s Registered group '%s' (ID: %s) with %s devices",
+                            lp,
+                            group.name,
+                            group.id,
+                            len(group.member_ids),
                         )
                     except Exception:
                         logger.exception(
-                        "[SUBGROUP_ERROR] ✗ Failed to publish group '%s' (ID: %s) to topic %s",
-                        group.name,
-                        group.id,
-                        tpc,
+                            "[SUBGROUP_ERROR] ✗ Failed to publish group '%s' (ID: %s) to topic %s",
+                            group.name,
+                            group.id,
+                            tpc,
                         )
 
             except aiomqtt.MqttCodeError as mqtt_code_exc:
@@ -786,6 +792,7 @@ class DiscoveryHelper:
                 ret = True
         logger.debug("%s Discovery complete (success: %s)", lp, ret)
         return ret
+
     async def create_bridge_device(self) -> bool:
         """Create the device / entity registry config for the Cync Controller bridge itself."""
         global bridge_device_reg_struct  # noqa: PLW0603
@@ -917,7 +924,9 @@ class DiscoveryHelper:
         if ret is False:
             logger.error("%s Failed to publish export server running entity config", lp)
         status = "ON" if g.export_server and g.export_server.running is True else "OFF"
-        pub_tasks.append(self.client.publish(f"{self.client.topic}/status/bridge/export_server/running", status.encode()))
+        pub_tasks.append(
+            self.client.publish(f"{self.client.topic}/status/bridge/export_server/running", status.encode())
+        )
 
         entity_unique_id = f"{bridge_base_unique_id}_mqtt_client_connected"
         mqtt_client_entity_conf = tcp_server_entity_conf.copy()
