@@ -95,9 +95,19 @@ wait_for_ha() {
   local retry_delay=5
 
   while [ $retry_count -lt $max_retries ]; do
-    # Check if onboarding endpoint responds (doesn't require auth)
+    # Check if onboarding endpoint responds (for fresh HA - doesn't require auth)
     if curl -sf "$HA_URL/api/onboarding" > /dev/null 2>&1; then
-      log_success "Home Assistant API is responsive"
+      log_success "Home Assistant API is responsive (onboarding available)"
+      return 0
+    fi
+
+    # Fallback check for already-onboarded HA: check /api/ endpoint
+    # HTTP 401 (Unauthorized) = HA is running but requires auth (onboarded)
+    # HTTP 200 (OK) = HA is running and accessible
+    local api_check
+    api_check=$(curl -s -o /dev/null -w "%{http_code}" "$HA_URL/api/" 2>&1)
+    if [ "$api_check" = "401" ] || [ "$api_check" = "200" ]; then
+      log_success "Home Assistant API is responsive (already onboarded)"
       return 0
     fi
 
@@ -114,13 +124,23 @@ wait_for_ha() {
 check_onboarding_status() {
   log_info "Checking onboarding status..."
 
-  # Try to access onboarding endpoint
+  # Try to access onboarding endpoint and capture HTTP status code
+  # Use -f flag to fail on errors, but capture status code separately
+  local http_code
   local response
+  http_code=$(curl -s -o /dev/null -w "%{http_code}" "$HA_URL/api/onboarding" 2> /dev/null || echo "000")
+
+  # If endpoint returns 404, onboarding is complete (endpoint no longer available)
+  if [ "$http_code" = "404" ]; then
+    log_info "Onboarding API returns 404 - onboarding already completed"
+    return 1
+  fi
+
+  # If not 404, try to get the response body (will work for 200 or other codes)
   response=$(curl -sf "$HA_URL/api/onboarding" 2> /dev/null || echo "")
 
   if [ -z "$response" ]; then
-    log_info "Onboarding API not available, checking if users exist..."
-    # Try to get a token - if this fails, onboarding is needed
+    log_info "Onboarding API not available (HTTP $http_code), assuming onboarding needed"
     return 0
   fi
 

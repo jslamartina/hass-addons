@@ -13,6 +13,7 @@ description: ACK pattern - MUST acknowledge rules before acting
 
 ```
 ACK:{
+  model_name: "My model name is {The name of your LLM model}."
   rules_you_will_follow: [list 7 executive rules from _00-exec-rules.mdc],
   how_you_will_verify: [3 bullets max - how you'll verify you followed each rule]
 }

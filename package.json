@@ -28,7 +28,7 @@
     "playwright:delete-mqtt-entities": "ts-node scripts/playwright/delete-mqtt-entities.ts",
     "playwright:delete-all-except-bridge": "ts-node scripts/playwright/delete-all-mqtt-entities-except-bridge.ts",
     "playwright:delete-all-except-bridge:dry-run": "DRY_RUN=true ts-node scripts/playwright/delete-all-mqtt-entities-except-bridge.ts",
-    "playwright:test": "npx playwright test"
+    "playwright:test": "npx playwright test --workers=1"
   },
   "repository": {
     "type": "git",

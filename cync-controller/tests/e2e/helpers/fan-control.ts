@@ -19,10 +19,8 @@ export async function findFanCard(page: Page, name: string): Promise<Locator> {
   await page.waitForTimeout(1500);
 
   // Return the more-info dialog
-  // It's at: document > home-assistant > ha-more-info-dialog
-  // The dialog is inside shadow DOM, so we use getByText from the page to find content inside it
-  // This pierces the shadow DOM boundaries automatically
-  const moreInfo = page.locator("ha-more-info-dialog");
+  // The dialog is inside shadow DOM, so we use getByRole which pierces shadow DOM
+  const moreInfo = page.getByRole("alertdialog").first();
 
   // Wait for dialog to be attached to DOM and visible
   await expect(moreInfo).toBeAttached({ timeout: 5000 });
@@ -83,26 +81,63 @@ export async function setFanSlider(
 }
 
 /**
- * Select a preset mode from the dropdown
+ * Select a preset mode from buttons or dropdown
  */
 export async function selectFanPreset(
   page: Page,
   card: Locator,
   preset: string,
 ): Promise<void> {
-  // Find preset dropdown - use page-level locator
-  const presetSelect = page.locator("ha-select").first();
+  // First, try to find preset buttons (newer UI style)
+  // Use page-level getByRole which pierces shadow DOM
+  const presetButton = page.getByRole("button", {
+    name: new RegExp(preset, "i"),
+  }).first();
 
-  if ((await presetSelect.count()) === 0) {
-    console.log(
-      `    Preset dropdown not found - preset feature may not be available`,
-    );
+  if ((await presetButton.count()) > 0) {
+    // Preset buttons found - verify it's visible and clickable
+    await expect(presetButton).toBeVisible({ timeout: 3000 });
+    // Use force click in case dialog intercepts pointer events
+    await presetButton.click({ force: true });
+    await page.waitForTimeout(1000);
     return;
   }
 
-  // Click to open dropdown
-  await presetSelect.click();
+  // Fallback: look for combobox (using page-level getByRole to pierce shadow DOM)
+  const presetCombobox = page.getByRole("combobox", {
+    name: /preset mode/i,
+  }).first();
+
+  // Wait for combobox to be visible (might take time for dialog to render)
+  // Also ensure dialog is still open
+  const dialog = page.getByRole("alertdialog").first();
+  try {
+    await expect(dialog).toBeAttached({ timeout: 2000 });
+    await expect(presetCombobox).toBeVisible({ timeout: 5000 });
+  } catch {
+    // If dialog closed or combobox not visible, check if combobox exists at all
+    if ((await presetCombobox.count()) === 0) {
+      throw new Error(
+        `Preset mode '${preset}' not found - dialog may have closed or combobox unavailable`,
+      );
+    }
+    // If dialog closed, we need to wait for UI to settle
+    await page.waitForTimeout(1000);
+    // Retry visibility check
+    await expect(presetCombobox).toBeVisible({ timeout: 3000 });
+  }
+
+  // Wait for combobox to be ready (dropdown closed from previous selection)
   await page.waitForTimeout(500);
+
+  // Click to open dropdown - ensure it's not already expanded
+  const isExpanded = await presetCombobox.getAttribute("aria-expanded");
+  if (isExpanded !== "true") {
+    // Verify combobox is still visible before clicking
+    await expect(presetCombobox).toBeVisible({ timeout: 3000 });
+    await presetCombobox.click({ force: true });
+    await page.waitForTimeout(500);
+  }
 
   // Click the preset option from the dropdown menu
   const presetOption = page.getByRole("option", {
@@ -110,10 +145,11 @@ export async function selectFanPreset(
   });
 
   if ((await presetOption.count()) === 0) {
-    console.log(`    Preset option '${preset}' not found in dropdown`);
-    return;
+    throw new Error(`Preset option '${preset}' not found in dropdown`);
   }
 
+  // Verify option is visible before clicking
+  await expect(presetOption).toBeVisible({ timeout: 3000 });
   await presetOption.click();
 
   // Wait for state update
@@ -121,28 +157,71 @@ export async function selectFanPreset(
 }
 
 /**
- * Get the current fan percentage from the card
+ * Get the current fan percentage from preset mode
  */
 export async function getFanPercentage(
   page: Page,
   card: Locator,
 ): Promise<number> {
-  // Look for the slider control which shows current percentage
-  const slider = page.locator("ha-control-slider").first();
+  const presetMap: Record<string, number> = {
+    off: 0,
+    low: 20,
+    medium: 50,
+    high: 75,
+    max: 100,
+  };
 
-  if ((await slider.count()) === 0) {
-    return 0;
+  // First, try to read from preset buttons (check for pressed/selected state)
+  // Use page-level getByRole which pierces shadow DOM
+  for (const [presetName, percent] of Object.entries(presetMap)) {
+    const presetButton = page
+      .getByRole("button", {
+        name: new RegExp(presetName, "i"),
+      })
+      .first();
+
+    if ((await presetButton.count()) > 0) {
+      // Verify button is visible before checking attributes
+      try {
+        await expect(presetButton).toBeVisible({ timeout: 2000 });
+      } catch {
+        // Button exists but not visible - skip this preset and continue searching
+        continue;
+      }
+      const isPressed = await presetButton.getAttribute("aria-pressed");
+      const className = await presetButton.getAttribute("class");
+      const hasSelectedClass =
+        className?.includes("selected") || className?.includes("active");
+
+      if (isPressed === "true" || hasSelectedClass) {
+        return percent;
+      }
+    }
   }
 
-  // Get aria-valuenow from the slider
-  const percentage = await slider.getAttribute("aria-valuenow");
-  if (!percentage) {
-    return 0;
+  // Fallback: try to read from combobox (using page-level getByRole to pierce shadow DOM)
+  const presetCombobox = page.getByRole("combobox", {
+    name: /preset mode/i,
+  }).first();
+
+  if ((await presetCombobox.count()) > 0) {
+    await expect(presetCombobox).toBeVisible({ timeout: 3000 });
+    const comboboxText = (await presetCombobox.textContent()) || "";
+    const preset = comboboxText.toLowerCase().trim();
+    // Extract preset name from text (e.g., "medium" from "Preset mode\nmedium")
+    const presetMatch = comboboxText.match(/\b(off|low|medium|high|max)\b/i);
+    if (presetMatch) {
+      return presetMap[presetMatch[1].toLowerCase()] || 0;
+    }
+    return presetMap[preset] || 0;
   }
 
-  // Convert from 0-255 range back to 0-100 percentage
-  const value = parseInt(percentage, 10);
-  return Math.round((value / 255) * 100);
+  // If we can't find preset controls, throw an error instead of silently returning a default
+  // Check if fan is on to provide better error message
+  const isOn = await isFanOn(page, card);
+  throw new Error(
+    `Could not determine fan percentage - preset controls not found. Fan is ${isOn ? "on" : "off"}.`,
+  );
 }
 
 /**
@@ -156,6 +235,8 @@ export async function toggleFanPower(page: Page, card: Locator): Promise<void> {
     throw new Error("Could not find fan toggle switch");
   }
 
+  // Verify switch is visible before clicking
+  await expect(toggleSwitch).toBeVisible({ timeout: 3000 });
   // Use force: true because the dialog may intercept pointer events
   await toggleSwitch.click({ force: true });
   await page.waitForTimeout(2000); // Wait for state change and ACK
