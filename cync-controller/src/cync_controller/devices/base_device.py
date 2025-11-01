@@ -119,7 +119,7 @@ class CyncDevice(DeviceCommands):
     def is_hvac(self) -> bool:
         if self._is_hvac is not None:
             return self._is_hvac
-        if self.type is None:
+        if self.type is not None:
             # Try to determine if the device is HVAC if _is_hvac is not set
             capabilities = getattr(self, "Capabilities", None)
             device_types = getattr(self, "DeviceTypes", None)
@@ -130,7 +130,7 @@ class CyncDevice(DeviceCommands):
                 or self.type in capabilities.get("COOL", set())
                 or self.type in device_types.get("THERMOSTAT", set())
             )
-        return None
+        return False
 
     @is_hvac.setter
     def is_hvac(self, value: bool) -> None:

@@ -1,3 +1,35 @@
+## 0.0.4.14
+**Refactoring and Test Infrastructure Improvements**
+
+### Fixed
+- **Container deployment**: Fixed config.yaml image line being commented out, which prevented proper container deployment
+  - Impact: Add-on now deploys correctly from container registry
+  - Location: `config.yaml` line 5
+
+### Changed
+- **MQTT client refactoring**: Major restructuring of MQTT client for improved maintainability
+  - Modularized device discovery and classification logic
+  - Moved slugify and discovery logic to dedicated mqtt module
+  - Enhanced area extraction logic for better device grouping
+  - Location: `mqtt_client.py`, `devices.py`
+
+- **Python module organization**: Modularized Python codebase for better separation of concerns
+  - Device type metadata extracted to separate module
+  - Improved mock paths for discovery and global state in tests
+  - Enhanced code formatting and whitespace consistency
+  - Location: Multiple modules across `src/cync_controller/`
+
+- **Test infrastructure**: Enhanced Playwright test commands and fan control tests
+  - Updated test setup and configuration
+  - Fixed failing unit tests related to file permissions and paths
+  - Improved test coverage for device operations
+  - Location: `tests/` directory
+
+### Technical Details
+- Refactored MQTT discovery to improve code readability and maintainability
+- Enhanced onboarding automation capabilities
+- Zero breaking changes - backward compatible with existing configuration
+
 ## 0.0.4.13
 **Production-Grade Logging, Test Infrastructure, and Bug Fixes**
 
