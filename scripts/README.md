@@ -62,6 +62,108 @@ LONG_LIVED_ACCESS_TOKEN=
 
 ## Scripts
 
+### `reset-ha-to-fresh-onboarded.sh`
+
+Complete factory reset + automated onboarding in one command.
+
+**Purpose:** Fast way to get from any state to "fresh but onboarded" state. Combines `reset-ha-to-fresh.sh` + `setup-fresh-ha.sh` into one command.
+
+**Usage:**
+```bash
+./scripts/reset-ha-to-fresh-onboarded.sh
+```
+
+**What It Does:**
+1. Resets HA to fresh state (calls `reset-ha-to-fresh.sh`)
+2. Runs automated onboarding (calls `setup-fresh-ha.sh`)
+3. Results in fully configured HA with EMQX and Cync Controller
+
+**When to Use:**
+- Quick iteration: need fresh onboarded state repeatedly
+- Testing the complete setup flow
+- Don't need to manually test fresh install steps
+
+**Time:** ~3-4 minutes total
+
+---
+
+### `reset-ha-to-fresh.sh`
+
+Complete factory reset of Home Assistant - **equivalent to rebuilding the devcontainer** - returns to fresh state.
+
+**Purpose:** Recreates the exact conditions of a fresh devcontainer build without the 10-minute rebuild time. Essential for testing fresh install scenarios and debugging initialization errors that only appear on first boot.
+
+**Usage:**
+```bash
+./scripts/reset-ha-to-fresh.sh
+```
+
+**What It Does:**
+
+1. **Stop and Remove Container**
+   - Stops Home Assistant Core
+   - **Removes homeassistant container** to release all file locks
+   - Ensures database files (including WAL) are truly deleted
+
+2. **Complete Wipe (Matches Devcontainer Rebuild)**
+   - Deletes `/tmp/supervisor_data/homeassistant/*` (all config, database, .storage)
+   - Deletes `/tmp/supervisor_data/backup/*` (all backups)
+   - Deletes `/tmp/supervisor_data/media/*` (media files)
+   - Deletes `/tmp/supervisor_data/ssl/*` (certificates)
+   - Deletes `/tmp/supervisor_data/tmp/*` (temporary files)
+   - **Identical to a fresh devcontainer** - nothing persists
+
+3. **Fresh Start**
+   - Starts HA Core (creates fresh container)
+   - Waits for HA to initialize and become responsive
+   - Accepts both HTTP 200 and 404 as valid fresh states (404 = no owner user yet)
+
+4. **Completion**
+   - HA is now in fresh state
+   - Ready for manual testing or running `setup-fresh-ha.sh`
+   - Allows you to debug initialization issues that only occur on first boot
+
+**Safety Features:**
+
+- ✅ Confirmation required (must type "yes")
+- ✅ Preserves addon code in `addons/local/`
+- ✅ Verifies wipe worked by checking onboarding state
+- ✅ Detailed error messages with debug steps
+- ✅ Proper container removal to avoid file lock issues
+
+**When to Use:**
+
+- Testing fresh install scenarios repeatedly
+- Debugging initialization errors that only happen on brand new builds
+- Need to verify behavior on completely clean HA state
+- Want devcontainer rebuild equivalent without 10-minute wait
+
+**Technical Details:**
+
+**Why remove the container?**
+Linux filesystems allow deleted files to persist while processes have them open. The homeassistant container's Python process keeps database files (including SQLite WAL files) open. Simply deleting files from the host leaves them accessible in memory through file descriptors. Removing the container guarantees all file descriptors are closed and deleted data is truly gone.
+
+**What's a WAL file?**
+SQLite Write-Ahead Log - changes written to `.db-wal` before committing to main `.db` file. Can persist state even after deleting the main database.
+
+**Examples:**
+
+```bash
+# Reset to fresh state
+./scripts/reset-ha-to-fresh.sh
+
+# Then manually test fresh install, OR run automated setup
+./scripts/setup-fresh-ha.sh
+```
+
+**Time Savings:**
+
+- Factory reset: ~2-3 minutes
+- Devcontainer rebuild: ~10 minutes
+- **Savings: ~7 minutes per iteration**
+
+---
+
 ### `setup-fresh-ha.sh`
 
 Automated setup script for fresh Home Assistant installations.
@@ -359,6 +461,85 @@ sudo python3 scripts/delete-mqtt-safe.py
 - ✅ Clears restore state (removes history memory)
 - ✅ Safe dry-run mode for preview
 - ✅ Comprehensive logging and backup creation
+
+---
+
+### `monitor-test-memory.sh`
+
+Memory usage monitor for test commands (particularly `npm run test:unit`).
+
+**Purpose:** Tracks RAM usage of test processes and their children to help identify memory-intensive operations.
+
+**Usage:**
+```bash
+# Monitor default test:unit command
+./scripts/monitor-test-memory.sh
+
+# Or via npm script
+npm run test:unit:mem
+
+# Monitor a custom command
+./scripts/monitor-test-memory.sh "cd cync-controller && pytest tests/unit/ -n 2"
+```
+
+**What It Shows:**
+
+1. **Real-time monitoring** (every 2.5 seconds):
+   - Current memory usage (sum of all test processes)
+   - Peak memory usage
+   - Number of processes being monitored
+
+2. **Final summary:**
+   - Peak memory usage (MB)
+   - Initial system memory
+   - Final system memory
+   - Memory delta (system-wide change)
+
+3. **Detailed metrics** (if `/usr/bin/time` available):
+   - Maximum resident set size
+   - User time
+   - System time
+   - Elapsed time
+
+**Output Example:**
+```
+=== Memory Monitor for: npm run test:unit ===
+
+Initial system memory in use: 2048 MB
+
+Monitoring memory usage (sampling every 0.5s)...
+Current:  156 MB | Peak:  256 MB | Processes:  8
+
+=== Memory Usage Summary ===
+Peak memory usage: 256 MB
+Initial system memory: 2048 MB
+Final system memory: 2064 MB
+System memory delta: +16 MB
+
+=== Detailed Timing & Memory (using time command) ===
+Maximum resident set size (kbytes): 262144
+User time (seconds): 12.34
+System time (seconds): 2.45
+Elapsed (wall clock) time (h:mm:ss or m:ss): 0:17.23
+```
+
+**How It Works:**
+
+1. Starts the test command in background
+2. Monitors the process tree (parent + all children) using `ps` to get RSS (Resident Set Size)
+3. Samples every 0.5 seconds, displays updates every 2.5 seconds
+4. Tracks peak memory across all processes
+5. Reports final statistics including system-wide memory changes
+
+**Use Cases:**
+- Identifying memory-intensive test configurations
+- Comparing RAM usage between different pytest worker counts (`-n auto` vs `-n 2`)
+- Debugging OOM (Out of Memory) errors
+- Optimizing test execution to reduce memory footprint
+
+**See also:**
+- `package.json` - `test:unit:mem` npm script
+- `cync-controller/pytest.ini` - Pytest configuration (adjust `-n auto` to limit workers)
 
 ---
 

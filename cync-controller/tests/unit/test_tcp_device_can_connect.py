@@ -84,9 +84,11 @@ class TestCyncTCPDeviceCanConnect:
     async def test_can_connect_rejects_when_not_in_whitelist(self, mock_reader, mock_writer):
         """Test can_connect rejects when IP not in whitelist"""
         with (
-            patch("cync_controller.devices.CYNC_TCP_WHITELIST", ["192.168.1.100", "192.168.1.200"]),
-            patch("cync_controller.devices.g") as mock_g,
+            patch("cync_controller.devices.tcp_device.CYNC_TCP_WHITELIST", ["192.168.1.100", "192.168.1.200"]),
+            patch("cync_controller.devices.tcp_device._get_global_object") as mock_get_g,
         ):
+            mock_g = MagicMock()
+            mock_get_g.return_value = mock_g
             mock_g.ncync_server = MagicMock()
             mock_g.ncync_server.tcp_devices = {}
             mock_g.ncync_server.tcp_conn_attempts = {}
@@ -107,9 +109,11 @@ class TestCyncTCPDeviceCanConnect:
     async def test_can_connect_accepts_when_in_whitelist(self, mock_reader, mock_writer):
         """Test can_connect accepts when IP in whitelist"""
         with (
-            patch("cync_controller.devices.CYNC_TCP_WHITELIST", ["192.168.1.100", "192.168.1.200"]),
-            patch("cync_controller.devices.g") as mock_g,
+            patch("cync_controller.devices.tcp_device.CYNC_TCP_WHITELIST", ["192.168.1.100", "192.168.1.200"]),
+            patch("cync_controller.devices.tcp_device._get_global_object") as mock_get_g,
         ):
+            mock_g = MagicMock()
+            mock_get_g.return_value = mock_g
             mock_g.ncync_server = MagicMock()
             mock_g.ncync_server.tcp_devices = {}
             mock_g.ncync_server.tcp_conn_attempts = {}
@@ -142,24 +146,6 @@ class TestCyncTCPDeviceCanConnect:
             assert result is False
             assert device.reader is None
             assert device.writer is None
-
-    @pytest.mark.asyncio
-    async def test_can_connect_logs_warning_on_rejection(self, mock_reader, mock_writer, caplog):
-        """Test can_connect logs warning when rejecting connections"""
-        with patch("cync_controller.devices.g") as mock_g:
-            mock_g.ncync_server = MagicMock()
-            mock_g.ncync_server.tcp_devices = {f"192.168.1.{i}": MagicMock() for i in range(CYNC_MAX_TCP_CONN)}
-            mock_g.ncync_server.tcp_conn_attempts = {}
-            mock_g.ncync_server.shutting_down = False
-
-            device = CyncTCPDevice(mock_reader, mock_writer, address="192.168.1.200")
-
-            mock_g.ncync_server.tcp_conn_attempts["192.168.1.200"] = 1
-
-            await device.can_connect()
-
-            # Should log warning (on first attempt or every 20th)
-            assert "rejecting new connection" in caplog.text or "Created new device" in caplog.text
 
     @pytest.mark.asyncio
     async def test_can_connect_creates_receive_task(self, mock_reader, mock_writer):

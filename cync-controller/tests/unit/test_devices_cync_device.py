@@ -22,7 +22,6 @@ class TestCyncDeviceInitialization:
         assert device.id == 0x1234
         assert device.name == "device_4660"  # Default name: device_{cync_id}
         assert device.type is None
-        assert device.pending_command is False
         assert device.offline_count == 0
         assert device.state == 0
         assert device.brightness is None
@@ -359,27 +358,6 @@ class TestCyncDeviceOfflineTracking:
 
             assert device.offline_count == 0
             assert device.online is True
-
-
-class TestCyncDevicePendingCommand:
-    """Tests for pending_command flag behavior"""
-
-    def test_pending_command_initialization(self):
-        """Test pending_command initializes to False"""
-        device = CyncDevice(cync_id=0x1234)
-        assert device.pending_command is False
-
-    def test_pending_command_flag(self):
-        """Test pending_command can be set and cleared"""
-        device = CyncDevice(cync_id=0x1234)
-
-        # Set pending command
-        device.pending_command = True
-        assert device.pending_command is True
-
-        # Clear pending command (after ACK)
-        device.pending_command = False
-        assert device.pending_command is False
 
 
 class TestCyncDeviceCommands:
@@ -773,7 +751,7 @@ class TestCyncDeviceCommandErrorPaths:
             assert "is not a fan controller" in caplog.text
 
     @pytest.mark.asyncio
-    async def test_set_fan_speed_invalid_speed(self, caplog):  # noqa: ARG002
+    async def test_set_fan_speed_invalid_speed(self, caplog):
         """Test set_fan_speed handles invalid speed values"""
         with patch("cync_controller.devices.g") as mock_g:
             mock_g.ncync_server.tcp_devices = {}

@@ -12,7 +12,7 @@ from playwright.sync_api import Page
 scripts_path = Path(__file__).parent.parent.parent.parent / "scripts" / "playwright"
 sys.path.insert(0, str(scripts_path))
 
-from addon_helpers import (  # noqa: E402
+from addon_helpers import (
     get_addon_status,
     read_json_logs,
     restart_addon_and_wait,

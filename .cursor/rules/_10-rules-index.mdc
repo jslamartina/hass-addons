@@ -3,7 +3,7 @@ alwaysApply: true
 ---
 # Rules Index - Fetch on Demand
 
-**CRITICAL: Do NOT paste entire rule files into responses. Use code search to fetch only the relevant sections when needed.**
+**CRITICAL: Do NOT paste entire rule files into responses. Use code_search to fetch only the relevant sections when needed.**
 
 ## Always-Apply (Top Priority)
 

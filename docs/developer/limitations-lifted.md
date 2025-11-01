@@ -155,7 +155,7 @@ Failed:       1
 
 ╔═══════════════════════════════════════════════════════╗
 ║                                                       ║
-║  ✅  MOST TESTS PASSED - CLOUD RELAY WORKING! ✅     ║
+║  ✅  MOST TESTS PASSED - CLOUD RELAY WORKING! ✅      ║
 ║                                                       ║
 ╚═══════════════════════════════════════════════════════╝
 ```

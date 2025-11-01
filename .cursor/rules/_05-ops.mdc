@@ -1,0 +1,10 @@
+# .ops Spec Protocol (Minimal)
+
+On first applicable turn (before acting):
+1) If a file matching `.ops/**/*.refactor-spec.v1.json` exists for current paths, OPEN it and emit:
+   USING_SPEC: <path> | plan_id=<id> | type=refactor
+
+Treat these as hard gates if present:
+- `invariants[]`, `checks.must_pass[]`, `abort_if[]`, and `batches.*`.
+
+Do not act until `USING_SPEC` has been emitted once for the current phase.

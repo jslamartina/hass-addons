@@ -11,8 +11,9 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-# Mock exporter before importing main to avoid static directory initialization issues
-with patch("starlette.staticfiles.StaticFiles"):
+# Mock exporter and file system operations before importing main to avoid static directory initialization issues
+with patch("starlette.staticfiles.StaticFiles"), patch("cync_controller.utils.check_for_uuid") as mock_check_uuid:
+    mock_check_uuid.return_value = "test-uuid-12345"
     from cync_controller.main import CyncController, main, parse_cli
 
 
@@ -73,9 +74,10 @@ class TestCyncControllerStartup:
     async def test_start_with_missing_config_file(self, mock_global_object, mock_path_exists):
         """Test startup when config file doesn't exist"""
         mock_path_exists.return_value = False
-        controller = CyncController()
+        with patch("cync_controller.main.check_for_uuid"):
+            controller = CyncController()
 
-        await controller.start()
+            await controller.start()
 
         # Should not create any services
         assert mock_global_object.ncync_server is None
@@ -90,6 +92,7 @@ class TestCyncControllerStartup:
         mock_groups = {"group1": MagicMock(), "group2": MagicMock()}
 
         with (
+            patch("cync_controller.main.check_for_uuid"),
             patch("cync_controller.main.parse_config") as mock_parse,
             patch("cync_controller.main.NCyncServer") as mock_server_class,
             patch("cync_controller.main.MQTTClient") as mock_mqtt_class,
@@ -129,6 +132,7 @@ class TestCyncControllerStartup:
         mock_groups = {}
 
         with (
+            patch("cync_controller.main.check_for_uuid"),
             patch("cync_controller.main.parse_config") as mock_parse,
             patch("cync_controller.main.NCyncServer") as mock_server_class,
             patch("cync_controller.main.MQTTClient") as mock_mqtt_class,
@@ -174,13 +178,14 @@ class TestCyncControllerStartup:
                 await controller.start_task
 
     @pytest.mark.asyncio
-    async def test_start_failure_calls_stop(self, mock_global_object, mock_path_exists):  # noqa: ARG002
+    async def test_start_failure_calls_stop(self, mock_global_object, mock_path_exists):
         """Test that startup failure triggers stop method"""
         mock_path_exists.return_value = True
         mock_devices = {1: MagicMock()}
         mock_groups = {}
 
         with (
+            patch("cync_controller.main.check_for_uuid"),
             patch("cync_controller.main.parse_config") as mock_parse,
             patch("cync_controller.main.NCyncServer") as mock_server_class,
             patch("cync_controller.main.MQTTClient") as mock_mqtt_class,
@@ -213,9 +218,13 @@ class TestCyncControllerShutdown:
     """Tests for CyncController shutdown sequence"""
 
     @pytest.mark.asyncio
-    async def test_stop_sends_sigterm(self, mock_global_object):  # noqa: ARG002
+    async def test_stop_sends_sigterm(self, mock_global_object):
         """Test that stop calls send_sigterm"""
-        with patch("cync_controller.main.send_sigterm") as mock_sigterm, patch("cync_controller.main.logger"):
+        with (
+            patch("cync_controller.main.check_for_uuid"),
+            patch("cync_controller.main.send_sigterm") as mock_sigterm,
+            patch("cync_controller.main.logger"),
+        ):
             controller = CyncController()
             await controller.stop()
 

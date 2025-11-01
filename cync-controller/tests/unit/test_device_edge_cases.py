@@ -4,9 +4,7 @@ Unit tests for device edge cases and error paths.
 Tests error handling, edge value handling, and group aggregation with edge cases.
 """
 
-from unittest.mock import AsyncMock, MagicMock, patch
-
-import pytest
+from unittest.mock import MagicMock, patch
 
 from cync_controller.devices import CyncDevice, CyncGroup
 from cync_controller.metadata.model_info import device_type_map
@@ -149,43 +147,4 @@ class TestCyncDeviceEdgeCases:
         # Empty string name is used as-is (device does not default if name="" is provided)
         assert device.name == ""
 
-    @pytest.mark.asyncio
-    async def test_set_power_pending_command_set(self, mock_tcp_device):
-        """Test set_power sets pending_command flag"""
-        with patch("cync_controller.devices.g") as mock_g:
-            mock_g.ncync_server.tcp_devices = {"192.168.1.100": mock_tcp_device}
-            mock_g.mqtt_client = AsyncMock()
-            mock_tcp_device.ready_to_control = True
-            mock_tcp_device.queue_id = bytes([0x00] * 3)
-            mock_tcp_device.get_ctrl_msg_id_bytes = MagicMock(return_value=[0x01])
-            mock_tcp_device.write = AsyncMock()
-            mock_tcp_device.messages.control = {}
-
-            device = CyncDevice(cync_id=0x12)
-
-            await device.set_power(1)
-
-            # pending_command should be set
-            assert device.pending_command is True
-
-    @pytest.mark.asyncio
-    async def test_set_power_pending_command_reset(self, mock_tcp_device):
-        """Test pending_command flag is properly reset"""
-        with patch("cync_controller.devices.g") as mock_g:
-            mock_g.ncync_server.tcp_devices = {"192.168.1.100": mock_tcp_device}
-            mock_g.mqtt_client = AsyncMock()
-            mock_tcp_device.ready_to_control = True
-            mock_tcp_device.queue_id = bytes([0x00] * 3)
-            mock_tcp_device.get_ctrl_msg_id_bytes = MagicMock(return_value=[0x01])
-            mock_tcp_device.write = AsyncMock()
-            mock_tcp_device.messages.control = {}
-
-            device = CyncDevice(cync_id=0x12)
-
-            # Send command - should set flag
-            await device.set_power(1)
-            assert device.pending_command is True
-
-            # Reset flag
-            device.pending_command = False
-            assert device.pending_command is False
+    # REMOVED: pending_command tests - flag no longer exists (command queue handles throttling)

@@ -11,7 +11,7 @@ from playwright.sync_api import Page, expect
 scripts_path = Path(__file__).parent.parent.parent.parent / "scripts" / "playwright"
 sys.path.insert(0, str(scripts_path))
 
-from addon_helpers import read_json_logs  # noqa: E402
+from addon_helpers import read_json_logs
 
 ADDON_SLUG = "local_cync-controller"
 
@@ -299,7 +299,7 @@ def test_toggle_switch(ha_login: Page, ha_base_url: str):
         raise AssertionError(error_msg) from e
 
 
-def test_command_latency_acceptable(ha_login: Page):  # noqa: ARG001
+def test_command_latency_acceptable(ha_login: Page):
     """
     Test that commands execute within acceptable latency (< 2 seconds).
 

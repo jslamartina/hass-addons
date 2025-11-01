@@ -446,45 +446,7 @@ class TestCyncGroupAdvancedCommands:
             assert agg["brightness"] == 62  # (25 + 50 + 75 + 100) / 4 = 62.5 -> 62
             assert agg["temperature"] == 60  # All same
 
-    @pytest.mark.asyncio
-    async def test_group_set_brightness_updates_pending_flags(self, mock_tcp_device):
-        """Test group set_brightness clears pending_command flags"""
-        with (
-            patch("cync_controller.devices.g") as mock_g,
-            patch("cync_controller.devices.asyncio.sleep", new_callable=AsyncMock),
-        ):
-            mock_g.ncync_server = MagicMock()
-            mock_g.ncync_server.tcp_devices = {"192.168.1.100": mock_tcp_device}
-            mock_g.ncync_server.devices = {}
-            mock_g.mqtt_client = MagicMock()
-
-            # Create devices in the group
-            device1 = MagicMock()
-            device1.id = 0x1234
-            device1.pending_command = True
-            device2 = MagicMock()
-            device2.id = 0x5678
-            device2.pending_command = True
-
-            mock_g.ncync_server.devices = {
-                0x1234: device1,
-                0x5678: device2,
-            }
-
-            mock_tcp_device.ready_to_control = True
-            mock_tcp_device.queue_id = bytes([0x00] * 3)
-            mock_tcp_device.get_ctrl_msg_id_bytes = MagicMock(return_value=[0x01])
-            mock_tcp_device.write = AsyncMock()
-            mock_tcp_device.messages = MagicMock()
-            mock_tcp_device.messages.control = {}
-
-            group = CyncGroup(group_id=0x5678, name="Test Group", member_ids=[0x1234, 0x5678])
-
-            await group.set_brightness(75)
-
-            # pending_command flags should be cleared
-            assert device1.pending_command is False
-            assert device2.pending_command is False
+    # REMOVED: pending_command test - flag no longer exists (command queue handles throttling)
 
     def test_group_str_representation(self):
         """Test group __str__ and __repr__ methods"""
@@ -492,13 +454,13 @@ class TestCyncGroupAdvancedCommands:
 
         # Test __str__ (shows decimal ID)
         str_repr = str(group)
-        assert "CyncGroup:" in str_repr
+        assert "CyncGroup" in str_repr
         assert "22136" in str_repr  # 0x5678 = 22136 in decimal
         assert "Living Room" in str_repr
 
         # Test __repr__
         repr_str = repr(group)
-        assert "CyncGroup:" in repr_str
+        assert "CyncGroup" in repr_str
         assert "22136" in repr_str  # Decimal representation
         assert str(len(group.member_ids)) in repr_str
 

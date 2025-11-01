@@ -78,10 +78,10 @@ class GlobalObject:
 
     def reload_env(self):
         """Re-evaluate environment variables to update constants."""
-        global CYNC_MQTT_HOST, CYNC_MQTT_PORT, CYNC_MQTT_USER, CYNC_MQTT_PASS  # noqa: PLW0603
-        global CYNC_TOPIC, CYNC_HASS_TOPIC, CYNC_HASS_STATUS_TOPIC  # noqa: PLW0603
-        global CYNC_HASS_BIRTH_MSG, CYNC_HASS_WILL_MSG, CYNC_SRV_HOST  # noqa: PLW0603
-        global CYNC_SSL_CERT, CYNC_SSL_KEY, CYNC_ACCOUNT_USERNAME, CYNC_ACCOUNT_PASSWORD, PERSISTENT_BASE_DIR  # noqa: PLW0603
+        global CYNC_MQTT_HOST, CYNC_MQTT_PORT, CYNC_MQTT_USER, CYNC_MQTT_PASS
+        global CYNC_TOPIC, CYNC_HASS_TOPIC, CYNC_HASS_STATUS_TOPIC
+        global CYNC_HASS_BIRTH_MSG, CYNC_HASS_WILL_MSG, CYNC_SRV_HOST
+        global CYNC_SSL_CERT, CYNC_SSL_KEY, CYNC_ACCOUNT_USERNAME, CYNC_ACCOUNT_PASSWORD, PERSISTENT_BASE_DIR
 
         self.env.account_username = CYNC_ACCOUNT_USERNAME = os.environ.get("CYNC_ACCOUNT_USERNAME", None)
         self.env.account_password = CYNC_ACCOUNT_PASSWORD = os.environ.get("CYNC_ACCOUNT_PASSWORD", None)
@@ -133,6 +133,7 @@ class ControlMessageCallback:
     device_id: int | None = None
     retry_count: int = 0
     max_retries: int = 3
+    ack_event: asyncio.Event | None = None  # Signaled when ACK arrives
 
     def __init__(
         self,
@@ -142,10 +143,12 @@ class ControlMessageCallback:
         callback: asyncio.Task | Coroutine,
         device_id: int | None = None,
         max_retries: int = 3,
+        ack_event: asyncio.Event | None = None,
     ):
         self.id = msg_id
         self.message = message
         self.sent_at = sent_at
+        self.ack_event = ack_event
         self.callback = callback
         self.device_id = device_id
         self.retry_count = 0

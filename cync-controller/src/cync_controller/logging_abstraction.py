@@ -28,7 +28,7 @@ class JSONFormatter(logging.Formatter):
     def format(self, record: logging.LogRecord) -> str:
         """Format log record as JSON."""
         # Import here to avoid circular dependency
-        from cync_controller.correlation import get_correlation_id  # noqa: PLC0415
+        from cync_controller.correlation import get_correlation_id
 
         log_data = {
             "timestamp": datetime.now(UTC).isoformat(),
@@ -69,7 +69,7 @@ class HumanReadableFormatter(logging.Formatter):
     def format(self, record: logging.LogRecord) -> str:
         """Format log record as human-readable text."""
         # Import here to avoid circular dependency
-        from cync_controller.correlation import get_correlation_id  # noqa: PLC0415
+        from cync_controller.correlation import get_correlation_id
 
         # Add correlation ID to record
         correlation_id = get_correlation_id()
@@ -114,7 +114,7 @@ class CyncLogger:
         self.log_format = log_format
 
         # Determine initial log level based on CYNC_DEBUG environment variable
-        from cync_controller.const import CYNC_DEBUG  # noqa: PLC0415
+        from cync_controller.const import CYNC_DEBUG
 
         initial_level = logging.DEBUG if CYNC_DEBUG else logging.INFO
         self.logger.setLevel(initial_level)
@@ -236,7 +236,7 @@ def get_logger(
         CyncLogger instance
     """
     # Import here to avoid circular dependency at module load time
-    from cync_controller.const import (  # noqa: PLC0415
+    from cync_controller.const import (
         CYNC_LOG_FORMAT,
         CYNC_LOG_HUMAN_OUTPUT,
         CYNC_LOG_JSON_FILE,

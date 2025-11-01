@@ -4,8 +4,13 @@
 
 set -euo pipefail
 
-# Get the repository root (parent of scripts/)
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/shell-common/common-output.sh"
+
+# shellcheck disable=SC2034  # LP used by common-output.sh log functions
+LP="[$(basename "$0")]"
+
+# Get the repository root (parent of scripts/)
 REPO_ROOT="$(dirname "$SCRIPT_DIR")"
 SECRETS_FILE="$REPO_ROOT/.mcp-secrets.env"
 LOG_DIR="$REPO_ROOT/tmp"
@@ -16,7 +21,7 @@ mkdir -p "$LOG_DIR"
 
 # Check if secrets file exists
 if [[ ! -f "$SECRETS_FILE" ]]; then
-  echo "ERROR: Secrets file not found at: $SECRETS_FILE" >&2
+  log_error "Secrets file not found at: $SECRETS_FILE"
   echo "Copy .mcp-secrets.env.example to .mcp-secrets.env and fill in your values." >&2
   exit 1
 fi

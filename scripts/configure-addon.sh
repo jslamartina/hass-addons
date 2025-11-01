@@ -3,13 +3,17 @@
 # This bypasses the UI and configuration persistence issues in devcontainer
 set -e
 
-LP="[configure-addon.sh]"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/shell-common/common-output.sh"
+
+# shellcheck disable=SC2034  # LP used by common-output.sh log functions
+LP="[$(basename "$0")]"
 
 # Get supervisor token from hassio_cli container
 SUPERVISOR_TOKEN=$(docker exec hassio_cli env | grep SUPERVISOR_TOKEN | cut -d= -f2)
 
 if [ -z "$SUPERVISOR_TOKEN" ]; then
-  echo "$LP ERROR: Could not retrieve SUPERVISOR_TOKEN from hassio_cli container"
+  log_error "Could not retrieve SUPERVISOR_TOKEN from hassio_cli container"
   exit 1
 fi
 
@@ -27,7 +31,7 @@ get_config() {
 update_config() {
   local new_config="$1"
 
-  echo "$LP Updating add-on configuration..."
+  log_info "Updating add-on configuration..."
 
   response=$(curl -sSL -w "\n%{http_code}" \
     -X POST \
@@ -40,10 +44,10 @@ update_config() {
   body=$(echo "$response" | sed '$d')
 
   if [ "$http_code" -eq 200 ]; then
-    echo "$LP ✅ Configuration updated successfully"
+    log_success "Configuration updated successfully"
     return 0
   else
-    echo "$LP ❌ Configuration update failed (HTTP $http_code)"
+    log_error "Configuration update failed (HTTP $http_code)"
     echo "$body" | jq '.' 2> /dev/null || echo "$body"
     return 1
   fi
@@ -51,26 +55,26 @@ update_config() {
 
 # Function to restart add-on
 restart_addon() {
-  echo "$LP Restarting add-on..."
+  log_info "Restarting add-on..."
 
   curl -sSL -X POST \
     -H "Authorization: Bearer ${SUPERVISOR_TOKEN}" \
     "${API_BASE}/restart" > /dev/null
 
-  echo "$LP ✅ Add-on restart initiated"
+  log_success "Add-on restart initiated"
   sleep 3
 }
 
 # Function to show logs
 show_logs() {
-  echo "$LP Fetching add-on logs..."
+  log_info "Fetching add-on logs..."
   ha addons logs local_cync-controller
 }
 
 # Main command processing
 case "${1:-}" in
   get)
-    echo "$LP Current configuration:"
+    log_info "Current configuration:"
     get_config
     ;;
 
@@ -79,7 +83,7 @@ case "${1:-}" in
     forward="${3:-true}"
     debug_logging="${4:-false}"
 
-    echo "$LP Configuring cloud relay mode:"
+    log_info "Configuring cloud relay mode:"
     echo "  - enabled: $enabled"
     echo "  - forward_to_cloud: $forward"
     echo "  - debug_packet_logging: $debug_logging"
@@ -104,7 +108,7 @@ case "${1:-}" in
   set-debug)
     debug_enabled="${2:-true}"
 
-    echo "$LP Setting debug_log_level to: $debug_enabled"
+    log_info "Setting debug_log_level to: $debug_enabled"
 
     # Get current config and merge changes
     current_config=$(get_config)
@@ -120,7 +124,7 @@ case "${1:-}" in
     ;;
 
   preset-baseline)
-    echo "$LP Applying preset: Baseline (LAN-only, relay disabled)"
+    log_info "Applying preset: Baseline (LAN-only, relay disabled)"
     current_config=$(get_config)
     new_config=$(echo "$current_config" | jq '.cloud_relay.enabled = false')
     update_config "$(echo "{\"options\": $new_config}" | jq -c '.')"
@@ -130,7 +134,7 @@ case "${1:-}" in
     ;;
 
   preset-relay-with-forward)
-    echo "$LP Applying preset: Cloud Relay with Forwarding"
+    log_info "Applying preset: Cloud Relay with Forwarding"
     current_config=$(get_config)
     new_config=$(echo "$current_config" | jq '
             .cloud_relay.enabled = true |
@@ -144,7 +148,7 @@ case "${1:-}" in
     ;;
 
   preset-relay-debug)
-    echo "$LP Applying preset: Cloud Relay with Debug Logging"
+    log_info "Applying preset: Cloud Relay with Debug Logging"
     current_config=$(get_config)
     new_config=$(echo "$current_config" | jq '
             .cloud_relay.enabled = true |
@@ -158,7 +162,7 @@ case "${1:-}" in
     ;;
 
   preset-lan-only)
-    echo "$LP Applying preset: LAN-only Relay (Privacy Mode)"
+    log_info "Applying preset: LAN-only Relay (Privacy Mode)"
     current_config=$(get_config)
     new_config=$(echo "$current_config" | jq '
             .cloud_relay.enabled = true |
@@ -181,7 +185,7 @@ case "${1:-}" in
 
   *)
     cat << EOF
-$LP Usage: $0 <command> [args...]
+Usage: $0 <command> [args...]
 
 Commands:
   get                           Show current configuration

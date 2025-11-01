@@ -28,6 +28,7 @@
   "postCreateCommand": "bash ${containerWorkspaceFolder}/.devcontainer/post-create.sh",
   "runArgs": [
     "--privileged",
+    "--memory=16g",
     "-p",
     "8123:8123",
     "-p",

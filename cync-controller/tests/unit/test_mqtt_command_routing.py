@@ -78,7 +78,7 @@ class TestGroupCommandRouting:
                 assert group_id in mock_global_object.ncync_server.groups
 
     @pytest.mark.asyncio
-    async def test_group_command_invalid_group_warning(self, mock_global_object, mock_mqtt_message, caplog):  # noqa: ARG002
+    async def test_group_command_invalid_group_warning(self, mock_global_object, mock_mqtt_message, caplog):
         """Test invalid group ID logs warning and skips."""
         # Arrange
         mock_global_object.ncync_server.groups = {}  # No groups

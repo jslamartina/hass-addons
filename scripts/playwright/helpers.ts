@@ -191,7 +191,7 @@ export async function getEntityState(
     }
 
     return "unavailable";
-  } catch (error) {
+  } catch {
     console.warn(`Could not determine state for entity: ${entityName}`);
     return null;
   }

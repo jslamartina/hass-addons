@@ -1,0 +1,9 @@
+# Python requirements for scripts/
+# Install with: pip install -r requirements.txt
+
+# Terminal colors (cross-platform)
+colorama>=0.4.6
+
+# HTTP requests
+requests>=2.31.0
+

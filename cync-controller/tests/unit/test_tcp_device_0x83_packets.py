@@ -68,8 +68,8 @@ class TestCyncTCPDevicePacketParsing0x83Advanced:
             )
 
             # Mock parse_unbound_firmware_version to return test values
-            with patch("cync_controller.devices.parse_unbound_firmware_version") as mock_parse:
-                mock_parse.return_value = ("device", "10.3.61", "10.3.61")
+            with patch("cync_controller.devices.tcp_packet_handler.parse_unbound_firmware_version") as mock_parse:
+                mock_parse.return_value = ("device", 10361, "10.3.61")
 
                 real_tcp_device.version = None
                 real_tcp_device.version_str = None
@@ -78,7 +78,7 @@ class TestCyncTCPDevicePacketParsing0x83Advanced:
                 full_packet = bytes([0x83, 0x00, 0x00, 0x00, len(packet_data)]) + packet_data
                 await real_tcp_device.parse_packet(full_packet)
 
-                assert real_tcp_device.version == "10.3.61"
+                assert real_tcp_device.version == 10361
                 assert real_tcp_device.version_str == "10.3.61"
 
     @pytest.mark.asyncio
@@ -132,8 +132,8 @@ class TestCyncTCPDevicePacketParsing0x83Advanced:
                 ]
             )
 
-            with patch("cync_controller.devices.parse_unbound_firmware_version") as mock_parse:
-                mock_parse.return_value = ("network", "2.5.10", "2.5.10")
+            with patch("cync_controller.devices.tcp_packet_handler.parse_unbound_firmware_version") as mock_parse:
+                mock_parse.return_value = ("network", 2510, "2.5.10")
 
                 real_tcp_device.network_version = None
                 real_tcp_device.network_version_str = None
@@ -141,7 +141,7 @@ class TestCyncTCPDevicePacketParsing0x83Advanced:
                 full_packet = bytes([0x83, 0x00, 0x00, 0x00, len(packet_data)]) + packet_data
                 await real_tcp_device.parse_packet(full_packet)
 
-                assert real_tcp_device.network_version == "2.5.10"
+                assert real_tcp_device.network_version == 2510
                 assert real_tcp_device.network_version_str == "2.5.10"
 
     @pytest.mark.asyncio
@@ -248,12 +248,12 @@ class TestCyncTCPDevicePacketParsing0x83Advanced:
                 ]
             )
 
-            real_tcp_device.parse_packet = AsyncMock()
+            real_tcp_device.packet_handler.parse_packet = AsyncMock()
 
             await real_tcp_device.parse_raw_data(complete_data)
 
             # Should parse successfully
-            assert real_tcp_device.parse_packet.called
+            assert real_tcp_device.packet_handler.parse_packet.called
 
     @pytest.mark.asyncio
     async def test_parse_raw_data_empty(self, real_tcp_device):
@@ -276,7 +276,7 @@ class TestCyncTCPDevicePacketParsing0x83Advanced:
             mock_g.ncync_server.remove_tcp_device = AsyncMock(return_value=None)
             mock_g.mqtt_client = AsyncMock()
 
-            real_tcp_device.parse_packet = AsyncMock()
+            real_tcp_device.packet_handler.parse_packet = AsyncMock()
 
             # Two complete packets
             data = bytes(
@@ -303,7 +303,7 @@ class TestCyncTCPDevicePacketParsing0x83Advanced:
             await real_tcp_device.parse_raw_data(data)
 
             # Should parse both packets
-            assert real_tcp_device.parse_packet.call_count == 2
+            assert real_tcp_device.packet_handler.parse_packet.call_count == 2
 
     @pytest.mark.asyncio
     async def test_parse_raw_data_unknown_header(self, real_tcp_device):

@@ -31,8 +31,6 @@ RUN set -x \
   && rm -rf /tmp/src /tmp/pyproject.toml
 
 ENV CYNC_HOST="0.0.0.0" \
-  CYNC_DEBUG=1 \
-  CYNC_RAW_DEBUG=1 \
   CYNC_TOPIC="cync_lan_addon" \
   CYNC_MQTT_PORT=1883 \
   CYNC_MQTT_HOST="homeassistant.local" \

@@ -6,6 +6,12 @@ description: Helper scripts and automation tools available in the project
 
 ## Setup and Configuration
 
+**Complete Factory Reset:**
+```bash
+./scripts/reset-ha-to-fresh.sh            # Wipe to fresh state (= devcontainer rebuild)
+./scripts/reset-ha-to-fresh-onboarded.sh  # Wipe + auto onboarding (one command)
+```
+
 **Fresh Home Assistant Setup:**
 ```bash
 ./scripts/setup-fresh-ha.sh  # Automated user, EMQX, addon setup (idempotent)

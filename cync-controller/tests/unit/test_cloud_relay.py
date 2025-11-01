@@ -243,7 +243,7 @@ class TestSSLWarnings:
     """Tests for SSL verification disabled warnings (lines 108-112)."""
 
     @pytest.mark.asyncio
-    async def test_ssl_verification_disabled_warning(self, caplog):  # noqa: ARG002
+    async def test_ssl_verification_disabled_warning(self, caplog):
         """Test warning logged when SSL verification is disabled."""
         # Arrange
         mock_reader = AsyncMock()
@@ -338,7 +338,7 @@ class TestPacketInjection:
                 assert mode_byte == 0x01
 
     @pytest.mark.asyncio
-    async def test_injection_checker_invalid_mode(self, cloud_relay_connection, tmp_path):  # noqa: ARG002
+    async def test_injection_checker_invalid_mode(self, cloud_relay_connection, tmp_path):
         """Test invalid mode injection is ignored."""
         # Arrange
         inject_file = tmp_path / "cync_inject_command.txt"

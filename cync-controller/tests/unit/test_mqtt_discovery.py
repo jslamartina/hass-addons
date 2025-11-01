@@ -22,7 +22,7 @@ def reset_mqtt_singleton():
 @pytest.fixture
 def mock_global_state():
     """Mock global state for discovery tests"""
-    with patch("cync_controller.mqtt_client.g") as mock_g:
+    with patch("cync_controller.mqtt.discovery.g") as mock_g:
         mock_g.uuid = "test-uuid-1234"
         mock_g.ncync_server = MagicMock()
         mock_g.ncync_server.devices = {}
@@ -73,11 +73,11 @@ class TestDeviceRegistration:
             assert result is False
 
     @pytest.mark.asyncio
-    async def test_register_single_device_publishes_discovery(self, mock_global_state, mock_device):  # noqa: ARG002
+    async def test_register_single_device_publishes_discovery(self, mock_global_state, mock_device):
         """Test that register_single_device publishes MQTT discovery message"""
         with (
             patch("cync_controller.mqtt_client.aiomqtt.Client") as mock_client_class,
-            patch("cync_controller.mqtt_client.device_type_map"),
+            patch("cync_controller.metadata.model_info.device_type_map"),
         ):
             mock_client = MagicMock()
             mock_client.publish = AsyncMock()
@@ -96,7 +96,7 @@ class TestDeviceRegistration:
             # Skip for now until bug is fixed
 
     @pytest.mark.asyncio
-    async def test_register_single_device_sets_suggested_area_from_group(self, mock_global_state, mock_device):  # noqa: ARG002
+    async def test_register_single_device_sets_suggested_area_from_group(self, mock_global_state, mock_device):
         """Test that register_single_device extracts area from group membership"""
         # Create a group that device belongs to
         group = MagicMock()
@@ -121,7 +121,7 @@ class TestDeviceRegistration:
             # Check the payload contains suggested_area from group
             call_args = None
 
-            def capture_publish(*args, **kwargs):  # noqa: ARG001
+            def capture_publish(*args, **kwargs):
                 nonlocal call_args
                 call_args = kwargs.get("payload", "")
 
@@ -133,7 +133,7 @@ class TestDeviceRegistration:
             assert mock_client.publish.called
 
     @pytest.mark.asyncio
-    async def test_register_single_device_extracts_area_from_device_name(self, mock_global_state, mock_device):  # noqa: ARG002
+    async def test_register_single_device_extracts_area_from_device_name(self, mock_global_state, mock_device):
         """Test that register_single_device extracts area from device name when not in group"""
         # Device name contains area
         mock_device.name = "Bedroom Light"
@@ -154,7 +154,7 @@ class TestDeviceRegistration:
             assert mock_client.publish.called
 
     @pytest.mark.asyncio
-    async def test_register_single_device_handles_switch_device(self, mock_global_state):  # noqa: ARG002
+    async def test_register_single_device_handles_switch_device(self, mock_global_state):
         """Test that register_single_device classifies switch device correctly"""
         switch_device = MagicMock()
         switch_device.id = 43
@@ -219,7 +219,7 @@ class TestDeviceRediscovery:
 
         with (
             patch("cync_controller.mqtt_client.aiomqtt.Client"),
-            patch("cync_controller.mqtt_client.MQTTClient.register_single_device") as mock_register,
+            patch("cync_controller.mqtt.discovery.DiscoveryHelper.register_single_device") as mock_register,
         ):
             mock_register.return_value = True
 
@@ -244,7 +244,7 @@ class TestDeviceRediscovery:
 
         with (
             patch("cync_controller.mqtt_client.aiomqtt.Client"),
-            patch("cync_controller.mqtt_client.MQTTClient.register_single_device") as mock_register,
+            patch("cync_controller.mqtt.discovery.DiscoveryHelper.register_single_device") as mock_register,
         ):
             mock_register.side_effect = Exception("Registration failed")
 
@@ -261,7 +261,7 @@ class TestEntityIDGeneration:
     """Tests for entity ID generation from device names"""
 
     @pytest.mark.asyncio
-    async def test_entity_id_from_simple_device_name(self, mock_global_state, mock_device):  # noqa: ARG002
+    async def test_entity_id_from_simple_device_name(self, mock_global_state, mock_device):
         """Test entity ID generation from simple device name"""
         mock_device.name = "Hallway Light"
 
@@ -281,7 +281,7 @@ class TestEntityIDGeneration:
             assert mock_client.publish.called
 
     @pytest.mark.asyncio
-    async def test_entity_id_from_complex_device_name(self, mock_global_state, mock_device):  # noqa: ARG002
+    async def test_entity_id_from_complex_device_name(self, mock_global_state, mock_device):
         """Test entity ID generation from complex device name with spaces and numbers"""
         mock_device.name = "Master Bedroom Light 1"
 
@@ -301,7 +301,7 @@ class TestEntityIDGeneration:
             assert mock_client.publish.called
 
     @pytest.mark.asyncio
-    async def test_entity_id_from_unicode_device_name(self, mock_global_state, mock_device):  # noqa: ARG002
+    async def test_entity_id_from_unicode_device_name(self, mock_global_state, mock_device):
         """Test entity ID generation from device name with unicode characters"""
         mock_device.name = "Café Lights"
 
@@ -350,7 +350,7 @@ class TestAreaExtraction:
             assert result is True
 
     @pytest.mark.asyncio
-    async def test_area_extraction_removes_suffixes(self, mock_global_state, mock_device):  # noqa: ARG002
+    async def test_area_extraction_removes_suffixes(self, mock_global_state, mock_device):
         """Test that area extraction removes device type suffixes"""
         # Device name with suffix that should be removed
         mock_device.name = "Bedroom Light"
@@ -371,7 +371,7 @@ class TestAreaExtraction:
             assert mock_client.publish.called
 
     @pytest.mark.asyncio
-    async def test_area_extraction_removes_trailing_numbers(self, mock_global_state, mock_device):  # noqa: ARG002
+    async def test_area_extraction_removes_trailing_numbers(self, mock_global_state, mock_device):
         """Test that area extraction removes trailing numbers from device names"""
         mock_device.name = "Hallway 1"
 

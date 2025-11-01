@@ -207,6 +207,8 @@ class CyncCloudAPI:
         """
         lp = f"{self.lp}:write_token_cache:"
         try:
+            # Ensure parent directory exists
+            Path(self.auth_cache_file).parent.mkdir(parents=True, exist_ok=True)
             with Path(self.auth_cache_file).open("wb") as f:
                 pickle.dump(tkn, f)
         except (OSError, pickle.PicklingError, TypeError):
@@ -318,6 +320,8 @@ class CyncCloudAPI:
             mesh["properties"] = await self.get_properties(mesh["product_id"], mesh["id"])
         mesh_config = await self._mesh_to_config(mesh_networks)
         try:
+            # Ensure parent directory exists
+            Path(CYNC_CONFIG_FILE_PATH).parent.mkdir(parents=True, exist_ok=True)
             with Path(CYNC_CONFIG_FILE_PATH).open("w") as f:
                 f.write(yaml.dump(mesh_config))
         except Exception:
@@ -337,6 +341,8 @@ class CyncCloudAPI:
         # What we get from the Cync cloud API
         raw_file_out = f"{PERSISTENT_BASE_DIR}/raw_mesh.cync"
         try:
+            # Ensure parent directory exists
+            Path(raw_file_out).parent.mkdir(parents=True, exist_ok=True)
             with Path(raw_file_out).open("w") as _f:
                 _f.write(yaml.dump(mesh_info))
         except Exception:

@@ -65,7 +65,7 @@ class TestSignalHandling:
         mock_send_signal.assert_called_once_with(signal.SIGINT)
 
     @patch("cync_controller.utils.os.kill", side_effect=OSError("Permission denied"))
-    def test_send_signal_handles_os_error(self, mock_kill):  # noqa: ARG002
+    def test_send_signal_handles_os_error(self, mock_kill):
         """Test that send_signal raises OSError properly"""
         import signal
 
@@ -305,7 +305,7 @@ class TestUUIDManagement:
     @patch("cync_controller.utils.Path.exists")
     @patch("cync_controller.utils.Path.open")
     @patch("cync_controller.utils.Path.mkdir")
-    def test_check_for_uuid_creates_new_uuid_when_missing(self, mock_mkdir, mock_open, mock_exists):  # noqa: ARG002
+    def test_check_for_uuid_creates_new_uuid_when_missing(self, mock_mkdir, mock_open, mock_exists):
         """Test that check_for_uuid creates a new UUID when uuid.txt doesn't exist"""
         from cync_controller.utils import g
 
@@ -346,7 +346,7 @@ class TestUUIDManagement:
     @patch("cync_controller.utils.Path.exists")
     @patch("cync_controller.utils.Path.open")
     @patch("cync_controller.utils.Path.mkdir")
-    def test_check_for_uuid_creates_uuid_when_invalid_version(self, mock_mkdir, mock_open, mock_exists):  # noqa: ARG002
+    def test_check_for_uuid_creates_uuid_when_invalid_version(self, mock_mkdir, mock_open, mock_exists):
         """Test that check_for_uuid creates new UUID when existing is invalid version"""
         from cync_controller.utils import g
 
@@ -369,7 +369,7 @@ class TestUUIDManagement:
     @patch("cync_controller.utils.Path.exists")
     @patch("cync_controller.utils.Path.open")
     @patch("cync_controller.utils.Path.mkdir")
-    def test_check_for_uuid_creates_uuid_when_empty_file(self, mock_mkdir, mock_open, mock_exists):  # noqa: ARG002
+    def test_check_for_uuid_creates_uuid_when_empty_file(self, mock_mkdir, mock_open, mock_exists):
         """Test that check_for_uuid creates UUID when file is empty"""
         from cync_controller.utils import g
 
@@ -491,7 +491,7 @@ class TestSignalHandler:
     @patch("cync_controller.utils.g")
     @patch("cync_controller.utils.asyncio.get_event_loop")
     @patch("cync_controller.utils._async_signal_cleanup")
-    def test_signal_handler_with_loop(self, mock_cleanup, mock_loop, mock_g):  # noqa: ARG002
+    def test_signal_handler_with_loop(self, mock_cleanup, mock_loop, mock_g):
         """Test signal handler creates cleanup task"""
         import signal
 
@@ -505,7 +505,7 @@ class TestSignalHandler:
     @patch("cync_controller.utils.g")
     @patch("cync_controller.utils.asyncio.get_event_loop")
     @patch("cync_controller.utils._async_signal_cleanup")
-    def test_signal_handler_falls_back_to_get_loop(self, mock_cleanup, mock_loop, mock_g):  # noqa: ARG002
+    def test_signal_handler_falls_back_to_get_loop(self, mock_cleanup, mock_loop, mock_g):
         """Test signal handler falls back to get_event_loop when g.loop is None"""
         import signal
 
@@ -558,7 +558,7 @@ class TestCheckForUUID:
             # UUID should be set
             assert mock_g.uuid is not None
 
-    def test_check_for_uuid_creates_new_uuid_when_invalid(self, tmp_path, caplog):  # noqa: ARG002
+    def test_check_for_uuid_creates_new_uuid_when_invalid(self, tmp_path, caplog):
         """Test that check_for_uuid creates new UUID when existing one is invalid version"""
         with (
             patch("cync_controller.utils.PERSISTENT_BASE_DIR", str(tmp_path / "cync_persistent")),

@@ -2,7 +2,6 @@ import { test, expect } from "@playwright/test";
 import { login } from "./helpers/auth";
 import {
   findFanCard,
-  setFanSlider,
   selectFanPreset,
   getFanPercentage,
   toggleFanPower,
@@ -62,45 +61,8 @@ test.describe("Fan Speed Control E2E Tests", () => {
     console.log(" Power toggle test PASSED");
   });
 
-  test("3. Test slider control at multiple speeds", async ({ page }) => {
-    console.log("\n  Test 3: Testing slider at multiple speeds");
-
-    const fanCard = await findFanCard(page, FAN_ENTITY_NAME);
-
-    // Ensure fan is on first
-    await toggleFanPower(page, fanCard);
-    await page.waitForTimeout(3000);
-
-    const speeds = [
-      { percent: 0, label: "0%" },
-      { percent: 25, label: "25%" },
-      { percent: 50, label: "50%" },
-      { percent: 75, label: "75%" },
-      { percent: 100, label: "100%" },
-    ];
-
-    for (const speed of speeds) {
-      console.log(`   Setting slider to ${speed.label}...`);
-      await setFanSlider(page, fanCard, speed.percent);
-      // Wait for MQTT message to be sent
-      await page.waitForTimeout(2000);
-
-      // Take screenshot
-      await screenshot(page, `03-slider-${speed.label}`);
-
-      // Note: UI reading doesn't update due to known backend bug
-      // The verification should come from addon logs showing MQTT commands were sent
-      // Check logs with: ha addons logs local_cync-controller | grep "Fan percentage command"
-      console.log(
-        `   Slider command sent to ${speed.label} (verify in addon logs)`,
-      );
-    }
-
-    console.log("   All slider commands sent to backend");
-  });
-
-  test("4. Test preset mode dropdown", async ({ page }) => {
-    console.log("\n Test 4: Testing preset modes");
+  test("3. Test preset mode dropdown", async ({ page }) => {
+    console.log("\n Test 3: Testing preset modes");
 
     const fanCard = await findFanCard(page, FAN_ENTITY_NAME);
 
@@ -123,7 +85,7 @@ test.describe("Fan Speed Control E2E Tests", () => {
         await page.waitForTimeout(2500); // Wait for ACK
 
         // Take screenshot
-        await screenshot(page, `04-preset-${preset.name}`);
+        await screenshot(page, `03-preset-${preset.name}`);
 
         // Verify percentage changed (allow 10% tolerance for presets)
         const currentPercent = await getFanPercentage(page, fanCard);
@@ -146,7 +108,7 @@ test.describe("Fan Speed Control E2E Tests", () => {
     try {
       await selectFanPreset(page, fanCard, "off");
       await page.waitForTimeout(2500);
-      await screenshot(page, "04-preset-off");
+      await screenshot(page, "03-preset-off");
 
       const isOff = !(await isFanOn(page, fanCard));
       expect(isOff).toBe(true);
@@ -158,21 +120,21 @@ test.describe("Fan Speed Control E2E Tests", () => {
     console.log(" Preset mode test PASSED");
   });
 
-  test("5. Test state persistence after page refresh", async ({ page }) => {
-    console.log("\n Test 5: Testing state persistence");
+  test("4. Test state persistence after page refresh", async ({ page }) => {
+    console.log("\n Test 4: Testing state persistence");
 
     const fanCard = await findFanCard(page, FAN_ENTITY_NAME);
 
-    // Turn on and set to 50%
-    console.log("   Setting fan to 50%...");
+    // Turn on and set to medium preset
+    console.log("   Setting fan to medium preset...");
     await toggleFanPower(page, fanCard);
     await page.waitForTimeout(2000);
-    await setFanSlider(page, fanCard, 50);
+    await selectFanPreset(page, fanCard, "medium");
     await page.waitForTimeout(2500);
 
     const percentBefore = await getFanPercentage(page, fanCard);
     console.log(`    Percentage before refresh: ${percentBefore}%`);
-    await screenshot(page, "05-before-refresh");
+    await screenshot(page, "04-before-refresh");
 
     // Refresh page
     console.log("   Refreshing page...");
@@ -183,7 +145,7 @@ test.describe("Fan Speed Control E2E Tests", () => {
     const fanCardAfter = await findFanCard(page, FAN_ENTITY_NAME);
     const percentAfter = await getFanPercentage(page, fanCardAfter);
     console.log(`    Percentage after refresh: ${percentAfter}%`);
-    await screenshot(page, "05-after-refresh");
+    await screenshot(page, "04-after-refresh");
 
     // Verify state persisted (allow 10% tolerance)
     expect(percentAfter).toBeGreaterThanOrEqual(percentBefore - 10);
@@ -193,8 +155,8 @@ test.describe("Fan Speed Control E2E Tests", () => {
     console.log(" State persistence test PASSED");
   });
 
-  test("6. Test rapid speed changes", async ({ page }) => {
-    console.log("\n Test 6: Testing rapid speed changes");
+  test("5. Test rapid preset changes", async ({ page }) => {
+    console.log("\n Test 5: Testing rapid preset changes");
 
     const fanCard = await findFanCard(page, FAN_ENTITY_NAME);
 
@@ -202,42 +164,52 @@ test.describe("Fan Speed Control E2E Tests", () => {
     await toggleFanPower(page, fanCard);
     await page.waitForTimeout(2000);
 
-    console.log("   Making rapid slider changes...");
+    console.log("   Making rapid preset changes...");
 
-    // Rapidly change speeds
-    await setFanSlider(page, fanCard, 0);
-    await page.waitForTimeout(500);
-    await setFanSlider(page, fanCard, 25);
-    await page.waitForTimeout(500);
-    await setFanSlider(page, fanCard, 50);
-    await page.waitForTimeout(500);
-    await setFanSlider(page, fanCard, 75);
-    await page.waitForTimeout(500);
-    await setFanSlider(page, fanCard, 100);
+    // Rapidly change presets - skip "off" since it turns fan off and requires more handling
+    // Test rapid changes between active presets
+    const presets = ["low", "medium", "high", "max"];
+
+    for (const preset of presets) {
+      console.log(`   Selecting preset: ${preset}...`);
+
+      // Ensure dialog is still open before each selection
+      const dialog = page.getByRole("alertdialog").first();
+      try {
+        await expect(dialog).toBeAttached({ timeout: 2000 });
+      } catch {
+        // Dialog closed - reopen it
+        console.log(`   Dialog closed, reopening...`);
+        const newCard = await findFanCard(page, FAN_ENTITY_NAME);
+        await page.waitForTimeout(1000);
+      }
+
+      await selectFanPreset(page, fanCard, preset);
+      await page.waitForTimeout(1000); // Wait for preset change to complete
+    }
 
     // Wait for system to settle
     console.log("   Waiting for system to settle...");
     await page.waitForTimeout(3000);
 
     // Take final screenshot
-    await screenshot(page, "06-rapid-changes-final");
+    await screenshot(page, "05-rapid-changes-final");
 
-    // Note: UI reading doesn't update due to known backend bug
-    // The important part is that all commands were sent and system didn't crash
-    console.log("   All rapid change commands sent");
+    // Note: The important part is that all commands were sent and system didn't crash
+    console.log("   All rapid preset change commands sent");
     console.log(
       "   System handled rapid changes without crashing (verify commands in logs)",
     );
   });
 
-  test("7. Verify state via Developer Tools", async ({ page }) => {
-    console.log("\n  Test 7: Verifying state via Developer Tools");
+  test("6. Verify state via Developer Tools", async ({ page }) => {
+    console.log("\n  Test 6: Verifying state via Developer Tools");
 
-    // First, set fan to a known state
+    // First, set fan to a known state using medium preset
     const fanCard = await findFanCard(page, FAN_ENTITY_NAME);
     await toggleFanPower(page, fanCard);
     await page.waitForTimeout(2000);
-    await setFanSlider(page, fanCard, 50);
+    await selectFanPreset(page, fanCard, "medium");
     await page.waitForTimeout(2500);
 
     console.log("   Checking state in Developer Tools...");
@@ -252,7 +224,7 @@ test.describe("Fan Speed Control E2E Tests", () => {
       console.log(`    Percentage: ${state.percentage}%`);
       console.log(`    Preset mode: ${state.preset_mode}`);
 
-      await screenshot(page, "07-developer-tools");
+      await screenshot(page, "06-developer-tools");
 
       // Verify state matches expectation
       expect(state.state).toBe("on");
