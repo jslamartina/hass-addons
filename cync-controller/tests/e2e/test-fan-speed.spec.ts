@@ -84,8 +84,8 @@ test.describe("Fan Speed Control E2E Tests", () => {
         await selectFanPreset(page, fanCard, preset.name);
         await page.waitForTimeout(2500); // Wait for ACK
 
-      // Take screenshot
-      await screenshot(page, `03-preset-${preset.name}`);
+        // Take screenshot
+        await screenshot(page, `03-preset-${preset.name}`);
 
         // Verify percentage changed (allow 10% tolerance for presets)
         const currentPercent = await getFanPercentage(page, fanCard);

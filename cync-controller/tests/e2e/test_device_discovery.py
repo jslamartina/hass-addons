@@ -10,7 +10,7 @@ from playwright.sync_api import Page
 scripts_path = Path(__file__).parent.parent.parent.parent / "scripts" / "playwright"
 sys.path.insert(0, str(scripts_path))
 
-from addon_helpers import get_addon_status, restart_addon_and_wait  # noqa: E402
+from addon_helpers import get_addon_status, restart_addon_and_wait
 
 ADDON_SLUG = "local_cync-controller"
 
@@ -154,7 +154,7 @@ def test_entity_suggested_area_attribute(ha_login: Page, ha_base_url: str):
     print("✓ Test placeholder - requires API integration for full validation")
 
 
-def test_entity_unique_ids_are_consistent(ha_login: Page):  # noqa: ARG001
+def test_entity_unique_ids_are_consistent(ha_login: Page):
     """
     Test that entity unique IDs remain consistent across restarts.
 

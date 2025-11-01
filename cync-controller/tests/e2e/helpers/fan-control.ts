@@ -90,9 +90,11 @@ export async function selectFanPreset(
 ): Promise<void> {
   // First, try to find preset buttons (newer UI style)
   // Use page-level getByRole which pierces shadow DOM
-  const presetButton = page.getByRole("button", {
-    name: new RegExp(preset, "i"),
-  }).first();
+  const presetButton = page
+    .getByRole("button", {
+      name: new RegExp(preset, "i"),
+    })
+    .first();
 
   if ((await presetButton.count()) > 0) {
     // Preset buttons found - verify it's visible and clickable
@@ -104,9 +106,11 @@ export async function selectFanPreset(
   }
 
   // Fallback: look for combobox (using page-level getByRole to pierce shadow DOM)
-  const presetCombobox = page.getByRole("combobox", {
-    name: /preset mode/i,
-  }).first();
+  const presetCombobox = page
+    .getByRole("combobox", {
+      name: /preset mode/i,
+    })
+    .first();
 
   // Wait for combobox to be visible (might take time for dialog to render)
   // Also ensure dialog is still open
@@ -200,9 +204,11 @@ export async function getFanPercentage(
   }
 
   // Fallback: try to read from combobox (using page-level getByRole to pierce shadow DOM)
-  const presetCombobox = page.getByRole("combobox", {
-    name: /preset mode/i,
-  }).first();
+  const presetCombobox = page
+    .getByRole("combobox", {
+      name: /preset mode/i,
+    })
+    .first();
 
   if ((await presetCombobox.count()) > 0) {
     await expect(presetCombobox).toBeVisible({ timeout: 3000 });

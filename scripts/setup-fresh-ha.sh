@@ -1,24 +1,20 @@
 #!/usr/bin/env bash
 # Automated setup script for fresh Home Assistant installation
 # Creates user, installs EMQX and Cync Controller add-ons with configuration
-set -e
+set -Eeuo pipefail
+IFS=$'\n\t'
 
-# Error handling - show better error messages when script fails
-trap 'echo "ERROR: Script failed at line $LINENO with exit code $?"; echo "Last command that failed: $BASH_COMMAND"; echo "Stack trace:"; caller; exit 1' ERR
-
-# Also trap EXIT to catch any unexpected exits
-trap 'if [ $? -ne 0 ]; then echo "ERROR: Script exited with code $?"; fi' EXIT
-
-LP="[setup-fresh-ha.sh]"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/shell-common/common-output.sh"
+
+# shellcheck disable=SC2034  # LP used by common-output.sh log functions
+LP="[$(basename "$0")]"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 # Default values
 # Auto-detect HA IP from ha core info if not specified
-if [ -z "$HA_URL" ]; then
-  HA_IP=$(ha core info 2> /dev/null | grep 'ip_address:' | awk '{print $2}')
-  HA_URL="http://${HA_IP:-homeassistant.local}:8123"
-fi
+HA_IP=$(ha core info 2> /dev/null | grep 'ip_address:' | awk '{print $2}' || echo "")
+HA_URL="${HA_URL:-http://${HA_IP:-homeassistant.local}:8123}"
 CREDENTIALS_FILE="${CREDENTIALS_FILE:-$REPO_ROOT/hass-credentials.env}"
 SUPERVISOR_TOKEN=""
 
@@ -34,28 +30,20 @@ EMQX_SLUG="a0d7b954_emqx"
 CYNC_SLUG="local_cync-controller"
 HASSIO_ADDONS_REPO="https://github.com/hassio-addons/repository"
 
-# Colors for output
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-NC='\033[0m' # No Color
-
-# Logging functions
-log_info() {
-  echo -e "${GREEN}$LP${NC} $1"
+# Error handling function
+on_error() {
+  local exit_code=$?
+  log_error "Script failed at line $1 with exit code $exit_code"
+  log_error "Failed command: $BASH_COMMAND"
+  log_error "Stack trace:"
+  caller >&2
+  trap - EXIT ERR
+  exit $exit_code
 }
 
-log_warn() {
-  echo -e "${YELLOW}$LP${NC} $1"
-}
-
-log_error() {
-  echo -e "${RED}$LP${NC} $1"
-}
-
-log_success() {
-  echo -e "${GREEN}$LP ✅${NC} $1"
-}
+# Set up error traps
+trap 'on_error $LINENO' ERR
+trap 'if [ $? -ne 0 ]; then log_error "Script exited with code $?"; fi' EXIT
 
 # Load credentials from .hass-credentials file
 load_credentials() {
@@ -72,16 +60,16 @@ load_credentials() {
   source "$CREDENTIALS_FILE"
   set +a
 
-  if [ -z "$HASS_USERNAME" ] || [ -z "$HASS_PASSWORD" ]; then
+  if [ -z "${HASS_USERNAME:-}" ] || [ -z "${HASS_PASSWORD:-}" ]; then
     log_error "HASS_USERNAME or HASS_PASSWORD not found in credentials file"
     exit 1
   fi
 
   log_success "Credentials loaded (username: $HASS_USERNAME)"
-  if [ -n "$CYNC_USERNAME" ]; then
+  if [ -n "${CYNC_USERNAME:-}" ]; then
     log_info "Cync credentials found (username: $CYNC_USERNAME)"
   fi
-  if [ -n "$MQTT_USER" ]; then
+  if [ -n "${MQTT_USER:-}" ]; then
     log_info "MQTT credentials found (username: $MQTT_USER)"
   fi
 }
@@ -105,7 +93,7 @@ wait_for_ha() {
     # HTTP 401 (Unauthorized) = HA is running but requires auth (onboarded)
     # HTTP 200 (OK) = HA is running and accessible
     local api_check
-    api_check=$(curl -s -o /dev/null -w "%{http_code}" "$HA_URL/api/" 2>&1)
+    api_check=$(curl -s -o /dev/null -w "%{http_code}" "$HA_URL/api/" 2>&1) || true
     if [ "$api_check" = "401" ] || [ "$api_check" = "200" ]; then
       log_success "Home Assistant API is responsive (already onboarded)"
       return 0
@@ -120,6 +108,61 @@ wait_for_ha() {
   exit 1
 }
 
+# Wait for Home Assistant Core service to be ready (not just API responding)
+wait_for_ha_core_ready() {
+  log_info "Checking Home Assistant Core service readiness..."
+
+  local retry_count=0
+  local max_retries=30
+  local retry_delay=5
+
+  while [ $retry_count -lt $max_retries ]; do
+    # Check if Core service is running and has a version (indicates it's initialized)
+    local core_version
+    core_version=$(ha core info --raw-json 2> /dev/null | jq -r '.data.version // empty' 2> /dev/null || echo "")
+
+    # Reject "landingpage" version as it indicates HA is not fully initialized
+    if [ -n "$core_version" ] && [ "$core_version" != "null" ] && [ "$core_version" != "" ] && [ "$core_version" != "landingpage" ]; then
+      log_success "Home Assistant Core is ready (version: $core_version)"
+      return 0
+    elif [ "$core_version" = "landingpage" ]; then
+      log_info "HA Core is still in landingpage state (initializing)..."
+    fi
+
+    retry_count=$((retry_count + 1))
+    log_info "Waiting for HA Core service... ($retry_count/$max_retries, sleeping ${retry_delay}s)"
+    sleep $retry_delay
+  done
+
+  log_warn "Home Assistant Core service not fully ready after $max_retries attempts"
+  log_info "Continuing anyway - Core may initialize during onboarding"
+  return 0 # Don't fail, just warn - Core may become ready during onboarding
+}
+
+# Wait for Home Assistant HTTP API to be ready for Python requests
+wait_for_ha_api_ready() {
+  log_info "Verifying Home Assistant HTTP API connectivity..."
+
+  local retry_count=0
+  local max_retries=20
+  local retry_delay=3
+
+  while [ $retry_count -lt $max_retries ]; do
+    # Test actual HTTP connectivity using Python requests (same library as onboarding script)
+    if python3 -c "import requests; requests.get('$HA_URL/api/', timeout=5)" 2> /dev/null; then
+      log_success "Home Assistant HTTP API is ready for connections"
+      return 0
+    fi
+
+    retry_count=$((retry_count + 1))
+    log_info "Waiting for HA HTTP API connectivity... ($retry_count/$max_retries, sleeping ${retry_delay}s)"
+    sleep $retry_delay
+  done
+
+  log_error "Home Assistant HTTP API not ready after $max_retries attempts"
+  exit 1
+}
+
 # Check if onboarding is needed (no users exist)
 check_onboarding_status() {
   log_info "Checking onboarding status..."
@@ -130,27 +173,40 @@ check_onboarding_status() {
   local response
   http_code=$(curl -s -o /dev/null -w "%{http_code}" "$HA_URL/api/onboarding" 2> /dev/null || echo "000")
 
-  # If endpoint returns 404, onboarding is complete (endpoint no longer available)
+  # Onboarding API endpoint returns 404 in two scenarios:
+  #   1) Fresh install - no owner user created yet (needs onboarding)
+  #   2) Already complete - endpoint removed after owner creation (skip)
+  # Delegate to Python automation to disambiguate via idempotent user creation attempt
   if [ "$http_code" = "404" ]; then
-    log_info "Onboarding API returns 404 - onboarding already completed"
-    return 1
+    log_info "Onboarding API returns 404 (no owner user OR already complete)"
+    log_info "Delegating detection to onboarding automation (will try user creation)"
+    return 0 # Let Python script disambiguate via user creation attempt
   fi
 
   # If not 404, try to get the response body (will work for 200 or other codes)
   response=$(curl -sf "$HA_URL/api/onboarding" 2> /dev/null || echo "")
 
   if [ -z "$response" ]; then
-    log_info "Onboarding API not available (HTTP $http_code), assuming onboarding needed"
+    log_info "Onboarding API returned HTTP $http_code - attempting onboarding"
     return 0
   fi
 
   # Check if user step is done
   local user_done
-  user_done=$(echo "$response" | jq -r '.[] | select(.step == "user") | .done' 2> /dev/null)
+  user_done=$(echo "$response" | jq -r '.[] | select(.step == "user") | .done' 2> /dev/null || echo "")
+
+  # Check if there are any incomplete steps
+  local incomplete_steps
+  incomplete_steps=$(echo "$response" | jq -r '.[] | select(.done == false) | .step' 2> /dev/null || echo "")
 
   if [ "$user_done" = "true" ]; then
-    log_info "User already created (onboarding in progress or complete)"
-    return 1
+    if [ -z "$incomplete_steps" ]; then
+      log_info "User already created and all onboarding steps completed"
+      return 1
+    else
+      log_info "User already created, but onboarding incomplete (remaining steps: $(echo "$incomplete_steps" | tr '\n' ',' | sed 's/,$//'))"
+      return 0 # Return true to indicate onboarding is needed
+    fi
   fi
 
   log_info "Home Assistant needs onboarding"
@@ -158,79 +214,417 @@ check_onboarding_status() {
 }
 
 # Create the first user via onboarding API
-create_first_user() {
-  log_info "Creating first user: $HASS_USERNAME..."
+# Run onboarding automation using Python script
+# This replaces the manual user creation and onboarding step completion
+# Returns 0 on success, 1 on failure
+# Outputs the auth token if successful
+run_onboarding_automation() {
+  local onboarding_script="$REPO_ROOT/scripts/automate-onboarding.py"
 
-  # Note: ha CLI doesn't have onboarding commands, so we'll use curl for this specific API
-  local response
-  response=$(curl -sf -w "\n%{http_code}" -X POST \
-    "$HA_URL/api/onboarding/users" \
-    -H "Content-Type: application/json" \
-    -d "{
-            \"name\": \"$HASS_USERNAME\",
-            \"username\": \"$HASS_USERNAME\",
-            \"password\": \"$HASS_PASSWORD\",
-            \"language\": \"en\",
-            \"client_id\": \"$HA_URL/\"
-        }" 2>&1)
+  if [ ! -f "$onboarding_script" ]; then
+    log_error "Onboarding automation script not found: $onboarding_script"
+    return 1
+  fi
 
-  local http_code
-  http_code=$(echo "$response" | tail -n1)
-  local body
-  body=$(echo "$response" | sed '$d')
+  log_info "Running onboarding automation script..."
+  log_info "This will create user (if needed) and complete all onboarding steps..."
 
-  if [ "$http_code" = "200" ] || [ "$http_code" = "201" ]; then
-    log_success "User created successfully"
+  # Run the Python script with proper environment variables
+  # Also log to file for persistence
+  local log_file="/tmp/onboarding-automation.log"
+  local script_output
+  script_output=$(HA_URL="$HA_URL" \
+    HASS_USERNAME="$HASS_USERNAME" \
+    HASS_PASSWORD="$HASS_PASSWORD" \
+    python3 "$onboarding_script" 2>&1 | tee "$log_file")
+  local script_exit_code=$?
 
-    # Try to extract auth token from response
-    local auth_token
-    auth_token=$(echo "$body" | jq -r '.access_token // .auth_code // empty' 2> /dev/null)
-    if [ -n "$auth_token" ]; then
-      log_info "Auth token received from user creation"
-      echo "$auth_token"
-    else
-      log_warn "No auth token found in response"
-      log_warn "Response body: $body"
+  # Check for restart indicators in output (even if script succeeded)
+  local needs_restart=false
+  if echo "$script_output" | grep -qiE "restart needed|restart_code.*2|consider restarting|💡.*restart"; then
+    needs_restart=true
+    log_warn "Onboarding script indicates HA Core restart may be needed"
+  fi
+
+  if [ $script_exit_code -eq 0 ]; then
+    log_success "Onboarding automation completed successfully"
+
+    # Extract token from credentials file (prefer LONG_LIVED_ACCESS_TOKEN, fallback to ONBOARDING_TOKEN)
+    local auth_token=""
+    if [ -f "$CREDENTIALS_FILE" ]; then
+      # First, try to get LONG_LIVED_ACCESS_TOKEN (preferred - long-lived)
+      auth_token=$(grep "^LONG_LIVED_ACCESS_TOKEN=" "$CREDENTIALS_FILE" | cut -d'=' -f2 | tr -d '"' || echo "")
+
+      # If no long-lived token, try ONBOARDING_TOKEN (short-lived, but usable)
+      if [ -z "$auth_token" ]; then
+        local onboarding_token
+        onboarding_token=$(grep "^ONBOARDING_TOKEN=" "$CREDENTIALS_FILE" | cut -d'=' -f2 | tr -d '"' || echo "")
+        if [ -n "$onboarding_token" ]; then
+          log_info "Found ONBOARDING_TOKEN, creating long-lived token..."
+          # Try to create long-lived token from onboarding token
+          local token_script="$REPO_ROOT/scripts/create-token-from-existing.js"
+          if [ -f "$token_script" ]; then
+            local token_output
+            token_output=$(HA_URL="$HA_URL" EXISTING_TOKEN="$onboarding_token" ONBOARDING_TOKEN="$onboarding_token" node "$token_script" 2>&1) || {
+              log_warn "Failed to create long-lived token from onboarding token"
+              log_warn "Will use onboarding token (may be short-lived)"
+              auth_token="$onboarding_token"
+            }
+
+            # Extract the long-lived token from output
+            local new_token
+            new_token=$(echo "$token_output" | grep -oE "eyJ[A-Za-z0-9_-]*\.[A-Za-z0-9_-]*\.[A-Za-z0-9_-]*" | head -n1)
+            if [ -n "$new_token" ]; then
+              log_success "Successfully created long-lived token from onboarding token"
+              auth_token="$new_token"
+              # Save the long-lived token to credentials file
+              if grep -q "LONG_LIVED_ACCESS_TOKEN=" "$CREDENTIALS_FILE" 2> /dev/null; then
+                sed -i "s|^LONG_LIVED_ACCESS_TOKEN=.*|LONG_LIVED_ACCESS_TOKEN=$new_token|" "$CREDENTIALS_FILE"
+              else
+                echo "LONG_LIVED_ACCESS_TOKEN=$new_token" >> "$CREDENTIALS_FILE"
+              fi
+            else
+              log_warn "Failed to extract long-lived token, using onboarding token"
+              auth_token="$onboarding_token"
+            fi
+          else
+            log_warn "Token bootstrap script not found, using onboarding token"
+            auth_token="$onboarding_token"
+          fi
+        fi
+      fi
     fi
-    return 0
+
+    # Check if restart is needed (but script completed)
+    if [ "$needs_restart" = "true" ]; then
+      log_info "Script completed but restart recommended - returning restart code"
+      if [ -n "$auth_token" ]; then
+        log_info "Token extracted from credentials file"
+        echo "$auth_token"
+        return 2 # Return restart code
+      fi
+      return 2 # Return restart code even without token
+    fi
+
+    # Return token if we found one
+    if [ -n "$auth_token" ]; then
+      log_info "Token extracted from credentials file"
+      echo "$auth_token"
+      return 0
+    fi
+
+    # Try to extract token from script output as fallback
+    auth_token=$(echo "$script_output" | grep -oE "eyJ[A-Za-z0-9_-]*\.[A-Za-z0-9_-]*\.[A-Za-z0-9_-]*" | head -n1)
+    if [ -n "$auth_token" ]; then
+      log_info "Token extracted from script output"
+      echo "$auth_token"
+      return 0
+    fi
+
+    log_warn "Onboarding completed but could not extract token"
+    log_warn "You may need to create a token manually"
+    return 0 # Still success, token can be created separately
   else
-    log_error "Failed to create user (HTTP $http_code)"
-    echo "$body" | jq '.' 2> /dev/null || echo "$body"
+    log_error "Onboarding automation script failed with exit code $script_exit_code"
+    log_error "Script output (full log: $log_file):"
+    echo "$script_output" | while IFS= read -r line; do
+      log_error "  $line"
+    done
+
+    # If script failed AND restart is needed, return restart code
+    if [ "$needs_restart" = "true" ]; then
+      log_warn "Script failed but restart may help - returning restart code"
+      return 2
+    fi
+
     return 1
   fi
 }
 
-# Complete onboarding by setting up core config
-complete_onboarding() {
-  log_info "Completing onboarding (core config)..."
+# Legacy function kept for backwards compatibility
+# Deprecated: Use run_onboarding_automation() instead
+create_first_user() {
+  log_info "Using new onboarding automation instead of legacy create_first_user..."
+  run_onboarding_automation
+}
 
-  # Note: ha CLI doesn't have onboarding commands, so we'll use curl for this specific API
-  local response
+# Discover available onboarding steps and their status
+discover_onboarding_steps() {
+  local auth_token="$1"
+  local log_output="${2:-true}"
+
+  if [ -z "$auth_token" ]; then
+    if [ "$log_output" = "true" ]; then
+      log_error "Missing auth token for onboarding discovery"
+    fi
+    return 1
+  fi
+
+  if [ "$log_output" = "true" ]; then
+    log_info "Discovering available onboarding steps..."
+  fi
+
+  # Check HTTP status code first to handle 404 gracefully
   local http_code
+  http_code=$(curl -s -o /dev/null -w "%{http_code}" -X GET \
+    "$HA_URL/api/onboarding" \
+    -H "Authorization: Bearer $auth_token" \
+    -H "Content-Type: application/json" 2> /dev/null || echo "000")
 
-  # Capture full response including errors
-  response=$(curl -sf -w "\n%{http_code}" -X POST \
-    "$HA_URL/api/onboarding/core_config" \
-    -H "Content-Type: application/json" \
-    -d "{}" 2>&1) || true # Don't exit on curl failure
-
-  http_code=$(echo "$response" | tail -n1)
-  local body
-  body=$(echo "$response" | sed '$d')
-
-  if [ "$http_code" = "200" ] || [ "$http_code" = "201" ]; then
-    log_success "Onboarding completed"
+  # 404 here means onboarding complete - endpoint removed after owner user created
+  # (This function is only called AFTER user creation has already been attempted)
+  if [ "$http_code" = "404" ]; then
+    if [ "$log_output" = "true" ]; then
+      log_info "Onboarding API returned HTTP 404 - onboarding complete"
+    fi
+    # Return 0 (success) with empty output - no incomplete steps
     return 0
-  elif [ "$http_code" = "404" ]; then
-    log_info "Onboarding already completed (endpoint no longer available)"
-    return 0
-  else
-    log_warn "Onboarding completion returned HTTP $http_code (may already be complete)"
-    if [ -n "$body" ]; then
-      echo "Response: $body"
+  fi
+
+  # If we get 401, token may be invalid/expired - return error
+  # Don't try to get response body with curl -sf as it will fail on 401
+  if [ "$http_code" = "401" ]; then
+    if [ "$log_output" = "true" ]; then
+      log_warn "Onboarding API returned HTTP 401 - token may be invalid or expired"
+      log_warn "Cannot check onboarding status with invalid token"
+    fi
+    return 1
+  fi
+
+  # Get response body (should be 200 at this point)
+  # Use curl -s without -f to get response even if HTTP error (we already checked status)
+  local response
+  response=$(curl -s -X GET \
+    "$HA_URL/api/onboarding" \
+    -H "Authorization: Bearer $auth_token" \
+    -H "Content-Type: application/json" 2>&1)
+
+  # Check if we got a valid response (should be JSON array)
+  if [ -z "$response" ] || [ "$response" = "null" ]; then
+    if [ "$log_output" = "true" ]; then
+      log_warn "Failed to retrieve onboarding steps (HTTP $http_code, empty response)"
+    fi
+    return 1
+  fi
+
+  # Verify we got JSON (starts with [ or {)
+  if ! echo "$response" | jq . > /dev/null 2>&1; then
+    if [ "$log_output" = "true" ]; then
+      log_warn "Failed to parse onboarding response as JSON (HTTP $http_code)"
+      log_warn "Response: $response"
+    fi
+    return 1
+  fi
+
+  # Log the full response for debugging if requested
+  if [ "$log_output" = "true" ]; then
+    log_info "Onboarding API response: $response"
+  fi
+
+  # Parse steps and extract incomplete ones
+  local incomplete_steps
+  incomplete_steps=$(echo "$response" | jq -r '.[] | select(.done == false) | .step' 2> /dev/null || echo "")
+
+  if [ -z "$incomplete_steps" ]; then
+    if [ "$log_output" = "true" ]; then
+      log_info "All onboarding steps already completed"
     fi
     return 0
   fi
+
+  if [ "$log_output" = "true" ]; then
+    log_info "Incomplete onboarding steps:"
+    echo "$incomplete_steps" | while IFS= read -r step; do
+      [ -n "$step" ] && log_info "  - $step"
+    done
+  fi
+
+  # Return the list of incomplete steps (one per line) to stdout
+  echo "$incomplete_steps"
+}
+
+# Generic function to complete an onboarding step
+complete_onboarding_step() {
+  local step_name="$1"
+  local payload_data="$2"
+  local auth_token="$3"
+  local max_retries="${4:-3}"
+
+  if [ -z "$step_name" ]; then
+    log_error "Missing required parameter: step_name"
+    return 1
+  fi
+
+  local endpoint="$HA_URL/api/onboarding/$step_name"
+  log_info "Attempting to complete onboarding step: $step_name"
+
+  local attempt=0
+  local retry_delay=10
+
+  while [ $attempt -lt "$max_retries" ]; do
+    attempt=$((attempt + 1))
+
+    local response
+    # Try with auth token if provided, otherwise try without (onboarding endpoints may not require auth)
+    if [ -n "$auth_token" ]; then
+      response=$(curl -s -w "\n%{http_code}" -X POST \
+        "$endpoint" \
+        -H "Authorization: Bearer $auth_token" \
+        -H "Content-Type: application/json" \
+        -d "$payload_data" 2>&1)
+    else
+      response=$(curl -s -w "\n%{http_code}" -X POST \
+        "$endpoint" \
+        -H "Content-Type: application/json" \
+        -d "$payload_data" 2>&1)
+    fi
+
+    local http_code
+    http_code=$(echo "$response" | tail -n1)
+    local body
+    body=$(echo "$response" | sed '$d')
+
+    case "$http_code" in
+      200 | 201)
+        log_success "Step '$step_name' completed successfully"
+        return 0
+        ;;
+      400)
+        if [ $attempt -lt "$max_retries" ]; then
+          log_warn "Step '$step_name' returned HTTP 400 (initialization issue), retrying in ${retry_delay}s... (attempt $attempt/$max_retries)"
+          sleep $retry_delay
+          retry_delay=$((retry_delay * 2)) # Exponential backoff
+          continue
+        else
+          log_warn "Step '$step_name' returned HTTP 400 after $max_retries attempts"
+          log_info "Response body: $body"
+          return 1
+        fi
+        ;;
+      403)
+        log_info "Step '$step_name' already completed (HTTP 403)"
+        return 0
+        ;;
+      404)
+        log_info "Step '$step_name' not found or onboarding complete (HTTP 404)"
+        return 0
+        ;;
+      401)
+        # If we got 401 with auth token, try without token on next attempt (onboarding endpoints may work without auth)
+        if [ -n "$auth_token" ] && [ $attempt -eq 1 ]; then
+          log_warn "Step '$step_name' returned HTTP 401 with auth token - trying without auth on next attempt"
+          auth_token="" # Clear token to try without auth
+          sleep $retry_delay
+          continue
+        else
+          log_warn "Step '$step_name' returned HTTP 401 (unauthorized)"
+          log_info "Response body: $body"
+          if [ $attempt -lt "$max_retries" ]; then
+            log_info "Retrying in ${retry_delay}s... (attempt $attempt/$max_retries)"
+            sleep $retry_delay
+            retry_delay=$((retry_delay * 2))
+            continue
+          else
+            return 1
+          fi
+        fi
+        ;;
+      *)
+        log_warn "Step '$step_name' returned unexpected HTTP $http_code"
+        log_info "Response body: $body"
+        if [ $attempt -lt "$max_retries" ]; then
+          log_info "Retrying in ${retry_delay}s... (attempt $attempt/$max_retries)"
+          sleep $retry_delay
+          retry_delay=$((retry_delay * 2))
+          continue
+        else
+          return 1
+        fi
+        ;;
+    esac
+  done
+
+  return 1
+}
+
+# Complete core_config step with Chicago location
+complete_core_config_step() {
+  local auth_token="${1:-}"
+
+  log_info "Completing core_config step with Chicago location..."
+
+  # Try full payload first
+  local payload
+  payload=$(jq -n \
+    --arg lat "41.8781" \
+    --arg lon "-87.6298" \
+    --arg elev "181" \
+    --arg units "imperial" \
+    --arg tz "America/Chicago" \
+    '{
+      "latitude": ($lat | tonumber),
+      "longitude": ($lon | tonumber),
+      "elevation": ($elev | tonumber),
+      "unit_system": $units,
+      "time_zone": $tz
+    }' 2> /dev/null)
+
+  if [ -z "$payload" ]; then
+    # Fallback if jq fails
+    payload='{"latitude": 41.8781, "longitude": -87.6298, "elevation": 181, "unit_system": "imperial", "time_zone": "America/Chicago"}'
+  fi
+
+  log_info "Using payload: $payload"
+
+  # Try with full payload
+  if complete_onboarding_step "core_config" "$payload" "$auth_token"; then
+    return 0
+  fi
+
+  # If that fails, try minimal payload
+  log_info "Full payload failed, trying minimal payload..."
+  local minimal_payload
+  minimal_payload='{"latitude": 41.8781, "longitude": -87.6298}'
+
+  if complete_onboarding_step "core_config" "$minimal_payload" "$auth_token"; then
+    return 0
+  fi
+
+  log_warn "Failed to complete core_config step after all attempts"
+  return 1
+}
+
+# Complete analytics step with opt-out preferences
+complete_analytics_step() {
+  local auth_token="${1:-}"
+
+  log_info "Completing analytics step with opt-out preferences..."
+
+  # Try different payload structures
+  local payload_attempts=(
+    '{"base": false, "usage": false, "statistics": false}'
+    '{"preferences": {"base": false, "usage": false, "statistics": false}}'
+    '{"analytics": false}'
+    '{}'
+  )
+
+  local attempt=0
+  for payload in "${payload_attempts[@]}"; do
+    attempt=$((attempt + 1))
+    log_info "Trying analytics payload attempt $attempt: $payload"
+
+    if complete_onboarding_step "analytics" "$payload" "$auth_token" 2; then
+      return 0
+    fi
+
+    if [ $attempt -lt ${#payload_attempts[@]} ]; then
+      log_info "Payload attempt $attempt failed, trying next..."
+      sleep 2
+    fi
+  done
+
+  log_warn "Failed to complete analytics step after all payload attempts"
+  return 1
 }
 
 # Get supervisor token from hassio_cli container
@@ -258,7 +652,7 @@ wait_for_supervisor() {
   while [ $retry_count -lt $max_retries ]; do
     local healthy
     healthy=$(ha supervisor info --raw-json 2> /dev/null \
-      | jq -r '.data.healthy // false' 2> /dev/null)
+      | jq -r '.data.healthy // false' 2> /dev/null || echo "false")
 
     if [ "$healthy" = "true" ]; then
       log_success "Supervisor is healthy"
@@ -391,6 +785,16 @@ EOF
 enable_emqx_sidebar() {
   log_info "Enabling 'Add to Sidebar' for EMQX..."
 
+  # Check if sidebar is already enabled
+  local current_options
+  current_options=$(ha addons info "$EMQX_SLUG" --raw-json 2> /dev/null \
+    | jq -r '.data.options.ingress_panel // false' 2> /dev/null || echo "false")
+
+  if [ "$current_options" = "true" ]; then
+    log_success "EMQX sidebar already enabled, skipping"
+    return 0
+  fi
+
   local response
   response=$(timeout 30 docker exec hassio_cli curl -sf -w "\n%{http_code}" -X POST \
     -H "Authorization: Bearer ${SUPERVISOR_TOKEN}" \
@@ -440,7 +844,7 @@ start_emqx() {
   # Check if the background process is still running or has failed immediately
   if ! kill -0 $start_pid 2> /dev/null; then
     # Process already exited - check if it succeeded
-    wait $start_pid 2> /dev/null
+    wait $start_pid 2> /dev/null || true
     local exit_code=$?
     if [ $exit_code -ne 0 ]; then
       log_error "Start command failed immediately (exit code: $exit_code)"
@@ -505,7 +909,7 @@ install_cync_lan() {
 # Configure Cync Controller add-on with credentials
 configure_cync_lan() {
   # Check if we have Cync credentials
-  if [ -z "$CYNC_USERNAME" ] || [ -z "$CYNC_PASSWORD" ]; then
+  if [ -z "${CYNC_USERNAME:-}" ] || [ -z "${CYNC_PASSWORD:-}" ]; then
     log_warn "Cync credentials not found in credentials file"
     log_info "Skipping configuration - configure manually via Home Assistant UI"
     log_info "Go to Settings > Add-ons > Cync Controller > Configuration"
@@ -520,18 +924,18 @@ configure_cync_lan() {
     cat << EOF
 {
   "options": {
-    "account_username": "$CYNC_USERNAME",
-    "account_password": "$CYNC_PASSWORD",
+    "account_username": "${CYNC_USERNAME:-}",
+    "account_password": "${CYNC_PASSWORD:-}",
     "debug_log_level": true,
     "mqtt_host": "localhost",
     "mqtt_port": 1883,
-    "mqtt_user": "$MQTT_USER",
-    "mqtt_pass": "$MQTT_PASS",
+    "mqtt_user": "${MQTT_USER:-}",
+    "mqtt_pass": "${MQTT_PASS:-}",
     "mqtt_topic": "cync_controller_addon",
     "tuning": {
       "tcp_whitelist": "",
-      "command_targets": 2,
-      "max_clients": 8
+      "command_targets": 1,
+      "max_clients": 64
     },
     "cloud_relay": {
       "enabled": false,
@@ -540,6 +944,9 @@ configure_cync_lan() {
       "cloud_port": 23779,
       "debug_packet_logging": false,
       "disable_ssl_verification": false
+    },
+    "features": {
+      "expose_device_lights": true
     }
   }
 }
@@ -623,7 +1030,7 @@ start_cync_lan() {
   # Check if the background process is still running or has failed immediately
   if ! kill -0 $start_pid 2> /dev/null; then
     # Process already exited - check if it succeeded
-    wait $start_pid 2> /dev/null
+    wait $start_pid 2> /dev/null || true
     local exit_code=$?
     if [ $exit_code -ne 0 ]; then
       log_warn "Start command failed (exit code: $exit_code, addon may need manual configuration)"
@@ -707,6 +1114,108 @@ wait_for_mqtt_broker() {
   return 0
 }
 
+# Validate and refresh token if expired or near expiry
+validate_and_refresh_token() {
+  local token="${1:-$LONG_LIVED_ACCESS_TOKEN}"
+
+  if [ -z "$token" ]; then
+    log_error "No token provided for validation"
+    return 1
+  fi
+
+  # Check if jq is available for JSON parsing
+  if ! command -v jq > /dev/null 2>&1 && ! docker exec hassio_cli sh -c "command -v jq >/dev/null 2>&1"; then
+    log_warn "jq not available; cannot validate token expiration"
+    return 0
+  fi
+
+  # Decode JWT token (payload is second part, split by dots)
+  # JWT format: header.payload.signature
+  local payload
+  payload=$(echo "$token" | cut -d'.' -f2)
+
+  # JWT base64 padding may be missing, add it if needed
+  case $((${#payload} % 4)) in
+    2) payload="${payload}==" ;;
+    3) payload="${payload}=" ;;
+  esac
+
+  # Decode base64 and extract exp claim
+  local exp_claim
+  if command -v jq > /dev/null 2>&1; then
+    exp_claim=$(echo "$payload" | base64 -d 2> /dev/null | jq -r '.exp // empty' 2> /dev/null || echo "")
+  else
+    # Try using hassio_cli if jq is not available locally
+    exp_claim=$(docker exec hassio_cli sh -c "echo '$payload' | base64 -d 2>/dev/null | jq -r '.exp // empty' 2>/dev/null || echo ''" 2> /dev/null || echo "")
+  fi
+
+  # If we couldn't extract expiration, assume token is invalid and refresh
+  if [ -z "$exp_claim" ] || [ "$exp_claim" = "null" ]; then
+    log_warn "Could not parse token expiration; will refresh token to be safe"
+    # Fall through to refresh logic below
+  else
+    # Get current timestamp
+    local current_time
+    current_time=$(date +%s)
+
+    # Check if token is expired (exp < current time) or will expire in 5 minutes
+    local time_until_expiry=$((exp_claim - current_time))
+    local min_valid_time=$((5 * 60)) # 5 minutes in seconds
+
+    if [ $time_until_expiry -gt $min_valid_time ]; then
+      log_info "Token is valid (expires in $((time_until_expiry / 60)) minutes)"
+      return 0
+    else
+      log_warn "Token expired or expires soon (exp: $exp_claim, current: $current_time)"
+      log_info "Refreshing token..."
+      # Fall through to refresh logic below
+    fi
+  fi
+
+  # Regenerate token using WebSocket script
+  log_info "Creating fresh long-lived access token using WebSocket script..."
+
+  local token_script="$REPO_ROOT/scripts/create-token-websocket.js"
+
+  if [ ! -f "$token_script" ]; then
+    log_error "WebSocket token creation script not found: $token_script"
+    return 1
+  fi
+
+  # Run the token creation script with proper environment variables
+  local token_output
+  token_output=$(HA_URL="$HA_URL" HASS_USERNAME="$HASS_USERNAME" HASS_PASSWORD="$HASS_PASSWORD" node "$token_script" 2>&1) || {
+    log_error "Failed to create token using WebSocket script"
+    log_error "Output: $token_output"
+    return 1
+  }
+
+  # Extract the token from the output (look for JWT pattern)
+  local new_token
+  new_token=$(echo "$token_output" | grep -oE "eyJ[A-Za-z0-9_-]*\.[A-Za-z0-9_-]*\.[A-Za-z0-9_-]*" | head -n1)
+
+  if [ -z "$new_token" ]; then
+    log_error "Failed to extract token from WebSocket script output"
+    log_error "Output: $token_output"
+    return 1
+  fi
+
+  log_success "Successfully created fresh long-lived token"
+
+  # Update the global variable
+  LONG_LIVED_ACCESS_TOKEN="$new_token"
+
+  # Save the long-lived access token to credentials file
+  if grep -q "LONG_LIVED_ACCESS_TOKEN=" "$CREDENTIALS_FILE" 2> /dev/null; then
+    sed -i "s|^LONG_LIVED_ACCESS_TOKEN=.*|LONG_LIVED_ACCESS_TOKEN=$new_token|" "$CREDENTIALS_FILE"
+  else
+    echo "LONG_LIVED_ACCESS_TOKEN=$new_token" >> "$CREDENTIALS_FILE"
+  fi
+
+  log_success "Updated credentials file with fresh long-lived access token"
+  return 0
+}
+
 # Build the user_input payload for the current MQTT config flow step
 mqtt_build_user_input() {
   local step_json="$1"
@@ -740,7 +1249,7 @@ mqtt_build_user_input() {
 mqtt_run_config_flow() {
   MQTT_LAST_ABORT_REASON=""
 
-  local auth_token="$LONG_LIVED_ACCESS_TOKEN"
+  local auth_token="${LONG_LIVED_ACCESS_TOKEN:-}"
 
   if [ -z "$auth_token" ]; then
     log_error "Missing long-lived access token; cannot configure MQTT integration"
@@ -749,17 +1258,68 @@ mqtt_run_config_flow() {
 
   local start_payload='{"handler":"mqtt","show_advanced_options":true}'
   local response
+  local http_code
+  local response_body
 
-  if ! response=$(curl -sf -X POST "$HA_URL/api/config/config_entries/flow" \
+  # Make curl request and capture both response body and HTTP status code
+  response=$(curl -s -w "\n%{http_code}" -X POST "$HA_URL/api/config/config_entries/flow" \
     -H "Authorization: Bearer $auth_token" \
     -H "Content-Type: application/json" \
-    -d "$start_payload" 2>&1); then
+    -d "$start_payload" 2>&1)
+
+  # Extract HTTP status code (last line) and response body (everything else)
+  http_code=$(echo "$response" | tail -n1)
+  response_body=$(echo "$response" | sed '$d')
+
+  # Check if HTTP status code indicates an error
+  if [ "$http_code" -lt 200 ] || [ "$http_code" -ge 300 ]; then
     log_error "Failed to start MQTT config flow via REST API"
-    log_error "curl output: $response"
-    return 1
+    log_error "HTTP Status: $http_code"
+    log_error "Endpoint: $HA_URL/api/config/config_entries/flow"
+    log_error "Response: $response_body"
+
+    # Provide helpful error messages for common status codes
+    case "$http_code" in
+      401)
+        log_error "Authentication failed - token may be invalid or expired"
+
+        # Try to refresh token and retry once
+        log_info "Attempting to refresh token and retry..."
+        if validate_and_refresh_token; then
+          log_info "Token refreshed, retrying MQTT config flow..."
+          # Retry the request with refreshed token
+          auth_token="$LONG_LIVED_ACCESS_TOKEN"
+          response=$(curl -s -w "\n%{http_code}" -X POST "$HA_URL/api/config/config_entries/flow" \
+            -H "Authorization: Bearer $auth_token" \
+            -H "Content-Type: application/json" \
+            -d "$start_payload" 2>&1)
+
+          http_code=$(echo "$response" | tail -n1)
+          response_body=$(echo "$response" | sed '$d')
+
+          if [ "$http_code" -lt 200 ] || [ "$http_code" -ge 300 ]; then
+            log_error "Retry after token refresh also failed with HTTP $http_code"
+            return 1
+          else
+            log_success "Successfully started MQTT config flow after token refresh"
+          fi
+        else
+          log_error "Failed to refresh token, cannot proceed"
+          return 1
+        fi
+        ;;
+      403) log_error "Access forbidden - check token permissions" ;;
+      404) log_error "Endpoint not found - may need to wait for HA to fully initialize" ;;
+      500) log_error "Server error - check Home Assistant logs" ;;
+    esac
+
+    # If we didn't handle it above, return error
+    if [ "$http_code" -lt 200 ] || [ "$http_code" -ge 300 ]; then
+      return 1
+    fi
   fi
 
-  local step_json="$response"
+  local step_json="$response_body"
   local step_type
   step_type=$(echo "$step_json" | jq -r '.type // empty' 2> /dev/null || echo "")
 
@@ -822,29 +1382,77 @@ mqtt_run_config_flow() {
 
     if [ "$step_type" = "menu" ]; then
       # Try top-level selector first
-      if ! response=$(curl -sf -X POST "$HA_URL/api/config/config_entries/flow/$flow_id" \
+      local menu_response
+      menu_response=$(curl -s -w "\n%{http_code}" -X POST "$HA_URL/api/config/config_entries/flow/$flow_id" \
         -H "Authorization: Bearer $auth_token" \
         -H "Content-Type: application/json" \
-        -d '{"next_step_id":"broker"}' 2>&1); then
+        -d '{"next_step_id":"broker"}' 2>&1)
+
+      local menu_http_code
+      menu_http_code=$(echo "$menu_response" | tail -n1)
+      local menu_response_body
+      menu_response_body=$(echo "$menu_response" | sed '$d')
+
+      # If first attempt failed, try fallback
+      if [ "$menu_http_code" -lt 200 ] || [ "$menu_http_code" -ge 300 ]; then
         # Fallback to user_input wrapper
-        if ! response=$(curl -sf -X POST "$HA_URL/api/config/config_entries/flow/$flow_id" \
+        menu_response=$(curl -s -w "\n%{http_code}" -X POST "$HA_URL/api/config/config_entries/flow/$flow_id" \
           -H "Authorization: Bearer $auth_token" \
           -H "Content-Type: application/json" \
-          -d '{"user_input":{"next_step_id":"broker"}}' 2>&1); then
+          -d '{"user_input":{"next_step_id":"broker"}}' 2>&1)
+
+        menu_http_code=$(echo "$menu_response" | tail -n1)
+        menu_response_body=$(echo "$menu_response" | sed '$d')
+
+        # If fallback also failed, report error
+        if [ "$menu_http_code" -lt 200 ] || [ "$menu_http_code" -ge 300 ]; then
           log_error "Failed to submit MQTT config flow step (menu)"
-          log_error "curl output: $response"
+          log_error "HTTP Status: $menu_http_code"
+          log_error "Endpoint: $HA_URL/api/config/config_entries/flow/$flow_id"
+          log_error "Response: $menu_response_body"
+
+          case "$menu_http_code" in
+            401) log_error "Authentication failed - token may be invalid or expired" ;;
+            403) log_error "Access forbidden - check token permissions" ;;
+            404) log_error "Endpoint not found - flow may have expired" ;;
+            500) log_error "Server error - check Home Assistant logs" ;;
+          esac
+
           return 1
         fi
       fi
+
+      response="$menu_response_body"
     else
-      if ! response=$(curl -sf -X POST "$HA_URL/api/config/config_entries/flow/$flow_id" \
+      # Form step submission
+      local form_response
+      form_response=$(curl -s -w "\n%{http_code}" -X POST "$HA_URL/api/config/config_entries/flow/$flow_id" \
         -H "Authorization: Bearer $auth_token" \
         -H "Content-Type: application/json" \
-        -d "$request_body" 2>&1); then
+        -d "$request_body" 2>&1)
+
+      local form_http_code
+      form_http_code=$(echo "$form_response" | tail -n1)
+      local form_response_body
+      form_response_body=$(echo "$form_response" | sed '$d')
+
+      if [ "$form_http_code" -lt 200 ] || [ "$form_http_code" -ge 300 ]; then
         log_error "Failed to submit MQTT config flow step"
-        log_error "curl output: $response"
+        log_error "HTTP Status: $form_http_code"
+        log_error "Endpoint: $HA_URL/api/config/config_entries/flow/$flow_id"
+        log_error "Response: $form_response_body"
+
+        case "$form_http_code" in
+          401) log_error "Authentication failed - token may be invalid or expired" ;;
+          403) log_error "Access forbidden - check token permissions" ;;
+          404) log_error "Endpoint not found - flow may have expired" ;;
+          500) log_error "Server error - check Home Assistant logs" ;;
+        esac
+
         return 1
       fi
+
+      response="$form_response_body"
     fi
 
     step_json="$response"
@@ -872,7 +1480,7 @@ mqtt_run_config_flow() {
 
 # Publish a test MQTT message via Home Assistant service call to verify integration
 mqtt_verify_publish() {
-  local auth_token="$LONG_LIVED_ACCESS_TOKEN"
+  local auth_token="${LONG_LIVED_ACCESS_TOKEN:-}"
 
   if [ -z "$auth_token" ]; then
     log_warn "Skipping MQTT publish verification (missing long-lived access token)"
@@ -887,7 +1495,7 @@ mqtt_verify_publish() {
   http_code=$(curl -s -o "$tmp_file" -w "%{http_code}" -X POST "$HA_URL/api/services/mqtt/publish" \
     -H "Authorization: Bearer $auth_token" \
     -H "Content-Type: application/json" \
-    -d "$payload")
+    -d "$payload" 2> /dev/null || echo "000")
 
   if [ "$http_code" = "200" ]; then
     log_success "Verified MQTT integration by publishing test message"
@@ -1002,68 +1610,305 @@ main() {
   # Step 2: Wait for HA to be ready
   wait_for_ha
 
+  # Step 2.5: Wait for HA Core service to be ready (not just API responding)
+  wait_for_ha_core_ready
+
+  # Step 2.75: Verify HTTP API is ready for Python requests
+  wait_for_ha_api_ready
+
   # Step 3: Handle onboarding if needed
   if check_onboarding_status; then
-    log_info "Home Assistant needs onboarding, creating first user..."
+    log_info "Home Assistant needs onboarding, running automation script..."
+    log_info "This will create user (if needed) and complete all onboarding steps..."
 
-    local auth_token
-    auth_token=$(create_first_user)
+    local auth_token=""
+    local onboarding_result=1
+    local retry_count=0
+    local max_retries=2
+    local retry_delay=10
+
+    # Retry logic with exponential backoff and restart handling
+    while [ $retry_count -le $max_retries ]; do
+      if [ $retry_count -gt 0 ]; then
+        log_info "Retrying onboarding automation (attempt $((retry_count + 1))/$((max_retries + 1)))..."
+        log_info "Waiting ${retry_delay}s before retry..."
+        sleep $retry_delay
+        retry_delay=$((retry_delay * 2)) # Exponential backoff
+      fi
+
+      # Use the new Python-based onboarding automation
+      set +e
+      auth_token=$(run_onboarding_automation)
+      onboarding_result=$?
+      set -e
+
+      # Handle restart code (2): restart HA Core and retry
+      if [ $onboarding_result -eq 2 ]; then
+        log_warn "Onboarding script indicates HA Core restart is needed"
+        log_info "Restarting Home Assistant Core..."
+
+        if ha core restart > /dev/null 2>&1; then
+          log_success "HA Core restart command issued"
+          log_info "Waiting for HA Core to restart and become ready..."
+
+          # Wait for Core to restart (up to 60 seconds)
+          local wait_count=0
+          local max_wait=12
+          while [ $wait_count -lt $max_wait ]; do
+            sleep 5
+            local core_version
+            core_version=$(ha core info --raw-json 2> /dev/null | jq -r '.data.version // empty' 2> /dev/null || echo "")
+            if [ -n "$core_version" ] && [ "$core_version" != "null" ] && [ "$core_version" != "" ]; then
+              log_success "HA Core restarted and ready (version: $core_version)"
+              break
+            fi
+            wait_count=$((wait_count + 1))
+            log_info "Waiting for Core restart... ($wait_count/$max_wait)"
+          done
+
+          # Verify HA API is responsive again
+          wait_for_ha
+          wait_for_ha_core_ready
+          wait_for_ha_api_ready
+
+          # Retry onboarding (increment counter and continue loop)
+          retry_count=$((retry_count + 1))
+          continue
+        else
+          log_error "Failed to restart HA Core"
+          log_error "Cannot proceed without completing onboarding"
+          exit 1
+        fi
+      fi
+
+      # Success case
+      if [ $onboarding_result -eq 0 ]; then
+        log_success "Onboarding automation completed successfully"
+        break
+      fi
+
+      # Failure case (exit code 1): retry if we have retries left
+      if [ $retry_count -lt $max_retries ]; then
+        log_warn "Onboarding automation failed (exit code: $onboarding_result)"
+        log_info "Will retry with exponential backoff..."
+        retry_count=$((retry_count + 1))
+      else
+        log_error "Failed to complete onboarding automation after $((max_retries + 1)) attempts"
+        log_error "Cannot proceed without completing onboarding"
+        log_error "Check /tmp/onboarding-automation.log for detailed error output"
+        exit 1
+      fi
+    done
 
     if [ -z "$auth_token" ]; then
-      log_error "Failed to create first user during onboarding"
-      exit 1
+      # Try to get token from credentials file (prefer LONG_LIVED_ACCESS_TOKEN, fallback to ONBOARDING_TOKEN)
+      if [ -f "$CREDENTIALS_FILE" ]; then
+        # First, try to get LONG_LIVED_ACCESS_TOKEN (preferred - long-lived)
+        auth_token=$(grep "^LONG_LIVED_ACCESS_TOKEN=" "$CREDENTIALS_FILE" | cut -d'=' -f2 | tr -d '"' || echo "")
+
+        # If no long-lived token, try ONBOARDING_TOKEN (short-lived, but usable)
+        if [ -z "$auth_token" ]; then
+          local onboarding_token
+          onboarding_token=$(grep "^ONBOARDING_TOKEN=" "$CREDENTIALS_FILE" | cut -d'=' -f2 | tr -d '"' || echo "")
+          if [ -n "$onboarding_token" ]; then
+            log_info "Found ONBOARDING_TOKEN, creating long-lived token..."
+            # Try to create long-lived token from onboarding token
+            local bootstrap_token_script="$REPO_ROOT/scripts/create-token-from-existing.js"
+            if [ -f "$bootstrap_token_script" ]; then
+              local token_output
+              token_output=$(HA_URL="$HA_URL" EXISTING_TOKEN="$onboarding_token" ONBOARDING_TOKEN="$onboarding_token" node "$bootstrap_token_script" 2>&1) || {
+                log_warn "Failed to create long-lived token from onboarding token"
+                log_warn "Will use onboarding token (may be short-lived)"
+                auth_token="$onboarding_token"
+              }
+
+              # Extract the long-lived token from output
+              local new_token
+              new_token=$(echo "$token_output" | grep -oE "eyJ[A-Za-z0-9_-]*\.[A-Za-z0-9_-]*\.[A-Za-z0-9_-]*" | head -n1)
+              if [ -n "$new_token" ]; then
+                log_success "Successfully created long-lived token from onboarding token"
+                auth_token="$new_token"
+                # Save the long-lived token to credentials file
+                if grep -q "LONG_LIVED_ACCESS_TOKEN=" "$CREDENTIALS_FILE" 2> /dev/null; then
+                  sed -i "s|^LONG_LIVED_ACCESS_TOKEN=.*|LONG_LIVED_ACCESS_TOKEN=$new_token|" "$CREDENTIALS_FILE"
+                else
+                  echo "LONG_LIVED_ACCESS_TOKEN=$new_token" >> "$CREDENTIALS_FILE"
+                fi
+              else
+                log_warn "Failed to extract long-lived token, using onboarding token"
+                auth_token="$onboarding_token"
+              fi
+            else
+              log_warn "Token bootstrap script not found, using onboarding token"
+              auth_token="$onboarding_token"
+            fi
+          fi
+        fi
+      fi
+
+      # If still no token, try WebSocket token creation as fallback (username/password based)
+      if [ -z "$auth_token" ]; then
+        log_warn "No token found after onboarding automation"
+        log_info "Attempting to create token via WebSocket (username/password)..."
+        local token_script="$REPO_ROOT/scripts/create-token-websocket.js"
+
+        if [ -f "$token_script" ]; then
+          local token_output
+          token_output=$(HA_URL="$HA_URL" HASS_USERNAME="$HASS_USERNAME" HASS_PASSWORD="$HASS_PASSWORD" node "$token_script" 2>&1) || {
+            log_error "Failed to create token using WebSocket script"
+            log_error "Output: $token_output"
+            log_error "Cannot proceed without authentication token"
+            exit 1
+          }
+
+          # Extract the token from the output
+          auth_token=$(echo "$token_output" | grep -oE "eyJ[A-Za-z0-9_-]*\.[A-Za-z0-9_-]*\.[A-Za-z0-9_-]*" | head -n1)
+
+          if [ -z "$auth_token" ]; then
+            log_error "Failed to extract token from WebSocket script output"
+            log_error "Output: $token_output"
+            log_error "Cannot proceed without authentication token"
+            exit 1
+          fi
+
+          log_success "Successfully created token using WebSocket script"
+        else
+          log_error "WebSocket token creation script not found: $token_script"
+          log_error "Cannot proceed without authentication token"
+          exit 1
+        fi
+      fi
     fi
 
-    log_success "First user created successfully"
-    complete_onboarding
-    log_info "Waiting for Home Assistant to initialize after onboarding..."
-    sleep 10
+    log_success "Onboarding completed successfully"
+    log_info "Auth token obtained and ready for use"
+
+    # Verify onboarding is complete (Python script should have handled everything)
+    # Add delay to allow token activation and use long-lived token for verification
+    log_info "Verifying onboarding completion..."
+    log_info "Waiting for token activation (3 seconds)..."
+    sleep 3
+
+    # Ensure we're using LONG_LIVED_ACCESS_TOKEN for verification (not ONBOARDING_TOKEN)
+    if [ -f "$CREDENTIALS_FILE" ]; then
+      local verify_token
+      verify_token=$(grep "^LONG_LIVED_ACCESS_TOKEN=" "$CREDENTIALS_FILE" | cut -d'=' -f2 | tr -d '"' || echo "")
+      if [ -n "$verify_token" ]; then
+        log_info "Using LONG_LIVED_ACCESS_TOKEN for verification"
+        auth_token="$verify_token"
+      else
+        log_warn "No LONG_LIVED_ACCESS_TOKEN found, using available token for verification"
+      fi
+    fi
+
+    local incomplete_steps
+    local verify_result
+    local verify_retry_count=0
+    local max_verify_retries=3
+
+    # Retry verification if it fails with 401 (token may need more time to activate)
+    while [ $verify_retry_count -lt $max_verify_retries ]; do
+      incomplete_steps=$(discover_onboarding_steps "$auth_token" false)
+      verify_result=$?
+
+      if [ $verify_result -eq 0 ]; then
+        # Verification succeeded
+        break
+      fi
+
+      # If verification failed with 401, wait and retry
+      if [ $verify_retry_count -lt $((max_verify_retries - 1)) ]; then
+        log_warn "Verification failed (exit code: $verify_result), retrying in 2 seconds..."
+        sleep 2
+        verify_retry_count=$((verify_retry_count + 1))
+      else
+        break
+      fi
+    done
+
+    if [ $verify_result -eq 0 ]; then
+      if [ -z "$incomplete_steps" ]; then
+        log_success "All onboarding steps completed successfully"
+      else
+        log_warn "Some onboarding steps may still be incomplete:"
+        echo "$incomplete_steps" | while IFS= read -r step; do
+          [ -n "$step" ] && log_warn "  - $step"
+        done
+        log_info "Python automation script should have completed all steps"
+        log_info "If steps remain incomplete, you may need to check Home Assistant logs"
+      fi
+    else
+      # Verification failed (likely 401 - token issue)
+      # Since Python script reported success, assume onboarding completed
+      log_warn "Verification step failed (likely token issue) after $max_verify_retries attempts"
+      log_info "Python script reported onboarding completed successfully"
+      log_info "Assuming onboarding is complete (verification could not be performed)"
+    fi
   else
     log_info "Onboarding already completed, proceeding with token creation"
   fi
 
-  # Step 4: Create fresh long-lived access token using WebSocket script
-  log_info "Creating fresh long-lived access token using WebSocket script..."
+  # Step 4: Create fresh long-lived access token using WebSocket script (only if one doesn't exist)
+  # Check if we already have a LONG_LIVED_ACCESS_TOKEN
+  local existing_llat=""
+  if [ -f "$CREDENTIALS_FILE" ]; then
+    existing_llat=$(grep "^LONG_LIVED_ACCESS_TOKEN=" "$CREDENTIALS_FILE" | cut -d'=' -f2 | tr -d '"' || echo "")
+  fi
 
-  # Use the WebSocket token creation script that works with just username/password
-  local token_script="$REPO_ROOT/scripts/create-token-websocket.js"
+  if [ -n "$existing_llat" ]; then
+    log_info "Long-lived access token already exists, validating before use"
+    LONG_LIVED_ACCESS_TOKEN="$existing_llat"
 
-  if [ -f "$token_script" ]; then
-    log_info "Running WebSocket token creation script..."
-
-    # Run the token creation script with proper environment variables
-    local token_output
-    token_output=$(HA_URL="$HA_URL" HASS_USERNAME="$HASS_USERNAME" HASS_PASSWORD="$HASS_PASSWORD" node "$token_script" 2>&1) || {
-      log_error "Failed to create token using WebSocket script"
-      log_error "Output: $token_output"
-      exit 1
-    }
-
-    # Extract the token from the output (look for JWT pattern)
-    local new_token
-    new_token=$(echo "$token_output" | grep -oE "eyJ[A-Za-z0-9_-]*\.[A-Za-z0-9_-]*\.[A-Za-z0-9_-]*" | head -n1)
-
-    if [ -n "$new_token" ]; then
-      log_success "Successfully created fresh long-lived token using WebSocket script"
-
-      LONG_LIVED_ACCESS_TOKEN="$new_token"
-
-      # Save the long-lived access token
-      if grep -q "LONG_LIVED_ACCESS_TOKEN=" "$CREDENTIALS_FILE" 2> /dev/null; then
-        sed -i "s|^LONG_LIVED_ACCESS_TOKEN=.*|LONG_LIVED_ACCESS_TOKEN=$new_token|" "$CREDENTIALS_FILE"
-      else
-        echo "LONG_LIVED_ACCESS_TOKEN=$new_token" >> "$CREDENTIALS_FILE"
-      fi
-
-      log_success "Updated credentials file with fresh long-lived access token"
-    else
-      log_error "Failed to extract token from WebSocket script output"
-      log_error "Output: $token_output"
+    # Validate and refresh token if expired or near expiry
+    if ! validate_and_refresh_token "$existing_llat"; then
+      log_error "Failed to validate/refresh token; cannot proceed"
       exit 1
     fi
+
+    log_success "Using validated LONG_LIVED_ACCESS_TOKEN"
   else
-    log_error "WebSocket token creation script not found: $token_script"
-    exit 1
+    log_info "No long-lived access token found, creating fresh one using WebSocket script..."
+
+    # Use the WebSocket token creation script that works with just username/password
+    local token_script="$REPO_ROOT/scripts/create-token-websocket.js"
+
+    if [ -f "$token_script" ]; then
+      log_info "Running WebSocket token creation script..."
+
+      # Run the token creation script with proper environment variables
+      local token_output
+      token_output=$(HA_URL="$HA_URL" HASS_USERNAME="$HASS_USERNAME" HASS_PASSWORD="$HASS_PASSWORD" node "$token_script" 2>&1) || {
+        log_error "Failed to create token using WebSocket script"
+        log_error "Output: $token_output"
+        exit 1
+      }
+
+      # Extract the token from the output (look for JWT pattern)
+      local new_token
+      new_token=$(echo "$token_output" | grep -oE "eyJ[A-Za-z0-9_-]*\.[A-Za-z0-9_-]*\.[A-Za-z0-9_-]*" | head -n1)
+
+      if [ -n "$new_token" ]; then
+        log_success "Successfully created fresh long-lived token using WebSocket script"
+
+        LONG_LIVED_ACCESS_TOKEN="$new_token"
+
+        # Save the long-lived access token
+        if grep -q "LONG_LIVED_ACCESS_TOKEN=" "$CREDENTIALS_FILE" 2> /dev/null; then
+          sed -i "s|^LONG_LIVED_ACCESS_TOKEN=.*|LONG_LIVED_ACCESS_TOKEN=$new_token|" "$CREDENTIALS_FILE"
+        else
+          echo "LONG_LIVED_ACCESS_TOKEN=$new_token" >> "$CREDENTIALS_FILE"
+        fi
+
+        log_success "Updated credentials file with fresh long-lived access token"
+      else
+        log_error "Failed to extract token from WebSocket script output"
+        log_error "Output: $token_output"
+        exit 1
+      fi
+    else
+      log_error "WebSocket token creation script not found: $token_script"
+      exit 1
+    fi
   fi
 
   # Step 5: Get supervisor token for add-on management

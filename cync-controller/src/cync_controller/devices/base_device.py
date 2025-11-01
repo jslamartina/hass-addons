@@ -39,13 +39,13 @@ def _get_global_object():
     # Fall back to the new shared module approach
     try:
         import cync_controller.devices.shared as shared_module
-
-        return shared_module.g
     except (ImportError, AttributeError):
         # Final fallback
         from cync_controller.structs import GlobalObject
 
         return GlobalObject()
+    else:
+        return shared_module.g
 
 
 class CyncDevice(DeviceCommands):
@@ -110,7 +110,6 @@ class CyncDevice(DeviceCommands):
         self._r: int = 0
         self._g: int = 0
         self._b: int = 0
-        self.pending_command: bool = False  # Track if command is waiting for ACK
         self.offline_count: int = 0  # Track consecutive offline reports before marking unavailable
         if hvac is not None:
             self.hvac = hvac

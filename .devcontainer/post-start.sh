@@ -65,26 +65,32 @@ fi
 
 # Step 4: Start Home Assistant Supervisor (this will start Docker internally)
 echo "Starting Home Assistant Supervisor..."
-# Start supervisor_run with script to provide TTY, logs to file only (no console output)
-# Pass WORKSPACE_DIRECTORY environment variable through sudo
-# Use setsid to create a new session - supervisor won't be killed when post-start.sh exits
-cd "${CONTAINER_WORKSPACE_FOLDER}/.devcontainer"
-setsid sudo WORKSPACE_DIRECTORY="${WORKSPACE_DIRECTORY}" script -qefc "sudo WORKSPACE_DIRECTORY=${WORKSPACE_DIRECTORY} ${CONTAINER_WORKSPACE_FOLDER}/.devcontainer/supervisor.sh" /tmp/supervisor_run.log > /dev/null 2>&1 &
-# Tail the log file and filter out DEBUG lines for console display
-sleep 1
-tail -f /tmp/supervisor_run.log 2> /dev/null | grep --line-buffered -v "DEBUG" &
 
-echo "Waiting for Supervisor to be ready..."
-sleep 5
-RETRY_DELAY=1
-MAX_DELAY=30
-until ha supervisor info 2> /dev/null; do
-  echo "  Still waiting for Supervisor... (sleep ${RETRY_DELAY}s)"
-  sleep $RETRY_DELAY
-  RETRY_DELAY=$((RETRY_DELAY * 2))
-  [ $RETRY_DELAY -gt $MAX_DELAY ] && RETRY_DELAY=$MAX_DELAY
-done
-echo "Supervisor is ready!"
+# Check if supervisor is already running and healthy
+if ha supervisor info 2> /dev/null | grep -q 'healthy: true'; then
+  echo "Supervisor already running and healthy, skipping start"
+else
+  # Start supervisor_run with script to provide TTY, logs to file only (no console output)
+  # Pass WORKSPACE_DIRECTORY environment variable through sudo
+  # Use setsid to create a new session - supervisor won't be killed when post-start.sh exits
+  cd "${CONTAINER_WORKSPACE_FOLDER}/.devcontainer"
+  setsid sudo WORKSPACE_DIRECTORY="${WORKSPACE_DIRECTORY}" script -qefc "sudo WORKSPACE_DIRECTORY=${WORKSPACE_DIRECTORY} ${CONTAINER_WORKSPACE_FOLDER}/.devcontainer/supervisor.sh" /tmp/supervisor_run.log > /dev/null 2>&1 &
+  # Tail the log file and filter out DEBUG lines for console display
+  sleep 1
+  tail -f /tmp/supervisor_run.log 2> /dev/null | grep -a --line-buffered -v "DEBUG" &
+
+  echo "Waiting for Supervisor to be ready..."
+  sleep 5
+  RETRY_DELAY=1
+  MAX_DELAY=30
+  until ha supervisor info 2> /dev/null; do
+    echo "  Still waiting for Supervisor... (sleep ${RETRY_DELAY}s)"
+    sleep $RETRY_DELAY
+    RETRY_DELAY=$((RETRY_DELAY * 2))
+    [ $RETRY_DELAY -gt $MAX_DELAY ] && RETRY_DELAY=$MAX_DELAY
+  done
+  echo "Supervisor is ready!"
+fi
 
 # Step 5: Pin Docker CLI version (now that Docker is running from supervisor_run)
 # echo "Checking Docker CLI version..."
@@ -330,7 +336,12 @@ fi
 # Set SETUP_FRESH_HA=true to automatically run the setup script
 if [ "${SETUP_FRESH_HA:-false}" = "true" ]; then
   echo "Running automated fresh HA setup..."
-  bash "${CONTAINER_WORKSPACE_FOLDER}/scripts/setup-fresh-ha.sh"
+  if ! bash "${CONTAINER_WORKSPACE_FOLDER}/scripts/setup-fresh-ha.sh" 2>&1; then
+    exit_code=$?
+    echo "❌ ERROR: setup-fresh-ha.sh failed with exit code $exit_code"
+    echo "Check the output above for details"
+    exit $exit_code
+  fi
 else
   echo "  ⚠️  Automated fresh HA setup is DISABLED"
   echo "  💡 To enable: Set SETUP_FRESH_HA=true in devcontainer.json or run manually:"

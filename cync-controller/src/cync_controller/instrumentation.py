@@ -57,11 +57,11 @@ def timed(operation_name: str | None = None) -> Callable:
         @functools.wraps(func)
         def wrapper(*args: P.args, **kwargs: P.kwargs) -> T:
             # Import here to avoid circular dependency
-            from cync_controller.const import (  # noqa: PLC0415
+            from cync_controller.const import (
                 CYNC_PERF_THRESHOLD_MS,
                 CYNC_PERF_TRACKING,
             )
-            from cync_controller.logging_abstraction import get_logger  # noqa: PLC0415
+            from cync_controller.logging_abstraction import get_logger
 
             # Skip timing if performance tracking is disabled
             if not CYNC_PERF_TRACKING:
@@ -105,11 +105,11 @@ def timed_async(operation_name: str | None = None) -> Callable:
         @functools.wraps(func)
         async def wrapper(*args: P.args, **kwargs: P.kwargs) -> T:
             # Import here to avoid circular dependency
-            from cync_controller.const import (  # noqa: PLC0415
+            from cync_controller.const import (
                 CYNC_PERF_THRESHOLD_MS,
                 CYNC_PERF_TRACKING,
             )
-            from cync_controller.logging_abstraction import get_logger  # noqa: PLC0415
+            from cync_controller.logging_abstraction import get_logger
 
             # Skip timing if performance tracking is disabled
             if not CYNC_PERF_TRACKING:

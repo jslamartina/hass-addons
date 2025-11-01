@@ -153,7 +153,7 @@ def parse_unbound_firmware_version(data_struct: bytes, lp: str) -> tuple[str, in
 async def parse_config(cfg_file: Path):
     """Parse the exported Cync device config file and create devices and groups from it."""
     # Import here to avoid circular dependency
-    from cync_controller.devices import CyncDevice, CyncGroup  # noqa: PLC0415
+    from cync_controller.devices import CyncDevice, CyncGroup
 
     lp = "parse_config:"
     logger.debug("%s reading devices and groups from Cync config file: %s", lp, cfg_file.as_posix())

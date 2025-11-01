@@ -44,7 +44,7 @@ class TestPeriodicStatusRefresh:
         mock_server.tcp_devices = {"dev1": mock_bridge_device}
         sleep_call_count = 0
 
-        async def mock_sleep(seconds):  # noqa: ARG001
+        async def mock_sleep(seconds):
             nonlocal sleep_call_count
             sleep_call_count += 1
             if sleep_call_count > 2:  # Stop after a few iterations
@@ -80,7 +80,7 @@ class TestPeriodicStatusRefresh:
 
         skip_called = False
 
-        async def mock_sleep(seconds):  # noqa: ARG001
+        async def mock_sleep(seconds):
             nonlocal skip_called
             mock_server.running = False
             skip_called = True
@@ -120,7 +120,7 @@ class TestPeriodicStatusRefresh:
         mock_server.running = True
         sleep_count = 0
 
-        async def mock_sleep(seconds):  # noqa: ARG001
+        async def mock_sleep(seconds):
             nonlocal sleep_count
             sleep_count += 1
             if sleep_count > 2:
@@ -151,7 +151,7 @@ class TestPeriodicStatusRefresh:
         mock_bridge_device.ask_for_mesh_info = AsyncMock(side_effect=Exception("Bridge error"))
         mock_server.tcp_devices = {"dev1": mock_bridge_device}
 
-        async def mock_sleep(seconds):  # noqa: ARG001
+        async def mock_sleep(seconds):
             mock_server.running = False
 
         with patch("asyncio.sleep", side_effect=mock_sleep):
@@ -199,7 +199,7 @@ class TestPeriodicStatusRefresh:
         mock_server.tcp_devices = {"dev1": mock_bridge_device}
         cancellation_handled = False
 
-        async def mock_sleep(seconds):  # noqa: ARG001
+        async def mock_sleep(seconds):
             raise asyncio.CancelledError
 
         with patch("asyncio.sleep", side_effect=mock_sleep):
@@ -225,10 +225,10 @@ class TestPeriodicPoolStatusLogging:
         mock_server.tcp_devices = {"dev1": mock_bridge_device}
         logged_metrics = None
 
-        async def mock_sleep(seconds):  # noqa: ARG001
+        async def mock_sleep(seconds):
             mock_server.running = False
 
-        def mock_logger_info(*args, **kwargs):  # noqa: ARG001
+        def mock_logger_info(*args, **kwargs):
             nonlocal logged_metrics
             if "extra" in kwargs:
                 logged_metrics = kwargs["extra"]
@@ -321,7 +321,7 @@ class TestPeriodicPoolStatusLogging:
         mock_server.tcp_devices = {"dev1": mock_bridge_device}
         exception_handled = False
 
-        async def mock_sleep(seconds):  # noqa: ARG001
+        async def mock_sleep(seconds):
             mock_server.running = False
 
         with patch("asyncio.sleep", side_effect=mock_sleep):
@@ -348,7 +348,7 @@ class TestPeriodicPoolStatusLogging:
         # Arrange
         cancellation_handled = False
 
-        async def mock_sleep(seconds):  # noqa: ARG001
+        async def mock_sleep(seconds):
             raise asyncio.CancelledError
 
         with patch("asyncio.sleep", side_effect=mock_sleep):

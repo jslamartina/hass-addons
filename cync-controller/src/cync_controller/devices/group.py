@@ -41,13 +41,13 @@ def _get_global_object():
     # Fall back to the new shared module approach
     try:
         import cync_controller.devices.shared as shared_module
-
-        return shared_module.g
     except (ImportError, AttributeError):
         # Final fallback
         from cync_controller.structs import GlobalObject
 
         return GlobalObject()
+    else:
+        return shared_module.g
 
 
 class CyncGroup:
@@ -350,12 +350,6 @@ class CyncGroup:
                 device_names.append(f"'{g.ncync_server.devices[device_id].name}' (ID: {device_id})")
         logger.info("%s Group members: %s", lp, ", ".join(device_names))
 
-        # Clear pending_command flags for all devices in this group to prevent status drops
-        for device_id in self.member_ids:
-            if device_id in g.ncync_server.devices:
-                device = g.ncync_server.devices[device_id]
-                device.pending_command = False
-
         # Register callback for ACK (no optimistic group publish)
         m_cb = ControlMessageCallback(
             msg_id=cmsg_id,
@@ -452,12 +446,6 @@ class CyncGroup:
             if device_id in g.ncync_server.devices:
                 device_names.append(f"'{g.ncync_server.devices[device_id].name}' (ID: {device_id})")
         logger.info("%s Group members: %s", lp, ", ".join(device_names))
-
-        # Clear pending_command flags for all devices in this group to prevent status drops
-        for device_id in self.member_ids:
-            if device_id in g.ncync_server.devices:
-                device = g.ncync_server.devices[device_id]
-                device.pending_command = False
 
         # Register callback for ACK (no optimistic group publish)
         m_cb = ControlMessageCallback(

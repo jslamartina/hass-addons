@@ -30,20 +30,24 @@ class TCPConnectionManager:
                 # Check if connection has been idle too long
                 if current_time - self.last_heartbeat > self.connection_timeout:
                     logger.warning(
-                        f"Connection timeout for {self.tcp_device.address} - no activity for {self.connection_timeout}s"
+                        "Connection timeout for %s - no activity for %ss",
+                        self.tcp_device.address,
+                        self.connection_timeout,
                     )
                     await self.tcp_device.close()
                     break
 
                 # Update heartbeat if we've received data recently
-                if hasattr(self.tcp_device, "last_data_received"):
-                    if current_time - self.tcp_device.last_data_received < self.heartbeat_interval:
-                        self.last_heartbeat = current_time
+                if (
+                    hasattr(self.tcp_device, "last_data_received")
+                    and current_time - self.tcp_device.last_data_received < self.heartbeat_interval
+                ):
+                    self.last_heartbeat = current_time
 
             except asyncio.CancelledError:
                 break
-            except Exception as e:
-                logger.exception(f"Error in connection health monitoring: {e}")
+            except Exception:
+                logger.exception("Error in connection health monitoring")
 
     def update_heartbeat(self):
         """Update the last heartbeat timestamp."""

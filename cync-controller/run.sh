@@ -37,6 +37,7 @@ CYNC_ACCOUNT_USERNAME="$(bashio::config 'account_username')"
 CYNC_ACCOUNT_PASSWORD="$(bashio::config 'account_password')"
 CYNC_TOPIC="$(bashio::config 'mqtt_topic')"
 CYNC_DEBUG="$(bashio::config 'debug_log_level')"
+CYNC_RAW_DEBUG="$(bashio::config 'raw_debug_logging')"
 CYNC_MQTT_HOST="$(bashio::config 'mqtt_host')"
 CYNC_MQTT_PORT="$(bashio::config 'mqtt_port')"
 CYNC_MQTT_USER="$(bashio::config 'mqtt_user')"
@@ -50,7 +51,7 @@ CYNC_CLOUD_SERVER="$(bashio::config 'cloud_relay' | jq -r '.cloud_server')"
 CYNC_CLOUD_PORT="$(bashio::config 'cloud_relay' | jq -r '.cloud_port')"
 CYNC_CLOUD_DEBUG_LOGGING="$(bashio::config 'cloud_relay' | jq -r '.debug_packet_logging')"
 CYNC_CLOUD_DISABLE_SSL_VERIFY="$(bashio::config 'cloud_relay' | jq -r '.disable_ssl_verification')"
-export CYNC_ACCOUNT_USERNAME CYNC_ACCOUNT_PASSWORD CYNC_TOPIC CYNC_DEBUG CYNC_MQTT_HOST CYNC_MQTT_PORT CYNC_MQTT_USER CYNC_MQTT_PASS CYNC_TCP_WHITELIST CYNC_CMD_BROADCASTS CYNC_MAX_TCP_CONN
+export CYNC_ACCOUNT_USERNAME CYNC_ACCOUNT_PASSWORD CYNC_TOPIC CYNC_DEBUG CYNC_RAW_DEBUG CYNC_MQTT_HOST CYNC_MQTT_PORT CYNC_MQTT_USER CYNC_MQTT_PASS CYNC_TCP_WHITELIST CYNC_CMD_BROADCASTS CYNC_MAX_TCP_CONN
 export CYNC_CLOUD_RELAY_ENABLED CYNC_CLOUD_FORWARD CYNC_CLOUD_SERVER CYNC_CLOUD_PORT CYNC_CLOUD_DEBUG_LOGGING CYNC_CLOUD_DISABLE_SSL_VERIFY
 
 # Feature flags

@@ -11,7 +11,7 @@ from playwright.sync_api import Page
 scripts_path = Path(__file__).parent.parent.parent.parent / "scripts" / "playwright"
 sys.path.insert(0, str(scripts_path))
 
-from addon_helpers import read_json_logs  # noqa: E402
+from addon_helpers import read_json_logs
 
 ADDON_SLUG = "local_cync-controller"
 

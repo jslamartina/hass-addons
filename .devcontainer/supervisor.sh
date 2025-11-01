@@ -9,6 +9,12 @@ function start_docker() {
   local starttime
   local endtime
 
+  # Check if docker is already running
+  if docker info > /dev/null 2>&1; then
+    echo "Docker already running"
+    return 0
+  fi
+
   if grep -q 'Alpine|standard-WSL' /proc/version; then
     # The docker daemon does not start when running WSL2 without adjusting iptables
     update-alternatives --set iptables /usr/sbin/iptables-legacy || echo "Fails adjust iptables"
@@ -70,7 +76,21 @@ function cleanup_lastboot() {
 
 function cleanup_docker() {
   echo "Cleaning up stopped containers..."
-  docker rm "$(docker ps -a -q)" || true
+  docker ps -a -q | xargs -r docker rm || true
+}
+
+function cleanup_stale_containers() {
+  echo "Checking for stale supervisor container..."
+  if docker ps -a --format '{{.Names}}' | grep -q '^hassio_supervisor$'; then
+    existing_state=$(docker inspect -f '{{.State.Status}}' hassio_supervisor 2> /dev/null || echo "unknown")
+    if [ "$existing_state" = "running" ]; then
+      echo "Supervisor container already running, removing and restarting..."
+      docker rm -f hassio_supervisor
+    elif [ "$existing_state" != "unknown" ]; then
+      echo "Removing stopped supervisor container..."
+      docker rm -f hassio_supervisor
+    fi
+  fi
 }
 
 function run_supervisor() {
@@ -174,6 +194,7 @@ docker system prune -f
 
 cleanup_lastboot
 cleanup_docker
+cleanup_stale_containers
 init_dbus
 init_udev
 run_supervisor

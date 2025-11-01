@@ -116,7 +116,7 @@ class TestCyncDeviceErrorPathsCommands:
     """Tests for error paths and edge cases in CyncDevice commands"""
 
     @pytest.mark.asyncio
-    async def test_set_temperature_no_tcp_bridges(self, mock_tcp_device):  # noqa: ARG002
+    async def test_set_temperature_no_tcp_bridges(self, mock_tcp_device):
         """Test set_temperature returns early when no TCP bridges available"""
         with patch("cync_controller.devices.shared.g") as mock_g:
             mock_g.ncync_server.tcp_devices = {}
@@ -147,7 +147,7 @@ class TestCyncDeviceErrorPathsCommands:
             assert device.temperature == 0  # Still at default
 
     @pytest.mark.asyncio
-    async def test_set_rgb_no_tcp_bridges(self, mock_tcp_device):  # noqa: ARG002
+    async def test_set_rgb_no_tcp_bridges(self, mock_tcp_device):
         """Test set_rgb returns early when no TCP bridges available"""
         with patch("cync_controller.devices.shared.g") as mock_g:
             mock_g.ncync_server.tcp_devices = {}
@@ -180,7 +180,7 @@ class TestCyncDeviceErrorPathsCommands:
             assert device.red == 0  # Still at default
 
     @pytest.mark.asyncio
-    async def test_group_set_power_no_bridges(self, mock_tcp_device):  # noqa: ARG002
+    async def test_group_set_power_no_bridges(self, mock_tcp_device):
         """Test group set_power returns early when no TCP bridges available"""
         with patch("cync_controller.devices.shared.g") as mock_g:
             mock_g.ncync_server.tcp_devices = {}

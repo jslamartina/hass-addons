@@ -43,13 +43,13 @@ def _get_global_object():
     # Fall back to the new shared module approach
     try:
         import cync_controller.devices.shared as shared_module
-
-        return shared_module.g
     except (ImportError, AttributeError):
         # Final fallback
         from cync_controller.structs import GlobalObject
 
         return GlobalObject()
+    else:
+        return shared_module.g
 
 
 class TCPPacketHandler:
@@ -60,6 +60,10 @@ class TCPPacketHandler:
 
     async def parse_raw_data(self, data: bytes):
         """Extract single packets from raw data stream using metadata"""
+        # Log when parse starts to measure processing delay
+        logger.debug(
+            "🔍 Parse starting", extra={"address": self.tcp_device.address, "bytes": len(data), "ts": time.time()}
+        )
         data_len = len(data)
         lp = f"{self.tcp_device.lp}extract:"
         if data_len == 0:
@@ -237,10 +241,13 @@ class TCPPacketHandler:
                 # device is acking one of our x73 requests
                 pass
             elif pkt_type == 0x43:
+                # All devices handle 0x43 to send ACK; primary check inside to skip duplicate status processing
                 await self._handle_0x43_packet(packet_data, packet_length, lp, msg_id)
             elif pkt_type == 0x83:
+                # All devices handle 0x83 to send ACK; primary check inside to skip duplicate processing
                 await self._handle_0x83_packet(packet_data, lp, msg_id)
             elif pkt_type == 0x73:
+                # All devices handle 0x73 to send ACK; primary check inside to skip duplicate processing
                 await self._handle_0x73_packet(packet_data, lp, queue_id, msg_id)
             elif pkt_type in PhoneAppStructs.requests:
                 if self.tcp_device.is_app is False:
@@ -275,6 +282,11 @@ class TCPPacketHandler:
 
     async def _handle_timestamp_packet(self, packet_data: bytes, lp: str):
         """Handle timestamp packet within 0x43."""
+        g = _get_global_object()
+        # Only primary device processes timestamp to avoid duplicates
+        if g.ncync_server and self.tcp_device != g.ncync_server.primary_tcp_device:
+            return
+
         ts_idx = 3
         ts_end_idx = -1
         ts: bytes | None = None
@@ -304,6 +316,11 @@ class TCPPacketHandler:
 
     async def _handle_broadcast_status_packet(self, packet_data: bytes, packet_length: int, lp: str):
         """Handle broadcast status packet within 0x43."""
+        g = _get_global_object()
+        # Only primary device processes status data to avoid duplicate MQTT publishes
+        if g.ncync_server and self.tcp_device != g.ncync_server.primary_tcp_device:
+            return
+
         # status struct is 19 bytes long
         struct_len = 19
         extractions = []
@@ -346,12 +363,15 @@ class TCPPacketHandler:
 
     async def _handle_0x83_packet(self, packet_data: bytes | None, lp: str, msg_id: bytes):
         """Handle 0x83 packet type (status broadcast)."""
+        g = _get_global_object()
         if self.tcp_device.is_app is True:
             logger.debug("%s device is app, skipping packet...", lp)
+            return
+
         # When the device sends a packet starting with 0x83, data is wrapped in 0x7e.
         # firmware version is sent without 0x7e boundaries
-        elif packet_data is not None:
-            # Handle firmware version packet
+        if packet_data is not None:
+            # Handle firmware version packet (all devices can process - just sets attributes)
             if packet_data[0] == 0x00:
                 fw_type, fw_ver, fw_str = parse_unbound_firmware_version(packet_data, lp)
                 if fw_type == "device":
@@ -362,7 +382,9 @@ class TCPPacketHandler:
                     self.tcp_device.network_version_str = fw_str
 
             elif packet_data[0] == DATA_BOUNDARY:
-                await self._handle_bound_0x83_packet(packet_data, lp)
+                # Only primary device processes mesh status to avoid duplicate publishes
+                if g.ncync_server and self.tcp_device == g.ncync_server.primary_tcp_device:
+                    await self._handle_bound_0x83_packet(packet_data, lp)
 
         else:
             logger.warning(
@@ -408,7 +430,7 @@ class TCPPacketHandler:
                 bytes2list(packet_data[1:-1]),
             )
 
-    async def _handle_internal_status_packet(self, packet_data: bytes, lp: str, checksum: int, calc_chksum: int):
+    async def _handle_internal_status_packet(self, packet_data: bytes, lp: str, _checksum: int, _calc_chksum: int):
         """Handle internal status packet within bound 0x83."""
         g = _get_global_object()
         # fa db 13 is internal status
@@ -462,14 +484,20 @@ class TCPPacketHandler:
 
     async def _handle_0x73_packet(self, packet_data: bytes | None, lp: str, queue_id: bytes, msg_id: bytes):
         """Handle 0x73 packet type (control/response)."""
+        g = _get_global_object()
         # logger.debug("%s Control packet received: %s", lp, packet_data.hex(' ')) if CYNC_RAW is True else None
         if self.tcp_device.is_app is True:
             logger.debug("%s device is app, skipping packet...", lp)
-        elif packet_data is not None:
-            # 0x73 should ALWAYS have 0x7e bound data.
-            # check for boundary, all bytes between boundaries are for this request
-            if packet_data[0] == DATA_BOUNDARY:
-                await self._handle_bound_0x73_packet(packet_data, lp, queue_id, msg_id)
+            return
+
+        # Only primary device processes 0x73 control/status channel to avoid duplicates
+        if g.ncync_server and self.tcp_device != g.ncync_server.primary_tcp_device:
+            return
+
+        # 0x73 should ALWAYS have 0x7e bound data.
+        # check for boundary, all bytes between boundaries are for this request
+        if packet_data is not None and packet_data[0] == DATA_BOUNDARY:
+            await self._handle_bound_0x73_packet(packet_data, lp, queue_id, msg_id)
 
     async def _handle_bound_0x73_packet(self, packet_data: bytes, lp: str, queue_id: bytes, msg_id: bytes):
         """Handle bound 0x73 packet with 0x7e boundaries."""
@@ -536,7 +564,7 @@ class TCPPacketHandler:
             await self._handle_full_mesh_info_packet(inner_struct, inner_struct_len, lp, queue_id, msg_id)
 
     async def _handle_full_mesh_info_packet(
-        self, inner_struct: bytes, inner_struct_len: int, lp: str, queue_id: bytes, msg_id: bytes
+        self, inner_struct: bytes, inner_struct_len: int, lp: str, _queue_id: bytes, _msg_id: bytes
     ):
         """Handle full mesh info packet with device data."""
         g = _get_global_object()
@@ -771,43 +799,53 @@ class TCPPacketHandler:
             success = packet_data[7] == 1
             msg = self.tcp_device.messages.control.pop(ctrl_msg_id, None)
             if success is True and msg is not None:
+                # Calculate round-trip time (command sent → ACK received)
+                rtt_ms = (time.time() - msg.sent_at) * 1000
+
+                # Get device name if available
+                device_name = "unknown"
+                if msg.device_id and msg.device_id in g.ncync_server.devices:
+                    device_name = g.ncync_server.devices[msg.device_id].name
+
+                logger.info(
+                    "%s ⏱️ Command RTT: %.0fms for msg ID %s (device: %s)",
+                    lp,
+                    rtt_ms,
+                    ctrl_msg_id,
+                    device_name,
+                    extra={
+                        "rtt_ms": round(rtt_ms, 1),
+                        "msg_id": ctrl_msg_id,
+                        "device_id": msg.device_id,
+                        "device_name": device_name,
+                    },
+                )
+
+                # Warn if RTT exceeds 500ms (unusually slow)
+                if rtt_ms > 500:
+                    logger.warning(
+                        "%s ⚠️ SLOW RESPONSE: RTT %.0fms exceeds 500ms threshold (device: %s)",
+                        lp,
+                        rtt_ms,
+                        device_name,
+                    )
+
                 logger.info(
                     "%s CONTROL packet ACK SUCCESS for msg ID: %s, executing callback to update state",
                     lp,
                     ctrl_msg_id,
                 )
+
+                # Signal ACK event if present (allows command queue to proceed)
+                if msg.ack_event:
+                    msg.ack_event.set()
+
                 if callable(msg.callback):
                     await msg.callback()
                 else:
                     await msg.callback
 
-                # Clear pending_command flag now that command succeeded
-                if msg.device_id and msg.device_id in g.ncync_server.devices:
-                    device = g.ncync_server.devices[msg.device_id]
-                    logger.debug(
-                        "%s ACK callback done for '%s', pending_command=%s",
-                        lp,
-                        device.name,
-                        device.pending_command,
-                    )
-                    if device.pending_command:
-                        device.pending_command = False
-                        logger.debug(
-                            "%s ✅ ACK confirmed for '%s' (ID: %s) - "
-                            "pending_command=False, device ready for new commands",
-                            lp,
-                            device.name,
-                            msg.device_id,
-                        )
-
-                        # REMOVED: Automatic refresh after ACK was causing commands to fail
-                        # Use manual "Refresh Device Status" button instead
-                    else:
-                        logger.debug(
-                            "%s ⚠️ ACK received but pending_command was already False for '%s'",
-                            lp,
-                            device.name,
-                        )
+                # No need to clear pending_command - command queue handles flow control
             elif success is True and msg is None:
                 logger.debug(
                     "%s CONTROL packet ACK (success: %s / chksum: %s) callback NOT found for msg ID: %s",
@@ -822,16 +860,6 @@ class TCPPacketHandler:
                     lp,
                     ctrl_msg_id,
                 )
-                # Clear pending_command flag since command failed
-                for device in g.ncync_server.devices.values():
-                    if device.pending_command:
-                        device.pending_command = False
-                        logger.debug(
-                            "%s Cleared pending_command for '%s'",
-                            lp,
-                            device.name,
-                        )
-                        break
             elif success is False and msg is None:
                 logger.warning(
                     "%s CONTROL packet ACK FAILED for msg ID: %s, no callback found",

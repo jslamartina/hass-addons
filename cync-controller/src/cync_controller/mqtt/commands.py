@@ -90,18 +90,32 @@ class CommandProcessor:
                     logger.debug("%s Publishing optimistic update", lp)
                     await cmd.publish_optimistic()
 
-                    # 2 Send to device
+                    # 2 Send to device and get ACK event + cleanup info
                     logger.debug("%s Executing device command", lp)
-                    await cmd.execute()
+                    result = await cmd.execute()
 
-                    # 3 Sync state with mesh refresh (synchronous - wait for completion)
+                    # Unpack result (may be ack_event only or (ack_event, sent_bridges) tuple)
+                    if isinstance(result, tuple):
+                        ack_event, sent_bridges = result
+                    else:
+                        ack_event = result
+                        sent_bridges = []
 
-                    logger.debug("%s Triggering mesh refresh", lp)
-                    logger.debug("%s Waiting 500ms for optimistic updates to settle", lp)
-                    await asyncio.sleep(0.5)
-
-                    if g.mqtt_client:
-                        await g.mqtt_client.trigger_status_refresh()
+                    # 3 Wait for ACK with timeout (block queue until command confirmed)
+                    if ack_event:
+                        logger.debug("%s Waiting for ACK...", lp)
+                        try:
+                            await asyncio.wait_for(ack_event.wait(), timeout=5.0)
+                            logger.info("%s ACK received, command confirmed", lp)
+                        except TimeoutError:
+                            logger.warning("%s ACK timeout after 5s - cleaning up callbacks", lp)
+                            # Immediately remove orphaned callbacks instead of waiting 30s for cleanup task
+                            for bridge, msg_id in sent_bridges:
+                                if msg_id in bridge.messages.control:
+                                    del bridge.messages.control[msg_id]
+                                    logger.debug("%s Removed orphaned callback for msg ID %s", lp, msg_id)
+                    else:
+                        logger.debug("%s No ACK event (command rejected/throttled)", lp)
 
                     logger.info("%s Command cycle complete for %s", lp, cmd.cmd_type)
 
@@ -153,7 +167,7 @@ class SetPowerCommand(DeviceCommand):
 
     async def execute(self):
         """Execute the actual set_power command."""
-        await self.device_or_group.set_power(self.state)
+        return await self.device_or_group.set_power(self.state)
 
 
 class SetBrightnessCommand(DeviceCommand):
@@ -182,4 +196,4 @@ class SetBrightnessCommand(DeviceCommand):
 
     async def execute(self):
         """Execute the actual set_brightness command."""
-        await self.device_or_group.set_brightness(self.brightness)
+        return await self.device_or_group.set_brightness(self.brightness)

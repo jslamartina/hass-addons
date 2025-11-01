@@ -68,7 +68,7 @@ class TestCyncTCPDevicePacketParsing:
         assert tcp_device.write.called
 
     @pytest.mark.asyncio
-    async def test_parse_packet_0xa3_app_announcement(self, caplog, stream_reader, stream_writer):  # noqa: ARG002
+    async def test_parse_packet_0xa3_app_announcement(self, caplog, stream_reader, stream_writer):
         """Test parsing 0xA3 app announcement packet"""
         tcp_device = CyncTCPDevice(reader=stream_reader, writer=stream_writer, address="192.168.1.100")
         tcp_device.write = AsyncMock()

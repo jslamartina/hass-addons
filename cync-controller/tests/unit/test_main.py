@@ -178,7 +178,7 @@ class TestCyncControllerStartup:
                 await controller.start_task
 
     @pytest.mark.asyncio
-    async def test_start_failure_calls_stop(self, mock_global_object, mock_path_exists):  # noqa: ARG002
+    async def test_start_failure_calls_stop(self, mock_global_object, mock_path_exists):
         """Test that startup failure triggers stop method"""
         mock_path_exists.return_value = True
         mock_devices = {1: MagicMock()}
@@ -218,7 +218,7 @@ class TestCyncControllerShutdown:
     """Tests for CyncController shutdown sequence"""
 
     @pytest.mark.asyncio
-    async def test_stop_sends_sigterm(self, mock_global_object):  # noqa: ARG002
+    async def test_stop_sends_sigterm(self, mock_global_object):
         """Test that stop calls send_sigterm"""
         with (
             patch("cync_controller.main.check_for_uuid"),

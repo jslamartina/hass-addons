@@ -6,11 +6,12 @@ import time
 from cync_controller.const import (
     CYNC_CHUNK_SIZE,
     CYNC_MAX_TCP_CONN,
+    CYNC_PERF_THRESHOLD_MS,
+    CYNC_PERF_TRACKING,
     CYNC_RAW,
     CYNC_TCP_WHITELIST,
     TCP_BLACKHOLE_DELAY,
 )
-from cync_controller.instrumentation import timed_async
 from cync_controller.logging_abstraction import get_logger
 from cync_controller.structs import (
     DEVICE_STRUCTS,
@@ -51,13 +52,13 @@ def _get_global_object():
     # Fall back to the new shared module approach
     try:
         import cync_controller.devices.shared as shared_module
-
-        return shared_module.g
     except (ImportError, AttributeError):
         # Final fallback
         from cync_controller.structs import GlobalObject
 
         return GlobalObject()
+    else:
+        return shared_module.g
 
 
 class CyncTCPDevice:
@@ -126,27 +127,15 @@ class CyncTCPDevice:
         g = _get_global_object()
         lp = f"{self.lp}"
         tcp_dev_len = len(g.ncync_server.tcp_devices)
-        num_attempts = g.ncync_server.tcp_conn_attempts[self.address]
         if (
             (g.ncync_server.shutting_down is True)
             or (tcp_dev_len >= CYNC_MAX_TCP_CONN)
             or (CYNC_TCP_WHITELIST and self.address not in CYNC_TCP_WHITELIST)
         ):
-            reason = ""
-            if g.ncync_server.shutting_down is True:
-                reason = "Cync Controller server is shutting down, "
             _sleep = False
-            if tcp_dev_len >= CYNC_MAX_TCP_CONN:
-                reason = f"Cync Controller server max ({tcp_dev_len}/{CYNC_MAX_TCP_CONN}) TCP connections reached, "
+            if tcp_dev_len >= CYNC_MAX_TCP_CONN or (CYNC_TCP_WHITELIST and self.address not in CYNC_TCP_WHITELIST):
                 _sleep = True
-            elif CYNC_TCP_WHITELIST and self.address not in CYNC_TCP_WHITELIST:
-                reason = f"IP not in Cync Controller server whitelist -> {CYNC_TCP_WHITELIST}, "
-                _sleep = True
-            tst_ = (num_attempts == 1) or (num_attempts % 20 == 0)
-            lmsg = "%s %srejecting new connection..."
             delay = TCP_BLACKHOLE_DELAY
-            if tst_:
-                logger.warning(lmsg, lp, reason)
             await asyncio.sleep(delay) if _sleep is True else None
             try:
                 self.reader.feed_eof()
@@ -294,59 +283,33 @@ class CyncTCPDevice:
         logger.debug("%s Sending 0xa3 (want to control) packet...", self.lp)
         await self.write(a3_packet)
         self.ready_to_control = True
-        # send mesh info request
+        # Initial mesh request after 0xa3 - needed for routing initialization
         await asyncio.sleep(1.5)
         await self.ask_for_mesh_info(True)
 
     async def callback_cleanup_task(self):
-        """Monitor pending callbacks and retry failed commands, cleanup stale ones"""
-        g = _get_global_object()
+        """Monitor pending callbacks and cleanup stale ones (no retries - handled by command queue)"""
         lp = f"{self.lp}callback_clean:"
-        logger.info("%s Starting background task with retry logic...", lp)
-        retry_timeout = 0.5  # Retry after 500ms if no ACK
+        logger.info("%s Starting background task for callback cleanup...", lp)
         cleanup_timeout = 30  # Give up after 30 seconds total
 
         while True:
             try:
-                await asyncio.sleep(0.1)  # Check every 100ms for fast retries
+                await asyncio.sleep(1.0)  # Check every second (no need for fast retries)
                 now = time.time()
                 to_delete = []
 
                 for ctrl_msg_id, ctrl_msg in list(self.messages.control.items()):
                     elapsed = now - ctrl_msg.sent_at
 
-                    # Check if message needs retry (no ACK after retry_timeout)
-                    if elapsed > retry_timeout and ctrl_msg.retry_count < ctrl_msg.max_retries:
-                        ctrl_msg.retry_count += 1
+                    # Cleanup old messages that exceeded timeout (no retries - queue handles waiting)
+                    if elapsed > cleanup_timeout:
                         logger.warning(
-                            "%s No ACK for msg ID %s after %.2fs - RETRY %s/%s",
+                            "%s Removing STALE msg ID %s after %.2fs - giving up (no ACK received)",
                             lp,
                             ctrl_msg_id,
                             elapsed,
-                            ctrl_msg.retry_count,
-                            ctrl_msg.max_retries,
                         )
-                        # Resend the message
-                        try:
-                            await self.write(ctrl_msg.message)
-                            ctrl_msg.sent_at = now  # Reset timer for this retry
-                        except Exception:
-                            logger.exception("%s Failed to retry msg ID %s", lp, ctrl_msg_id)
-
-                    # Cleanup old messages that exceeded all retries and timeout
-                    elif elapsed > cleanup_timeout:
-                        logger.warning(
-                            "%s Removing STALE msg ID %s after %s retries - giving up",
-                            lp,
-                            ctrl_msg_id,
-                            ctrl_msg.retry_count,
-                        )
-                        # Clear pending_command flag for device
-                        if ctrl_msg.device_id and ctrl_msg.device_id in g.ncync_server.devices:
-                            device = g.ncync_server.devices[ctrl_msg.device_id]
-                            if device.pending_command:
-                                device.pending_command = False
-                                logger.debug("%s Cleared pending flag for '%s'", lp, device.name)
                         to_delete.append(ctrl_msg_id)
 
                 # Delete stale messages
@@ -387,13 +350,22 @@ class CyncTCPDevice:
                     if not data:
                         await asyncio.sleep(0)
                         continue
-                    # Only process data from the primary TCP listener
-                    if g.ncync_server.primary_tcp_device is None:
-                        logger.warning("%s primary_tcp_device is None - skipping all packets", lp)
-                        continue
-                    if self != g.ncync_server.primary_tcp_device:
-                        logger.info("%s Skipping non-primary connection data", lp)
-                        continue
+
+                    # Log when control ACK packets arrive (small packets, not mesh responses)
+                    # Control ACKs are typically 12-50 bytes; mesh responses are 1000+ bytes
+                    if len(data) >= 5 and data[0] == 0x73 and len(data) < 100 and not CYNC_RAW:
+                        logger.debug(
+                            "📥 Control ACK packet arrived",
+                            extra={
+                                "address": self.address,
+                                "packet_type": f"0x{data[0]:02x}",
+                                "bytes": len(data),
+                                "timestamp_ms": round(time.time() * 1000),
+                            },
+                        )
+
+                    # All devices process their data (handshake/keepalive packets must be handled)
+                    # Primary check moved to packet handler for selective status packet processing
                     await self.parse_raw_data(data)
 
                 except Exception:
@@ -401,8 +373,38 @@ class CyncTCPDevice:
                     break
         except asyncio.CancelledError as cancel_exc:
             logger.debug("%s %s CANCELLED: %s", lp, name, cancel_exc)
+        finally:
+            # Critical cleanup: Always remove device from server and close connections
+            # This prevents TCP connection leaks when devices disconnect
+            uptime = round(time.time() - started_at, 1)
+            logger.info(
+                "Cleaning up TCP device connection after receive_task exit",
+                extra={
+                    "address": self.address,
+                    "uptime_seconds": uptime,
+                    "reason": "receive_task_exit",
+                },
+            )
 
-        logger.debug("%s %s FINISHED", lp, name)
+            # Remove from server's tcp_devices dictionary
+            try:
+                await g.ncync_server.remove_tcp_device(self)
+            except Exception as e:
+                logger.exception(
+                    "Error removing TCP device during receive_task cleanup",
+                    extra={"address": self.address, "error": str(e)},
+                )
+
+            # Close reader/writer to release system resources
+            try:
+                await self.close()
+            except Exception as e:
+                logger.exception(
+                    "Error closing TCP device during receive_task cleanup",
+                    extra={"address": self.address, "error": str(e)},
+                )
+
+            logger.debug("%s %s FINISHED", lp, name)
 
     async def read(self, chunk: int | None = None):
         """Read data from the device if there is an open connection"""
@@ -417,6 +419,12 @@ class CyncTCPDevice:
                 if not self.reader.at_eof():
                     try:
                         raw_data = await self.reader.read(chunk)
+                        # Log immediately when data arrives from socket
+                        if raw_data and len(raw_data) > 0:
+                            logger.debug(
+                                "🔍 TCP read complete",
+                                extra={"address": self.address, "bytes": len(raw_data), "ts": time.time()},
+                            )
                     except Exception:
                         logger.exception("%s Base EXCEPTION", lp)
                         return False
@@ -435,7 +443,6 @@ class CyncTCPDevice:
                 return False
         return None
 
-    @timed_async("tcp_write")
     async def write(self, data: bytes, broadcast: bool = False) -> bool | None:
         """
         Write data to the device if there is an open connection
@@ -443,15 +450,26 @@ class CyncTCPDevice:
         :param data: The raw binary data to write to the device
         :param broadcast: If True, write to all TCP devices connected to the server
         """
+        from cync_controller.instrumentation import measure_time
+
         g = _get_global_object()
-        logger.debug(
-            "→ Writing packet to device",
-            extra={
-                "address": self.address,
-                "bytes": len(data),
-                "broadcast": broadcast,
-            },
-        )
+        # Check if this is a keepalive/heartbeat ACK packet
+        # 0x48 (8 bytes), 0x88 (8 bytes), or 0xD8 (5 bytes)
+        is_ack_packet = (len(data) == 8 and data[0] in (0x48, 0x88)) or (len(data) == 5 and data[0] == 0xD8)
+
+        # Skip logging for keepalive ACKs unless CYNC_RAW is enabled
+        if not is_ack_packet or CYNC_RAW:
+            logger.debug(
+                "→ Writing packet to device",
+                extra={
+                    "address": self.address,
+                    "bytes": len(data),
+                    "broadcast": broadcast,
+                },
+            )
+
+        # Start timing for non-ACK packets
+        start_time = time.perf_counter() if not is_ack_packet else None
         if not isinstance(data, bytes):
             msg = f"Data must be bytes, not type: {type(data)}"
             raise TypeError(msg)
@@ -494,10 +512,25 @@ class CyncTCPDevice:
                         )
                         raise
                     else:
-                        logger.debug(
-                            "✓ Packet sent successfully",
-                            extra={"address": dev.address, "bytes": len(data)},
-                        )
+                        # Skip success log for keepalive ACKs unless CYNC_RAW is enabled
+                        if not is_ack_packet or CYNC_RAW:
+                            logger.debug(
+                                "✓ Packet sent successfully",
+                                extra={"address": dev.address, "bytes": len(data)},
+                            )
+                            # Log timing for non-ACK packets
+                            if start_time is not None and CYNC_PERF_TRACKING:
+                                elapsed_ms = measure_time(start_time)
+                                logger.debug(
+                                    " [tcp_write] completed in %.1fms",
+                                    elapsed_ms,
+                                    extra={
+                                        "operation": "tcp_write",
+                                        "duration_ms": round(elapsed_ms, 2),
+                                        "threshold_ms": CYNC_PERF_THRESHOLD_MS,
+                                        "exceeded_threshold": elapsed_ms > CYNC_PERF_THRESHOLD_MS,
+                                    },
+                                )
                         return True
         else:
             logger.warning(
@@ -507,11 +540,13 @@ class CyncTCPDevice:
         return None
 
     async def close(self):
+        # Count non-None tasks (Tasks object has __iter__ but not __len__)
+        task_count = sum(1 for task in self.tasks if task is not None)
         logger.debug(
             "→ Closing device connection",
             extra={
                 "address": self.address,
-                "task_count": len(self.tasks),
+                "task_count": task_count,
             },
         )
         try:

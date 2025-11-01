@@ -48,10 +48,31 @@ on_error() {
 - ✅ Check command exit codes with `|| { ... }`
 - ✅ Log errors with context (line numbers, function names)
 
-### Logging
-- ✅ Use log functions: `log_info`, `log_success`, `log_warn`, `log_error`
-- ✅ Prefix messages with context
-- ✅ Redirect logs to stderr when needed
+### Console Output & Logging
+
+**REQUIRED: Use common output library in all scripts**
+
+```bash
+#!/usr/bin/env bash
+set -Eeuo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/shell-common/common-output.sh"
+
+# shellcheck disable=SC2034  # LP used by common-output.sh log functions
+LP="[$(basename "$0")]"
+```
+
+**Standard log functions** (from `common-output.sh`):
+- `log_info "message"` - Green prefix with [script-name]
+- `log_warn "message"` - Yellow prefix with [script-name]
+- `log_error "message"` - Red prefix with [script-name] to stderr
+- `log_success "message"` - Green prefix with ✅ emoji
+- `log_section "title"` - Blue section header with box borders
+- `test_result "name" "true|false" "message"` - Test result with ✅/❌
+
+**Color variables** (available from common-output.sh):
+- `RED`, `GREEN`, `YELLOW`, `BLUE`, `NC` (No Color)
 
 Example:
 ```bash
@@ -61,6 +82,29 @@ if ! command_that_might_fail; then
   exit 1
 fi
 log_success "Task completed"
+```
+
+**Status symbols** (standardized):
+- ✅ Success/completion
+- ❌ Error/failure
+- ⚠️ Warning/caution
+- 💡 Tip/suggestion
+- ℹ️ Information
+- 🛑 Stop/critical
+- 🗑️ Delete/clean
+- 🚀 Start/launch
+- ⏳ Waiting/progress
+
+**Box diagrams** (55 char total width):
+```bash
+# Box: 53 equals (═) + 2 borders (║) = 55 total width
+# IMPORTANT: Emojis display as 2 character widths but count as 1 in source
+# Formula: source_chars = 53 - emoji_count
+# Examples: 0 emojis=53 chars, 1 emoji=52 chars, 2 emojis=51 chars
+echo -e "${GREEN}╔═════════════════════════════════════════════════════╗${NC}"
+echo -e "${GREEN}║    ✅ Success Message!                       ║${NC}"  # 1 emoji: 52 source chars
+echo -e "${GREEN}║  ✅ Two emojis here ✅                      ║${NC}"  # 2 emojis: 51 source chars
+echo -e "${GREEN}╚═════════════════════════════════════════════════════╝${NC}"
 ```
 
 ### Variables

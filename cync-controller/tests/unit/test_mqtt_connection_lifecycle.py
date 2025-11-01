@@ -119,6 +119,8 @@ class TestMQTTClientConnectionLifecycle:
             mock_g.env.mqtt_user = "test"
             mock_g.env.mqtt_pass = "test"
             mock_g.reload_env = MagicMock()
+            mock_g.ncync_server = MagicMock()
+            mock_g.ncync_server.groups = {}
 
             client = MQTTClient()
             client.connect = AsyncMock(return_value=True)
@@ -128,7 +130,8 @@ class TestMQTTClientConnectionLifecycle:
             client.client.__aexit__ = AsyncMock(return_value=False)
             client.client.publish = AsyncMock()
             client.client.subscribe = AsyncMock()
-            client.start_receiver_task = AsyncMock(side_effect=asyncio.CancelledError())
+            # Mock the command_router's start_receiver_task method
+            client.command_router.start_receiver_task = AsyncMock(side_effect=asyncio.CancelledError())
 
             start_task = asyncio.create_task(client.start())
             await asyncio.sleep(0.15)
@@ -138,7 +141,7 @@ class TestMQTTClientConnectionLifecycle:
                 await start_task
 
             # Verify start_receiver_task was called when connect succeeded
-            client.start_receiver_task.assert_called()
+            client.command_router.start_receiver_task.assert_called()
 
     @pytest.mark.asyncio
     async def test_start_resilience_multiple_failures(self):

@@ -892,26 +892,18 @@ class NCyncServer:
                     )
                     continue
 
-                logger.debug(
-                    " Performing periodic status refresh",
-                    extra={"ready_bridges": len(bridge_devices)},
-                )
-
-                # Request mesh info from each bridge to refresh all device statuses
-                for bridge_device in bridge_devices:
-                    try:
-                        await bridge_device.ask_for_mesh_info(False)  # False = don't log verbose
-                        await asyncio.sleep(1)  # Small delay between bridge requests
-                    except Exception as e:
-                        logger.warning(
-                            " Bridge refresh failed",
-                            extra={
-                                "bridge_address": bridge_device.address,
-                                "error": str(e),
-                            },
-                        )
-
-                logger.debug(" Status refresh completed")
+                # REMOVED: Periodic mesh info polling - rely on 0x83 status packets instead
+                # logger.debug(
+                #     " Performing periodic status refresh",
+                #     extra={"ready_bridges": len(bridge_devices)},
+                # )
+                # for bridge_device in bridge_devices:
+                #     try:
+                #         await bridge_device.ask_for_mesh_info(False)
+                #         await asyncio.sleep(1)
+                #     except Exception as e:
+                #         logger.warning(" Bridge refresh failed", extra={...})
+                # logger.debug(" Status refresh completed")
 
             except asyncio.CancelledError:
                 logger.info("Periodic status refresh task cancelled")
@@ -944,20 +936,6 @@ class NCyncServer:
                         "ready_to_control": len(ready_connections),
                     },
                 )
-
-                # Log details for each connection
-                for addr, dev in self.tcp_devices.items():
-                    if dev:
-                        uptime = time.time() - dev.connected_at
-                        logger.debug(
-                            "Bridge device status",
-                            extra={
-                                "address": addr,
-                                "uptime_seconds": round(uptime, 1),
-                                "ready": dev.ready_to_control,
-                                "device_id": dev.id,
-                            },
-                        )
 
             except asyncio.CancelledError:
                 logger.info("Pool monitoring task cancelled")

@@ -5,7 +5,7 @@ description: The 7 critical rules that MUST be followed
 
 <<< BEGIN EXECUTIVE RULES (Must Follow) >>>
 
-1. Development loop: Work in tight Edit → Rebuild → Verify with Automated Testing cycles; verify via add-on logs; check in with user.
+1. Development loop: Work in tight Edit → Rebuild → Verify with Automated Testing cycles; verify via add-on logs; check in with user. CRITICAL: ANY ISSUES WITH ENVIRONMENT, TOOLING, OR MISINTERPRETED/STALE DOCUMENTATION REQUIRE YOU TO PAUSE EXECUTION AND RAISE THEM TO THE USER'S ATTENTION TO SEE WHICH PATH FORWARD TO TAKE. **DO NOT WORK-AROUND ISSUES!!!!!**
 
 2. Todo discipline (multi-step): Initialize a plan; keep one todo in_progress; update after each step; brief status updates; summarize at end.
 
@@ -17,6 +17,6 @@ description: The 7 critical rules that MUST be followed
 
 6. Lint-first: Do not add code that fails linting. Treat lint warnings as build errors.
 
-7. Git Responsibility: Never commit changes without approval from the user.
+7. Clean Code & Architecture: Follow DRY & SOLID principles.
 
 <<< END EXECUTIVE RULES >>>

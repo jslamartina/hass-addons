@@ -77,8 +77,8 @@ configure_addon() {
     "mqtt_topic": "cync_controller_addon",
     "tuning": {
       "tcp_whitelist": "",
-      "command_targets": 2,
-      "max_clients": 8
+      "command_targets": 1,
+      "max_clients": 64
     },
     "cloud_relay": {
       "enabled": false,

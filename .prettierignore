@@ -1,6 +1,3 @@
 node_modules/
 .git/
 *.md
-cync-controller/htmlcov/
-cync-controller/coverage.json
-.cursor/Dockerfile

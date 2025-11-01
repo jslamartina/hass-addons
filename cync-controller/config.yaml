@@ -30,7 +30,8 @@ panel_title: "Cync Controller"
 options:
   account_username: null
   account_password: null
-  debug_log_level: true
+  debug_log_level: false
+  raw_debug_logging: false
   mqtt_host: "localhost"
   mqtt_port: 1883
   mqtt_user: null
@@ -38,8 +39,8 @@ options:
   mqtt_topic: "cync_controller_addon"
   tuning:
     tcp_whitelist: ""
-    command_targets: 2
-    max_clients: 8
+    command_targets: 1
+    max_clients: 64
   cloud_relay:
     enabled: false
     forward_to_cloud: true
@@ -55,6 +56,7 @@ schema:
   account_username: email
   account_password: password
   debug_log_level: bool
+  raw_debug_logging: bool?
   mqtt_topic: str
   mqtt_host: str
   mqtt_port: port

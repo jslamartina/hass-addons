@@ -162,7 +162,10 @@
           "batch_number": { "type": "integer" },
           "message": { "type": "string" },
           "timestamp": { "type": "string" },
-          "level": { "type": "string" },
+          "level": {
+            "type": "string",
+            "enum": ["DEBUG", "INFO", "WARNING", "ERROR"]
+          },
           "module": { "type": "string" },
           "function": { "type": "string" },
           "line": { "type": "integer" },

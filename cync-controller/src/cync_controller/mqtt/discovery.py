@@ -23,10 +23,25 @@ from cync_controller.const import (
 )
 from cync_controller.logging_abstraction import get_logger
 from cync_controller.metadata.model_info import DeviceClassification, device_type_map
-from cync_controller.structs import GlobalObject
 
 logger = get_logger(__name__)
-g = GlobalObject()
+
+
+# Import g from mqtt_client module for backward compatibility with test patches
+# Use lazy import to avoid circular dependency
+def _get_g():
+    import cync_controller.mqtt_client as mqtt_client_module
+
+    return mqtt_client_module.g
+
+
+# Create a getter function that can be used like a module-level variable
+class GProxy:
+    def __getattr__(self, name):
+        return getattr(_get_g(), name)
+
+
+g = GProxy()
 bridge_device_reg_struct = CYNC_BRIDGE_DEVICE_REGISTRY_CONF
 
 
@@ -795,7 +810,7 @@ class DiscoveryHelper:
 
     async def create_bridge_device(self) -> bool:
         """Create the device / entity registry config for the Cync Controller bridge itself."""
-        global bridge_device_reg_struct  # noqa: PLW0603
+        global bridge_device_reg_struct
         # want to expose buttons (restart, start export, submit otp)
         # want to expose some sensors that show the number of devices, number of online devices, etc.
         # sensors to show if MQTT is connected, if the Cync Controller server is running, etc.

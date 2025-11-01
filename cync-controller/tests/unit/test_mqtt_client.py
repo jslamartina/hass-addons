@@ -12,6 +12,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
+from cync_controller.mqtt.discovery import slugify
 from cync_controller.mqtt_client import (
     CommandProcessor,
     DeviceCommand,
@@ -19,7 +20,6 @@ from cync_controller.mqtt_client import (
     SetBrightnessCommand,
     SetPowerCommand,
 )
-from cync_controller.mqtt.discovery import slugify
 
 # Filter deprecation warning from aiomqtt.client module
 pytestmark = pytest.mark.filterwarnings("ignore:There is no current event loop:DeprecationWarning:aiomqtt.client")
@@ -86,8 +86,8 @@ class TestMQTTClientInitialization:
     def test_init_with_default_topics(self):
         """Test initialization with default topic values"""
         with (
-            patch("cync_controller.mqtt_client.CYNC_TOPIC", ""),
-            patch("cync_controller.mqtt_client.CYNC_HASS_TOPIC", ""),
+            patch("cync_controller.mqtt.client.CYNC_TOPIC", ""),
+            patch("cync_controller.mqtt.client.CYNC_HASS_TOPIC", ""),
             patch("cync_controller.mqtt_client.g") as mock_g,
         ):
             mock_g.uuid = "test-uuid"
@@ -101,8 +101,8 @@ class TestMQTTClientInitialization:
     def test_init_with_custom_topics(self):
         """Test initialization with custom topic values"""
         with (
-            patch("cync_controller.mqtt_client.CYNC_TOPIC", "custom_cync"),
-            patch("cync_controller.mqtt_client.CYNC_HASS_TOPIC", "custom_ha"),
+            patch("cync_controller.mqtt.client.CYNC_TOPIC", "custom_cync"),
+            patch("cync_controller.mqtt.client.CYNC_HASS_TOPIC", "custom_ha"),
             patch("cync_controller.mqtt_client.g") as mock_g,
         ):
             mock_g.uuid = "test-uuid"
@@ -115,10 +115,10 @@ class TestMQTTClientInitialization:
     def test_init_sets_broker_config(self):
         """Test that initialization sets broker configuration"""
         with (
-            patch("cync_controller.mqtt_client.CYNC_MQTT_HOST", "192.168.1.100"),
-            patch("cync_controller.mqtt_client.CYNC_MQTT_PORT", "1883"),
-            patch("cync_controller.mqtt_client.CYNC_MQTT_USER", "testuser"),
-            patch("cync_controller.mqtt_client.CYNC_MQTT_PASS", "testpass"),
+            patch("cync_controller.mqtt.client.CYNC_MQTT_HOST", "192.168.1.100"),
+            patch("cync_controller.mqtt.client.CYNC_MQTT_PORT", "1883"),
+            patch("cync_controller.mqtt.client.CYNC_MQTT_USER", "testuser"),
+            patch("cync_controller.mqtt.client.CYNC_MQTT_PASS", "testpass"),
             patch("cync_controller.mqtt_client.g") as mock_g,
         ):
             mock_g.uuid = "test-uuid"
@@ -207,7 +207,7 @@ class TestMQTTClientConnection:
         """Test connection with bad credentials"""
         with (
             patch("cync_controller.mqtt_client.g") as mock_g,
-            patch("cync_controller.mqtt_client.send_sigterm") as mock_sigterm,
+            patch("cync_controller.mqtt.client.send_sigterm") as mock_sigterm,
             patch("cync_controller.mqtt_client.aiomqtt.Client") as mock_client_class,
         ):
             mock_g.uuid = "test-uuid"
@@ -274,7 +274,7 @@ class TestMQTTClientPublishing:
             assert published_data == test_data
 
     @pytest.mark.asyncio
-    async def test_publish_json_msg_error_handling(self, caplog):  # noqa: ARG002
+    async def test_publish_json_msg_error_handling(self, caplog):
         """Test publish_json_msg handles errors gracefully"""
         with patch("cync_controller.mqtt_client.g") as mock_g:
             mock_g.uuid = "test-uuid"
@@ -381,13 +381,16 @@ class TestMQTTClientStateUpdates:
 
             client = MQTTClient()
             client.topic = "cync_lan"
-            client.send_device_status = AsyncMock(return_value=True)
+            client._connected = True
+            client.client = MagicMock()
+            client.client.publish = AsyncMock()
+            client.state_updates.send_device_status = AsyncMock(return_value=True)
 
             result = await client.update_device_state(mock_device, 1)
 
             assert result is True
             # Should call send_device_status
-            assert client.send_device_status.called
+            assert client.state_updates.send_device_status.called
 
     @pytest.mark.asyncio
     async def test_update_device_state_off(self):
@@ -413,13 +416,15 @@ class TestMQTTClientStateUpdates:
 
             client = MQTTClient()
             client.topic = "cync_lan"
-            client.send_device_status = AsyncMock(return_value=True)
+            client._connected = True
+            client.client = MagicMock()
+            client.client.publish = AsyncMock()
 
             result = await client.update_device_state(mock_device, 0)
 
             assert result is True
-            # Should call send_device_status
-            assert client.send_device_status.called
+            # Should call publish
+            assert client.client.publish.called
 
     @pytest.mark.asyncio
     async def test_update_brightness(self):
@@ -434,13 +439,16 @@ class TestMQTTClientStateUpdates:
 
             client = MQTTClient()
             client.topic = "cync_lan"
-            client.send_device_status = AsyncMock(return_value=True)
+            client._connected = True
+            client.client = MagicMock()
+            client.client.publish = AsyncMock()
+            client.state_updates.send_device_status = AsyncMock(return_value=True)
 
             result = await client.update_brightness(mock_device, 75)
 
             assert result is True
             # Should call send_device_status with brightness
-            assert client.send_device_status.called
+            assert client.state_updates.send_device_status.called
 
     @pytest.mark.asyncio
     async def test_update_temperature(self):
@@ -455,13 +463,16 @@ class TestMQTTClientStateUpdates:
 
             client = MQTTClient()
             client.topic = "cync_lan"
-            client.send_device_status = AsyncMock(return_value=True)
+            client._connected = True
+            client.client = MagicMock()
+            client.client.publish = AsyncMock()
+            client.state_updates.send_device_status = AsyncMock(return_value=True)
 
             result = await client.update_temperature(mock_device, 50)
 
             assert result is True
             # Should call send_device_status with temperature
-            assert client.send_device_status.called
+            assert client.state_updates.send_device_status.called
 
     @pytest.mark.asyncio
     async def test_update_rgb(self):
@@ -478,13 +489,16 @@ class TestMQTTClientStateUpdates:
 
             client = MQTTClient()
             client.topic = "cync_lan"
-            client.send_device_status = AsyncMock(return_value=True)
+            client._connected = True
+            client.client = MagicMock()
+            client.client.publish = AsyncMock()
+            client.state_updates.send_device_status = AsyncMock(return_value=True)
 
             result = await client.update_rgb(mock_device, (255, 128, 64))
 
             assert result is True
             # Should call send_device_status with RGB
-            assert client.send_device_status.called
+            assert client.state_updates.send_device_status.called
 
 
 class TestMQTTClientBirthWill:
@@ -1085,7 +1099,7 @@ class TestSetPowerCommand:
         device.id = 42
         device.is_switch = False
 
-        with patch("cync_controller.mqtt_client.g") as mock_g:
+        with patch("cync_controller.mqtt.commands.g") as mock_g:
             mock_g.mqtt_client = MagicMock()
             mock_g.mqtt_client.update_device_state = AsyncMock()
 
@@ -1105,7 +1119,7 @@ class TestSetPowerCommand:
         group.name = "Test Group"
         group.member_ids = [42, 43]
 
-        with patch("cync_controller.mqtt_client.g") as mock_g:
+        with patch("cync_controller.mqtt.commands.g") as mock_g:
             mock_g.mqtt_client = MagicMock()
             mock_g.mqtt_client.update_device_state = AsyncMock()
             mock_g.mqtt_client.sync_group_devices = AsyncMock()
@@ -1128,7 +1142,7 @@ class TestSetPowerCommand:
         group = MagicMock(spec=CyncGroup)
         group.id = "group1"
 
-        with patch("cync_controller.mqtt_client.g") as mock_g:
+        with patch("cync_controller.mqtt.commands.g") as mock_g:
             mock_g.mqtt_client = MagicMock()
 
             cmd = SetPowerCommand(group, state=1)
@@ -1171,7 +1185,7 @@ class TestSetBrightnessCommand:
         device = MagicMock()
         device.id = 42
 
-        with patch("cync_controller.mqtt_client.g") as mock_g:
+        with patch("cync_controller.mqtt.commands.g") as mock_g:
             mock_g.mqtt_client = MagicMock()
             mock_g.mqtt_client.update_brightness = AsyncMock()
 
@@ -1188,7 +1202,7 @@ class TestSetBrightnessCommand:
         group = MagicMock(spec=CyncGroup)
         group.id = "group1"
 
-        with patch("cync_controller.mqtt_client.g") as mock_g:
+        with patch("cync_controller.mqtt.commands.g") as mock_g:
             mock_g.mqtt_client = MagicMock()
 
             cmd = SetBrightnessCommand(group, brightness=50)
@@ -1224,7 +1238,9 @@ class TestCommandProcessorQueue:
 
         mock_command = MagicMock(spec=DeviceCommand)
         mock_command.publish_optimistic = AsyncMock()
-        mock_command.execute = AsyncMock()
+        # Return event that will be set later (simulates waiting for ACK)
+        ack_event = asyncio.Event()
+        mock_command.execute = AsyncMock(return_value=ack_event)
         mock_command.cmd_type = "test_command"
         mock_command.device_id = 42
 
@@ -1235,6 +1251,10 @@ class TestCommandProcessorQueue:
 
         # Should have started processing
         assert processor._processing is True
+
+        # Signal ACK to let test complete
+        ack_event.set()
+        await asyncio.sleep(0.01)
 
     @pytest.mark.asyncio
     async def test_enqueue_doesnt_duplicate_processing_task(self):
@@ -1296,7 +1316,7 @@ class TestCommandProcessorExecution:
 
     @pytest.mark.asyncio
     async def test_process_next_triggers_status_refresh(self):
-        """Test that process_next triggers status refresh after command"""
+        """Test that process_next does NOT trigger active refresh (relies on natural 0x83 broadcasts)"""
         processor = CommandProcessor()
 
         mock_command = MagicMock(spec=DeviceCommand)
@@ -1305,15 +1325,15 @@ class TestCommandProcessorExecution:
         mock_command.cmd_type = "test_command"
         mock_command.device_id = 42
 
-        with patch("cync_controller.mqtt_client.g") as mock_g:
+        with patch("cync_controller.mqtt.commands.g") as mock_g:
             mock_g.mqtt_client = MagicMock()
             mock_g.mqtt_client.trigger_status_refresh = AsyncMock()
 
             await processor.enqueue(mock_command)
             await asyncio.sleep(0.7)  # Wait for sleep(0.5) + processing
 
-            # Should have called trigger_status_refresh
-            mock_g.mqtt_client.trigger_status_refresh.assert_called_once()
+            # Should NOT trigger active refresh - rely on natural 0x83 broadcasts instead
+            mock_g.mqtt_client.trigger_status_refresh.assert_not_called()
 
     @pytest.mark.asyncio
     async def test_process_next_handles_command_failure(self):
@@ -1326,7 +1346,7 @@ class TestCommandProcessorExecution:
         mock_command.cmd_type = "test_command"
         mock_command.device_id = 42
 
-        with patch("cync_controller.mqtt_client.g") as mock_g, patch("cync_controller.mqtt_client.logger"):
+        with patch("cync_controller.mqtt.commands.g") as mock_g:
             mock_g.mqtt_client = MagicMock()
 
             # Should not raise, should handle gracefully
@@ -1373,11 +1393,13 @@ class TestCommandProcessorExecution:
 
         mock_command = MagicMock(spec=DeviceCommand)
         mock_command.publish_optimistic = AsyncMock()
-        mock_command.execute = AsyncMock()
+        # Return event that will be set later (simulates waiting for ACK)
+        ack_event = asyncio.Event()
+        mock_command.execute = AsyncMock(return_value=ack_event)
         mock_command.cmd_type = "test_command"
         mock_command.device_id = 42
 
-        with patch("cync_controller.mqtt_client.g") as mock_g:
+        with patch("cync_controller.mqtt.commands.g") as mock_g:
             mock_g.mqtt_client = MagicMock()
             mock_g.mqtt_client.trigger_status_refresh = AsyncMock()
 
@@ -1392,7 +1414,9 @@ class TestCommandProcessorExecution:
             # Should be processing
             assert processor._processing is True
 
-            await asyncio.sleep(0.7)
+            # Signal ACK
+            ack_event.set()
+            await asyncio.sleep(0.01)
 
             # Should have cleared processing flag
             assert processor._processing is False
@@ -1418,13 +1442,14 @@ class TestMQTTUpdateDeviceFromSubgroup:
             client = MQTTClient()
             client.topic = "cync_lan"
             client._connected = True
-            client.send_device_status = AsyncMock(return_value=True)
+            client.client = MagicMock()
+            client.client.publish = AsyncMock()
 
             result = await client.update_switch_from_subgroup(mock_device, 1, "Subgroup")
 
             assert result is True
             assert mock_device.state == 1
-            client.send_device_status.assert_called_once()
+            client.client.publish.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_update_switch_from_subgroup_not_switch(self):
@@ -1474,13 +1499,14 @@ class TestMQTTUpdateDeviceFromSubgroup:
             client = MQTTClient()
             client.topic = "cync_lan"
             client._connected = True
-            client.send_device_status = AsyncMock(return_value=True)
+            client.client = MagicMock()
+            client.client.publish = AsyncMock()
 
             result = await client.update_switch_from_subgroup(mock_device, 0, "Subgroup")
 
             assert result is True
             # Should publish OFF state
-            client.send_device_status.assert_called_once()
+            client.client.publish.assert_called_once()
 
 
 class TestMQTTSyncGroupSwitches:
@@ -1517,12 +1543,14 @@ class TestMQTTSyncGroupSwitches:
             mock_g.ncync_server.devices = {1: switch1, 2: switch2}
 
             client = MQTTClient()
-            client.update_switch_from_subgroup = AsyncMock(return_value=True)
+            client._connected = True
+            client.client = MagicMock()
+            client.client.publish = AsyncMock()
 
             result = await client.sync_group_switches(123, 1, "Test Group")
 
             assert result == 2
-            assert client.update_switch_from_subgroup.call_count == 2
+            assert client.client.publish.call_count == 2
 
     @pytest.mark.asyncio
     async def test_sync_group_switches_group_not_found(self):
@@ -1560,7 +1588,9 @@ class TestMQTTSyncGroupSwitches:
             mock_g.ncync_server.devices = {1: switch1}
 
             client = MQTTClient()
-            client.update_switch_from_subgroup = AsyncMock(return_value=True)
+            client._connected = True
+            client.client = MagicMock()
+            client.client.publish = AsyncMock()
 
             result = await client.sync_group_switches(123, 1, "Test Group")
 
@@ -1601,16 +1631,15 @@ class TestMQTTSyncGroupDevices:
             mock_g.ncync_server.devices = {1: switch, 2: light}
 
             client = MQTTClient()
-            client.update_switch_from_subgroup = AsyncMock(return_value=True)
-            client.update_device_state = AsyncMock(return_value=True)
+            client._connected = True
+            client.client = MagicMock()
+            client.client.publish = AsyncMock()
 
             result = await client.sync_group_devices(123, 1, "Test Group")
 
             assert result == 2
-            # Should sync switch via update_switch_from_subgroup
-            client.update_switch_from_subgroup.assert_called_once()
-            # Should sync light via update_device_state
-            client.update_device_state.assert_called_once()
+            # Should publish MQTT messages for both devices
+            assert client.client.publish.call_count == 2
 
     @pytest.mark.asyncio
     async def test_sync_group_devices_group_not_found(self):
@@ -1653,15 +1682,16 @@ class TestMQTTSyncGroupDevices:
             mock_g.ncync_server.devices = {1: switch, 2: light1, 3: light2}
 
             client = MQTTClient()
-            client.update_switch_from_subgroup = AsyncMock(return_value=True)
-            client.update_device_state = AsyncMock(return_value=True)
+            client._connected = True
+            client.client = MagicMock()
+            client.client.publish = AsyncMock()
 
             result = await client.sync_group_devices(123, 0, "Mixed Group")
 
             # Should sync 1 switch + 2 lights = 3 total
             assert result == 3
-            assert client.update_switch_from_subgroup.call_count == 1
-            assert client.update_device_state.call_count == 2
+            # Should publish MQTT messages for all 3 devices
+            assert client.client.publish.call_count == 3
 
 
 class TestMQTTReceiverTask:
@@ -1960,12 +1990,13 @@ class TestMQTTParseDeviceStatus:
             client = MQTTClient()
             client.topic = "cync_lan"
             client._connected = True
-            client.send_device_status = AsyncMock(return_value=True)
+            client.client = MagicMock()
+            client.client.publish = AsyncMock()
 
             result = await client.parse_device_status(1, device_status, from_pkt="test")
 
             assert result is True
-            client.send_device_status.assert_called_once()
+            client.client.publish.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_parse_device_status_with_rgb_color(self):
@@ -2000,12 +2031,13 @@ class TestMQTTParseDeviceStatus:
             client = MQTTClient()
             client.topic = "cync_lan"
             client._connected = True
-            client.send_device_status = AsyncMock(return_value=True)
+            client.client = MagicMock()
+            client.client.publish = AsyncMock()
 
             result = await client.parse_device_status(1, device_status, from_pkt="test")
 
             assert result is True
-            client.send_device_status.assert_called_once()
+            client.client.publish.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_parse_device_status_with_color_temp(self):
@@ -2040,12 +2072,13 @@ class TestMQTTParseDeviceStatus:
             client = MQTTClient()
             client.topic = "cync_lan"
             client._connected = True
-            client.send_device_status = AsyncMock(return_value=True)
+            client.client = MagicMock()
+            client.client.publish = AsyncMock()
 
             result = await client.parse_device_status(1, device_status, from_pkt="test")
 
             assert result is True
-            client.send_device_status.assert_called_once()
+            client.client.publish.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_parse_device_status_switch_skips_mesh_info(self):
@@ -2066,13 +2099,15 @@ class TestMQTTParseDeviceStatus:
             mock_g.ncync_server.devices = {1: device}
 
             client = MQTTClient()
-            client.send_device_status = AsyncMock()
+            client._connected = True
+            client.client = MagicMock()
+            client.client.publish = AsyncMock()
 
             # Should return False and not call send_device_status
             result = await client.parse_device_status(1, device_status, from_pkt="mesh info")
 
             assert result is False
-            client.send_device_status.assert_not_called()
+            client.client.publish.assert_not_called()
 
     @pytest.mark.asyncio
     async def test_parse_device_status_device_not_found(self):
@@ -2113,13 +2148,14 @@ class TestMQTTParseDeviceStatus:
             client = MQTTClient()
             client.topic = "cync_lan"
             client._connected = True
-            client.send_device_status = AsyncMock(return_value=True)
+            client.client = MagicMock()
+            client.client.publish = AsyncMock()
 
             result = await client.parse_device_status(1, device_status, from_pkt="0x83")
 
             assert result is True
             # Should publish plain ON/OFF bytes (not JSON)
-            client.send_device_status.assert_called_once()
+            client.client.publish.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_parse_device_status_fan_preset_mode(self):
@@ -2143,7 +2179,7 @@ class TestMQTTParseDeviceStatus:
             client = MQTTClient()
             client.topic = "cync_lan"
             client._connected = True
-            client.send_device_status = AsyncMock(return_value=True)
+            client.client = MagicMock()
             client.client.publish = AsyncMock()
 
             result = await client.parse_device_status(1, device_status)
@@ -2213,7 +2249,6 @@ class TestMQTTTriggerStatusRefresh:
             bridge.ready_to_control = True
             bridge.connected_at = time.time()
             bridge.address = "192.168.1.100"
-            bridge.ask_for_mesh_info = AsyncMock()
 
             mock_g.ncync_server.tcp_devices = {"192.168.1.100": bridge}
 
@@ -2222,8 +2257,7 @@ class TestMQTTTriggerStatusRefresh:
 
             await client.trigger_status_refresh()
 
-            # Should have called ask_for_mesh_info
-            bridge.ask_for_mesh_info.assert_called_once()
+            # REMOVED: Mesh polling disabled - now relying on 0x83 status packets
             # Should reset flag
             assert client._refresh_in_progress is False
 
@@ -2246,14 +2280,16 @@ class TestMQTTUpdateDeviceStateEdgeCases:
 
             client = MQTTClient()
             client.topic = "cync_lan"
-            client.send_device_status = AsyncMock(return_value=True)
+            client._connected = True
+            client.client = MagicMock()
+            client.client.publish = AsyncMock()
 
             result = await client.update_device_state(device, 1)
 
             assert result is True
             assert device.state == 1
             # Should publish plain ON/OFF for plugs
-            client.send_device_status.assert_called_once()
+            client.client.publish.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_update_device_state_supports_temperature(self):
@@ -2272,13 +2308,15 @@ class TestMQTTUpdateDeviceStateEdgeCases:
 
             client = MQTTClient()
             client.topic = "cync_lan"
-            client.send_device_status = AsyncMock(return_value=True)
+            client._connected = True
+            client.client = MagicMock()
+            client.client.publish = AsyncMock()
 
             result = await client.update_device_state(device, 1)
 
             assert result is True
             assert device.state == 1
-            client.send_device_status.assert_called_once()
+            client.client.publish.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_update_device_state_supports_rgb(self):
@@ -2297,13 +2335,15 @@ class TestMQTTUpdateDeviceStateEdgeCases:
 
             client = MQTTClient()
             client.topic = "cync_lan"
-            client.send_device_status = AsyncMock(return_value=True)
+            client._connected = True
+            client.client = MagicMock()
+            client.client.publish = AsyncMock()
 
             result = await client.update_device_state(device, 1)
 
             assert result is True
             assert device.state == 1
-            client.send_device_status.assert_called_once()
+            client.client.publish.assert_called_once()
 
 
 class TestRegisterSingleDevice:

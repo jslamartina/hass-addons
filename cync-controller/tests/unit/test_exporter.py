@@ -90,7 +90,7 @@ class TestExportServerLifecycle:
             await start_task
 
     @pytest.mark.asyncio
-    async def test_start_with_cancelled_error(self, mock_global_object):  # noqa: ARG002
+    async def test_start_with_cancelled_error(self, mock_global_object):
         """Test that start handles CancelledError gracefully"""
         server = ExportServer()
         server.uvi_server.serve = AsyncMock(side_effect=asyncio.CancelledError())
@@ -299,7 +299,7 @@ class TestFastAPIEndpoints:
                 await download_config()
 
     @pytest.mark.asyncio
-    async def test_restart_success(self, mock_global_object):  # noqa: ARG002
+    async def test_restart_success(self, mock_global_object):
         """Test restart endpoint with valid supervisor token"""
         with (
             patch("cync_controller.exporter.os.environ") as mock_env,

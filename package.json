@@ -13,10 +13,13 @@
     "test:unit:fast": "cd cync-controller && pytest tests/unit/ -x",
     "test:unit:serial": "cd cync-controller && pytest tests/unit/ -n 0",
     "test:unit:watch": "cd cync-controller && pytest-watch tests/unit/",
+    "test:unit:mem": "./scripts/monitor-test-memory.sh",
     "lint": "./scripts/lint-all.sh",
     "lint:python": "ruff check .",
     "lint:python:fix": "ruff check . --fix",
     "lint:shell": "git ls-files '*.sh' | xargs -r shellcheck",
+    "lint:typescript": "eslint . --ext .ts,.tsx",
+    "lint:typescript:fix": "eslint . --ext .ts,.tsx --fix",
     "format": "npx prettier --write .",
     "format:check": "npx prettier --check .",
     "format:python": "ruff format .",
@@ -28,7 +31,7 @@
     "playwright:delete-mqtt-entities": "ts-node scripts/playwright/delete-mqtt-entities.ts",
     "playwright:delete-all-except-bridge": "ts-node scripts/playwright/delete-all-mqtt-entities-except-bridge.ts",
     "playwright:delete-all-except-bridge:dry-run": "DRY_RUN=true ts-node scripts/playwright/delete-all-mqtt-entities-except-bridge.ts",
-    "playwright:test": "npx playwright test --workers=1"
+    "playwright:test": "npx playwright test"
   },
   "repository": {
     "type": "git",
@@ -42,13 +45,17 @@
   },
   "homepage": "https://github.com/jslamartina/hass-addons#readme",
   "devDependencies": {
+    "@eslint/js": "^9.0.0",
     "@playwright/test": "^1.56.0",
     "@types/node": "^24.7.2",
+    "eslint": "^9.0.0",
+    "eslint-config-prettier": "^9.1.0",
     "playwright": "^1.56.0",
     "prettier": "^3.6.2",
     "prettier-plugin-sh": "^0.17.4",
     "ts-node": "^10.9.2",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.0.0"
   },
   "dependencies": {
     "@modelcontextprotocol/server-filesystem": "^2025.8.21",

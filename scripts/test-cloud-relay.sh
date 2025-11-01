@@ -3,32 +3,23 @@
 # Tests all phases of cloud relay functionality
 set -e
 
-LP="[test-cloud-relay.sh]"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-CONFIG_SCRIPT="${SCRIPT_DIR}/configure-addon.sh"
+source "$SCRIPT_DIR/shell-common/common-output.sh"
 
-# Colors for output
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-# YELLOW='\033[1;33m'  # Reserved for future use
-BLUE='\033[0;34m'
-NC='\033[0m' # No Color
+LP="[$(basename "$0")]"
+CONFIG_SCRIPT="${SCRIPT_DIR}/configure-addon.sh"
 
 # Test results
 TESTS_PASSED=0
 TESTS_FAILED=0
 TESTS_TOTAL=0
 
-# Function to print section header
+# Function to print section header (use log_section from common lib)
 section() {
-  echo ""
-  echo -e "${BLUE}═══════════════════════════════════════════════════════════${NC}"
-  echo -e "${BLUE}  $1${NC}"
-  echo -e "${BLUE}═══════════════════════════════════════════════════════════${NC}"
-  echo ""
+  log_section "$1"
 }
 
-# Function to print test result
+# Override test_result to track totals
 test_result() {
   local name="$1"
   local passed="$2"
@@ -209,18 +200,18 @@ main() {
   echo ""
 
   if [ $TESTS_FAILED -eq 0 ]; then
-    echo -e "${GREEN}╔═══════════════════════════════════════════════════╗${NC}"
-    echo -e "${GREEN}║                                                   ║${NC}"
-    echo -e "${GREEN}║  ✅  ALL TESTS PASSED - CLOUD RELAY WORKING! ✅  ║${NC}"
-    echo -e "${GREEN}║                                                   ║${NC}"
-    echo -e "${GREEN}╚═══════════════════════════════════════════════════╝${NC}"
+    echo -e "${GREEN}╔═════════════════════════════════════════════════════╗${NC}"
+    echo -e "${GREEN}║                                                     ║${NC}"
+    echo -e "${GREEN}║ ✅  ALL TESTS PASSED - CLOUD RELAY WORKING! ✅      ║${NC}"
+    echo -e "${GREEN}║                                                     ║${NC}"
+    echo -e "${GREEN}╚═════════════════════════════════════════════════════╝${NC}"
     exit 0
   else
-    echo -e "${RED}╔═══════════════════════════════════════════════════╗${NC}"
-    echo -e "${RED}║                                                   ║${NC}"
-    echo -e "${RED}║      ❌  SOME TESTS FAILED - SEE ABOVE  ❌       ║${NC}"
-    echo -e "${RED}║                                                   ║${NC}"
-    echo -e "${RED}╚═══════════════════════════════════════════════════╝${NC}"
+    echo -e "${RED}╔═════════════════════════════════════════════════════╗${NC}"
+    echo -e "${RED}║                                                     ║${NC}"
+    echo -e "${RED}║     ❌  SOME TESTS FAILED - SEE ABOVE  ❌           ║${NC}"
+    echo -e "${RED}║                                                     ║${NC}"
+    echo -e "${RED}╚═════════════════════════════════════════════════════╝${NC}"
     exit 1
   fi
 }

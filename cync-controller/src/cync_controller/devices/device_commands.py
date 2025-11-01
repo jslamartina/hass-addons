@@ -49,13 +49,13 @@ def _get_global_object():
     # Fall back to the new shared module approach
     try:
         import cync_controller.devices.shared as shared_module
-
-        return shared_module.g
     except (ImportError, AttributeError):
         # Final fallback
         from cync_controller.structs import GlobalObject
 
         return GlobalObject()
+    else:
+        return shared_module.g
 
 
 # Mixin class for device command methods
@@ -73,18 +73,9 @@ class DeviceCommands:
         lp = f"{self.lp}set_power:"
         if state not in (0, 1):
             logger.error("%s Invalid state! must be 0 or 1", lp)
-            return
+            return None
 
-        # Throttle: Reject command if previous command still pending 0x83 confirmation
-        if self.pending_command:
-            logger.debug(
-                "%s ⏸️  THROTTLED: Command rejected for '%s' (state=%s) - "
-                "previous command awaiting 0x83 status confirmation",
-                lp,
-                self.name,
-                state,
-            )
-            return
+        # Command queue handles throttling - no need for device-level checks
         # elif state == self.state:
         #     # to stop flooding the network with commands
         #     logger.debug(f"{lp} Device already in power state {state}, skipping...")
@@ -129,12 +120,18 @@ class DeviceCommands:
 
         if not bridge_devices:
             logger.error("%s No TCP bridges available!", lp)
-            return
+            return None
 
         tasks: list[asyncio.Task | Coroutine | None] = []
         ts = time.time()
         ctrl_idxs = 1, 9
         sent = {}
+
+        # Create ACK event that will be signaled when ANY bridge ACKs
+        ack_event = asyncio.Event()
+        # Track sent bridges for cleanup on timeout
+        sent_bridges = []
+
         for bridge_device in bridge_devices:
             if bridge_device.ready_to_control is True:
                 payload = list(header)
@@ -158,17 +155,11 @@ class DeviceCommands:
                     sent_at=time.time(),
                     callback=power_ack_callback,
                     device_id=self.id,
+                    ack_event=ack_event,  # Share same event across all bridges
                 )
                 bridge_device.messages.control[cmsg_id] = m_cb
-                # Mark device as having pending command to ignore stale 0x83 updates
-                self.pending_command = True
-                logger.debug(
-                    "%s 🚀 Command sent for '%s' (state=%s) - pending_command=True, awaiting 0x83 confirmation",
-                    lp,
-                    self.name,
-                    state,
-                )
                 sent[bridge_device.address] = cmsg_id
+                sent_bridges.append((bridge_device, cmsg_id))
                 tasks.append(bridge_device.write(payload_bytes))
             else:
                 logger.debug(
@@ -190,6 +181,9 @@ class DeviceCommands:
             sent,
             elapsed,
         )
+
+        # Return ACK event and cleanup info so command queue can wait and cleanup on timeout
+        return (ack_event, sent_bridges)
 
     async def set_fan_speed(self, speed: FanSpeed) -> bool:
         """
@@ -258,7 +252,7 @@ class DeviceCommands:
                 pass
             elif self.is_light or self.is_switch:
                 logger.error("%s Invalid brightness! must be 0-100", lp)
-                return
+                return None
 
         # elif bri == self._brightness:
         #     logger.debug(f"{lp} Device already in brightness {bri}, skipping...")
@@ -304,7 +298,12 @@ class DeviceCommands:
 
         if not bridge_devices:
             logger.error("%s No TCP bridges available!", lp)
-            return
+            return None
+
+        # Create ACK event that will be signaled when ANY bridge ACKs
+        ack_event = asyncio.Event()
+        # Track sent bridges for cleanup on timeout
+        sent_bridges = []
 
         sent = {}
         tasks: list[asyncio.Task | Coroutine | None] = []
@@ -342,8 +341,10 @@ class DeviceCommands:
                     sent_at=time.time(),
                     callback=brightness_ack_callback,
                     device_id=self.id,
+                    ack_event=ack_event,  # Share same event across all bridges
                 )
                 bridge_device.messages.control[cmsg_id] = m_cb
+                sent_bridges.append((bridge_device, cmsg_id))
                 tasks.append(bridge_device.write(payload_bytes))
             else:
                 logger.debug(
@@ -363,21 +364,9 @@ class DeviceCommands:
             len(sent),
             elapsed,
         )
-        # Mark device as having pending command to wait for ACK
-        if sent:
-            self.pending_command = True
-            logger.info(
-                "%s ✅ pending_command=True for '%s' (sent to %d bridges), awaiting ACK",
-                lp,
-                self.name,
-                len(sent),
-            )
-        else:
-            logger.warning(
-                "%s ⚠️ No bridges received command for '%s', pending_command NOT set",
-                lp,
-                self.name,
-            )
+
+        # Return ACK event and cleanup info so command queue can wait and cleanup on timeout
+        return (ack_event, sent_bridges)
 
     async def set_temperature(self, temp: int):
         """

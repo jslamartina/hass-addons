@@ -50,7 +50,7 @@ class EditContextValidator:
     def validate_context(
         self,
         context: str,
-        start_line: Optional[int] = None,  # noqa: ARG002
+        start_line: Optional[int] = None,
     ) -> Tuple[bool, str]:
         """
         Validate that context matches file content at the expected location.

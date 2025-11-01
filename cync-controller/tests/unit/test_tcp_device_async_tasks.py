@@ -109,7 +109,7 @@ class TestCyncTCPDeviceAsyncTasks:
         test_data = bytes([0x83, 0x00, 0x00, 0x00, 0x05, 0x01, 0x02, 0x03, 0x04])
         call_count = 0
 
-        async def mock_read(chunk=None):  # noqa: ARG001
+        async def mock_read(chunk=None):
             nonlocal call_count
             call_count += 1
             if call_count == 1:
