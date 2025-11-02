@@ -15,6 +15,23 @@ function start_docker() {
     return 0
   fi
 
+  # Clean up stale Docker PID and socket files from previous failed attempts
+  if [ -f /var/run/docker.pid ]; then
+    OLD_PID=$(cat /var/run/docker.pid)
+    if ! kill -0 "$OLD_PID" 2> /dev/null; then
+      echo "Cleaning up stale Docker PID file (process $OLD_PID not running)"
+      rm -f /var/run/docker.pid
+      rm -f /var/run/docker.sock
+    else
+      echo "Warning: Docker PID file exists and process $OLD_PID is running"
+      echo "Attempting to stop existing process..."
+      kill "$OLD_PID" 2> /dev/null || true
+      sleep 2
+      rm -f /var/run/docker.pid
+      rm -f /var/run/docker.sock
+    fi
+  fi
+
   if grep -q 'Alpine|standard-WSL' /proc/version; then
     # The docker daemon does not start when running WSL2 without adjusting iptables
     update-alternatives --set iptables /usr/sbin/iptables-legacy || echo "Fails adjust iptables"
@@ -22,7 +39,8 @@ function start_docker() {
   fi
 
   echo "Starting docker."
-  dockerd 2> /dev/null &
+  # Show critical errors but suppress verbose debug output
+  dockerd 2>&1 | grep -v -E "(level=info|level=debug|level=warning)" &
   DOCKER_PID=$!
 
   echo "Waiting for docker to initialize..."
@@ -34,6 +52,7 @@ function start_docker() {
       endtime=$(date +%s)
     else
       echo "Timeout while waiting for docker to come up"
+      echo "Check /tmp/dockerd.log for details (if logging was enabled)"
       exit 1
     fi
   done

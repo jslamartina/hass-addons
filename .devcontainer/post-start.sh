@@ -66,21 +66,41 @@ fi
 # Step 4: Start Home Assistant Supervisor (this will start Docker internally)
 echo "Starting Home Assistant Supervisor..."
 
-# Check if supervisor is already running and healthy
-if ha supervisor info 2> /dev/null | grep -q 'healthy: true'; then
-  echo "Supervisor already running and healthy, skipping start"
+# Check if supervisor.sh is already running
+if pgrep -f "supervisor.sh" > /dev/null 2>&1; then
+  echo "⚠️  WARNING: supervisor.sh is already running!"
+  echo "Checking if supervisor is healthy..."
+  if ha supervisor info 2> /dev/null | grep -q 'healthy: true'; then
+    echo "✅ Supervisor is running and healthy, skipping start"
+  else
+    echo "⚠️  Supervisor script running but not healthy yet, waiting..."
+  fi
 else
-  # Start supervisor_run with script to provide TTY, logs to file only (no console output)
-  # Pass WORKSPACE_DIRECTORY environment variable through sudo
-  # Use setsid to create a new session - supervisor won't be killed when post-start.sh exits
-  cd "${CONTAINER_WORKSPACE_FOLDER}/.devcontainer"
-  setsid sudo WORKSPACE_DIRECTORY="${WORKSPACE_DIRECTORY}" script -qefc "sudo WORKSPACE_DIRECTORY=${WORKSPACE_DIRECTORY} ${CONTAINER_WORKSPACE_FOLDER}/.devcontainer/supervisor.sh" /tmp/supervisor_run.log > /dev/null 2>&1 &
-  # Tail the log file and filter out DEBUG lines for console display
-  sleep 1
-  tail -f /tmp/supervisor_run.log 2> /dev/null | grep -a --line-buffered -v "DEBUG" &
+  # Check if supervisor is already running and healthy
+  if ha supervisor info 2> /dev/null | grep -q 'healthy: true'; then
+    echo "Supervisor already running and healthy, skipping start"
+  else
+    # Start supervisor_run with script to provide TTY, logs to file only (no console output)
+    # Pass WORKSPACE_DIRECTORY environment variable through sudo
+    # Use setsid to create a new session - supervisor won't be killed when post-start.sh exits
+    cd "${CONTAINER_WORKSPACE_FOLDER}/.devcontainer"
 
-  echo "Waiting for Supervisor to be ready..."
-  sleep 5
+    # Clear old log file to avoid confusion
+    > /tmp/supervisor_run.log
+
+    setsid sudo WORKSPACE_DIRECTORY="${WORKSPACE_DIRECTORY}" script -qefc "sudo WORKSPACE_DIRECTORY=${WORKSPACE_DIRECTORY} ${CONTAINER_WORKSPACE_FOLDER}/.devcontainer/supervisor.sh" /tmp/supervisor_run.log > /dev/null 2>&1 &
+    # Tail the log file and filter out DEBUG lines for console display
+    sleep 1
+    tail -f /tmp/supervisor_run.log 2> /dev/null | grep -a --line-buffered -v "DEBUG" &
+
+    echo "Waiting for Supervisor to be ready..."
+    sleep 5
+  fi
+fi
+
+# Common wait logic for both paths
+if ! ha supervisor info 2> /dev/null | grep -q 'healthy: true'; then
+  echo "Waiting for Supervisor to become healthy..."
   RETRY_DELAY=1
   MAX_DELAY=30
   until ha supervisor info 2> /dev/null; do
