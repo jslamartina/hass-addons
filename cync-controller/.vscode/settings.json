@@ -1,7 +1,3 @@
 {
-  "python.analysis.extraPaths": [
-    "${workspaceFolder}/src"
-  ]
+  "python.analysis.extraPaths": ["${workspaceFolder}/src"]
 }
-
-

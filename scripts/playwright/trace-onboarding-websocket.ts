@@ -5,7 +5,7 @@
  * for reverse engineering analysis.
  */
 
-import { test, Page } from "@playwright/test";
+import { test, Page, Locator } from "@playwright/test";
 import * as fs from "fs";
 import * as path from "path";
 
@@ -13,11 +13,16 @@ const BASE_URL = process.env.HA_BASE_URL || "http://localhost:8123";
 const USERNAME = process.env.HA_USERNAME || "dev";
 const PASSWORD = process.env.HA_PASSWORD || "dev";
 
+interface OnboardingStep {
+  step: string;
+  done: boolean;
+}
+
 interface WebSocketMessage {
   timestamp: string;
   direction: "sent" | "received";
   step: string;
-  message: any;
+  message: unknown;
   raw: string;
 }
 
@@ -29,8 +34,8 @@ interface NetworkRequest {
   status?: number;
   requestHeaders?: Record<string, string>;
   responseHeaders?: Record<string, string>;
-  requestBody?: any;
-  responseBody?: any;
+  requestBody?: unknown;
+  responseBody?: unknown;
 }
 
 class OnboardingTracer {
@@ -104,7 +109,7 @@ class OnboardingTracer {
           const postData = request.postDataJSON();
           if (postData) {
             Promise.resolve(postData)
-              .then((body: any) => {
+              .then((body: unknown) => {
                 networkReq.requestBody = body;
               })
               .catch(() => {
@@ -161,7 +166,7 @@ class OnboardingTracer {
         : Buffer.isBuffer(payload)
           ? payload.toString()
           : String(payload);
-    let message: any;
+    let message: unknown;
 
     try {
       message = JSON.parse(raw);
@@ -247,8 +252,8 @@ async function detectCurrentStep(page: Page): Promise<string> {
     try {
       const response = await page.request.get(`${BASE_URL}/api/onboarding`);
       if (response.ok()) {
-        const data = await response.json();
-        const incompleteSteps = data.filter((step: any) => !step.done);
+        const data: OnboardingStep[] = await response.json();
+        const incompleteSteps = data.filter((step) => !step.done);
         if (incompleteSteps.length > 0) {
           console.log(
             `[Detection] API detected incomplete step: ${incompleteSteps[0].step}`,
@@ -402,7 +407,7 @@ async function _retryWithBackoff<T>(
  */
 async function waitForActionable(
   page: Page,
-  locator: any,
+  locator: Locator,
   timeout: number = 10000,
 ): Promise<boolean> {
   try {
@@ -419,7 +424,7 @@ async function waitForActionable(
  */
 async function _safeClick(
   page: Page,
-  locator: any,
+  locator: Locator,
   timeout: number = 5000,
   description: string = "Element",
 ): Promise<boolean> {

@@ -86,7 +86,7 @@ else
     cd "${CONTAINER_WORKSPACE_FOLDER}/.devcontainer"
 
     # Clear old log file to avoid confusion
-    > /tmp/supervisor_run.log
+    : > /tmp/supervisor_run.log
 
     setsid sudo WORKSPACE_DIRECTORY="${WORKSPACE_DIRECTORY}" script -qefc "sudo WORKSPACE_DIRECTORY=${WORKSPACE_DIRECTORY} ${CONTAINER_WORKSPACE_FOLDER}/.devcontainer/supervisor.sh" /tmp/supervisor_run.log > /dev/null 2>&1 &
     # Tail the log file and filter out DEBUG lines for console display

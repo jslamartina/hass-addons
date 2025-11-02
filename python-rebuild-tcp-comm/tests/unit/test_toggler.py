@@ -53,9 +53,10 @@ async def test_send_toggle_packet_success() -> None:
     conn.writer = MagicMock()
 
     # Mock successful send/recv
-    with patch.object(conn, "send", return_value=True) as mock_send, patch.object(
-        conn, "recv", return_value=b"ACK"
-    ) as mock_recv:
+    with (
+        patch.object(conn, "send", return_value=True) as mock_send,
+        patch.object(conn, "recv", return_value=b"ACK") as mock_recv,
+    ):
         response = await send_toggle_packet(
             conn=conn,
             device_id="TEST123",
@@ -93,8 +94,9 @@ async def test_send_toggle_packet_recv_timeout() -> None:
     conn._connected = True
 
     # Mock send success, recv timeout
-    with patch.object(conn, "send", return_value=True), patch.object(
-        conn, "recv", return_value=None
+    with (
+        patch.object(conn, "send", return_value=True),
+        patch.object(conn, "recv", return_value=None),
     ):
         response = await send_toggle_packet(
             conn=conn,
@@ -139,9 +141,10 @@ async def test_toggle_device_with_retry_failure_then_success() -> None:
         mock_conn.close = AsyncMock()
         mock_conn_class.return_value = mock_conn
 
-        with patch(
-            "rebuild_tcp_comm.harness.toggler.send_toggle_packet", return_value=b"ACK"
-        ), patch("asyncio.sleep"):  # Speed up test by mocking sleep
+        with (
+            patch("rebuild_tcp_comm.harness.toggler.send_toggle_packet", return_value=b"ACK"),
+            patch("asyncio.sleep"),
+        ):  # Speed up test by mocking sleep
             result = await toggle_device_with_retry(
                 device_id="TEST123",
                 device_host="127.0.0.1",

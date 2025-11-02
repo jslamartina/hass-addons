@@ -1,6 +1,7 @@
 {
   "name": "hass-addons",
   "version": "1.0.0",
+  "type": "module",
   "description": "The following add-ons are available in this repository:",
   "main": "index.js",
   "directories": {

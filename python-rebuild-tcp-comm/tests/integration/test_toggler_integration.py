@@ -220,14 +220,10 @@ async def test_all_attempts_timeout(
     assert result is False, "Should fail when all attempts timeout"
 
     # Verify both attempts were made
-    assert (
-        mock_tcp_server_timeout.connection_count == 2
-    ), "Should attempt connection twice"
+    assert mock_tcp_server_timeout.connection_count == 2, "Should attempt connection twice"
 
     # Server should receive packets but not respond
-    assert (
-        len(mock_tcp_server_timeout.received_packets) == 2
-    ), "Server should receive both packets"
+    assert len(mock_tcp_server_timeout.received_packets) == 2, "Server should receive both packets"
 
 
 @pytest.mark.asyncio
@@ -329,9 +325,7 @@ async def test_metrics_endpoint_accessible(
     # Verify metrics exist in output
     assert "tcp_comm_packet_sent_total" in metrics_text, "Should have sent packet metric"
     assert "tcp_comm_packet_recv_total" in metrics_text, "Should have recv packet metric"
-    assert (
-        "tcp_comm_packet_latency_seconds" in metrics_text
-    ), "Should have latency metric"
+    assert "tcp_comm_packet_latency_seconds" in metrics_text, "Should have latency metric"
 
     # Verify device_id label is present (at least somewhere in metrics)
     # Note: The actual device_id might be URL-encoded or quoted
@@ -341,4 +335,3 @@ async def test_metrics_endpoint_accessible(
 
     # Verify success outcome is recorded
     assert 'outcome="success"' in metrics_text, "Should have success outcome in metrics"
-

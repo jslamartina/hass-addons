@@ -31,4 +31,3 @@ echo "✓ Build complete!"
 echo ""
 echo "Artifacts:"
 ls -lh dist/
-

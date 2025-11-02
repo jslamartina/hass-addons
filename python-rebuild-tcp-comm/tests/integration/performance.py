@@ -178,4 +178,3 @@ class PerformanceTracker:
         index = max(0, min(len(sorted_samples) - 1, int(rank)))
 
         return sorted_samples[index]
-

@@ -292,4 +292,3 @@ def _init_performance_tracker(
     """Initialize performance tracker in pytest config."""
     request.config._performance_tracker = performance_tracker  # type: ignore[attr-defined]
     return performance_tracker
-
