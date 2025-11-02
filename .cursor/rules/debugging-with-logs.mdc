@@ -9,11 +9,30 @@ alwaysApply: false
 ## Log Access
 
 ```bash
-# Human-readable
+# Standard log viewing
+ha addons logs local_cync-controller
+
+# Follow logs in real-time
 ha addons logs local_cync-controller --follow
 
-# JSON logs (filter with jq)
+# JSON logs for filtering
 docker exec addon_local_cync-controller tail -100 /var/log/cync_controller.json | jq '.'
+
+# Supervisor lifecycle events
+tail -f /tmp/supervisor_run.log
+```
+
+## Container Inspection
+
+```bash
+# Access shell
+docker exec -it addon_local_cync-controller /bin/bash
+
+# Check environment
+docker exec addon_local_cync-controller env | grep CYNC_
+
+# Check configuration
+docker exec addon_local_cync-controller cat /data/options.json
 ```
 
 ## Key Investigation Commands
@@ -57,6 +76,6 @@ docker exec addon_local_cync-controller sh -c "grep '$CORR_ID' /var/log/cync_con
 
 ## Related
 
-- See `debugging-guide.mdc` for container inspection
 - See `logging-patterns.mdc` for configuration
 - See `logging-mandatory.mdc` for logging guidelines
+- See `docs/user/troubleshooting.md` for common issues

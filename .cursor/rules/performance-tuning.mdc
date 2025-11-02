@@ -45,5 +45,4 @@ self.pending_command = True
 
 ## Related
 
-- See `common-commands.mdc` for command reference
 - See `devcontainer-quirks.mdc` for dev environment notes

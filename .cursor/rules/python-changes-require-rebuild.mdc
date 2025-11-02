@@ -21,5 +21,4 @@ Python files are baked into the Docker image at build time. Restarting alone wil
 ## Related
 
 - `development-workflow.mdc` - Full 3-step workflow
-- `common-commands.mdc` - Complete command reference
 - `critical-docker.mdc` - Docker handling rules

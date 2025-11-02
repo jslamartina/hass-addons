@@ -10,7 +10,6 @@ alwaysApply: true
 These files are loaded automatically on every turn:
 
 - **[Executive Rules](_00-exec-rules.mdc)** - 7 critical rules that MUST be followed
-- **[Guard](_01-guard.mdc)** - ACK pattern: acknowledge rules before taking action
 - **[Tail Recap](zz_end_recap.mdc)** - Final reminder (if applicable)
 
 ## Core Development Rules
@@ -50,7 +49,6 @@ These files are loaded automatically on every turn:
 
 ## Reference Documentation
 
-- **[Common Commands](common-commands.mdc)** - Command reference
 - **[Performance Tuning](performance-tuning.mdc)** - Optimization patterns
 - **[Known Bugs](known-bugs-workarounds.mdc)** - Bug patterns and workarounds
 - **[Cloud Relay Patterns](cloud-relay-patterns.mdc)** - Relay mode usage
@@ -60,8 +58,7 @@ These files are loaded automatically on every turn:
 
 - **[Architecture Concepts](architecture-concepts.mdc)** - Key architectural patterns
 - **[Testing Workflows](testing-workflows.mdc)** - Testing procedures
-- **[Debugging Guide](debugging-guide.mdc)** - Debug techniques
-- **[Debugging with Logs](debugging-with-logs.mdc)** - Log inspection techniques
+- **[Debugging with Logs](debugging-with-logs.mdc)** - Debugging and log inspection techniques
 
 ## Environment Setup
 
@@ -71,7 +68,6 @@ These files are loaded automatically on every turn:
 
 ## Task Management
 
-- **[Plan & Todo Management](plan-todo-management.mdc)** - Task tracking
 - **[Git Practices](git-practices.mdc)** - Git workflow
 
 ## Usage Instructions

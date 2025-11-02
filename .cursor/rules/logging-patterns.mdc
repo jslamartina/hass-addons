@@ -124,5 +124,4 @@ handler.setFormatter(JSONFormatter())
 ## Related
 
 - See `logging_abstraction.py` for implementation details
-- See `common-commands.mdc` for logging command reference
-- See `debugging-guide.mdc` for log inspection techniques
+- See `debugging-with-logs.mdc` for log inspection techniques

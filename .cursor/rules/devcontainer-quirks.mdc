@@ -43,4 +43,3 @@ cd scripts
 
 - `supervisor-api-access.mdc` - How to access Supervisor API
 - `critical-docker.mdc` - Docker handling rules
-- `common-commands.mdc` - Command reference
