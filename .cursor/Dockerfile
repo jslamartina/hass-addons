@@ -67,6 +67,8 @@ RUN pip install --upgrade pip setuptools wheel
 
 # Install Ruff (fast Python linter/formatter)
 RUN pip install ruff
+# Install Poetry (dependency manager for python-rebuild-tcp-comm)
+RUN pip install poetry
 
 # Create non-root user 'ubuntu' with sudo access
 RUN useradd -m -s /bin/bash ubuntu \
