@@ -19,7 +19,7 @@ echo "2. Linting..."
 # Run tests
 echo ""
 echo "3. Running tests..."
-./scripts/test.sh
+./scripts/test-all.sh
 
 # Build package
 echo ""

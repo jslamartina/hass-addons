@@ -5,8 +5,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from rebuild_tcp_comm.harness.toggler import send_toggle_packet, toggle_device_with_retry
-from rebuild_tcp_comm.transport import TCPConnection
+from harness.toggler import send_toggle_packet, toggle_device_with_retry
+from transport import TCPConnection
 
 
 @pytest.mark.asyncio
@@ -111,13 +111,13 @@ async def test_send_toggle_packet_recv_timeout() -> None:
 @pytest.mark.asyncio
 async def test_toggle_device_with_retry_success() -> None:
     """Test toggle with successful first attempt."""
-    with patch("rebuild_tcp_comm.harness.toggler.TCPConnection") as mock_conn_class:
+    with patch("harness.toggler.TCPConnection") as mock_conn_class:
         mock_conn = AsyncMock()
         mock_conn.connect.return_value = True
         mock_conn.close = AsyncMock()
         mock_conn_class.return_value = mock_conn
 
-        with patch("rebuild_tcp_comm.harness.toggler.send_toggle_packet", return_value=b"ACK"):
+        with patch("harness.toggler.send_toggle_packet", return_value=b"ACK"):
             result = await toggle_device_with_retry(
                 device_id="TEST123",
                 device_host="127.0.0.1",
@@ -134,7 +134,7 @@ async def test_toggle_device_with_retry_success() -> None:
 @pytest.mark.asyncio
 async def test_toggle_device_with_retry_failure_then_success() -> None:
     """Test toggle with retry - first fails, second succeeds."""
-    with patch("rebuild_tcp_comm.harness.toggler.TCPConnection") as mock_conn_class:
+    with patch("harness.toggler.TCPConnection") as mock_conn_class:
         mock_conn = AsyncMock()
         # First attempt fails connection, second succeeds
         mock_conn.connect.side_effect = [False, True]
@@ -142,7 +142,7 @@ async def test_toggle_device_with_retry_failure_then_success() -> None:
         mock_conn_class.return_value = mock_conn
 
         with (
-            patch("rebuild_tcp_comm.harness.toggler.send_toggle_packet", return_value=b"ACK"),
+            patch("harness.toggler.send_toggle_packet", return_value=b"ACK"),
             patch("asyncio.sleep"),
         ):  # Speed up test by mocking sleep
             result = await toggle_device_with_retry(
@@ -160,7 +160,7 @@ async def test_toggle_device_with_retry_failure_then_success() -> None:
 @pytest.mark.asyncio
 async def test_toggle_device_with_retry_all_attempts_fail() -> None:
     """Test toggle with all retry attempts failing."""
-    with patch("rebuild_tcp_comm.harness.toggler.TCPConnection") as mock_conn_class:
+    with patch("harness.toggler.TCPConnection") as mock_conn_class:
         mock_conn = AsyncMock()
         mock_conn.connect.return_value = False
         mock_conn.close = AsyncMock()

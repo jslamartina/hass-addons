@@ -357,7 +357,7 @@ echo "Updating imports..."
 echo ""
 echo "✓ Legacy code removed"
 echo "Please run tests and verify:"
-echo "  ./scripts/test.sh"
+echo "  ./scripts/test-all.sh"
 echo "  ./scripts/lint.sh"
 ```
 

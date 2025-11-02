@@ -12,7 +12,7 @@ echo "Press Ctrl+C to stop"
 echo ""
 
 # Run with debug logging
-poetry run python -m rebuild_tcp_comm.harness.toggler \
+poetry run python -m harness.toggler \
   --device-id="${DEVICE_ID:-DEBUG_DEVICE}" \
   --device-host="${DEVICE_HOST:-127.0.0.1}" \
   --device-port="${DEVICE_PORT:-9000}" \

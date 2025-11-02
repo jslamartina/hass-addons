@@ -12,10 +12,10 @@ Common development tasks for the TCP communication rebuild project.
 - **`debug.sh`** - Run the toggler with debug logging enabled
 
 ### Testing
-- **`test.sh`** - Run all tests (unit + integration)
-  - `test.sh -v` or `--verbose` - Verbose output
-  - `test.sh -c` or `--coverage` - Generate coverage report
-  - `test.sh -w` or `--watch` - Watch mode (requires pytest-watch)
+- **`test-all.sh`** - Run all tests (unit + integration)
+  - `test-all.sh -v` or `--verbose` - Verbose output
+  - `test-all.sh -c` or `--coverage` - Generate coverage report
+  - `test-all.sh -w` or `--watch` - Watch mode (requires pytest-watch)
 - **`test-unit.sh`** - Run only unit tests (fast, with mocks)
   - `test-unit.sh -v` or `--verbose` - Verbose output
   - `test-unit.sh -c` or `--coverage` - Generate coverage report
@@ -42,7 +42,7 @@ Common development tasks for the TCP communication rebuild project.
 ./scripts/setup.sh
 
 # Run tests
-./scripts/test.sh
+./scripts/test-all.sh
 
 # Run linting
 ./scripts/lint.sh
@@ -72,7 +72,7 @@ DEVICE_ID=MYDEVICE DEVICE_HOST=10.0.0.5 ./scripts/run.sh
 ### Testing
 ```bash
 # Run all tests (unit + integration)
-./scripts/test.sh
+./scripts/test-all.sh
 
 # Run only unit tests (fast, ~1-2 seconds)
 ./scripts/test-unit.sh
@@ -81,7 +81,7 @@ DEVICE_ID=MYDEVICE DEVICE_HOST=10.0.0.5 ./scripts/run.sh
 ./scripts/test-integration.sh
 
 # Verbose output
-./scripts/test.sh -v
+./scripts/test-all.sh -v
 ./scripts/test-unit.sh -v
 ./scripts/test-integration.sh -v
 
@@ -150,7 +150,7 @@ These scripts are designed to work in CI environments:
   run: ./scripts/lint.sh
 
 - name: Test
-  run: ./scripts/test.sh --coverage
+  run: ./scripts/test-all.sh --coverage
 
 - name: Build
   run: ./scripts/build.sh

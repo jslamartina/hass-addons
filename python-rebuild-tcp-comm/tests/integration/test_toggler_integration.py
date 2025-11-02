@@ -6,8 +6,8 @@ from typing import TYPE_CHECKING
 
 import pytest
 
-from rebuild_tcp_comm.harness.toggler import toggle_device_with_retry
-from rebuild_tcp_comm.metrics import start_metrics_server
+from harness.toggler import toggle_device_with_retry
+from metrics import start_metrics_server
 
 from .conftest import MockTCPServer
 

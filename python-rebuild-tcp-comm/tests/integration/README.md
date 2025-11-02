@@ -40,7 +40,7 @@ Integration tests validate:
 
 ```bash
 # Both unit and integration tests
-./scripts/test.sh
+./scripts/test-all.sh
 ```
 
 ## Test Structure

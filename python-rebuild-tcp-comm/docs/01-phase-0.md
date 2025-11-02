@@ -140,7 +140,7 @@ poetry install
 
 ```bash
 # Quick test
-./scripts/test.sh
+./scripts/test-all.sh
 
 # Run linting
 ./scripts/lint.sh
@@ -248,7 +248,7 @@ Phase 0 now includes both **unit tests** (11 tests with mocks) and **integration
 **Option 1: Using helper scripts (recommended)**
 ```bash
 # Run ALL tests (unit + integration) - ~10-12 seconds
-./scripts/test.sh
+./scripts/test-all.sh
 
 # Run ONLY unit tests (fast) - ~1-2 seconds
 ./scripts/test-unit.sh
@@ -257,7 +257,7 @@ Phase 0 now includes both **unit tests** (11 tests with mocks) and **integration
 ./scripts/test-integration.sh
 
 # Verbose output
-./scripts/test.sh -v
+./scripts/test-all.sh -v
 ./scripts/test-unit.sh -v
 ./scripts/test-integration.sh -v
 

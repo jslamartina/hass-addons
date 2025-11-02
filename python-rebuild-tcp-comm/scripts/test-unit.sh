@@ -13,7 +13,7 @@ if [ "$1" = "--verbose" ] || [ "$1" = "-v" ]; then
 elif [ "$1" = "--coverage" ] || [ "$1" = "-c" ]; then
   echo "Running with coverage report..."
   poetry run pytest -m "not integration" \
-    --cov=rebuild_tcp_comm \
+    --cov=src \
     --cov-report=term-missing \
     --cov-fail-under=90 \
     tests/unit/

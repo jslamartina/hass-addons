@@ -11,14 +11,14 @@ import uuid
 from datetime import UTC, datetime
 from typing import Optional
 
-from rebuild_tcp_comm.metrics import (
+from metrics import (
     record_packet_latency,
     record_packet_recv,
     record_packet_sent,
     record_retransmit,
     start_metrics_server,
 )
-from rebuild_tcp_comm.transport import TCPConnection
+from transport import TCPConnection
 
 
 class JSONFormatter(logging.Formatter):

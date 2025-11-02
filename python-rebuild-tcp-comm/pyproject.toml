@@ -8,7 +8,11 @@ version = "0.1.0"
 description = "Lean harness and reliable TCP transport rebuild"
 authors = ["TCP Rebuild Team <team@example.com>"]
 readme = "README.md"
-packages = [{ include = "rebuild_tcp_comm", from = "src" }]
+packages = [
+    { include = "transport", from = "src" },
+    { include = "metrics", from = "src" },
+    { include = "harness", from = "src" }
+]
 
 [tool.poetry.dependencies]
 python = "^3.13"
@@ -39,7 +43,7 @@ testpaths = ["tests"]
 timeout = 30
 
 [tool.coverage.run]
-source = ["src/rebuild_tcp_comm"]
+source = ["src"]
 omit = [
     "*/tests/*",
     "*/__pycache__/*",

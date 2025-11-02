@@ -64,7 +64,7 @@ echo "State: $STATE"
 echo "Log Level: $LOG_LEVEL"
 echo ""
 
-poetry run python -m rebuild_tcp_comm.harness.toggler \
+poetry run python -m harness.toggler \
   --device-id="$DEVICE_ID" \
   --device-host="$DEVICE_HOST" \
   --device-port="$DEVICE_PORT" \

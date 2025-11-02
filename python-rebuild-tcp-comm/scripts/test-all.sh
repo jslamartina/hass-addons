@@ -11,7 +11,7 @@ if [ "$1" = "--verbose" ] || [ "$1" = "-v" ]; then
   poetry run pytest -v tests/
 elif [ "$1" = "--coverage" ] || [ "$1" = "-c" ]; then
   echo "Running with coverage report..."
-  poetry run pytest --cov=rebuild_tcp_comm --cov-report=term-missing --cov-fail-under=90 tests/
+  poetry run pytest --cov=src --cov-report=term-missing --cov-fail-under=90 tests/
   echo ""
   echo "✅ Coverage report complete (90% threshold enforced)"
 elif [ "$1" = "--watch" ] || [ "$1" = "-w" ]; then
