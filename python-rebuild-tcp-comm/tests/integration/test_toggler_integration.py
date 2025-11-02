@@ -1,6 +1,8 @@
 """Integration tests for Phase 0 TCP communication."""
 
 import json
+import time
+from typing import TYPE_CHECKING
 
 import pytest
 
@@ -8,6 +10,9 @@ from rebuild_tcp_comm.harness.toggler import toggle_device_with_retry
 from rebuild_tcp_comm.metrics import start_metrics_server
 
 from .conftest import MockTCPServer
+
+if TYPE_CHECKING:
+    from .performance import PerformanceTracker
 
 # Mark all tests in this module as integration tests
 pytestmark = pytest.mark.integration
@@ -18,10 +23,14 @@ async def test_happy_path_toggle_success(
     mock_tcp_server: MockTCPServer,
     unique_device_id: str,
     unique_metrics_port: int,
+    performance_tracker: "PerformanceTracker",
 ) -> None:
     """Test successful toggle with immediate server response."""
     # Start metrics server
     start_metrics_server(unique_metrics_port)
+
+    # Track performance: measure round-trip time
+    start_time = time.perf_counter()
 
     # Toggle device
     result = await toggle_device_with_retry(
@@ -31,6 +40,10 @@ async def test_happy_path_toggle_success(
         state=True,
         max_attempts=2,
     )
+
+    # Record latency
+    latency_ms = (time.perf_counter() - start_time) * 1000.0
+    performance_tracker.record_latency(latency_ms)
 
     # Verify success
     assert result is True, "Toggle should succeed"
@@ -60,9 +73,13 @@ async def test_packet_format_validation(
     mock_tcp_server: MockTCPServer,
     unique_device_id: str,
     unique_metrics_port: int,
+    performance_tracker: "PerformanceTracker",
 ) -> None:
     """Test exact packet structure validation."""
     start_metrics_server(unique_metrics_port)
+
+    # Track performance: measure round-trip time
+    start_time = time.perf_counter()
 
     # Toggle with state=False to test both states
     result = await toggle_device_with_retry(
@@ -72,6 +89,10 @@ async def test_packet_format_validation(
         state=False,
         max_attempts=1,
     )
+
+    # Record latency
+    latency_ms = (time.perf_counter() - start_time) * 1000.0
+    performance_tracker.record_latency(latency_ms)
 
     assert result is True
 
@@ -270,12 +291,16 @@ async def test_metrics_endpoint_accessible(
     mock_tcp_server: MockTCPServer,
     unique_device_id: str,
     unique_metrics_port: int,
+    performance_tracker: "PerformanceTracker",
 ) -> None:
     """Test that metrics endpoint is accessible and contains expected data."""
     import urllib.request
 
     # Start metrics server
     start_metrics_server(unique_metrics_port)
+
+    # Track performance: measure round-trip time
+    start_time = time.perf_counter()
 
     # Perform a successful toggle to generate metrics
     result = await toggle_device_with_retry(
@@ -285,6 +310,10 @@ async def test_metrics_endpoint_accessible(
         state=True,
         max_attempts=1,
     )
+
+    # Record latency
+    latency_ms = (time.perf_counter() - start_time) * 1000.0
+    performance_tracker.record_latency(latency_ms)
 
     assert result is True, "Toggle should succeed"
 

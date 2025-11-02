@@ -31,4 +31,9 @@ fi
 echo ""
 echo "✅ Integration tests completed"
 echo "JUnit XML report: test-reports/integration-junit.xml"
+echo ""
+echo "Performance Report:"
+echo "  - JSON artifact: test-reports/performance-report.json"
+echo "  - Thresholds: p95 < 300ms (Phase 0 target)"
+echo "  - Note: Performance warnings are informational only"
 

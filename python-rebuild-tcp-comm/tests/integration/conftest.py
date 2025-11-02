@@ -3,11 +3,15 @@
 import asyncio
 import json
 import logging
+from collections.abc import AsyncGenerator
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Optional
+from pathlib import Path
+from typing import Any
 
 import pytest
+
+from .performance import PerformanceTracker
 
 logger = logging.getLogger(__name__)
 
@@ -56,7 +60,7 @@ class MockTCPServer:
         self.response_delay = response_delay
         self.host = host
         self.port = port
-        self.server: Optional[asyncio.Server] = None
+        self.server: asyncio.Server | None = None
         self.received_packets: list[ReceivedPacket] = []
         self.connection_count = 0
         self._should_accept_connection = True
@@ -203,7 +207,7 @@ class MockTCPServer:
 
 
 @pytest.fixture
-async def mock_tcp_server() -> MockTCPServer:
+async def mock_tcp_server() -> AsyncGenerator[MockTCPServer, None]:
     """Fixture providing a mock TCP server."""
     server = MockTCPServer()
     await server.start()
@@ -212,7 +216,7 @@ async def mock_tcp_server() -> MockTCPServer:
 
 
 @pytest.fixture
-async def mock_tcp_server_with_delay() -> MockTCPServer:
+async def mock_tcp_server_with_delay() -> AsyncGenerator[MockTCPServer, None]:
     """Fixture providing a mock TCP server with delayed responses."""
     server = MockTCPServer(response_mode=ResponseMode.DELAY, response_delay=2.0)
     await server.start()
@@ -221,7 +225,7 @@ async def mock_tcp_server_with_delay() -> MockTCPServer:
 
 
 @pytest.fixture
-async def mock_tcp_server_timeout() -> MockTCPServer:
+async def mock_tcp_server_timeout() -> AsyncGenerator[MockTCPServer, None]:
     """Fixture providing a mock TCP server that never responds."""
     server = MockTCPServer(response_mode=ResponseMode.TIMEOUT)
     await server.start()
@@ -253,4 +257,39 @@ def unique_metrics_port() -> int:
     idempotent and will reuse the existing server.
     """
     return 19400  # High port to avoid conflicts
+
+
+@pytest.fixture(scope="session")
+def performance_tracker() -> PerformanceTracker:
+    """Session-scoped performance tracker for collecting latency metrics."""
+    return PerformanceTracker()
+
+
+def pytest_terminal_summary(terminalreporter: Any, exitstatus: int, config: Any) -> None:
+    """Hook to display performance report at end of test session."""
+    # Get the performance tracker from the session
+    tracker = config._performance_tracker if hasattr(config, "_performance_tracker") else None
+
+    if tracker is None or not tracker.samples:
+        return
+
+    # Display text report
+    terminalreporter.write_line(tracker.format_text_report())
+
+    # Save JSON artifact
+    report_path = Path("test-reports/performance-report.json")
+    tracker.save_report(report_path)
+    terminalreporter.write_line(
+        f"Performance report saved to: {report_path}",
+        bold=True,
+    )
+
+
+@pytest.fixture(scope="session", autouse=True)
+def _init_performance_tracker(
+    request: pytest.FixtureRequest, performance_tracker: PerformanceTracker
+) -> PerformanceTracker:
+    """Initialize performance tracker in pytest config."""
+    request.config._performance_tracker = performance_tracker  # type: ignore[attr-defined]
+    return performance_tracker
 

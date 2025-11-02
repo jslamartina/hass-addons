@@ -183,6 +183,137 @@ async def test_my_scenario(
 
 Integration tests are slower due to real TCP operations and timeouts.
 
+## Performance Reporting
+
+Integration tests automatically track and report round-trip command latency to ensure the TCP communication stays lightning-fast as the codebase evolves.
+
+### What's Tracked
+
+The performance tracker collects latency metrics from **happy-path tests only** (successful commands without intentional errors or timeouts). For each successful command:
+
+- **Round-trip latency**: Time from command initiation to response receipt
+- **Statistical metrics**: min, max, mean, standard deviation
+- **Percentiles**: p50 (median), p95, p99
+
+### Thresholds
+
+Performance thresholds are based on Phase 0 lab environment targets:
+
+| Metric | Threshold | Purpose |
+|--------|-----------|---------|
+| **p95** | < 300ms | Primary target (Phase 0) |
+| **p99** | < 800ms | Stretch goal (Phase 1) |
+
+**Important**: Threshold violations generate warnings but **do not fail tests**. This allows you to see performance trends without blocking CI.
+
+### Reports Generated
+
+#### 1. Console Output (During Test Run)
+
+At the end of the test session, a formatted performance report appears:
+
+```
+======================================================================
+PERFORMANCE REPORT - Round-Trip Command Latency
+======================================================================
+
+Samples collected: 8
+
+Latency Statistics:
+  Min:       15.23 ms
+  Max:       42.67 ms
+  Mean:      24.85 ms
+  StdDev:     8.12 ms
+
+Percentiles:
+  p50:       22.45 ms
+  p95:       38.91 ms  (threshold: 300.0 ms)
+  p99:       41.23 ms  (threshold: 800.0 ms)
+
+✅ All performance thresholds met
+
+======================================================================
+```
+
+#### 2. JSON Artifact (`test-reports/performance-report.json`)
+
+A machine-readable JSON file is saved for historical tracking and trend analysis:
+
+```json
+{
+  "timestamp": "2025-11-02T12:34:56.789Z",
+  "thresholds": {
+    "p95_ms": 300.0,
+    "p99_ms": 800.0
+  },
+  "metrics": {
+    "sample_count": 8,
+    "min_ms": 15.23,
+    "max_ms": 42.67,
+    "mean_ms": 24.85,
+    "stddev_ms": 8.12,
+    "p50_ms": 22.45,
+    "p95_ms": 38.91,
+    "p99_ms": 41.23
+  },
+  "samples_ms": [15.23, 18.45, 22.67, ...],
+  "warnings": []
+}
+```
+
+### Which Tests Are Tracked?
+
+Only successful, realistic scenarios are tracked for performance:
+
+| Test | Tracked? | Reason |
+|------|----------|--------|
+| `test_happy_path_toggle_success` | ✅ Yes | Realistic success case |
+| `test_packet_format_validation` | ✅ Yes | Realistic success case |
+| `test_metrics_endpoint_accessible` | ✅ Yes | Realistic success case |
+| `test_retry_*` | ❌ No | Includes intentional failures |
+| `test_connection_refused` | ❌ No | Intentional error scenario |
+| `test_all_attempts_timeout` | ❌ No | Intentional timeout scenario |
+
+This ensures performance metrics reflect **normal operating conditions** rather than error paths.
+
+### Using Performance Data
+
+**During Development:**
+```bash
+./scripts/test-integration.sh
+# Review console output for immediate feedback
+```
+
+**Tracking Trends:**
+```bash
+# Save historical reports with timestamps
+cp test-reports/performance-report.json \
+   test-reports/performance-$(date +%Y%m%d-%H%M%S).json
+
+# Compare against baseline
+jq '.metrics.p95_ms' test-reports/performance-report.json
+```
+
+**CI/CD Integration:**
+- JSON artifact can be parsed by CI tools
+- Track p95/p99 trends over time
+- Alert on sustained performance degradation
+
+### Troubleshooting
+
+**"No performance data collected"**
+- Ensure at least one tracked test passes successfully
+- Check that `performance_tracker` fixture is available
+
+**Unexpectedly high latency**
+- Check system load (CPU, memory)
+- Verify no background network activity
+- Review metrics server responsiveness
+
+**Want to adjust thresholds?**
+- Edit `PerformanceThresholds` in `tests/integration/performance.py`
+- Thresholds should reflect realistic production targets
+
 ## Related Documentation
 
 - **Phase 0 Spec**: `docs/rebuild-tcp-comm/01-phase-0.md`
