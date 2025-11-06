@@ -1,7 +1,7 @@
 # TCP Communication Rebuild - Documentation Index
 
-**Program Status**: Phase 0 Complete ✓ | Phase 1-3 Planned
-**Last Updated**: 2025-11-01
+**Program Status**: Phase 0 Complete ✓ | Phase 0.5-1d Planned (next) | Phase 2-3 Planned
+**Last Updated**: 2025-11-02
 
 ---
 
@@ -31,14 +31,22 @@ This directory contains comprehensive documentation for the TCP communication la
 - Acceptance criteria (all met)
 - **Status**: Delivered and validated
 
-**[02-phase-1-spec.md](02-phase-1-spec.md)** - Phase 1: Reliable Frame Layer
-- ACK/NACK with retries
-- Idempotency via LRU deduplication
-- Bounded queues for backpressure
-- Cync protocol integration
-- Device simulator for chaos testing
-- **Status**: Specification complete, ready for implementation
-- **Effort**: ~3-4 weeks, 2-3 engineers
+**[02-phase-1-spec.md](02-phase-1-spec.md)** - Phase 1 Program: Reliable Transport Layer
+- **Status**: Split into focused sub-phases
+- **Total Effort**: ~4 weeks (split into 5 increments)
+- **Sub-Phases**:
+  - **[Phase 0.5](02a-phase-0.5-protocol-validation.md)**: Protocol Validation (3-5 days)
+    - Real device packet capture and validation
+    - Test fixtures from actual devices
+  - **[Phase 1a](02b-phase-1a-protocol-codec.md)**: Cync Protocol Codec (1 week)
+    - Real protocol encoder/decoder
+    - Replace Phase 0 custom framing
+  - **[Phase 1b](02c-phase-1b-reliable-transport.md)**: Reliable Transport Layer (1 week)
+    - ACK/NACK handling, retries, idempotency
+  - **[Phase 1c](02d-phase-1c-backpressure.md)**: Backpressure & Queues (3-4 days)
+    - Bounded queues with overflow policies
+  - **[Phase 1d](02e-phase-1d-simulator.md)**: Device Simulator & Chaos Testing (1 week)
+    - Realistic device simulator with chaos injection
 
 **[03-phase-2-spec.md](03-phase-2-spec.md)** - Phase 2: Canary Deployment
 - Traffic routing (10-50% canary)
@@ -67,11 +75,15 @@ This directory contains comprehensive documentation for the TCP communication la
 | Phase | Status | Effort | Deliverables |
 |-------|--------|--------|--------------|
 | Phase 0 | ✓ Complete | 1-2 weeks | Toggler, metrics, tests, docs |
-| Phase 1 | Planned | 3-4 weeks | Reliability layer, simulator |
+| Phase 0.5 | Planned | 3-5 days | Protocol validation, real packet captures |
+| Phase 1a | Planned | 1 week | Cync protocol codec |
+| Phase 1b | Planned | 1 week | Reliable transport (ACK/NACK, retry, dedup) |
+| Phase 1c | Planned | 3-4 days | Backpressure & queues |
+| Phase 1d | Planned | 1 week | Device simulator, chaos tests |
 | Phase 2 | Planned | 3-4 weeks | Canary deployment, monitoring |
 | Phase 3 | Planned | 4-6 weeks | Full migration, deprecation |
 
-**Total Program**: ~12-16 weeks (3-4 months)
+**Total Program**: ~13-17 weeks (3.5-4.5 months)
 
 ### Key Decisions
 
@@ -248,12 +260,19 @@ tcp_comm_error_budget_remaining{slo_name}
 
 ## How to Use This Documentation
 
-### For Engineers Implementing Phase 1
+### For Engineers Implementing Phase 1 (Sub-Phases)
 1. Read `01-phase-0.md` to understand foundation
-2. Study `02-phase-1-spec.md` for detailed requirements
-3. Review existing code in `cync-controller/src/cync_controller/`
-4. Start with reliable transport, then simulator
-5. Reference acceptance criteria for done definition
+2. Review `02-phase-1-spec.md` for overall Phase 1 program architecture
+3. **Start with Phase 0.5**: `02a-phase-0.5-protocol-validation.md`
+   - Capture real device packets using cloud relay
+   - Validate protocol structure
+   - Create test fixtures
+4. **Then Phase 1a**: `02b-phase-1a-protocol-codec.md`
+   - Implement protocol encoder/decoder
+   - Use Phase 0.5 captures for validation
+5. **Continue through 1b-1d** in sequence
+6. Reference `cync-controller/` code only for protocol documentation (not for integration)
+7. Use individual phase acceptance criteria for done definition
 
 ### For SRE Team (Phase 2)
 1. Review `03-phase-2-spec.md` for monitoring setup
@@ -313,6 +332,8 @@ A: Yes! This phased migration approach is reusable. See retrospective (Phase 3) 
 
 ## Change Log
 
+- **2025-11-02**: Phase 1 split into sub-phases (0.5, 1a, 1b, 1c, 1d); individual specs created
+- **2025-11-02**: Architecture context clarified: from-scratch rebuild, not integration
 - **2025-11-01**: Phase 0 complete; Phase 1-3 specifications created
 - **2025-11-01**: Initial program kickoff and discovery
 
@@ -327,5 +348,5 @@ A: Yes! This phased migration approach is reusable. See retrospective (Phase 3) 
 
 ---
 
-**Next Action**: Review Phase 1 spec and schedule kick-off meeting.
+**Next Action**: Begin Phase 0.5 (protocol validation) - capture real device packets.
 
