@@ -1,4 +1,5 @@
 <!-- 064fc85a-f42a-4957-a0fb-6fe899fde1ac af631e0c-05aa-4558-950e-f0ce5b2f1de6 -->
+
 # Consolidate cync-controller Repository into hass-addons
 
 ## Verification: Is the Separate Repo Necessary?
@@ -129,7 +130,7 @@ RUN pip install --no-cache-dir .
 
 ```gitignore
 # Add to hass-addons/.gitignore:
-.cache-cync-controller-python/  # No longer needed
+.cache-cync-controller-python/ # No longer needed
 ```
 
 ### Phase 4: Update Devcontainer Setup
@@ -201,12 +202,10 @@ RUN pip install --no-cache-dir .
 **After Successful Migration:**
 
 1. **Local Cleanup:**
-
    - Delete entire directory: `rm -rf /mnt/supervisor/addons/local/cync-controller/`
    - Verify no broken references
 
 2. **GitHub Cleanup:**
-
    - Add deprecation notice to `cync-controller` repo README
    - Update repo description: "⚠️ DEPRECATED - Code moved to hass-addons"
    - Archive the GitHub repository (read-only)
@@ -223,9 +222,11 @@ The cync-controller Python package is now an internal component of the Home Assi
 All future development happens in the unified repository.
 
 ## For Users
+
 Use the **[Cync Controller Home Assistant Add-on](https://github.com/jslamartina/hass-addons)**
 
 ## For Contributors
+
 Submit pull requests to: https://github.com/jslamartina/hass-addons
 ```
 
@@ -245,19 +246,15 @@ Submit pull requests to: https://github.com/jslamartina/hass-addons
 **Potential Issues:**
 
 1. **Dockerfile Path Changes** - COPY commands need correct relative paths
-
    - Mitigation: Test build immediately after Dockerfile changes
 
 2. **Development Workflow Changes** - No more `rebuild.sh` script
-
    - Mitigation: Document new workflow clearly, add alias if needed
 
 3. **Git History Reference** - Might need to reference old commits
-
    - Mitigation: Keep GitHub repo archived (not deleted) for 6-12 months
 
 4. **Documentation Links** - External sites might link to old repo
-
    - Mitigation: Keep old repo with redirect notice, set up GitHub redirect
 
 ## Success Criteria
@@ -284,7 +281,7 @@ All tasks have been successfully completed. The cync-controller repository has b
 
 - [x] Verify the analysis by examining any potential external dependencies or users
 - [x] Create backup branches and document git status of both repos
-- [x] Copy cync-controller/src/cync_lan/* to hass-addons/src/cync_lan/ and copy pyproject.toml
+- [x] Copy cync-controller/src/cync_lan/\* to hass-addons/src/cync_lan/ and copy pyproject.toml
 - [x] Move unique documentation and update cross-references (reorganized into developer/ and protocol/)
 - [x] Modify Dockerfile to use local source and update build scripts (now syncs from ../src/)
 - [x] Remove clone script and update workspace configuration

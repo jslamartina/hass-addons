@@ -1,4 +1,5 @@
 <!-- 9053ce2b-e509-4230-adcf-25596372ba59 91dc9654-cddb-4ee2-abfd-f85c17750ad5 -->
+
 # First-Class Logging Implementation
 
 ## Overview
@@ -197,9 +198,9 @@ async def publish(topic, payload):
 **Step 1: Lint & Build Verification**
 
 ```bash
-npm run lint:python:fix   # Fix any linting issues
-npm run format:python      # Format code
-cd cync-controller && ./rebuild.sh  # Rebuild addon
+npm run lint:python:fix            # Fix any linting issues
+npm run format:python              # Format code
+cd cync-controller && ./rebuild.sh # Rebuild addon
 ```
 
 **Step 2: Dual-Format Output Verification**
@@ -241,25 +242,21 @@ cd cync-controller && ./rebuild.sh  # Rebuild addon
 **Step 6: End-to-End Workflow Testing**
 
 1. **Device Connection**:
-
    - Start addon
    - Verify bridge device connection logs
    - Check correlation ID is present
 
 2. **Command Execution**:
-
    - Send MQTT command to turn on/off device
    - Verify command flow logging (MQTT → Server → Device → ACK)
    - Check performance timing logs
 
 3. **State Updates**:
-
    - Trigger device state change
    - Verify state update propagation logs
    - Check group/subgroup aggregation logs
 
 4. **Error Handling**:
-
    - Disconnect a device
    - Verify offline detection logs with proper context
    - Check error logs include full context

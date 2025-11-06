@@ -12,6 +12,7 @@ This document provides **concrete test examples** for the most critical uncovere
 ### Gap: Group Command Routing
 
 **Uncovered Code** (lines 475-482):
+
 ```python
 elif "-group-" in _topic[2]:
     # Group command
@@ -24,6 +25,7 @@ elif "-group-" in _topic[2]:
 ```
 
 **Required Test**:
+
 ```python
 # File: cync-controller/tests/unit/test_mqtt_group_commands.py
 
@@ -59,6 +61,7 @@ async def test_group_set_power_command_routing():
 ### Gap: Fan Percentage Commands (lines 544-571)
 
 **Uncovered Code**:
+
 ```python
 elif device and device.is_fan_controller:
     if extra_data[0] == "percentage":
@@ -77,6 +80,7 @@ elif device and device.is_fan_controller:
 ```
 
 **Required Tests**:
+
 ```python
 @pytest.mark.asyncio
 async def test_fan_percentage_mapping_0():
@@ -107,6 +111,7 @@ async def test_fan_percentage_mapping_100():
 ### Gap: Fan Preset Commands (lines 572-596)
 
 **Uncovered Code**:
+
 ```python
 elif extra_data[0] == "preset":
     preset_mode = norm_pl
@@ -123,6 +128,7 @@ elif extra_data[0] == "preset":
 ```
 
 **Required Tests**:
+
 ```python
 @pytest.mark.asyncio
 async def test_fan_preset_off():
@@ -160,6 +166,7 @@ async def test_fan_preset_invalid_warning():
 ### Gap: Cloud Relay Connection
 
 **Uncovered Code** (lines 105-195):
+
 ```python
 async def start_relay(self):
     """Start the relay process"""
@@ -182,6 +189,7 @@ async def start_relay(self):
 ```
 
 **Required Tests**:
+
 ```python
 # File: cync-controller/tests/integration/test_cloud_relay.py
 
@@ -257,6 +265,7 @@ async def test_cloud_relay_ssl_warning():
 ### Gap: Packet Injection Checking (lines 282-362)
 
 **Uncovered Code** (lines 282-353):
+
 ```python
 async def _check_injection_commands(self):
     """Check for packet injection commands (debug feature)"""
@@ -278,6 +287,7 @@ async def _check_injection_commands(self):
 ```
 
 **Required Tests**:
+
 ```python
 @pytest.mark.asyncio
 async def test_packet_injection_raw_bytes(mocker):
@@ -309,6 +319,7 @@ async def test_packet_injection_cleanup():
 ### Gap: Periodic Status Refresh (lines 876-924)
 
 **Uncovered Code**:
+
 ```python
 async def periodic_status_refresh(self):
     """Refresh device statuses every 5 minutes"""
@@ -334,6 +345,7 @@ async def periodic_status_refresh(self):
 ```
 
 **Required Tests**:
+
 ```python
 # File: cync-controller/tests/unit/test_periodic_tasks.py
 
@@ -406,6 +418,7 @@ async def test_periodic_status_refresh_handles_exceptions(mocker):
 ### Gap: Pool Status Monitoring (lines 926-970)
 
 **Uncovered Code**:
+
 ```python
 async def periodic_pool_status_logger(self):
     """Log TCP connection pool status every 30 seconds"""
@@ -427,6 +440,7 @@ async def periodic_pool_status_logger(self):
 ```
 
 **Required Tests**:
+
 ```python
 @pytest.mark.asyncio
 async def test_pool_status_logger_logs_metrics(mocker):
@@ -442,16 +456,19 @@ async def test_pool_status_logger_handles_exceptions(mocker):
 ## Implementation Checklist
 
 ### Immediate (Week 1)
+
 - [ ] Create `test_mqtt_group_commands.py`
 - [ ] Create `test_fan_commands.py` (percentage + preset)
 - [ ] Create basic cloud relay tests
 
 ### Short-term (Week 2-3)
+
 - [ ] Create `test_periodic_tasks.py`
 - [ ] Add cloud relay integration tests
 - [ ] Add packet injection tests
 
 ### Medium-term (Week 4+)
+
 - [ ] Add error path tests
 - [ ] Add edge case coverage
 - [ ] Improve integration test coverage
@@ -465,4 +482,3 @@ These concrete examples demonstrate exactly what tests need to be written to cov
 3. **Background periodic tasks** (server.py) - **MEDIUM** priority
 
 Each test should follow the **Arrange-Act-Assert** pattern and use appropriate mocking for async operations.
-

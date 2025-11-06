@@ -15,6 +15,7 @@ The MQTT integration setup in `setup-fresh-ha.sh` was failing with HTTP 401 Unau
 The `configure_mqtt_integration()` function was using `SUPERVISOR_TOKEN` to access the Home Assistant **Core API** (`/api/config_entries/...`), but the Supervisor token only has authorization for **Supervisor API endpoints** (`/addons/...`, `/supervisor/...`, etc.).
 
 **Code Issue (Lines 481-484, 508-512, 530-534):**
+
 ```bash
 # ❌ WRONG - Using SUPERVISOR_TOKEN for Core API
 existing_mqtt=$(timeout 30 docker exec hassio_cli curl -sf \
@@ -35,13 +36,15 @@ response=$(timeout 30 docker exec hassio_cli curl -sf ... -X POST \
 ### Changes Made
 
 #### 1. Added Global HA Auth Token Variable (Line 18)
+
 ```bash
-HA_AUTH_TOKEN=""  # Home Assistant access token for Core API
+HA_AUTH_TOKEN="" # Home Assistant access token for Core API
 ```
 
 #### 2. New Function: `get_ha_auth_token()` (Lines 244-296)
 
 Handles three scenarios:
+
 1. **Onboarding token available** - Use token from `create_first_user()` (fresh HA setup)
 2. **Long-lived token in credentials** - Use `LONG_LIVED_ACCESS_TOKEN` from `hass-credentials.env`
 3. **Create new token** - Authenticate with username/password and create long-lived token
@@ -77,7 +80,7 @@ get_ha_auth_token() {
 # In main():
 if check_onboarding_status; then
   auth_token=$(create_first_user)
-  HA_AUTH_TOKEN="$auth_token"  # ← Save for Core API use
+  HA_AUTH_TOKEN="$auth_token" # ← Save for Core API use
   # ...
 fi
 
@@ -95,6 +98,7 @@ configure_mqtt_integration
 - **Fixed endpoint paths** from `http://supervisor/core/api/...` to `$HA_URL/api/...`
 
 **Before:**
+
 ```bash
 response=$(timeout 30 docker exec hassio_cli curl -sf ... -X POST \
   -H "Authorization: Bearer ${SUPERVISOR_TOKEN}" \
@@ -102,6 +106,7 @@ response=$(timeout 30 docker exec hassio_cli curl -sf ... -X POST \
 ```
 
 **After:**
+
 ```bash
 # Check if we have Home Assistant auth token
 if [ -z "$HA_AUTH_TOKEN" ]; then
@@ -121,21 +126,25 @@ response=$(curl -sf -w "\n%{http_code}" -X POST \
 ### Verification Steps
 
 1. **Fresh HA Setup** (with onboarding):
+
    ```bash
    ./scripts/setup-fresh-ha.sh
    ```
+
    - Creates first user → gets auth token
    - Saves token to `HA_AUTH_TOKEN`
    - Uses token for MQTT integration setup
    - ✅ MQTT integration should configure successfully
 
 2. **Already-Onboarded HA** (with credentials file):
+
    ```bash
    # In hass-credentials.env:
    LONG_LIVED_ACCESS_TOKEN=eyJhbGciOiJIUzI1NiIs...
-
+   
    ./scripts/setup-fresh-ha.sh
    ```
+
    - Skips onboarding
    - Loads token from credentials file
    - Uses token for MQTT integration setup
@@ -145,13 +154,14 @@ response=$(curl -sf -w "\n%{http_code}" -X POST \
    ```bash
    # Check if MQTT integration exists
    curl -sf -H "Authorization: Bearer $HA_AUTH_TOKEN" \
-     "$HA_URL/api/config_entries/entry" | \
-     jq '.[] | select(.domain == "mqtt")'
+     "$HA_URL/api/config_entries/entry" \
+     | jq '.[] | select(.domain == "mqtt")'
    ```
 
 ### Expected Behavior
 
 **Success Logs:**
+
 ```
 [setup-fresh-ha.sh] Setting up Home Assistant auth token for Core API...
 [setup-fresh-ha.sh] ✅ Using auth token from onboarding
@@ -162,6 +172,7 @@ response=$(curl -sf -w "\n%{http_code}" -X POST \
 ```
 
 **Failure (no token available):**
+
 ```
 [setup-fresh-ha.sh] Setting up Home Assistant auth token for Core API...
 [setup-fresh-ha.sh] ⚠ Could not create auth token via password authentication
@@ -187,11 +198,13 @@ response=$(curl -sf -w "\n%{http_code}" -X POST \
 ## Benefits
 
 ### Before
+
 - ❌ MQTT integration setup always failed (401 Unauthorized)
 - ❌ Required manual UI configuration
 - ❌ Incomplete automation
 
 ### After
+
 - ✅ MQTT integration configures automatically
 - ✅ Works for both fresh and already-onboarded HA
 - ✅ Graceful fallback if auth token unavailable
@@ -217,4 +230,3 @@ response=$(curl -sf -w "\n%{http_code}" -X POST \
 
 **Status**: ✅ Fixed and tested
 **Author**: AI Assistant (Claude Sonnet 4.5)
-

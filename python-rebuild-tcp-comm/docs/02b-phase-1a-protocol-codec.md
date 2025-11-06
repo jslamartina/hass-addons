@@ -27,6 +27,7 @@ Phase 1a implements the real Cync device protocol encoder/decoder based on valid
 ## Scope
 
 **In Scope**:
+
 - Packet encoding (Python → bytes)
 - Packet decoding (bytes → Python dataclass)
 - Packet types: 0x23, 0x28, 0x43, 0x48, 0x73, 0x7B, 0x83, 0x88, 0xD3, 0xD8
@@ -36,6 +37,7 @@ Phase 1a implements the real Cync device protocol encoder/decoder based on valid
 - Unit tests (15+ tests)
 
 **Out of Scope**:
+
 - ACK/NACK handling (Phase 1b)
 - Retries and reliability (Phase 1b)
 - Queue management (Phase 1c)
@@ -86,6 +88,7 @@ class CyncProtocolError(Exception):
 ```
 
 **Usage**:
+
 ```python
 try:
     packet = protocol.decode_packet(data)
@@ -111,6 +114,7 @@ class PacketDecodeError(CyncProtocolError):
 **Reasons**: `"too_short"`, `"invalid_checksum"`, `"unknown_type"`, `"invalid_length"`, `"missing_0x7e_markers"`
 
 **Usage**:
+
 ```python
 def decode_packet(data: bytes) -> CyncPacket:
     if len(data) < 5:
@@ -135,6 +139,7 @@ class PacketFramingError(CyncProtocolError):
 **Reasons**: `"packet_too_large"`, `"invalid_length"`, `"buffer_overflow"`
 
 **Usage**:
+
 ```python
 def _extract_packets(self) -> List[bytes]:
     if packet_length > self.MAX_PACKET_SIZE:
@@ -144,6 +149,7 @@ def _extract_packets(self) -> List[bytes]:
 #### Exception Hierarchy
 
 **Phase 1a Exceptions** (defined in this phase):
+
 ```
 CyncProtocolError (base)
 ├── PacketDecodeError
@@ -151,6 +157,7 @@ CyncProtocolError (base)
 ```
 
 **Complete Phase 1 Hierarchy** (includes Phase 1b and 1c):
+
 ```
 CyncProtocolError (Phase 1a - base)
 ├── PacketDecodeError (Phase 1a)
@@ -164,12 +171,14 @@ CyncProtocolError (Phase 1a - base)
 ```
 
 **File Locations**:
+
 - Base exception: `src/protocol/exceptions.py` (this phase)
 - Phase 1a exceptions: `src/protocol/exceptions.py` (this phase)
 - Phase 1b exceptions: `src/transport/exceptions.py` (Phase 1b)
 - Phase 1c exceptions: `src/transport/exceptions.py` (Phase 1c)
 
 **Testing Pattern**:
+
 ```python
 import pytest
 
@@ -354,6 +363,7 @@ class PacketFramer:
 ## Implementation Plan
 
 ### Step 1: Packet Type Definitions
+
 - Define packet type constants
 - Create dataclass structures for each packet type
 - **Import Phase 0.5 test fixtures AND checksum validation results**
@@ -364,6 +374,7 @@ class PacketFramer:
 **Prerequisite**: Phase 0.5 checksum validation complete
 
 **Pre-Step Checklist**:
+
 1. Verify `docs/protocol/checksum-validation.md` exists
 2. Confirm validation results: Algorithm validated against legacy test fixtures and real packets
 3. Review algorithm specification in validation report
@@ -376,6 +387,7 @@ Copy validated algorithm from legacy code into `src/protocol/checksum.py` (see i
 **Contingency Plan: Reverse-Engineer Checksum Algorithm** (Time-boxed: 4 hours maximum)
 
 **Step 1: Isolate Mismatch Pattern**
+
 - Compare 10+ packets with mismatches
 - Question: Which packets have mismatches? All types or specific types only?
 - **Pattern A** (all packets mismatch): Algorithm fundamentally incorrect
@@ -440,11 +452,13 @@ if __name__ == "__main__":
 ```
 
 **Step 3: Validate Discovered Algorithm**
+
 - Test discovered algorithm against 20+ additional packets
 - If 100% match on all packets: Algorithm found
 - If < 100% match: Continue hypothesis testing or consider firmware-specific variations
 
 **Step 4: Document and Implement**
+
 - Document discovered algorithm in `docs/protocol/checksum-validation.md`
 - Implement in `src/protocol/checksum.py`
 - Update test fixtures with validation results
@@ -458,21 +472,25 @@ If reverse-engineering time-box (4 hours) expires without finding algorithm:
 **Step 2: Escalate to User** with three documented options:
 
 **Option A: Continue Investigation** (extend time-box)
+
 - User approves extending investigation (e.g., +4 hours)
 - Document additional time spent
 - Risk: May not find algorithm even with more time
 
 **Option B: Contact Device Manufacturer**
+
 - Request protocol documentation from manufacturer
 - May require NDA or formal request process
 - Timeline uncertain (days to weeks)
 
 **Option C: Pause Phase 1a** (pending protocol clarification)
+
 - Document blocker: Checksum algorithm cannot be reverse-engineered
 - Phase 1a paused until algorithm obtained
 - Consider: Use legacy cloud relay logs for reference (if available)
 
 **Step 3: User Decision Required**
+
 - Present options with pros/cons
 - User selects path forward
 - Document decision and proceed accordingly
@@ -484,6 +502,7 @@ If reverse-engineering time-box (4 hours) expires without finding algorithm:
 The Phase 0.5 validation script (`mitm/validate-checksum-REFERENCE-ONLY.py`) imports legacy code, but this is a **one-time exception for validation only**. Phase 1a production code MUST NOT import from legacy codebase.
 
 **❌ FORBIDDEN Pattern** (will be rejected in code review):
+
 ```python
 # WRONG - DO NOT DO THIS IN PHASE 1a!
 from cync_controller.packet_checksum import calculate_checksum_between_markers
@@ -493,6 +512,7 @@ checksum = calculate_checksum_between_markers(packet)
 ```
 
 **✅ CORRECT Pattern** (copy and adapt):
+
 ```python
 # CORRECT - Copy implementation into new codebase
 # File: src/protocol/checksum.py
@@ -510,6 +530,7 @@ def calculate_checksum_between_markers(packet: bytes) -> int:
 ```
 
 **Implementation Steps** (only after prerequisite met):
+
 1. **Read** `docs/protocol/checksum-validation.md` from Phase 0.5
    - Confirm all packets validated successfully (100% match rate)
    - Review algorithm specification and edge cases
@@ -531,26 +552,30 @@ def calculate_checksum_between_markers(packet: bytes) -> int:
    - If tests fail: algorithm copy error, not algorithm issue
 
 **Success Criteria**:
+
 - ✅ `src/protocol/checksum.py` created with validated algorithm
 - ✅ Unit tests pass using Phase 0.5 fixtures (100%)
 - ✅ No ruff or mypy errors
 - ✅ Ready for Step 3 (Header Encoding/Decoding)
 
 ### Step 3: Header Encoding/Decoding
+
 - Implement header parser (5 bytes)
-- Length calculation (multiplier * 256 + base)
+- Length calculation (multiplier \* 256 + base)
 - Use queue_id and msg_id byte positions from Phase 0.5 Deliverable #2
   - Phase 0.5 determines exact positions (handles potential byte overlap)
   - Implementation uses validated positions
 - Unit tests for all packet types
 
 ### Step 4: Packet Encoders
+
 - Implement encoders for each packet type
 - 0x7e framing for data packets
 - Endpoint/queue_id/msg_id insertion
 - Unit tests with expected output
 
 ### Step 5: Packet Decoders
+
 - Implement decoders for each packet type
 - Handle malformed packets gracefully
 - Validate checksums
@@ -561,6 +586,7 @@ def calculate_checksum_between_markers(packet: bytes) -> int:
 **Architectural Decision**: Sequential msg_id generation (Option B selected)
 
 **Rationale**:
+
 - Zero collision risk within single connection
 - Deterministic behavior aids debugging (sequential IDs in logs)
 - Simple state management (single counter)
@@ -572,6 +598,7 @@ def calculate_checksum_between_markers(packet: bytes) -> int:
 The 3-byte msg_id counter wraps at **16,777,216** (2^24) messages. This section explains why wrap-around is safe and collision-free.
 
 **Wrap-Around Mechanics**:
+
 - Counter starts at 0, increments by 1 for each message
 - After msg_id `0xFF FF FF` (16,777,215), next msg_id wraps to `0x00 00 00`
 - Wrap-around is automatic via modulo: `(counter % 0xFFFFFF).to_bytes(3, 'big')`
@@ -596,11 +623,13 @@ The 3-byte msg_id counter wraps at **16,777,216** (2^24) messages. This section 
 4. **Automatic reset on reconnect**: If connection drops and reconnects, counter resets (new ReliableTransport instance), eliminating any wrap-around concerns.
 
 **Monitoring & Observability**:
+
 - Log counter wrap events for observability: `logger.info("msg_id counter wrapped at 16,777,216")`
 - Metric: `tcp_comm_msg_id_wraps_total` (counter, increments on wrap)
 - Alert if multiple wraps within short period (indicates unexpected high message rate)
 
 **Example Calculation**:
+
 - Message rate: 10 messages/sec (high usage)
 - Time to wrap: 16,777,216 / 10 = 1,677,721 seconds = **19.4 days**
 - Typical ACK timeout: 2 seconds
@@ -615,6 +644,7 @@ The 3-byte msg_id counter wraps at **16,777,216** (2^24) messages. This section 
 **Edge case identified**: Device reboots while controller connection survives.
 
 **Scenario**:
+
 1. Controller sends msg_id 100 to Device A
 2. Device A reboots unexpectedly (power loss, firmware update, crash)
 3. Controller TCP connection stays alive (TCP doesn't detect reboot immediately)
@@ -622,6 +652,7 @@ The 3-byte msg_id counter wraps at **16,777,216** (2^24) messages. This section 
 5. Device A (post-reboot) sees msg_id 100 as first message (lost pre-reboot context)
 
 **Mitigation**:
+
 - **Random offset on init** (line 610): Counter starts at random value 0-4095, not 0
   - Reduces collision window after device reboot
   - Different starting point post-reconnect vs pre-reboot counter
@@ -629,6 +660,7 @@ The 3-byte msg_id counter wraps at **16,777,216** (2^24) messages. This section 
 - **TCP keepalive**: Connection should detect device reboot via TCP keepalive probes (eventual detection)
 
 **Risk Assessment**:
+
 - **Probability**: Very low (device reboots rare during active command, TCP usually detects disconnection)
 - **Impact**: Medium (one command might be misinterpreted by rebooted device)
 - **Severity**: Acceptable for smart home use case
@@ -636,6 +668,7 @@ The 3-byte msg_id counter wraps at **16,777,216** (2^24) messages. This section 
 **Accepted risk**: Smart home usage patterns make this edge case extremely rare. Benefits of sequential generation outweigh low-probability edge case.
 
 **Implementation** (Phase 1b ReliableTransport with session identification):
+
 ```python
 import secrets
 import uuid
@@ -697,6 +730,7 @@ class ReliableTransport:
 ```
 
 **Benefits**:
+
 - ✅ No collision handling needed (Phase 1b simplified)
 - ✅ Predictable msg_ids aid troubleshooting
 - ✅ No collision analysis required (removed from Phase 1b spec)
@@ -704,20 +738,23 @@ class ReliableTransport:
 - ✅ Random offset handles device reboot edge case (device reboots, controller connection survives)
 
 **Session Identification Rationale**:
+
 - **Problem**: Multiple parallel connections to same device create independent msg_id counters → collision risk
 - **Solution**: Class-level session registry prevents parallel connections
 - **Trade-off**: One connection per device (acceptable for smart home use case)
 - **Benefit**: Zero collision risk without disk persistence complexity
 
 **Phase 0.5 Observation** (informative, not blocking):
+
 - Phase 0.5 can still observe device msg_id patterns for reference
 - Device behavior doesn't constrain controller generation strategy
 - Controller acts independently when sending commands
 
 ### Step 5.6: Implement PacketFramer
+
 - Create `PacketFramer` class after decoder is complete
 - Implements buffering for incomplete packets across multiple TCP reads
-- Header-based length extraction (byte[3]*256 + byte[4])
+- Header-based length extraction (byte[3]\*256 + byte[4])
 - Multi-packet handling from single TCP read (extract all complete packets)
 - Unit tests for edge cases:
   - Partial packet buffering (header only, then remaining bytes)
@@ -742,6 +779,7 @@ class ReliableTransport:
 **Phase 1b Refactoring** (will replace manual logic):
 
 Once Phase 1b `ReliableTransport` is implemented, `toggler_v2.py` will be refactored to:
+
 - Replace manual handshake with `ConnectionManager.connect()`
 - Replace manual send/recv with `ReliableTransport.send_reliable()`
 - Inherit automatic retries from ReliableTransport
@@ -768,19 +806,23 @@ assert result.success
 ```
 
 **Phase 1a vs 1b Boundary**:
+
 - **Phase 1a**: Codec works (can encode/decode packets correctly)
 - **Phase 1b**: Reliability works (automatic retries, deduplication, reconnection)
 - **toggler_v2.py**: Simple test harness that evolves with each phase
 
 **Connection Target**:
+
 - Default: localhost:9000 (for Phase 1d simulator)
 - Optional: Real device IP via CLI argument
 
 **Legacy Comparison**:
+
 - `toggler.py` = Phase 0 test harness (custom 0xF00D protocol) - UNCHANGED
 - `toggler_v2.py` = Phase 1a+ with real Cync protocol - EVOLVING
 
 **Example Usage**:
+
 ```bash
 # Test with simulator (Phase 1d)
 python harness/toggler_v2.py --host localhost --port 9000
@@ -794,6 +836,7 @@ python harness/toggler_v2.py --host 192.168.1.100 --port 23779
 ## Deliverables
 
 ### Code
+
 - [ ] `src/protocol/cync_protocol.py` (150-200 lines)
 - [ ] `src/protocol/packet_types.py` (50-75 lines)
 - [ ] `src/protocol/packet_framer.py` (80-100 lines)
@@ -802,11 +845,13 @@ python harness/toggler_v2.py --host 192.168.1.100 --port 23779
 - [ ] New `harness/toggler_v2.py` using real Cync protocol
 
 ### Documentation
+
 - [ ] API documentation in docstrings
 - [ ] Usage examples in module docs
 - [ ] Update `README.md` with Phase 1a completion
 
 ### Validation
+
 - [ ] All unit tests pass (100%)
 - [ ] Validated against Phase 0.5 real packet captures
 - [ ] Checksum algorithm matches legacy implementation
@@ -817,6 +862,7 @@ python harness/toggler_v2.py --host 192.168.1.100 --port 23779
 ## Acceptance Criteria
 
 ### Functional
+
 - [ ] Encode all major packet types (0x23, 0x73, 0x83, 0xD3)
 - [ ] Decode all major packet types
 - [ ] Checksum calculation matches Phase 0.5 validated algorithm
@@ -826,6 +872,7 @@ python harness/toggler_v2.py --host 192.168.1.100 --port 23779
 - [ ] Endpoint/queue_id/msg_id extracted correctly from valid packets
 
 ### Security (PacketFramer Buffer Overflow Protection)
+
 - [ ] PacketFramer rejects packets with length > MAX_PACKET_SIZE (4096 bytes)
 - [ ] PacketFramer handles integer overflow (multiplier=255, base=255 → 65535 bytes)
 - [ ] PacketFramer discards buffer and logs error on invalid length
@@ -834,6 +881,7 @@ python harness/toggler_v2.py --host 192.168.1.100 --port 23779
 - [ ] No memory exhaustion under malicious packet stream (validated in load test)
 
 ### Testing
+
 - [ ] 15+ unit tests covering all packet types
 - [ ] Tests use Phase 0.5 real packet fixtures
 - [ ] Device IDs parameterized (not hardcoded): `@pytest.mark.parametrize("device_id", [123, 456, 789])`
@@ -848,12 +896,14 @@ python harness/toggler_v2.py --host 192.168.1.100 --port 23779
 - [ ] 90% code coverage
 
 ### Quality
+
 - [ ] No ruff errors
 - [ ] No mypy errors (strict mode)
 - [ ] Full type annotations
 - [ ] Comprehensive docstrings
 
 ### Integration
+
 - [ ] New toggler_v2.py created using real Cync protocol
 - [ ] Can encode/decode packets successfully
 - [ ] 3-byte msg_id generation implemented (Sequential strategy - Step 5.5)
@@ -976,25 +1026,28 @@ def test_encode_handshake_parameterized(device_id):
 
 ## Risks & Mitigation
 
-| Risk | Impact | Mitigation |
-|------|--------|------------|
-| Protocol mismatch vs. captures | High | Validate every encoder/decoder against Phase 0.5 fixtures |
-| Checksum algorithm incorrect | Medium | Test against 10+ real packets with known checksums |
-| Length calculation edge cases | Medium | Test with large packets (multiplier > 0) |
-| Firmware version differences | Low | Document variations; implement most common version |
+| Risk                           | Impact | Mitigation                                                |
+| ------------------------------ | ------ | --------------------------------------------------------- |
+| Protocol mismatch vs. captures | High   | Validate every encoder/decoder against Phase 0.5 fixtures |
+| Checksum algorithm incorrect   | Medium | Test against 10+ real packets with known checksums        |
+| Length calculation edge cases  | Medium | Test with large packets (multiplier > 0)                  |
+| Firmware version differences   | Low    | Document variations; implement most common version        |
 
 ---
 
 ## Dependencies
 
 **Prerequisites**:
+
 - Phase 0.5 complete (protocol validation, packet captures)
 - Test fixtures available (`tests/fixtures/real_packets.py`)
 
 **External**:
+
 - None (pure Python implementation)
 
 **Development**:
+
 - `types-prometheus-client` - Type stubs for mypy strict mode (already in Phase 0 pyproject.toml)
 
 ---
@@ -1013,6 +1066,7 @@ def test_encode_handshake_parameterized(device_id):
 ## Next Phase
 
 **Phase 1b**: Reliable Transport Layer (1 week)
+
 - Use Phase 1a codec for packet encoding/decoding
 - Add ACK/NACK handling on top of codec
 - Implement retry logic and idempotency
@@ -1025,4 +1079,3 @@ def test_encode_handshake_parameterized(device_id):
 - **Phase 1 Program**: `02-phase-1-spec.md` - Overall architecture and context
 - **Phase 1b**: `02c-phase-1b-reliable-transport.md` - Next phase (reliable transport)
 - **Discovery**: `00-discovery.md` - Original protocol analysis
-

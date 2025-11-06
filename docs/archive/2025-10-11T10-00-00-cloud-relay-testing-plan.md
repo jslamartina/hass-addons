@@ -1,4 +1,5 @@
 <!-- 56394217-30ff-4825-9208-dd9226e0a36a 5d7ed494-f1f2-4871-8def-128de24e931d -->
+
 # Cloud Relay Mode Testing Plan
 
 ✅ **COMPLETED** - Systematic validation of all Cloud Relay operating modes with real devices in devcontainer.
@@ -10,6 +11,7 @@
 Before testing, verify:
 
 - Git repo changes are committed: `/mnt/supervisor/addons/local/cync-controller/`
+
   ```bash
   # Use Git MCP tool to check status
   mcp_git_git_status("/mnt/supervisor/addons/local/cync-controller/")
@@ -18,6 +20,7 @@ Before testing, verify:
 
 - DNS redirection is active for `cm.gelighting.com`
 - MQTT broker (EMQX) is running and accessible
+
   ```bash
   # Use Docker MCP to verify EMQX container
   mcp_docker_list_containers(filters={"name": ["emqx"]})
@@ -89,6 +92,7 @@ cloud_relay:
 ```
 
 **Results:**
+
 - ✅ Add-on starts without errors
 - ✅ Device connects and appears in logs (4 devices connected)
 - ✅ MQTT discovery messages published (20+ entities)
@@ -116,6 +120,7 @@ cloud_relay:
 ```
 
 **Results:**
+
 - ✅ Add-on starts without errors
 - ✅ Device connects to relay (4 devices in RELAY mode)
 - ✅ Cloud connection established (SSL to 35.196.85.236:23779)
@@ -144,6 +149,7 @@ cloud_relay:
 ```
 
 **Results:**
+
 - ✅ Add-on restarts cleanly
 - ✅ Detailed packet logs appear (6 packet types captured)
 - ✅ Both device→cloud and cloud→device packets logged
@@ -152,6 +158,7 @@ cloud_relay:
 - ✅ Performance acceptable (no noticeable lag)
 
 **Packet Types Captured:**
+
 - 0xd8 HEARTBEAT_CLOUD (5 packets)
 - 0xd3 HEARTBEAT_DEV (5 packets)
 - 0x28 HELLO_ACK (4 packets)
@@ -179,6 +186,7 @@ cloud_relay:
 ```
 
 **Results:**
+
 - ✅ Add-on starts without errors
 - ✅ Device connects to relay (LAN-only mode confirmed)
 - ✅ NO cloud connection established (verified in logs)
@@ -200,11 +208,13 @@ cloud_relay:
 **Configuration:** Relay mode active with debug logging.
 
 **Tests Executed:**
+
 - ✅ **Smart Mode Injection** - `echo "smart" > /tmp/cync_inject_command.txt`
 - ✅ **Traditional Mode Injection** - `echo "traditional" > /tmp/cync_inject_command.txt`
 - ✅ **Raw Bytes Injection** - Custom packet injection
 
 **Results:**
+
 - ✅ Injection file detected (check logs)
 - ✅ Mode packet crafted and sent to device
 - ✅ Device responds (check response in logs)
@@ -231,6 +241,7 @@ cloud_relay:
 ✅ Warning includes "DEBUG MODE" with prominent alerts
 
 **Results:**
+
 - ✅ Secure mode: SSL verification active, no warnings
 - ✅ Debug mode: SSL verification disabled with clear warnings
 - ✅ Both modes functional and documented
@@ -251,6 +262,7 @@ cloud_relay:
 4. **Long-running Stability** ✅ 30+ minutes testing, no memory leaks or connection drops
 
 **Results:**
+
 - ✅ **13 total errors** - All graceful shutdown-related (Event loop closed)
 - ✅ **4 devices** tested simultaneously
 - ✅ **6 configuration changes** - All successful
@@ -258,6 +270,7 @@ cloud_relay:
 - ✅ **No operational errors** or crashes
 
 **Performance Metrics:**
+
 - Configuration change time: ~5 seconds
 - Add-on restart time: 5-8 seconds
 - Device reconnection time: 2-3 seconds
@@ -282,6 +295,7 @@ cloud_relay:
 - ✅ **`scripts/README.md`** - Automated testing tools documentation
 
 **Documentation Quality:**
+
 - ✅ Accurate and matches implementation
 - ✅ Comprehensive coverage of all features
 - ✅ Clear examples and use cases
@@ -384,7 +398,7 @@ If critical issues found:
 - ✅ **Packet Parsing** - Copied packet_parser.py from mitm/ to cync_lan package
 - ✅ **Checksum Calculation** - Copied checksum.py to cync_lan/packet_checksum.py
 - ✅ **CloudRelayConnection Class** - Created complete CloudRelayConnection class
-- ✅ **NCyncServer Integration** - Modified to support relay mode in _register_new_connection
+- ✅ **NCyncServer Integration** - Modified to support relay mode in \_register_new_connection
 - ✅ **Bidirectional Forwarding** - Implemented packet forwarding with inspection
 - ✅ **MQTT Integration** - Integrated packet parsing with existing MQTT status publishing
 - ✅ **Packet Injection** - Added file-based packet injection for debugging
@@ -408,6 +422,7 @@ If critical issues found:
 - ✅ **Production ready** - All tests passed, all limitations resolved
 
 **Files Modified/Created:**
+
 - **Modified:** 6 files (server.py, const.py, structs.py, config.yaml, run.sh, CHANGELOG.md)
 - **New:** 3 files (packet_parser.py, packet_checksum.py, cloud-relay.md)
 - **Documentation:** 6+ comprehensive documents created/updated

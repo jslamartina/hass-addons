@@ -24,6 +24,7 @@
 **Resolution**: All approved and addressed with spec updates
 
 **Key Decisions Documented**:
+
 - Finding 1.1: Strengthened Phase 0.5 exit criteria (definitive ACK findings required)
 - Finding 1.2: Added Phase 0.5 → 1b handoff with timeout recalibration
 - Finding 1.3: Clarified queue_id overlap decision is conditional
@@ -40,6 +41,7 @@
 **CRITICAL PRINCIPLE**: Phase 1 implementation depends on empirical protocol validation (Phase 0.5). Some protocol details **cannot be known in advance** and will only be discovered through packet capture and analysis.
 
 **Known Unknowns** (resolved during Phase 0.5):
+
 1. **ACK packet msg_id positions** - Unknown until real ACK packets captured and analyzed
 2. **Queue ID/Endpoint byte overlap** - Derivation pattern unknown until handshake sequences captured
 3. **Actual ACK latency distribution** - Timeout tuning depends on measured p99 from Phase 0.5
@@ -48,6 +50,7 @@
 **What Technical Reviewers Should NOT Flag (These Are EXPECTED, Not Risks)**:
 
 ❌ **DNS Redirection Requirement**
+
 - Phase 0.5 REQUIRES DNS redirection - this is the ONLY capture method
 - If DNS fails prerequisite validation, Phase 0.5 stops - this is expected behavior, not a "risk"
 - Do NOT ask for "fallback strategies" or "alternative capture methods"
@@ -55,6 +58,7 @@
 - ACCEPT: This is a hard prerequisite. If it fails, we stop and escalate. No alternatives documented.
 
 ❌ **Timeline/Schedule/Duration/Time Estimates**
+
 - This is a one-person hobby project executed sequentially
 - Do NOT track days, hours, weeks, time-boxes, or duration estimates
 - Do NOT create "contingency buffers" or "+X days" risk scenarios
@@ -63,6 +67,7 @@
 - ACCEPT: Work proceeds at natural pace without schedule tracking or time management
 
 ❌ **Protocol Unknowns Before Data Collection**
+
 - ACK structure unknown until Phase 0.5 → Implementation decision deferred to Phase 1b start (Step 0)
 - Queue ID derivation unknown until Phase 0.5 → Implementation uses validated pattern from captures
 - Checksum algorithm unknown until Phase 0.5 → Validation first, copy validated algorithm second
@@ -73,18 +78,21 @@
 
 **What You're Doing Wrong If You Flag These As Issues**:
 If an AI review flags any of the above as "risks", "blockers", "needs contingency planning", or "requires decision":
+
 1. The AI has NOT read this guidance section carefully enough
 2. The AI is pattern-matching on keywords ("DNS", "unknown", "day") without understanding they are expected
 3. The review is WASTING TIME on non-issues
 4. The review should be REJECTED and AI redirected to read this section again
 
 **What Technical Reviewers Should NOT Do**:
+
 - ❌ Create elaborate decision trees for every possible ambiguous outcome before data exists
 - ❌ Demand pre-commitment to implementation approaches when dealing with genuine unknowns
 - ❌ Request detailed contingency plans for scenarios that may never occur
 - ❌ Re-review architectural decisions already settled in prior planning discussions
 
 **What Technical Reviewers SHOULD Flag (These Are Actual Problems)**:
+
 - ✅ **Actual Bugs**: Logic errors, race conditions, incorrect algorithms, missing edge case handling in code examples
 - ✅ **Missing Implementation Guidance**: Gaps that would block actual coding work (missing byte positions, undefined behavior)
 - ✅ **Spec Inconsistencies**: Contradictions within same spec or between different specs
@@ -97,10 +105,12 @@ If an AI review flags any of the above as "risks", "blockers", "needs contingenc
 **Proper Handling of Uncertainty**:
 
 **Example 1 - Byte Overlap**:
+
 - **Don't demand**: "Create decision tree with 4 options for byte overlap handling"
 - **Instead accept**: "Byte overlap unknown. Implementation will handle discovered pattern (Options A-D possible). Decision deferred to Phase 1a."
 
 **Example 2 - ACK Ambiguity**:
+
 - **Don't demand**: "Define thresholds for what counts as 'ambiguous' (80%? 90%?) and escalation criteria"
 - **Instead accept**: "ACK structure unknown. If findings are ambiguous, document objectively and make implementation decision in Phase 1b Step 0 (Prerequisites Check)."
 
@@ -113,6 +123,7 @@ If an AI review flags any of the above as "risks", "blockers", "needs contingenc
 **Principle 1: No Legacy Imports**
 
 Legacy code must **NEVER be imported or used as a dependency** in production code. Copy and adapt algorithms from `cync-controller/` as needed, treating it strictly as reference documentation. This ensures:
+
 - Complete independence from legacy codebase
 - No dependency conflicts or version coupling
 - Clean migration path for eventual legacy retirement
@@ -121,11 +132,13 @@ Legacy code must **NEVER be imported or used as a dependency** in production cod
 ### Import Rules: Allowed vs Forbidden
 
 **ALLOWED** (Phase 0.5 validation scripts ONLY):
+
 - `mitm/validate-checksum-REFERENCE-ONLY.py`: Can import `cync_controller.packet_checksum`
 - `scripts/parse-capture.py`: Can import packet type constants for reference
 - Test fixture comparison: Can use legacy packet examples for validation
 
 **NEVER ALLOWED** (All phases, all production code):
+
 - `src/protocol/*.py`: NO imports from `cync_controller.*`
 - `src/transport/*.py`: NO imports from `cync_controller.*`
 - `tests/unit/*.py`: NO imports from `cync_controller.*` (use copied code)
@@ -133,6 +146,7 @@ Legacy code must **NEVER be imported or used as a dependency** in production cod
 - `harness/*.py`: NO imports from `cync_controller.*`
 
 **Enforcement**:
+
 ```bash
 # Pre-commit hook to reject legacy imports in production code
 grep -r "from cync_controller" src/ harness/ tests/ && exit 1
@@ -140,14 +154,15 @@ grep -r "from cync_controller" src/ harness/ tests/ && exit 1
 
 **Exception Scope Summary**:
 
-| Code Type | Legacy Imports | Rationale |
-|-----------|----------------|-----------|
-| **Phase 0.5 validation scripts** | ✅ Allowed | One-time validation of legacy algorithms |
-| **Phase 1a-1d production code** | ❌ Forbidden | Must be independent, copy algorithms instead |
-| **Phase 1a-1d tests** | ❌ Forbidden | Test against copied code, not legacy |
-| **Helper scripts** | ⚠️ Reference only | Can read legacy for comparison, not dependency |
+| Code Type                        | Legacy Imports    | Rationale                                      |
+| -------------------------------- | ----------------- | ---------------------------------------------- |
+| **Phase 0.5 validation scripts** | ✅ Allowed        | One-time validation of legacy algorithms       |
+| **Phase 1a-1d production code**  | ❌ Forbidden      | Must be independent, copy algorithms instead   |
+| **Phase 1a-1d tests**            | ❌ Forbidden      | Test against copied code, not legacy           |
+| **Helper scripts**               | ⚠️ Reference only | Can read legacy for comparison, not dependency |
 
 **Common Mistakes to Avoid**:
+
 - ❌ "It's just for testing" - NO, copy the code
 - ❌ "It's a constant, not a function" - NO, copy constants too
 - ❌ "We'll remove it later" - NO, never add legacy imports
@@ -156,6 +171,7 @@ grep -r "from cync_controller" src/ harness/ tests/ && exit 1
 **Principle 2: No Nullability**
 
 Methods must **NEVER return `None` or `Optional[T]`** to indicate errors or absence. Fields must **NEVER initialize as `None`**. Instead:
+
 - **For errors**: Raise specific exceptions (e.g., `PacketDecodeError`, `ConnectionError`)
 - **For fields**: Initialize with empty values of correct type (e.g., `bytes = b""`, `str = ""`, `list = []`)
 
@@ -325,14 +341,14 @@ def process(self, data: bytes) -> str:
 
 ### Summary Table
 
-| Scenario | Anti-Pattern (None) | Correct Pattern | Rationale |
-|----------|---------------------|-----------------|-----------|
-| Optional config | Field stays `Optional[T]` | Convert to `T` in `__init__` | Fields never None after construction |
-| Cache miss | `.get(key)` returns None | `.get(key, default)` with non-None default | Avoids None checks in caller |
-| Required lookup | `.get(key)` returns None | `if key not in cache: raise ...` | Explicit error handling |
-| Empty network | Return None on empty | Raise `ConnectionClosedError()` | Distinguishes error conditions |
-| Search no results | Return None | Return `[]` (empty list) | Collections never None |
-| Single item not found | Return None | Raise `NotFoundError()` | Forces explicit error handling |
+| Scenario              | Anti-Pattern (None)       | Correct Pattern                            | Rationale                            |
+| --------------------- | ------------------------- | ------------------------------------------ | ------------------------------------ |
+| Optional config       | Field stays `Optional[T]` | Convert to `T` in `__init__`               | Fields never None after construction |
+| Cache miss            | `.get(key)` returns None  | `.get(key, default)` with non-None default | Avoids None checks in caller         |
+| Required lookup       | `.get(key)` returns None  | `if key not in cache: raise ...`           | Explicit error handling              |
+| Empty network         | Return None on empty      | Raise `ConnectionClosedError()`            | Distinguishes error conditions       |
+| Search no results     | Return None               | Return `[]` (empty list)                   | Collections never None               |
+| Single item not found | Return None               | Raise `NotFoundError()`                    | Forces explicit error handling       |
 
 ---
 
@@ -341,6 +357,7 @@ def process(self, data: bytes) -> str:
 Phase 1 adds reliability primitives (ACK/NACK, idempotency, backpressure) and implements the real Cync device protocol. This program is **split into 5 focused sub-phases** to manage complexity and enable incremental validation.
 
 **Why Split into Sub-Phases?**
+
 - Phase 0 used custom test protocol (0xF00D magic bytes) - need real protocol validation first
 - Original Phase 1 bundled 3-4 weeks of work - too broad for effective tracking
 - Focused phases allow validation at each step
@@ -402,6 +419,7 @@ To avoid confusion, this glossary defines key protocol terms:
   - If Option B: Store both endpoint and queue_id independently
   - If Option D: Extract both with overlapping byte ranges, handle shared byte appropriately
   - Connection state must track both identifiers regardless of relationship
+
 - **msg_id**: 3-byte message identifier in wire protocol (bytes[10:13] in data packets). Generated sequentially for ACK matching. NOT used for deduplication (see dedup_key in Phase 1b).
 - **correlation_id**: UUID v7 for internal tracking and observability. Generated per-message for logs, metrics, and tracing. NOT sent over wire. NOT used for deduplication (see dedup_key in Phase 1b).
 - **dedup_key**: Deterministic hash of packet content used for duplicate detection. Generated from packet_type + endpoint + msg_id + payload hash. Same logical packet always produces same dedup_key (unlike correlation_id which is unique per reception). Uses Full Fingerprint strategy for maximum robustness.
@@ -428,11 +446,13 @@ For clarity, key acronyms used throughout Phase 1 documentation:
 ## Sub-Phase Breakdown
 
 ### Phase 0.5: Real Protocol Validation (NEW - PREREQUISITE)
+
 **Status**: Planned | **Spec**: `02a-phase-0.5-protocol-validation.md`
 
 **Goal**: Capture and validate real Cync device protocol behavior
 
 **Key Deliverables**:
+
 - MITM proxy tool (`mitm/mitm-proxy.py`) for packet capture
 - Packet captures using MITM proxy and cloud relay infrastructure
 - **Checksum validation script (`mitm/validate-checksum-REFERENCE-ONLY.py`)** - Required for Phase 1a
@@ -446,11 +466,13 @@ For clarity, key acronyms used throughout Phase 1 documentation:
 ---
 
 ### Phase 1a: Cync Protocol Codec
+
 **Status**: Specified | **Spec**: `02b-phase-1a-protocol-codec.md`
 
 **Goal**: Implement real Cync protocol encoder/decoder
 
 **Key Deliverables**:
+
 - `protocol/cync_protocol.py` - Encode/decode all packet types
 - `protocol/packet_framer.py` - TCP stream framing and packet extraction
 - Support: 0x23, 0x73, 0x83, 0xD3, 0x43, etc.
@@ -463,11 +485,13 @@ For clarity, key acronyms used throughout Phase 1 documentation:
 ---
 
 ### Phase 1b: Reliable Transport Layer
+
 **Status**: Specified | **Spec**: `02c-phase-1b-reliable-transport.md`
 
 **Goal**: Implement native Cync protocol ACK/response handling with reliability primitives
 
 **Key Deliverables**:
+
 - `transport/reliable_layer.py` - Native Cync ACK/response handling (0x28, 0x7B, 0x88, 0xD8)
 - `transport/connection_manager.py` - Connection state machine and reconnection logic
 - `transport/deduplication.py` - LRU cache for idempotency
@@ -481,11 +505,13 @@ For clarity, key acronyms used throughout Phase 1 documentation:
 ---
 
 ### Phase 1c: Backpressure & Queues
+
 **Status**: Specified | **Spec**: `02d-phase-1c-backpressure.md`
 
 **Goal**: Implement bounded queues and flow control
 
 **Key Deliverables**:
+
 - `transport/bounded_queue.py` - Configurable overflow policies with automatic deadlock recovery
 - Queue metrics (depth, full events, drops, policy switches)
 - Integration with reliable layer
@@ -498,11 +524,13 @@ For clarity, key acronyms used throughout Phase 1 documentation:
 ---
 
 ### Phase 1d: Device Simulator & Chaos Testing
+
 **Status**: Specified | **Spec**: `02e-phase-1d-simulator.md`
 
 **Goal**: Build realistic device simulator for integration testing
 
 **Key Deliverables**:
+
 - `tests/simulator/cync_device_simulator.py` - Speaks real protocol
 - Configurable chaos (latency, loss, reordering, duplicates)
 - 10+ integration tests
@@ -541,23 +569,25 @@ The sections below provide high-level summaries for coordination purposes.
 
 Sequential execution order for solo implementation:
 
-| Phase | Prerequisites | Key Deliverables Needed |
-|-------|--------------|------------------------|
-| **Phase 0.5** | Phase 0 complete ✓ | All Phase 0 tests passing |
-| **Phase 1a** (Protocol Codec) | Phase 0.5 complete | - Protocol Capture Document<br/>- Checksum validation complete<br/>- Updated protocol documentation<br/>- Deduplication field verification |
-| **Phase 1b** (Reliable Transport) | Phase 1a complete | - All codec tests passing<br/>- ACK packet structure validated<br/>- Full Fingerprint strategy confirmed |
-| **Phase 1c** (Backpressure) | Phase 1b complete | - All transport tests passing<br/>- ReliableTransport working<br/>- Integration tests passing |
-| **Phase 1d** (Simulator) | Phases 1a-1c complete | - Full protocol stack working<br/>- Integration tests passing |
+| Phase                             | Prerequisites         | Key Deliverables Needed                                                                                                                    |
+| --------------------------------- | --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Phase 0.5**                     | Phase 0 complete ✓    | All Phase 0 tests passing                                                                                                                  |
+| **Phase 1a** (Protocol Codec)     | Phase 0.5 complete    | - Protocol Capture Document<br/>- Checksum validation complete<br/>- Updated protocol documentation<br/>- Deduplication field verification |
+| **Phase 1b** (Reliable Transport) | Phase 1a complete     | - All codec tests passing<br/>- ACK packet structure validated<br/>- Full Fingerprint strategy confirmed                                   |
+| **Phase 1c** (Backpressure)       | Phase 1b complete     | - All transport tests passing<br/>- ReliableTransport working<br/>- Integration tests passing                                              |
+| **Phase 1d** (Simulator)          | Phases 1a-1c complete | - Full protocol stack working<br/>- Integration tests passing                                                                              |
 
 ### Sequential Execution Notes
 
 **Phase Order**:
+
 1. Phase 0.5 validates protocol → Phase 1a implements codec
 2. Phase 1a provides codec → Phase 1b adds reliability
 3. Phase 1b provides transport → Phase 1c adds backpressure
 4. Phases 1a-1c complete → Phase 1d validates with simulator
 
 **Key Validation Points**:
+
 - Phase 0.5 measures ACK latency, validates checksum, documents ACK structure
 - Phase 1a uses validated protocol information
 - Phase 1b uses measured timeouts and validated ACK structure
@@ -602,6 +632,7 @@ Mock Cync device for integration and chaos testing. Speaks real protocol with co
 The following diagram illustrates the complete Phase 1 end-state architecture showing all layers, components, and data flow paths:
 
 <!-- [MermaidChart: 8e7a2f78-9ec7-4400-b3dd-24ca4030593e] -->
+
 ```mermaid
 ---
 project_id: 9a2485fd-95c8-4328-8c5b-9887221e1055
@@ -700,11 +731,13 @@ graph TD
 **Layered Design**: Each phase (1a-1d) corresponds to a distinct architectural layer with clear responsibilities and interfaces.
 
 **Triple Identifier Strategy**:
+
 - **msg_id** (3 bytes): Wire protocol identifier for ACK matching over the network
 - **dedup_key** (Full Fingerprint): Deterministic hash for collision-resistant duplicate detection (packet_type + endpoint + msg_id + payload hash)
 - **correlation_id** (UUID v7): Internal identifier for observability and event tracing (NOT used for deduplication)
 
 **Send Path Flow**:
+
 1. Client → Send Queue (backpressure)
 2. ReliableTransport dequeues and encodes via CyncProtocol
 3. Track pending ACK with msg_id → correlation_id mapping
@@ -712,6 +745,7 @@ graph TD
 5. Wait for ACK (0x28, 0x7B, 0x88, 0xD8) with retry/backoff
 
 **Receive Path Flow**:
+
 1. TCP socket → PacketFramer buffers and extracts complete packets
 2. CyncProtocol decodes and validates checksum
 3. ReliableTransport checks LRUCache for duplicates (by dedup_key)
@@ -746,23 +780,27 @@ Phase 1 adds **25+ new metrics** across 5 categories:
 ### Useful Reference Files
 
 **Protocol Documentation**:
+
 - `cync-controller/src/cync_controller/packet_parser.py` - Packet type definitions and parsing examples
 - `cync-controller/src/cync_controller/structs.py` - Packet structure definitions (DeviceStructs)
 - `docs/protocol/packet_structure.md` - Protocol documentation
 - `docs/protocol/findings.md` - Protocol analysis notes
 
 **Reference Implementations** (for understanding only):
+
 - `cync-controller/src/cync_controller/devices/tcp_device.py` - Legacy TCP handling
 - `cync-controller/src/cync_controller/devices/tcp_packet_handler.py` - Legacy packet parsing
 - `cync-controller/packet_checksum.py` - Checksum algorithm reference
 
 **What to Reference**:
+
 - Packet format and structure
 - Checksum calculation
 - Protocol flow examples
 - Device behavior patterns
 
 **What NOT to Do**:
+
 - Import legacy code
 - Integrate with legacy system
 - Wrap or extend legacy classes
@@ -832,14 +870,14 @@ Chaos tests use two strategies to ensure reliability without flakiness:
 
 ## Risks & Mitigation
 
-| Risk                                | Impact | Probability | Mitigation                             | Status |
-| ----------------------------------- | ------ | ----------- | -------------------------------------- | ------ |
-| Cync protocol incompatibility       | High   | Medium      | Device simulator + real device testing | Active |
-| Performance regression              | Medium | Low         | Benchmarks + SLO monitoring            | Active |
-| Duplicate detection false negatives | High   | Low         | Comprehensive dedup tests              | Active |
+| Risk                                | Impact | Probability | Mitigation                                               | Status    |
+| ----------------------------------- | ------ | ----------- | -------------------------------------------------------- | --------- |
+| Cync protocol incompatibility       | High   | Medium      | Device simulator + real device testing                   | Active    |
+| Performance regression              | Medium | Low         | Benchmarks + SLO monitoring                              | Active    |
+| Duplicate detection false negatives | High   | Low         | Comprehensive dedup tests                                | Active    |
 | Queue exhaustion / BLOCK deadlock   | Medium | Medium      | Backpressure policies + automatic recovery (Finding 5.1) | Mitigated |
-| ACK timeout tuning                  | Medium | Medium      | Lab testing + Phase 0.5 → 1b handoff (Finding 1.2) | Mitigated |
-| DNS redirection blocked             | High   | Low         | Day -1 validation + troubleshooting guide (Finding 2.2) | Mitigated |
+| ACK timeout tuning                  | Medium | Medium      | Lab testing + Phase 0.5 → 1b handoff (Finding 1.2)       | Mitigated |
+| DNS redirection blocked             | High   | Low         | Day -1 validation + troubleshooting guide (Finding 2.2)  | Mitigated |
 
 ---
 
@@ -848,6 +886,7 @@ Chaos tests use two strategies to ensure reliability without flakiness:
 **Sequential Execution**: Phases execute in order: 0.5 → 1a → 1b → 1c → 1d. Each phase completes before next begins.
 
 **Phase Dependencies**:
+
 - Phase 0.5: Protocol validation (prerequisite for all implementation phases)
 - Phase 1a: Protocol codec (uses Phase 0.5 validated protocol)
 - Phase 1b: Reliable transport (uses Phase 1a codec + Phase 0.5 ACK validation)
@@ -861,10 +900,12 @@ Chaos tests use two strategies to ensure reliability without flakiness:
 ## Dependencies
 
 **Internal**:
+
 - Phase 0 complete ✓
 - Access to real Cync devices for testing
 
 **External**:
+
 - None
 
 ---
@@ -872,6 +913,7 @@ Chaos tests use two strategies to ensure reliability without flakiness:
 ## Success Metrics
 
 **Performance Targets** (Balanced hierarchy - Option C):
+
 - p50 latency < 100ms (feels instant to users)
 - p95 latency < 300ms (acceptable responsiveness)
 - p99 latency < 800ms (rare slow commands tolerable)
@@ -882,29 +924,34 @@ Chaos tests use two strategies to ensure reliability without flakiness:
 These targets are based on smart home user experience research and human perception thresholds:
 
 **p50 < 100ms** (Instant Perception):
+
 - Research: Humans perceive <100ms as "instantaneous" with no perceived delay
 - User expectation: Light switch feels like physical switch (immediate response)
 - Covers: 50% of commands should feel instant
 - Trade-off: Achievable with local network, challenges reliability margin
 
 **p95 < 300ms** (Acceptable Responsiveness):
+
 - Research: <300ms is perceived as "responsive" with minimal lag
 - User expectation: Slight delay acceptable but not frustrating
 - Covers: 95% of commands should feel responsive
 - Trade-off: Balances user satisfaction with realistic network conditions
 
 **p99 < 800ms** (Rare Slow Commands Tolerable):
+
 - Research: <1s is boundary before users perceive "broken" or "laggy"
 - User expectation: Occasional slow command acceptable (1 in 100)
 - Covers: 99% of commands complete before user frustration
 - Trade-off: 800ms provides margin below 1s threshold for reliability under network jitter
 
 **Success Rate > 99.9%** (Baseline):
+
 - Maximum 1 failure per 1000 commands under ideal conditions
 - Establishes reliability baseline before chaos testing
 - With retries: Should achieve >99% even with 20% packet loss
 
 **Alternative Options Considered**:
+
 - **Option A (Aggressive)**: p50 < 50ms, p95 < 150ms, p99 < 300ms - Unrealistic for network-based protocol
 - **Option B (Conservative)**: p50 < 200ms, p95 < 500ms, p99 < 1000ms - Too slow, users perceive as laggy
 - **Option C (Balanced)**: Selected - balances user experience with achievable targets
@@ -912,11 +959,13 @@ These targets are based on smart home user experience research and human percept
 **Validation**: Phase 1d baseline tests will measure actual performance. If targets not met, adjust expectations or optimize implementation.
 
 **Timeout Configuration** (derived from targets):
+
 - ACK timeout: 2000ms (2.5× p99 target)
 - Heartbeat timeout: 10s (max(3× ACK, 10s))
 - Global cleanup: 30s (safety margin for stuck ACKs)
 
 **Reliability**:
+
 - Chaos suite passes (5/5 tests)
 - Retransmit rate < 0.5%
 - Zero duplicate processing
@@ -931,6 +980,7 @@ These targets are based on smart home user experience research and human percept
 Before proceeding to Phase 2 (Canary Deployment), ALL criteria must be met:
 
 ### Must-Pass Criteria
+
 - [ ] All 5 sub-phases (0.5, 1a, 1b, 1c, 1d) complete with acceptance criteria met
 - [ ] Chaos suite passes (5/5 tests, deterministic + high-volume probabilistic)
 - [ ] Performance targets met:
@@ -949,6 +999,7 @@ Before proceeding to Phase 2 (Canary Deployment), ALL criteria must be met:
 Bug classification for Phase 1 completion:
 
 **CRITICAL** (Must fix before completion):
+
 - Data loss or corruption (messages dropped silently, state incorrect)
 - Connection failure rate > 1% under normal conditions
 - Memory leak > 10% growth per hour
@@ -957,6 +1008,7 @@ Bug classification for Phase 1 completion:
 - Crash or unrecoverable error requiring restart
 
 **HIGH** (Document and monitor):
+
 - Rare edge case failure < 0.1% rate (e.g., 1 failure per 1000 operations)
 - Performance degradation: p99 latency between 1× and 2× target
 - Intermittent connection issues (automatic recovery within 30s)
@@ -964,6 +1016,7 @@ Bug classification for Phase 1 completion:
 - Retry exhaustion on specific device firmware versions
 
 **MEDIUM** (Document and defer to Phase 2):
+
 - UI inconsistencies (cosmetic issues, no functional impact)
 - Non-critical metrics missing or incomplete
 - Performance inefficiency (not impacting SLOs)
@@ -971,12 +1024,14 @@ Bug classification for Phase 1 completion:
 - Enhancement requests
 
 **LOW** (Track in backlog):
+
 - Documentation gaps or typos
 - Code style issues (already passing linters)
 - Feature requests for future phases
 - Minor logging improvements
 
 **Handling Bugs**:
+
 - CRITICAL: Fix before Phase 1 complete
 - HIGH: Document mitigation, add monitoring
 - MEDIUM/LOW: Track in backlog for later phases
@@ -986,4 +1041,3 @@ Bug classification for Phase 1 completion:
 ## Next Phase
 
 Phase 2: Canary deployment with SLO monitoring (see `03-phase-2-spec.md`)
-

@@ -9,12 +9,14 @@ This guide documents the new logging system and refactoring patterns for upgradi
 ### 1. Logging Abstraction (`logging_abstraction.py`)
 
 **Features:**
+
 - Dual-format output (JSON + human-readable)
 - Structured context support via `extra` parameter
 - Automatic correlation ID injection
 - Configurable via environment variables
 
 **Usage:**
+
 ```python
 from cync_controller.logging_abstraction import get_logger
 
@@ -47,11 +49,13 @@ logger.exception(
 ### 2. Correlation Tracking (`correlation.py`)
 
 **Features:**
+
 - Async-safe correlation ID storage
 - Auto-generation for new contexts
 - Manual override for testing
 
 **Usage:**
+
 ```python
 from cync_controller.correlation import correlation_context, ensure_correlation_id
 
@@ -69,11 +73,13 @@ async def test_critical_path():
 ### 3. Performance Instrumentation (`instrumentation.py`)
 
 **Features:**
+
 - Automatic timing for operations
 - Configurable threshold warnings
 - On/off toggle via environment variable
 
 **Usage:**
+
 ```python
 from cync_controller.instrumentation import timed_async
 
@@ -89,12 +95,14 @@ async def read_packet(reader):
 ### Pattern 1: Replace Old Logger with New Logger
 
 **Before:**
+
 ```python
 import logging
 logger = logging.getLogger(CYNC_LOG_NAME)
 ```
 
 **After:**
+
 ```python
 from cync_controller.logging_abstraction import get_logger
 logger = get_logger(__name__)
@@ -103,6 +111,7 @@ logger = get_logger(__name__)
 ### Pattern 2: Remove `lp` (Log Prefix) Pattern
 
 **Before:**
+
 ```python
 def some_method(self):
     lp = f"{self.lp}some_method:"
@@ -111,6 +120,7 @@ def some_method(self):
 ```
 
 **After:**
+
 ```python
 def some_method(self):
     logger.info("→ Starting operation")
@@ -123,11 +133,13 @@ def some_method(self):
 ### Pattern 3: Add Structured Context
 
 **Before:**
+
 ```python
 logger.info("Device %s connected at %s", device_id, ip_addr)
 ```
 
 **After:**
+
 ```python
 logger.info(
     "✓ Device connected",
@@ -141,12 +153,14 @@ logger.info(
 ### Pattern 4: Improve Error Logging
 
 **Before:**
+
 ```python
 except Exception:
     logger.exception("Error in operation")
 ```
 
 **After:**
+
 ```python
 except Exception as e:
     logger.exception(
@@ -162,6 +176,7 @@ except Exception as e:
 ### Pattern 5: Add Entry/Exit Logging for Async Operations
 
 **Before:**
+
 ```python
 async def process_command(device_id, command):
     # No entry/exit logging
@@ -170,6 +185,7 @@ async def process_command(device_id, command):
 ```
 
 **After:**
+
 ```python
 async def process_command(device_id, command):
     ensure_correlation_id()  # Ensure correlation tracking
@@ -198,12 +214,14 @@ async def process_command(device_id, command):
 ### Pattern 6: Add Performance Timing
 
 **Before:**
+
 ```python
 async def publish_message(topic, payload):
     await client.publish(topic, payload)
 ```
 
 **After:**
+
 ```python
 @timed_async("mqtt_publish")
 async def publish_message(topic, payload):
@@ -334,10 +352,10 @@ CYNC_PERF_THRESHOLD_MS=100
 ## Examples from Refactored Code
 
 See `main.py` and `server.py` for complete examples of:
+
 - Application lifecycle logging
 - Cloud relay connection logging
 - TCP device management logging
 - Structured context usage
 - Correlation tracking integration
 - Performance instrumentation
-

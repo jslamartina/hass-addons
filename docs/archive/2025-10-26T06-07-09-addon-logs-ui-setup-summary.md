@@ -33,16 +33,16 @@ Home Assistant Supervisor requires access to systemd journal to retrieve and dis
 **New primary aliases (journald-based):**
 
 ```bash
-cync-logs         # View all logs via journalctl
-cync-logs-follow  # Follow logs in real-time
-cync-logs-tail    # View last 100 lines
+cync-logs        # View all logs via journalctl
+cync-logs-follow # Follow logs in real-time
+cync-logs-tail   # View last 100 lines
 ```
 
 **Fallback aliases (Docker-based):**
 
 ```bash
-cync-logs-docker         # Direct Docker logs access
-cync-logs-docker-follow  # Follow Docker logs
+cync-logs-docker        # Direct Docker logs access
+cync-logs-docker-follow # Follow Docker logs
 ```
 
 ### 4. Created Documentation
@@ -138,6 +138,7 @@ Web UI (Logs tab)
 ## Next Steps for User
 
 1. **Open the add-on logs page** in your browser:
+
    ```
    http://localhost:8123/hassio/addon/local_cync-controller/logs
    ```
@@ -148,8 +149,8 @@ Web UI (Logs tab)
 
 4. **Try the new aliases** (in a new shell):
    ```bash
-   cync-logs-tail       # View recent logs
-   cync-logs-follow     # Follow logs in real-time
+   cync-logs-tail   # View recent logs
+   cync-logs-follow # Follow logs in real-time
    ```
 
 ## Troubleshooting
@@ -164,18 +165,4 @@ If logs still don't appear:
 
 ---
 
-*This document provides a summary of changes made to enable add-on logs UI in the devcontainer environment.*
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+_This document provides a summary of changes made to enable add-on logs UI in the devcontainer environment._

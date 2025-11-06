@@ -7,20 +7,25 @@
 ## Source Code Location
 
 All Python source code for the Cync Controller add-on is located in this directory:
+
 - `src/cync_lan/` - Python package source code
 - `pyproject.toml` - Package configuration and dependencies
 
 ## 🆕 Enhanced Development Features (v0.0.4.4)
 
 ### Cloud Relay Mode (WIP)
+
 New MITM proxy functionality for packet inspection and debugging:
+
 - **Transparent proxy** between devices and cloud
 - **Packet inspection** and real-time logging
 - **Multiple operating modes** for different use cases
 - **File-based packet injection** for testing
 
 ### MCP Integration
+
 Advanced AI agent development tools:
+
 - **6 specialized MCP servers** for enhanced capabilities
 - **Docker management** for container inspection
 - **Python code execution** with filesystem access
@@ -28,7 +33,9 @@ Advanced AI agent development tools:
 - **Filesystem operations** for bulk file transformations
 
 ### Ruff Linting
+
 **10-100x faster** Python linting and formatting:
+
 - **Replaced Pylint** with Ruff (Rust-based)
 - **Auto-fix on save** in VS Code/Cursor
 - **Comprehensive rule set** (E, W, F, I, N, UP, B, C4, etc.)
@@ -37,12 +44,14 @@ Advanced AI agent development tools:
 ## Development Workflow
 
 ### Basic Workflow
+
 1. Edit code in `src/cync_lan/` or `pyproject.toml`
 2. **Run `./rebuild.sh` to rebuild and restart the add-on**
 3. Check logs: `ha addons logs local_cync-controller`
 4. Test functionality in Home Assistant
 
 ### Enhanced Workflow (v0.0.4.4)
+
 1. Edit code in `src/cync_lan/` or `pyproject.toml`
 2. **Run linting**: `npm run lint:python:fix` (auto-fixes issues)
 3. **Run formatting**: `npm run format:python` (formats code)
@@ -50,6 +59,7 @@ Advanced AI agent development tools:
 5. **Test**: Use automated scripts for configuration and validation
 
 ### Testing Workflow
+
 ```bash
 # Programmatic configuration
 ./scripts/configure-addon.sh preset-relay-debug
@@ -72,6 +82,7 @@ ha addons logs local_cync-controller --follow | grep -i "relay\|cloud"
 ## Development Tools
 
 ### Quick Commands
+
 ```bash
 # Lint and format all code
 npm run lint && npm run format
@@ -90,6 +101,7 @@ ha addons rebuild local_cync-controller
 ```
 
 ### MCP Servers Available
+
 - **mcp-server-time** - Timezone operations and scheduling
 - **mcp-python-interpreter** - Native Python code execution
 - **mcp-server-docker** - Container management and inspection

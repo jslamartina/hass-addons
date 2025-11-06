@@ -38,37 +38,44 @@ Rules that only apply to specific file types (Python, shell scripts, etc.):
 Context-specific rules that can be referenced on demand:
 
 #### Quick Reference & Navigation
+
 14. **[quick-start.mdc](.cursor/rules/quick-start.mdc)** - Navigation index to all rules
 15. **[daily-dev-cheatsheet.mdc](.cursor/rules/daily-dev-cheatsheet.mdc)** - Most common daily commands
 
 #### Setup & Requirements
+
 16. **[dns-requirements.mdc](.cursor/rules/dns-requirements.mdc)** - DNS redirection setup (REQUIRED)
 17. **[token-creation-flow.mdc](.cursor/rules/token-creation-flow.mdc)** - Automated LLAT creation
 18. **[devcontainer-quirks.mdc](.cursor/rules/devcontainer-quirks.mdc)** - Dev environment setup
 
 #### Helper Tools & Automation
+
 19. **[helper-scripts.mdc](.cursor/rules/helper-scripts.mdc)** - Automation scripts and tools
 20. **[mqtt-entity-cleanup.mdc](.cursor/rules/mqtt-entity-cleanup.mdc)** - Entity deletion workflows
 21. **[common-commands.mdc](.cursor/rules/common-commands.mdc)** - Command reference
 22. **[mcp-tools-guide.mdc](.cursor/rules/mcp-tools-guide.mdc)** - MCP tools usage
 
 #### Testing & Debugging
+
 23. **[testing-workflows.mdc](.cursor/rules/testing-workflows.mdc)** - Testing procedures
 24. **[ai-browser-testing.mdc](.cursor/rules/ai-browser-testing.mdc)** - Playwright browser automation
 25. **[debugging-guide.mdc](.cursor/rules/debugging-guide.mdc)** - Debug techniques
 26. **[known-bugs-workarounds.mdc](.cursor/rules/known-bugs-workarounds.mdc)** - Bug patterns and fixes
 
 #### Architecture & Patterns
+
 27. **[architecture-concepts.mdc](.cursor/rules/architecture-concepts.mdc)** - Key architectural patterns
 28. **[repository-structure.mdc](.cursor/rules/repository-structure.mdc)** - Project structure
 29. **[supervisor-api-access.mdc](.cursor/rules/supervisor-api-access.mdc)** - Supervisor API patterns
 30. **[cloud-relay-patterns.mdc](.cursor/rules/cloud-relay-patterns.mdc)** - Cloud relay mode usage
 
 #### Performance & Optimization
+
 31. **[performance-tuning.mdc](.cursor/rules/performance-tuning.mdc)** - Performance tuning and optimization
 32. **[logging-examples.mdc](.cursor/rules/logging-examples.mdc)** - Logging patterns
 
 #### Documentation & Process
+
 33. **[documentation-archiving.mdc](.cursor/rules/documentation-archiving.mdc)** - Documentation archiving
 34. **[pr-checklist.mdc](.cursor/rules/pr-checklist.mdc)** - PR submission checklist
 

@@ -1,4 +1,5 @@
 <!-- 064fc85a-f42a-4957-a0fb-6fe899fde1ac 619cd7b8-2b1f-4fed-87d2-76d3b4b4e4b6 -->
+
 # Cleanup Duplicate Files After Consolidation
 
 ## Current Situation
@@ -102,6 +103,7 @@ The `rebuild.sh` script syncs files to `cync-controller/` because Docker's build
 ### Steps:
 
 1. **Add build-time copies to .gitignore:**
+
    ```gitignore
    # Build-time copies (synced from ../src by rebuild.sh)
    cync-controller/src/
@@ -109,16 +111,17 @@ The `rebuild.sh` script syncs files to `cync-controller/` because Docker's build
    ```
 
 2. **Update rebuild.sh with clear comments:**
+
    ```bash
    #!/bin/bash
    set -e
-
+   
    # Sync source code from primary location (../src) to build directory
    # These are build-time copies required for Docker build context
    echo "Syncing cync-controller source code from ../src..."
    rsync -av --delete ../src/ src/ --exclude='__pycache__' --exclude='*.pyc'
    cp ../pyproject.toml pyproject.toml
-
+   
    echo "Rebuilding addon..."
    ha addons rebuild local_cync-controller
    # ... rest
@@ -128,16 +131,16 @@ The `rebuild.sh` script syncs files to `cync-controller/` because Docker's build
 
 Create `cync-controller/README-DEV.md`:
 
-   ```markdown
-   # Developer Note
+```markdown
+# Developer Note
 
-   The `src/` and `pyproject.toml` in this directory are **build-time copies**
-   synced from `../src/` and `../pyproject.toml` by `rebuild.sh`.
+The `src/` and `pyproject.toml` in this directory are **build-time copies**
+synced from `../src/` and `../pyproject.toml` by `rebuild.sh`.
 
-   **DO NOT EDIT FILES HERE** - Edit the primary source in `../src/cync_lan/` instead.
+**DO NOT EDIT FILES HERE** - Edit the primary source in `../src/cync_lan/` instead.
 
-   These copies exist because Docker's build context is limited to this directory.
-   ```
+These copies exist because Docker's build context is limited to this directory.
+```
 
 4. **Update AGENTS.md to explain the structure:**
 
@@ -166,22 +169,26 @@ This would require testing and may not work with HA's builder system.
 All tasks from the cync-controller repository consolidation have been successfully completed:
 
 ### 1. Repository Consolidation
+
 - ✅ Moved Python source from separate repo to `hass-addons/src/cync_lan/`
 - ✅ Moved documentation to appropriate locations (developer/, protocol/)
 - ✅ Updated all references and URLs
 
 ### 2. Build System
+
 - ✅ Updated Dockerfile to use local source
 - ✅ Updated rebuild.sh to sync from primary source
 - ✅ Gitignored build-time copies
 
 ### 3. Documentation
+
 - ✅ Fixed all file paths referencing old cync-controller repo
 - ✅ Cleaned up confusing documentation files
 - ✅ Each file now has clear purpose for its audience
 - ✅ Updated AGENTS.md with plan update workflow instructions
 
 ### 4. Testing
+
 - ✅ Add-on builds and runs successfully
 - ✅ Manufacturer field corrected to "Savant"
 - ✅ All repository URLs updated to jslamartina/hass-addons

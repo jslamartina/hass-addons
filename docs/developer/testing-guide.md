@@ -11,6 +11,7 @@
 This guide captures the testing patterns and best practices we've established while building the unit test suite for the Cync Controller add-on. Use this as a reference when writing new tests or extending existing test coverage.
 
 **Current Test Suite:**
+
 - **192 unit tests** across 7 test files
 - **35.33% overall coverage** (critical modules at 95-100%)
 - **< 0.4s execution time** for full suite ⚡
@@ -34,12 +35,14 @@ This guide captures the testing patterns and best practices we've established wh
 ### Why These Tests Exist
 
 The Cync Controller add-on has complex async workflows involving:
+
 - TCP packet parsing and validation (critical for protocol correctness)
 - MQTT communication with Home Assistant
 - Device state management and command handling
 - Cloud API authentication and device export
 
 **Key Testing Goals:**
+
 1. ✅ Enable confident refactoring of packet parsing logic
 2. ✅ Prevent regressions in core business logic
 3. ✅ Document expected behavior through tests
@@ -186,6 +189,7 @@ class TestParseCyncPacket:
 ```
 
 **Key Patterns:**
+
 - Use `bytes.fromhex()` for readability
 - Test both valid and malformed packets
 - Parametrize for multiple packet types
@@ -211,6 +215,7 @@ class TestCyncDevice:
 ```
 
 **Key Patterns:**
+
 - Test initialization with/without optional params
 - Validate property setters enforce constraints
 - Mock global state (`g`) to avoid dependencies
@@ -246,6 +251,7 @@ class TestMQTTClient:
 ```
 
 **Key Patterns:**
+
 - Reset singleton between tests with `@pytest.fixture(autouse=True)`
 - Set `_connected = True` for methods that check connection
 - Mock `aiomqtt.Client` to avoid actual MQTT connections
@@ -271,6 +277,7 @@ class TestNCyncServer:
 ```
 
 **Key Patterns:**
+
 - Mock all environment variables via `mock_g.env`
 - Mock event loop to avoid runtime errors
 - Use real `CyncTCPDevice` instances for device management tests
@@ -303,6 +310,7 @@ class TestCyncCloudAPI:
 ```
 
 **Key Patterns:**
+
 - Mock `aiohttp.ClientSession` and responses
 - Use correct field names (`expire_in` not `expires_in`, `refresh_token`)
 - Reset singleton between tests
@@ -394,6 +402,7 @@ with patch("cync_lan.cloud_api.Path") as mock_path:
 **Problem:** Tests interfere with each other when singletons persist.
 
 **Solution:**
+
 ```python
 @pytest.fixture(autouse=True)
 def reset_singleton():
@@ -407,6 +416,7 @@ def reset_singleton():
 **Problem:** `asyncio.gather()` fails with "An asyncio.Future, a coroutine or an awaitable is required"
 
 **Solution:**
+
 ```python
 # ❌ WRONG
 mock_device.write = MagicMock()
@@ -415,11 +425,12 @@ mock_device.write = MagicMock()
 mock_device.write = AsyncMock()
 ```
 
-### Pitfall 3: Missing _connected Flag
+### Pitfall 3: Missing \_connected Flag
 
 **Problem:** MQTT publish methods return False instead of True.
 
 **Solution:**
+
 ```python
 client = MQTTClient()
 client._connected = True  # Required!
@@ -431,6 +442,7 @@ client.client.publish = AsyncMock()
 **Problem:** Pydantic validation errors due to wrong field names.
 
 **Solution:** Check the actual struct definition:
+
 ```python
 # ❌ WRONG
 ComputedTokenData(expires_in=3600)
@@ -444,6 +456,7 @@ ComputedTokenData(expire_in=3600, refresh_token="...")
 **Problem:** "RuntimeError: no running event loop" when setting properties.
 
 **Solution:**
+
 ```python
 with patch("cync_lan.devices.asyncio.get_running_loop") as mock_loop:
     mock_loop.return_value.create_task = MagicMock()
@@ -455,6 +468,7 @@ with patch("cync_lan.devices.asyncio.get_running_loop") as mock_loop:
 **Problem:** Large device IDs cause "bytes must be in range(0, 256)" errors.
 
 **Solution:**
+
 ```python
 # ❌ PROBLEMATIC
 device = CyncDevice(cync_id=0x1234)  # Large ID in packet creation
@@ -580,9 +594,9 @@ pytest tests/unit/ -s
 ### NPM Scripts
 
 ```bash
-npm run test:unit          # Run all unit tests
-npm run test:unit:cov      # Run with coverage report
-npm run test:unit:fast     # Fast fail on first error
+npm run test:unit      # Run all unit tests
+npm run test:unit:cov  # Run with coverage report
+npm run test:unit:fast # Fast fail on first error
 ```
 
 ### Coverage Reports
@@ -627,8 +641,8 @@ open cync-controller/htmlcov/index.html
 
 Based on Phase 1 & 2 results:
 
-| Module                   | Target | Achieved | Status         | Notes                                 |
-| ------------------------ | ------ | -------- | -------------- | ------------------------------------- |
+| Module                   | Target | Achieved | Status          | Notes                                 |
+| ------------------------ | ------ | -------- | --------------- | ------------------------------------- |
 | `packet_parser.py`       | 90%+   | 95.76%   | ✅ **EXCEEDED** | Critical - enables protocol work      |
 | `packet_checksum.py`     | 95%+   | 100%     | ✅ **EXCEEDED** | Critical - validates packet integrity |
 | `const.py`               | 90%+   | 90.70%   | ✅ **MET**      | Configuration constants               |
@@ -662,6 +676,7 @@ The project includes a Playwright-based end-to-end (e2e) test that validates the
 #### Setup
 
 One-time browser installation:
+
 ```bash
 npm run playwright:install
 ```
@@ -722,9 +737,9 @@ The happy path test (`cync-controller/tests/e2e/happy-path.spec.ts`) performs th
 ```bash
 # Customize Home Assistant URL and credentials
 HA_BASE_URL=http://localhost:8123 \
-HA_USERNAME=dev \
-HA_PASSWORD=dev \
-npm run playwright:test
+  HA_USERNAME=dev \
+  HA_PASSWORD=dev \
+  npm run playwright:test
 ```
 
 #### Artifacts and Debugging
@@ -742,6 +757,7 @@ playwright-report/     # HTML report (open in browser)
 ```
 
 View the HTML report:
+
 ```bash
 npx playwright show-report
 ```
@@ -757,19 +773,23 @@ npx playwright show-report
 #### Troubleshooting
 
 **Test times out waiting for state flip**
+
 - Device may be offline or slow to ACK
 - Increase timeout in test: `toPass({ timeout: 30000 })`
 - Check `ha addons logs local_cync-controller` for errors
 
 **"Element intercepts pointer events" errors**
+
 - Use click helpers or parent container clicks
 - See `docs/developer/browser-automation.md` for solutions
 
 **MQTT entities not found**
+
 - Run optional cleanup (above) to ensure entities are published
 - Check `ha addons logs local_cync-controller | grep -i discovery`
 
 **Login fails**
+
 - Verify credentials in `hass-credentials.env`
 - Clear browser session: `rm -rf ~/.cache/ms-playwright`
 - Check HA logs: `ha logs --follow`
@@ -781,6 +801,7 @@ npx playwright show-report
 ### Common Test Failures
 
 **"RuntimeError: no running event loop"**
+
 ```python
 # Fix: Mock get_running_loop
 with patch("module.asyncio.get_running_loop") as mock_loop:
@@ -788,12 +809,14 @@ with patch("module.asyncio.get_running_loop") as mock_loop:
 ```
 
 **"TypeError: object MagicMock can't be used in 'await' expression"**
+
 ```python
 # Fix: Use AsyncMock instead of MagicMock
 mock_obj.async_method = AsyncMock()  # Not MagicMock()
 ```
 
 **"assert False is True" (method returns False unexpectedly)**
+
 ```python
 # Common causes:
 # 1. Missing _connected flag (MQTT methods)
@@ -807,6 +830,7 @@ mock_method = AsyncMock(return_value=True)  # Add return_value!
 ```
 
 **Pydantic validation errors**
+
 ```python
 # Fix: Check actual struct definition for required fields
 # Example: ComputedTokenData needs expire_in, refresh_token, etc.
@@ -824,4 +848,3 @@ mock_method = AsyncMock(return_value=True)  # Add return_value!
 ---
 
 _Last updated: October 26, 2025_
-

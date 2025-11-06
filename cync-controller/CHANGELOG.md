@@ -1,12 +1,15 @@
 ## 0.0.4.14
+
 **Refactoring and Test Infrastructure Improvements**
 
 ### Fixed
+
 - **Container deployment**: Fixed config.yaml image line being commented out, which prevented proper container deployment
   - Impact: Add-on now deploys correctly from container registry
   - Location: `config.yaml` line 5
 
 ### Changed
+
 - **MQTT client refactoring**: Major restructuring of MQTT client for improved maintainability
   - Modularized device discovery and classification logic
   - Moved slugify and discovery logic to dedicated mqtt module
@@ -26,14 +29,17 @@
   - Location: `tests/` directory
 
 ### Technical Details
+
 - Refactored MQTT discovery to improve code readability and maintainability
 - Enhanced onboarding automation capabilities
 - Zero breaking changes - backward compatible with existing configuration
 
 ## 0.0.4.13
+
 **Production-Grade Logging, Test Infrastructure, and Bug Fixes**
 
 ### Added
+
 - **Structured Logging System**: Production-grade logging with dual-format output
   - JSON format for machine parsing: `/var/log/cync_controller.json`
   - Human-readable format for developer console
@@ -54,6 +60,7 @@
 - Comprehensive logging for token caching operations
 
 ### Fixed
+
 - **Bug: Random Device Offline Issues**: Fixed devices randomly going offline despite being connected
   - Root cause: Race condition between offline detection and MQTT status updates
   - Fix: Single source of truth for device availability in `server.parse_status()`
@@ -86,6 +93,7 @@
   - Location: `devices.py` `aggregate_member_states()` method - added filter to exclude `is_switch` devices
 
 ### Changed
+
 - **Logging Refactoring**: All Python modules migrated to structured logging
   - `main.py`: Application lifecycle logging with correlation context
   - `server.py`: TCP/cloud relay operations with structured logging
@@ -96,6 +104,7 @@
   - `exporter.py`: Export server lifecycle logging
 
 ### Technical Details
+
 - New core modules: `logging_abstraction.py`, `correlation.py`, `instrumentation.py`
 - Structured logging with key=value context pairs throughout codebase
 - Visual prefixes in logs: ═ (separators), ✓ (success), → (operations), ⚠️ (warnings), ✗ (errors)
@@ -105,29 +114,35 @@
 - Zero breaking changes - backward compatible with existing configuration
 
 ## 0.0.4.12
+
 **Enhancement: Fan Speed Control Improvements**
 
 ### Fixed
+
 - **Fan preset mode persistence**: Fan entities now correctly persist preset mode state across UI reopens and addon restarts
   - Added `retain=True` to preset mode MQTT messages
   - Preset mode now publishes in three locations: command execution, status updates, and initial discovery
   - Impact: Fan preset mode (off/low/medium/high/max) now persists correctly in Home Assistant UI
 
 ### Changed
+
 - **Fan control UI**: Removed percentage slider from fan entities
   - Fan devices only support discrete preset modes (off, low, medium, high, max)
   - UI now only shows preset mode buttons for clearer user experience
   - Brightness mapping: 0→off, 25→low, 50→medium, 75→high, 100→max
 
 ### Added
+
 - Initial preset mode publishing during device discovery
 - Preset mode publishing on device status updates (0x83 packets)
 - Comprehensive logging for fan preset mode changes
 
 ## 0.0.4.6
+
 **Maintenance: Complete Rebranding to Cync Controller**
 
 ### Changed
+
 - Renamed from "CyncLAN" to "Cync Controller" throughout entire codebase
 - Updated all paths: `/root/cync-lan/` → `/root/cync-controller/`
 - Updated storage paths: `/homeassistant/.storage/cync-lan/` → `/homeassistant/.storage/cync-controller/`
@@ -135,9 +150,11 @@
 - Updated documentation and developer guides
 
 ## 0.0.4.4
+
 **Enhancement: MQTT Discovery Improvements**
 
 ### Changed
+
 - **Name-based entity IDs**: Entities now use friendly names instead of numeric IDs
   - Before: `light.cync_lan_467454691_119`
   - After: `light.hallway_lights`
@@ -149,6 +166,7 @@
 - **State updates**: All state messages now include `color_mode` field
 
 ### Added
+
 - Type 171 device mapping: Cync Full Color Direct Connect A19 Bulb (CLEDA1921C4)
   - Full RGB color support
   - Tunable white (2000K-7000K)
@@ -157,14 +175,17 @@
 - Documentation: Cloud relay mode limitations (read-only, no commands)
 
 ### Fixed
+
 - Python 3.13 compatibility: Replaced `asyncio.get_event_loop()` with `asyncio.new_event_loop()`
 - Groups without color support now properly declare `supported_color_modes: ["brightness"]`
 - Individual devices without color support now properly declare `supported_color_modes: ["brightness"]`
 
 ## 0.0.4.3
+
 **Enhancement: Smart Area Grouping for Devices**
 
 ### Added
+
 - **Automatic area detection**: Devices now automatically suggest their room/area based on name
   - Feature: Extracts area name from device names (e.g., "Hallway Front Switch" → suggests "Hallway" area)
   - Benefit: Devices with similar names are now grouped together on the Home Assistant dashboard

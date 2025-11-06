@@ -16,6 +16,7 @@ This directory contains comprehensive documentation for the TCP communication la
 ### Discovery & Planning
 
 **[00-discovery.md](00-discovery.md)** - Current System Analysis
+
 - File map and code survey
 - Current TCP flow diagram
 - Identified failure modes
@@ -25,6 +26,7 @@ This directory contains comprehensive documentation for the TCP communication la
 ### Implementation Phases
 
 **[01-phase-0.md](01-phase-0.md)** - Phase 0: Toggle + Log Harness ✓ **COMPLETE**
+
 - Minimal toggler with JSON logging
 - Prometheus metrics endpoint
 - TCP transport abstraction
@@ -32,6 +34,7 @@ This directory contains comprehensive documentation for the TCP communication la
 - **Status**: Delivered and validated
 
 **[02-phase-1-spec.md](02-phase-1-spec.md)** - Phase 1 Program: Reliable Transport Layer
+
 - **Status**: Split into focused sub-phases
 - **Total Effort**: ~4 weeks (split into 5 increments)
 - **Sub-Phases**:
@@ -49,6 +52,7 @@ This directory contains comprehensive documentation for the TCP communication la
     - Realistic device simulator with chaos injection
 
 **[03-phase-2-spec.md](03-phase-2-spec.md)** - Phase 2: Canary Deployment
+
 - Traffic routing (10-50% canary)
 - SLO monitoring and dashboards
 - Error budget tracking
@@ -58,6 +62,7 @@ This directory contains comprehensive documentation for the TCP communication la
 - **Effort**: ~3-4 weeks, 2 engineers + 1 SRE
 
 **[04-phase-3-spec.md](04-phase-3-spec.md)** - Phase 3: Full Migration
+
 - 100% traffic cutover
 - Legacy code deprecation
 - Operational handoff
@@ -72,22 +77,23 @@ This directory contains comprehensive documentation for the TCP communication la
 
 ### Phase Summary
 
-| Phase | Status | Effort | Deliverables |
-|-------|--------|--------|--------------|
-| Phase 0 | ✓ Complete | 1-2 weeks | Toggler, metrics, tests, docs |
-| Phase 0.5 | Planned | 3-5 days | Protocol validation, real packet captures |
-| Phase 1a | Planned | 1 week | Cync protocol codec |
-| Phase 1b | Planned | 1 week | Reliable transport (ACK/NACK, retry, dedup) |
-| Phase 1c | Planned | 3-4 days | Backpressure & queues |
-| Phase 1d | Planned | 1 week | Device simulator, chaos tests |
-| Phase 2 | Planned | 3-4 weeks | Canary deployment, monitoring |
-| Phase 3 | Planned | 4-6 weeks | Full migration, deprecation |
+| Phase     | Status     | Effort    | Deliverables                                |
+| --------- | ---------- | --------- | ------------------------------------------- |
+| Phase 0   | ✓ Complete | 1-2 weeks | Toggler, metrics, tests, docs               |
+| Phase 0.5 | Planned    | 3-5 days  | Protocol validation, real packet captures   |
+| Phase 1a  | Planned    | 1 week    | Cync protocol codec                         |
+| Phase 1b  | Planned    | 1 week    | Reliable transport (ACK/NACK, retry, dedup) |
+| Phase 1c  | Planned    | 3-4 days  | Backpressure & queues                       |
+| Phase 1d  | Planned    | 1 week    | Device simulator, chaos tests               |
+| Phase 2   | Planned    | 3-4 weeks | Canary deployment, monitoring               |
+| Phase 3   | Planned    | 4-6 weeks | Full migration, deprecation                 |
 
 **Total Program**: ~13-17 weeks (3.5-4.5 months)
 
 ### Key Decisions
 
 **Phase 0 Decisions** (Implemented):
+
 - Python 3.13 (latest GA)
 - Minimal dependencies (prometheus-client only)
 - JSON structured logging (stdlib)
@@ -95,6 +101,7 @@ This directory contains comprehensive documentation for the TCP communication la
 - Asyncio TCP transport with timeouts
 
 **Phase 1 Decisions** (Specified):
+
 - ACK/NACK explicit frames
 - UUIDv7 for msg_id (sortable)
 - LRU deduplication (1000 entry cache, 5min TTL)
@@ -102,6 +109,7 @@ This directory contains comprehensive documentation for the TCP communication la
 - Real Cync protocol (0x73, 0x83, 0x43 support)
 
 **Phase 2 Decisions** (Specified):
+
 - Hash-based canary routing (sticky per device)
 - Dark launch before cutover
 - SLO targets: 99.9% success, p99 < 1.5s
@@ -109,6 +117,7 @@ This directory contains comprehensive documentation for the TCP communication la
 - Error budget tracking (30-day window)
 
 **Phase 3 Decisions** (Specified):
+
 - Gradual increase: 75% → 90% → 100%
 - 30-day validation at 100%
 - Deprecate then remove legacy code
@@ -119,6 +128,7 @@ This directory contains comprehensive documentation for the TCP communication la
 ## Architecture Evolution
 
 ### Phase 0 (Current)
+
 ```
 [Toggler CLI] → [TCPConnection] → [Device]
                       ↓
@@ -127,6 +137,7 @@ This directory contains comprehensive documentation for the TCP communication la
 ```
 
 ### Phase 1 (Target)
+
 ```
 [Application] → [ReliableTransport] → [TCPConnection] → [Device]
                      ↓                      ↑
@@ -139,6 +150,7 @@ This directory contains comprehensive documentation for the TCP communication la
 ```
 
 ### Phase 2 (Canary)
+
 ```
 [Application] → [CanaryRouter] ─→ [ReliableTransport (new)] → [Device]
                      ├──────────→ [LegacyTransport] → [Device]
@@ -149,6 +161,7 @@ This directory contains comprehensive documentation for the TCP communication la
 ```
 
 ### Phase 3 (Final)
+
 ```
 [Application] → [ReliableTransport] → [Device]
                      ↓
@@ -197,43 +210,47 @@ tcp_comm_error_budget_remaining{slo_name}
 
 ### Production SLOs (Phase 2+)
 
-| SLO | Target | Window | Error Budget |
-|-----|--------|--------|--------------|
-| Toggle Success Rate | 99.9% | 30d | 0.1% |
-| Toggle Latency (p99) | ≤ 1500ms | 7d | N/A |
-| Packet Loss Rate | < 1% | 24h | N/A |
-| Decode Error Rate | < 0.1% | 24h | N/A |
-| Queue Full Rate | < 1% | 1h | N/A |
+| SLO                  | Target   | Window | Error Budget |
+| -------------------- | -------- | ------ | ------------ |
+| Toggle Success Rate  | 99.9%    | 30d    | 0.1%         |
+| Toggle Latency (p99) | ≤ 1500ms | 7d     | N/A          |
+| Packet Loss Rate     | < 1%     | 24h    | N/A          |
+| Decode Error Rate    | < 0.1%   | 24h    | N/A          |
+| Queue Full Rate      | < 1%     | 1h     | N/A          |
 
 ### Lab SLOs (Phase 1)
 
-| Metric | Target |
-|--------|--------|
-| p95 latency | < 300ms |
-| p99 latency | < 800ms |
-| Retransmit rate | < 0.5% |
+| Metric          | Target  |
+| --------------- | ------- |
+| p95 latency     | < 300ms |
+| p99 latency     | < 800ms |
+| Retransmit rate | < 0.5%  |
 
 ---
 
 ## Testing Strategy
 
 ### Phase 0 (Implemented)
+
 - ✓ 11 unit tests (100% pass)
 - ✓ Mock-based isolation
 - ✓ Integration with pytest-asyncio
 
 ### Phase 1 (Planned)
+
 - 30+ unit tests (reliability + dedup + queues)
 - 10+ integration tests with device simulator
 - 5+ chaos tests (latency, loss, reorder, partition)
 
 ### Phase 2 (Planned)
+
 - Dark launch validation
 - Canary testing (10%, 25%, 50%)
 - SLO compliance monitoring
 - Rollback testing
 
 ### Phase 3 (Planned)
+
 - 30-day production validation
 - Regression testing after cleanup
 - Load testing at 100%
@@ -261,6 +278,7 @@ tcp_comm_error_budget_remaining{slo_name}
 ## How to Use This Documentation
 
 ### For Engineers Implementing Phase 1 (Sub-Phases)
+
 1. Read `01-phase-0.md` to understand foundation
 2. Review `02-phase-1-spec.md` for overall Phase 1 program architecture
 3. **Start with Phase 0.5**: `02a-phase-0.5-protocol-validation.md`
@@ -275,6 +293,7 @@ tcp_comm_error_budget_remaining{slo_name}
 7. Use individual phase acceptance criteria for done definition
 
 ### For SRE Team (Phase 2)
+
 1. Review `03-phase-2-spec.md` for monitoring setup
 2. Set up Grafana dashboards from specs
 3. Configure Prometheus alerts
@@ -282,6 +301,7 @@ tcp_comm_error_budget_remaining{slo_name}
 5. Validate dark launch before canary
 
 ### For Product/Leadership
+
 1. Review this README for program overview
 2. Check phase summaries for timeline and effort
 3. Review SLO definitions for success criteria
@@ -349,4 +369,3 @@ A: Yes! This phased migration approach is reusable. See retrospective (Phase 3) 
 ---
 
 **Next Action**: Begin Phase 0.5 (protocol validation) - capture real device packets.
-

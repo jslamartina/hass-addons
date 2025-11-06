@@ -1,4 +1,5 @@
 <!-- 8491950f-d054-42c7-8d1b-4e673713adff 450a889c-7756-4931-916d-8e453a6aadea -->
+
 # Sync Switch On/Off States to Subgroup State
 
 **Status**: ✅ Completed and Tested
@@ -21,6 +22,7 @@ When a subgroup is controlled and the mesh confirms the state change, individual
 **File**: `cync-controller/src/cync_lan/mqtt_client.py` (lines 642-704)
 
 Added `update_switch_from_subgroup()` method that:
+
 - Validates device is a switch (`device.is_switch`)
 - Checks `pending_command` flag (individual commands take precedence)
 - Updates switch state and publishes to MQTT
@@ -39,6 +41,7 @@ async def update_switch_from_subgroup(self, device: CyncDevice, subgroup_state: 
 **File**: `cync-controller/src/cync_lan/server.py` (lines 607-617)
 
 Enhanced `NCyncServer.parse_status()` method to:
+
 - After publishing subgroup state, loop through member devices
 - Call helper method for each member to sync switch states
 - Only affects switches (lights unchanged)
@@ -66,6 +69,7 @@ for member_id in subgroup.member_ids:
 ## Testing Results ✅
 
 Verified:
+
 1. ✅ Turning on a subgroup turns on all member switches in Home Assistant
 2. ✅ Turning off a subgroup turns off all member switches in Home Assistant
 3. ✅ Individual switch commands still work and take precedence
@@ -82,4 +86,3 @@ Verified:
 - `cync-controller/src/cync_lan/mqtt_client.py` - Helper method implementation
 - `cync-controller/src/cync_lan/server.py` - Integration point in parse_status()
 - `cync-controller/src/cync_lan/devices.py` - CyncDevice and CyncGroup classes
-

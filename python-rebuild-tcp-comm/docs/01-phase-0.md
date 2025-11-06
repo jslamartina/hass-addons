@@ -10,6 +10,7 @@
 ## Goal
 
 Build a minimal, non-invasive toggler harness that:
+
 - Sends a single toggle command to one device
 - Logs all send/recv operations with structured JSON
 - Exposes Prometheus metrics
@@ -19,6 +20,7 @@ Build a minimal, non-invasive toggler harness that:
 ## Scope
 
 **In Scope:**
+
 - CLI toggler tool
 - TCP socket abstraction with timeouts
 - JSON structured logging
@@ -27,6 +29,7 @@ Build a minimal, non-invasive toggler harness that:
 - Per-packet `msg_id` generation
 
 **Out of Scope:**
+
 - Integration with existing add-on
 - Production deployment
 - OpenTelemetry/distributed tracing
@@ -69,6 +72,7 @@ For lab testing, we use a simple framed format:
 ```
 
 **Payload (JSON):**
+
 ```json
 {
   "opcode": "toggle",
@@ -158,6 +162,7 @@ ls -la scripts/
 ### Run Toggler (Multiple Ways)
 
 **Option 1: Using helper script (recommended)**
+
 ```bash
 # With defaults
 ./scripts/run.sh
@@ -173,6 +178,7 @@ ls -la scripts/
 ```
 
 **Option 2: Direct Python invocation**
+
 ```bash
 # Basic usage
 python -m rebuild_tcp_comm.harness.toggler \
@@ -203,6 +209,7 @@ python -m rebuild_tcp_comm.harness.toggler \
 ```
 
 **Option 3: Environment variables**
+
 ```bash
 # Set once
 export DEVICE_ID=DEVICE123
@@ -216,11 +223,13 @@ export DEVICE_PORT=9000
 ### View Metrics
 
 **Option 1: Using helper script**
+
 ```bash
 ./scripts/check-metrics.sh
 ```
 
 **Option 2: Direct curl**
+
 ```bash
 # In another terminal (while toggler is running or has run)
 curl http://localhost:9400/metrics
@@ -246,6 +255,7 @@ curl http://localhost:9400/metrics
 Phase 0 now includes both **unit tests** (11 tests with mocks) and **integration tests** (8 tests with real TCP server).
 
 **Option 1: Using helper scripts (recommended)**
+
 ```bash
 # Run ALL tests (unit + integration) - ~10-12 seconds
 ./scripts/test-all.sh
@@ -271,6 +281,7 @@ Phase 0 now includes both **unit tests** (11 tests with mocks) and **integration
 ```
 
 **Option 2: Direct pytest**
+
 ```bash
 # All tests (unit + integration)
 poetry run pytest -v
@@ -289,12 +300,14 @@ poetry run pytest --cov=rebuild_tcp_comm --cov-report=html
 ```
 
 **Test Artifacts Generated**:
+
 - `test-reports/integration-junit.xml` - JUnit XML report for CI/CD
 - `test-reports/performance-report.json` - Performance metrics (p50, p95, p99)
 
 ### Lint & Format
 
 **Option 1: Using helper scripts**
+
 ```bash
 # Check code quality
 ./scripts/lint.sh
@@ -307,6 +320,7 @@ poetry run pytest --cov=rebuild_tcp_comm --cov-report=html
 ```
 
 **Option 2: Direct commands**
+
 ```bash
 # Check
 poetry run ruff check .
@@ -339,6 +353,7 @@ poetry run mypy src tests
 **Added 2025-11-02**: Comprehensive integration testing with real TCP server.
 
 **Integration Test Suite** (`tests/integration/`):
+
 - **8 integration tests** covering end-to-end scenarios with real TCP sockets
 - **MockTCPServer fixture** - Realistic asyncio-based TCP server with configurable response modes:
   - `SUCCESS` - Immediate ACK response
@@ -358,6 +373,7 @@ poetry run mypy src tests
   - Metrics endpoint accessibility
 
 **Performance Tracking Features**:
+
 - Automatic collection of round-trip latency from successful commands
 - Statistical analysis: min, max, mean, standard deviation
 - Percentile reporting: p50, p95, p99
@@ -366,6 +382,7 @@ poetry run mypy src tests
 - Console report with color-coded pass/fail indicators
 
 **Integration Test Results** (Latest Run: 2025-11-02):
+
 ```
 Tests:        8/8 passing (100%)
 Duration:     ~14.6 seconds
@@ -375,6 +392,7 @@ p99 latency:  0.54ms ✅ (target: 800ms)
 ```
 
 **Documentation**:
+
 - Complete integration test documentation in `tests/integration/README.md`
 - Network flow diagrams in `docs/rebuild-tcp-comm/integration-test-network-flow.md`
 - Helper script usage in `scripts/README.md`
@@ -382,6 +400,7 @@ p99 latency:  0.54ms ✅ (target: 800ms)
 ### Implementation Summary
 
 **Code Delivered**:
+
 - `src/rebuild_tcp_comm/harness/toggler.py` - 382 lines
 - `src/rebuild_tcp_comm/transport/socket_abstraction.py` - 246 lines
 - `src/rebuild_tcp_comm/metrics/registry.py` - 79 lines
@@ -391,6 +410,7 @@ p99 latency:  0.54ms ✅ (target: 800ms)
 - `tests/integration/performance.py` - 182 lines (performance tracking)
 
 **Quality Metrics**:
+
 - **Unit test pass rate**: **100%** (11/11 tests)
 - **Integration test pass rate**: **100%** (8/8 tests)
 - **Total tests**: **19/19 passing** (100%)
@@ -399,6 +419,7 @@ p99 latency:  0.54ms ✅ (target: 800ms)
 - **Python version**: **3.13** (latest GA)
 
 **Performance Metrics** (Integration Tests):
+
 - **p50 latency**: 0.46ms (median round-trip time)
 - **p95 latency**: 0.54ms (well below 300ms target) ✅
 - **p99 latency**: 0.54ms (well below 800ms target) ✅
@@ -406,6 +427,7 @@ p99 latency:  0.54ms ✅ (target: 800ms)
 - **Zero threshold violations**: All performance targets exceeded
 
 **Additional Deliverables**:
+
 - 12 helper scripts in `scripts/` directory
   - `test.sh` - Run all tests
   - `test-unit.sh` - Run only unit tests (fast)
@@ -474,4 +496,3 @@ Phase 0 is complete ✅. Next actions:
 - ✅ **Documented**: Complete specifications, runbooks, and integration test guides
 - ✅ **Production-ready foundation**: Ready to build Phase 1 on top
 - ✅ **CI/CD ready**: Test reports and performance artifacts for automated pipelines
-

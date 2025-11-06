@@ -17,24 +17,27 @@ Automated MQTT integration configuration in the fresh Home Assistant setup scrip
 **Location:** `scripts/setup-fresh-ha.sh` lines 452-542
 
 **What it does:**
+
 1. Checks if MQTT credentials are available in `hass-credentials.env`
 2. Checks if MQTT integration already exists (idempotent)
 3. Creates MQTT config entry via Home Assistant config flow API
 4. Configures connection to EMQX broker running on localhost:1883
 
 **Configuration:**
+
 ```json
 {
   "broker": "localhost",
   "port": 1883,
-  "username": "$MQTT_USER",    // from hass-credentials.env
-  "password": "$MQTT_PASS"     // from hass-credentials.env
+  "username": "$MQTT_USER", // from hass-credentials.env
+  "password": "$MQTT_PASS" // from hass-credentials.env
 }
 ```
 
 ### Workflow Integration
 
 **Added to main() flow at Step 6.5:**
+
 ```bash
 # Step 6: Install and configure EMQX
 install_emqx
@@ -57,6 +60,7 @@ configure_cync_lan
 The function uses the Home Assistant config flow API to programmatically set up the integration:
 
 1. **Start config flow:**
+
    ```bash
    POST http://supervisor/core/api/config_entries/flow
    {
@@ -73,6 +77,7 @@ The function uses the Home Assistant config flow API to programmatically set up 
 2. **Extract flow_id from response**
 
 3. **Complete the flow:**
+
    ```bash
    POST http://supervisor/core/api/config_entries/flow/{flow_id}
    {}
@@ -83,6 +88,7 @@ The function uses the Home Assistant config flow API to programmatically set up 
 ### Credentials Source
 
 Reads from `hass-credentials.env`:
+
 ```bash
 MQTT_USER=dev
 MQTT_PASSWORD=dev
@@ -91,10 +97,11 @@ MQTT_PASSWORD=dev
 ### Idempotency
 
 The function checks if MQTT integration already exists before attempting configuration:
+
 ```bash
 existing_mqtt=$(curl -H "Authorization: Bearer ${SUPERVISOR_TOKEN}" \
-  "http://supervisor/core/api/config_entries/entry" | \
-  jq -r '.data[] | select(.domain == "mqtt") | .entry_id')
+  "http://supervisor/core/api/config_entries/entry" \
+  | jq -r '.data[] | select(.domain == "mqtt") | .entry_id')
 ```
 
 If found, it skips configuration and logs the existing entry_id.
@@ -102,6 +109,7 @@ If found, it skips configuration and logs the existing entry_id.
 ## Benefits
 
 ### Before
+
 1. ❌ User had to manually navigate to Settings → Devices & Services
 2. ❌ User had to click "+ Add Integration"
 3. ❌ User had to search for "MQTT"
@@ -109,6 +117,7 @@ If found, it skips configuration and logs the existing entry_id.
 5. ❌ User had to click "Submit" and wait for connection test
 
 ### After
+
 1. ✅ Script automatically configures MQTT integration
 2. ✅ Connection credentials pulled from `hass-credentials.env`
 3. ✅ No manual UI interaction required
@@ -121,8 +130,8 @@ To test the MQTT integration after setup:
 ```bash
 # 1. Check MQTT integration exists
 curl -sf -H "Authorization: Bearer ${SUPERVISOR_TOKEN}" \
-  http://supervisor/core/api/config_entries/entry | \
-  jq '.data[] | select(.domain == "mqtt")'
+  http://supervisor/core/api/config_entries/entry \
+  | jq '.data[] | select(.domain == "mqtt")'
 
 # 2. Publish test message via EMQX WebUI
 # Navigate to: Settings → Add-ons → EMQX → Open Web UI
@@ -147,6 +156,7 @@ The function handles several scenarios gracefully:
 ## Logging Output
 
 **Success:**
+
 ```
 Configuring MQTT integration...
 MQTT integration configured successfully
@@ -155,12 +165,14 @@ MQTT Username: dev
 ```
 
 **Already configured:**
+
 ```
 Configuring MQTT integration...
 MQTT integration already configured (entry_id: abc123...)
 ```
 
 **Missing credentials:**
+
 ```
 Configuring MQTT integration...
 MQTT credentials not found in credentials file
@@ -186,6 +198,7 @@ Next steps:
 ## Future Enhancements
 
 Potential improvements:
+
 - [ ] Add MQTT integration health check after configuration
 - [ ] Automatically subscribe to test topics
 - [ ] Configure MQTT discovery prefix if non-default
@@ -209,4 +222,3 @@ Potential improvements:
 
 **Status:** ✅ Implemented and ready to use
 **Tested:** Pending user testing with fresh setup
-

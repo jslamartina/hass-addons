@@ -43,12 +43,14 @@ docs/
 ## 🚀 Quick Start
 
 ### For Users
+
 1. **[Installation Guide](../README.md)** - Add repository to Home Assistant
 2. **[DNS Setup](user/dns-setup.md)** - **Required** for local control
 3. **[Add-on Quick Start](../cync-controller/README.md)** - First run steps
 4. **[Troubleshooting](user/troubleshooting.md)** - Common issues
 
 ### For Developers & AI Agents
+
 1. **[Developer Guide](../AGENTS.md)** - **START HERE** - Cursor rules and development workflow
 2. **[Testing Guide](developer/testing-guide.md)** - Unit and E2E testing
 3. **[Testing Tools](../scripts/README.md)** - Automated testing and configuration
@@ -56,6 +58,7 @@ docs/
 5. **[Linting Setup](developer/linting-setup.md)** - Ruff linting configuration and npm scripts
 
 ### For Protocol Researchers
+
 1. **[Protocol Findings](protocol/findings.md)** - Cync protocol reverse engineering
 2. **[MITM Testing Guide](protocol/mitm-testing.md)** - Packet capture and analysis
 
@@ -104,19 +107,19 @@ docs/
 
 Historical documentation and completed testing artifacts.
 
-| Document                                                                                                                       | Description                                                           |
-| ------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------- |
+| Document                                                                                                                       | Description                                                            |
+| ------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------- |
 | **[2025-10-14T18-40-00-absorb-cync-controller-repo-plan.md](archive/2025-10-14T18-40-00-absorb-cync-controller-repo-plan.md)** | Plan: Consolidate cync-controller repo into hass-addons (✅ completed) |
 | **[2025-10-14T18-40-01-remove-symlink-architecture-plan.md](archive/2025-10-14T18-40-01-remove-symlink-architecture-plan.md)** | Plan: Remove symlink to fix semantic search (✅ completed)             |
-| **[2025-10-14T16-13-43-cleanup-unused-scripts-plan.md](archive/2025-10-14T16-13-43-cleanup-unused-scripts-plan.md)**           | Plan: Cleanup unused scripts                                          |
-| **[2025-10-14T15-39-00-cleanup-summary.md](archive/2025-10-14T15-39-00-cleanup-summary.md)**                                   | Documentation cleanup (October 2025)                                  |
-| **[2025-10-14T16-00-00-gui-validation-results.md](archive/2025-10-14T16-00-00-gui-validation-results.md)**                     | GUI validation test results                                           |
-| **[2025-10-13T14-00-00-refresh-solution.md](archive/2025-10-13T14-00-00-refresh-solution.md)**                                 | Manual refresh button implementation                                  |
-| **[2025-10-13T15-00-00-throttling-solution.md](archive/2025-10-13T15-00-00-throttling-solution.md)**                           | Command throttling solution                                           |
-| **[2025-10-13T13-00-00-gui-validation-phase.md](archive/2025-10-13T13-00-00-gui-validation-phase.md)**                         | Phase 8 GUI testing plan                                              |
-| **[2025-10-11T10-00-00-cloud-relay-testing-plan.md](archive/2025-10-11T10-00-00-cloud-relay-testing-plan.md)**                 | Complete cloud relay testing plan (8/8 phases completed)              |
-| **[2025-10-08T14-00-00-baseline-review.md](archive/2025-10-08T14-00-00-baseline-review.md)**                                   | Historical code review (October 2025)                                 |
-| **[2025-10-08T15-00-00-pr-comments.md](archive/2025-10-08T15-00-00-pr-comments.md)**                                           | Historical PR review comments                                         |
+| **[2025-10-14T16-13-43-cleanup-unused-scripts-plan.md](archive/2025-10-14T16-13-43-cleanup-unused-scripts-plan.md)**           | Plan: Cleanup unused scripts                                           |
+| **[2025-10-14T15-39-00-cleanup-summary.md](archive/2025-10-14T15-39-00-cleanup-summary.md)**                                   | Documentation cleanup (October 2025)                                   |
+| **[2025-10-14T16-00-00-gui-validation-results.md](archive/2025-10-14T16-00-00-gui-validation-results.md)**                     | GUI validation test results                                            |
+| **[2025-10-13T14-00-00-refresh-solution.md](archive/2025-10-13T14-00-00-refresh-solution.md)**                                 | Manual refresh button implementation                                   |
+| **[2025-10-13T15-00-00-throttling-solution.md](archive/2025-10-13T15-00-00-throttling-solution.md)**                           | Command throttling solution                                            |
+| **[2025-10-13T13-00-00-gui-validation-phase.md](archive/2025-10-13T13-00-00-gui-validation-phase.md)**                         | Phase 8 GUI testing plan                                               |
+| **[2025-10-11T10-00-00-cloud-relay-testing-plan.md](archive/2025-10-11T10-00-00-cloud-relay-testing-plan.md)**                 | Complete cloud relay testing plan (8/8 phases completed)               |
+| **[2025-10-08T14-00-00-baseline-review.md](archive/2025-10-08T14-00-00-baseline-review.md)**                                   | Historical code review (October 2025)                                  |
+| **[2025-10-08T15-00-00-pr-comments.md](archive/2025-10-08T15-00-00-pr-comments.md)**                                           | Historical PR review comments                                          |
 
 ### Additional Resources
 
@@ -133,27 +136,35 @@ Historical documentation and completed testing artifacts.
 ## 🎯 Find What You Need
 
 ### "I want to install the add-on"
+
 → [../README.md](../README.md) + [user/dns-setup.md](user/dns-setup.md) + [../cync-controller/README.md](../cync-controller/README.md)
 
 ### "I'm developing the add-on"
+
 → [../AGENTS.md](../AGENTS.md) - **Cursor Rules Guide**
 
 ### "I need to configure cloud relay mode"
+
 → [../scripts/README.md](../scripts/README.md) (automated tools) or [user/cloud-relay.md](user/cloud-relay.md) (manual)
 
 ### "I need to test my changes"
+
 → [../scripts/test-cloud-relay.sh](../scripts/test-cloud-relay.sh)
 
 ### "My devices aren't connecting"
+
 → [user/dns-setup.md](user/dns-setup.md) + [user/troubleshooting.md](user/troubleshooting.md)
 
 ### "I want to understand the protocol"
+
 → [protocol/findings.md](protocol/findings.md)
 
 ### "I need to clean up MQTT entities"
+
 → [developer/entity-management.md](developer/entity-management.md)
 
 ### "I'm using AI agents to work on this project"
+
 → [../AGENTS.md](../AGENTS.md) - **Start with Rules Guide**
 
 ---
@@ -163,6 +174,7 @@ Historical documentation and completed testing artifacts.
 **Always start with [Cursor Rules Guide](../.cursor/RULES_GUIDE.md)!**
 
 It contains:
+
 - ✅ Development workflow (rebuild vs restart)
 - ✅ Critical guardrails
 - ✅ File-specific rules
@@ -173,13 +185,14 @@ It contains:
 - ✅ Critical DO and DON'T rules
 
 **Quick commands:**
+
 ```bash
-ha addons logs local_cync-controller     # View logs
-./scripts/configure-addon.sh      # Configure addon
-ha addons restart local_cync-controller  # Restart addon
-ha addons rebuild local_cync-controller  # Rebuild after Python changes
-npm run lint                      # Run all linters
-npm run lint:python:fix           # Auto-fix Python issues
+ha addons logs local_cync-controller    # View logs
+./scripts/configure-addon.sh            # Configure addon
+ha addons restart local_cync-controller # Restart addon
+ha addons rebuild local_cync-controller # Rebuild after Python changes
+npm run lint                            # Run all linters
+npm run lint:python:fix                 # Auto-fix Python issues
 ```
 
 ---
@@ -197,11 +210,13 @@ npm run lint:python:fix           # Auto-fix Python issues
 ## 🔍 Search Tips
 
 ### By Role
+
 - **User**: Start with `docs/user/`
 - **Developer**: Start with `docs/developer/agents-guide.md`
 - **Protocol Researcher**: Start with `docs/protocol/`
 
 ### By Task
+
 - **Installation**: `../README.md` and `docs/user/dns-setup.md`
 - **Troubleshooting**: `docs/user/troubleshooting.md`
 - **Development**: `docs/developer/agents-guide.md`
@@ -209,6 +224,7 @@ npm run lint:python:fix           # Auto-fix Python issues
 - **Protocol Analysis**: `docs/protocol/findings.md`
 
 ### By File Type
+
 - **Markdown docs**: This folder (`docs/`)
 - **Shell scripts**: `../scripts/`
 - **Add-on files**: `../cync-controller/`
@@ -220,9 +236,11 @@ npm run lint:python:fix           # Auto-fix Python issues
 ## 📊 Documentation Maintenance
 
 ### Last Major Reorganization
+
 **Date:** October 14, 2025
 
 **Changes:**
+
 - ✅ Moved all documentation to `/docs` folder
 - ✅ Created clear hierarchy: user/developer/protocol
 - ✅ Removed 11 redundant files (~2,000 lines)
@@ -230,6 +248,7 @@ npm run lint:python:fix           # Auto-fix Python issues
 - ✅ Created this navigation index
 
 **Result:**
+
 - Organized: Clear structure
 - Consolidated: No redundancy
 - Current: All references valid
@@ -270,6 +289,6 @@ When adding or updating documentation:
 
 ---
 
-*Last Updated: October 17, 2025*
-*Documentation organized and maintained by: Repository contributors*
-*For the latest updates, always refer to the repository*
+_Last Updated: October 17, 2025_
+_Documentation organized and maintained by: Repository contributors_
+_For the latest updates, always refer to the repository_

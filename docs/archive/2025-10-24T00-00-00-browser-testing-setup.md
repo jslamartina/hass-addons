@@ -9,11 +9,13 @@ A comprehensive browser testing framework for AI agents to autonomously test and
 ## New Documentation
 
 ### 1. **AI Browser Testing Plan** 📘
+
 **Location:** `docs/developer/ai-browser-testing-plan.md`
 
 **Purpose:** Complete guide for AI agents to use browser automation effectively.
 
 **Contents:**
+
 - 📖 Overview of all available MCP Playwright tools
 - 🔄 Core workflows (login, navigation, entity verification, device control)
 - ⚠️ Home Assistant UI quirks (Shadow DOM, iframes, SVG interference)
@@ -26,11 +28,13 @@ A comprehensive browser testing framework for AI agents to autonomously test and
 - 📊 Success metrics
 
 ### 2. **Quick Reference Rule** 🚀
+
 **Location:** `.cursor/rules/ai-browser-testing.mdc`
 
 **Purpose:** Fast-access cheat sheet for browser testing.
 
 **Contents:**
+
 - Quick tool reference table
 - Common patterns (login, add-on config, entity verification)
 - Critical rules (Shadow DOM, iframes, SVG issues)
@@ -40,9 +44,11 @@ A comprehensive browser testing framework for AI agents to autonomously test and
 - Common scenarios
 
 ### 3. **MCP Tools Guide Update** 📚
+
 **Location:** `docs/developer/mcp-tools.md`
 
 **Changes:**
+
 - Added `cursor-playwright` to quick reference table
 - Added comprehensive Browser Automation section with:
   - All 17 available tools
@@ -52,9 +58,11 @@ A comprehensive browser testing framework for AI agents to autonomously test and
   - Links to detailed documentation
 
 ### 4. **AGENTS.md Update** 🤖
+
 **Location:** `AGENTS.md`
 
 **Changes:**
+
 - Added browser automation to MCP Development Tools section
 - Highlighted as NEW feature
 - Added direct link to AI Browser Testing Plan
@@ -76,18 +84,20 @@ A comprehensive browser testing framework for AI agents to autonomously test and
 ### Common Workflows
 
 #### Quick UI Verification
+
 ```typescript
 // 1. Take snapshot to understand structure
-mcp_cursor-playwright_browser_snapshot()
+mcp_cursor - playwright_browser_snapshot();
 
 // 2. Take screenshot for visual verification
-mcp_cursor-playwright_browser_take_screenshot({ filename: "state.png" })
+mcp_cursor - playwright_browser_take_screenshot({ filename: "state.png" });
 
 // 3. Check console for errors
-mcp_cursor-playwright_browser_console_messages()
+mcp_cursor - playwright_browser_console_messages();
 ```
 
 #### Test Add-on Configuration
+
 ```typescript
 // 1. Navigate and login
 // 2. Go to add-on config (remember: iframe!)
@@ -96,6 +106,7 @@ mcp_cursor-playwright_browser_console_messages()
 ```
 
 #### Debug UI Issue
+
 ```typescript
 // 1. Navigate to problem page
 // 2. Screenshot before action
@@ -123,12 +134,14 @@ mcp_cursor-playwright_browser_console_messages()
 ## What This Enables
 
 ### Before (TypeScript Scripts Only)
+
 - ❌ Manual UI exploration required
 - ❌ Hard to verify visual issues
 - ❌ Complex scripts for simple checks
 - ❌ Long feedback loops
 
 ### After (MCP Browser Tools)
+
 - ✅ AI agents can explore UI autonomously
 - ✅ Visual verification with screenshots
 - ✅ Quick ad-hoc testing
@@ -139,39 +152,49 @@ mcp_cursor-playwright_browser_console_messages()
 ## Example Use Cases
 
 ### 1. Verify Configuration Option Appears
+
 **Before:** Rebuild, restart, manually check UI
 **After:** Agent navigates, takes snapshot, verifies option present
 
 ### 2. Debug Entity Not Showing
+
 **Before:** Check logs, manual UI inspection
 **After:** Agent checks Developer Tools → States, searches entity, reports findings
 
 ### 3. Test Device Control
+
 **Before:** Manual interaction, watch logs
 **After:** Agent clicks card, adjusts slider, verifies state, checks logs
 
 ### 4. Validate Error Handling
+
 **Before:** Manual error triggering, observe behavior
 **After:** Agent triggers error, screenshots state, checks console
 
 ## Integration with Existing Tools
 
 ### MCP Browser Tools
+
 **Best for:**
+
 - Interactive exploration
 - Quick verification
 - Ad-hoc testing
 - Debugging
 
 ### TypeScript Scripts (`scripts/playwright/`)
+
 **Best for:**
+
 - Automated workflows
 - Bulk operations
 - CI/CD integration
 - Complex scenarios
 
 ### API Tools (`scripts/configure-addon.sh`)
+
 **Best for:**
+
 - Configuration changes
 - Add-on management
 - Programmatic operations
@@ -181,12 +204,14 @@ mcp_cursor-playwright_browser_console_messages()
 ## Next Steps
 
 ### For AI Agents
+
 1. Try the quick start pattern in the rule file
 2. Explore a Home Assistant page with `browser_snapshot()`
 3. Practice with common scenarios
 4. Document any new patterns discovered
 
 ### For Humans
+
 1. Review the documentation structure
 2. Try examples with `--headed` mode to see browser
 3. Extend with project-specific patterns
@@ -195,18 +220,21 @@ mcp_cursor-playwright_browser_console_messages()
 ## Technical Details
 
 ### Tools Available
+
 - 17 MCP Playwright functions
 - Navigation, interaction, evaluation, debugging
 - Screenshot/snapshot capabilities
 - Console/network inspection
 
 ### Home Assistant Support
+
 - Shadow DOM handling
 - Iframe navigation
 - SVG icon workarounds
 - Dynamic content waiting
 
 ### Documentation Organization
+
 ```
 docs/developer/
 ├── ai-browser-testing-plan.md  # Comprehensive guide (main reference)
@@ -232,6 +260,7 @@ AGENTS.md                        # Points to browser testing docs
 ## Credits
 
 Built on top of:
+
 - Cursor's built-in MCP Playwright integration
 - Existing Home Assistant UI expertise
 - Patterns from `scripts/playwright/` TypeScript scripts
@@ -242,4 +271,3 @@ Built on top of:
 **Ready to test!** 🚀
 
 See [AI Browser Testing Plan](ai-browser-testing-plan.md) to get started.
-

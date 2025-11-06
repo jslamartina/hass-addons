@@ -7,6 +7,7 @@ This document tracks the progress of implementing first-class logging throughout
 ## ✅ Completed (Core Infrastructure)
 
 ### 1. Logging Abstraction Layer
+
 **File:** `src/cync_controller/logging_abstraction.py`
 
 - ✅ `CyncLogger` class with dual-format output
@@ -18,6 +19,7 @@ This document tracks the progress of implementing first-class logging throughout
 - ✅ Configurable via environment variables
 
 ### 2. Correlation Tracking System
+
 **File:** `src/cync_controller/correlation.py`
 
 - ✅ Context-var based correlation storage (async-safe)
@@ -26,6 +28,7 @@ This document tracks the progress of implementing first-class logging throughout
 - ✅ `ensure_correlation_id()` for async entry points
 
 ### 3. Performance Instrumentation
+
 **File:** `src/cync_controller/instrumentation.py`
 
 - ✅ `@timed` decorator for sync functions
@@ -35,6 +38,7 @@ This document tracks the progress of implementing first-class logging throughout
 - ✅ Millisecond precision timing
 
 ### 4. Configuration Constants
+
 **File:** `src/cync_controller/const.py`
 
 - ✅ `CYNC_LOG_FORMAT` - Output format configuration
@@ -45,6 +49,7 @@ This document tracks the progress of implementing first-class logging throughout
 - ✅ `CYNC_PERF_THRESHOLD_MS` - Performance threshold in milliseconds
 
 ### 5. Main Entry Point
+
 **File:** `src/cync_controller/main.py`
 
 - ✅ Migrated to new `CyncLogger`
@@ -58,9 +63,11 @@ This document tracks the progress of implementing first-class logging throughout
 ## ⏳ Partially Complete
 
 ### 6. TCP Server
+
 **File:** `src/cync_controller/server.py` (945 lines, 82 log calls)
 
 **Completed:**
+
 - ✅ Migrated imports to new logging system
 - ✅ CloudRelayConnection class fully refactored:
   - `connect_to_cloud()` - Added timing, structured context
@@ -72,6 +79,7 @@ This document tracks the progress of implementing first-class logging throughout
 - ✅ `remove_tcp_device()` - Improved logging with context
 
 **Remaining:**
+
 - 🔲 `parse_status()` - Large method (200+ lines) needs refactoring
 - 🔲 `periodic_status_refresh()` - Background task logging
 - 🔲 `periodic_pool_status_logger()` - Already has good logging, minor cleanup
@@ -85,9 +93,11 @@ This document tracks the progress of implementing first-class logging throughout
 ## 🔲 Pending (High Priority)
 
 ### 7. Device Management
+
 **File:** `src/cync_controller/devices.py` (3154 lines, 199 log calls)
 
 **Priority Areas:**
+
 - CyncDevice class methods
 - CyncTCPDevice class methods
 - Command sending with ACK tracking
@@ -99,9 +109,11 @@ This document tracks the progress of implementing first-class logging throughout
 **Estimated:** 0% complete
 
 ### 8. MQTT Client
+
 **File:** `src/cync_controller/mqtt_client.py` (2211 lines, 155 log calls)
 
 **Priority Areas:**
+
 - Connection/reconnection lifecycle
 - Message publish/receive operations
 - Discovery message generation
@@ -112,9 +124,11 @@ This document tracks the progress of implementing first-class logging throughout
 **Estimated:** 0% complete
 
 ### 9. Cloud API
+
 **File:** `src/cync_controller/cloud_api.py` (484 lines, 46 log calls)
 
 **Priority Areas:**
+
 - Authentication flow (OTP request/send)
 - Token lifecycle management
 - API request/response logging
@@ -124,9 +138,11 @@ This document tracks the progress of implementing first-class logging throughout
 **Estimated:** 0% complete
 
 ### 10. Utilities
+
 **File:** `src/cync_controller/utils.py` (352 lines, 25 log calls)
 
 **Priority Areas:**
+
 - Configuration parsing (`parse_config`)
 - UUID management
 - Signal handling
@@ -135,9 +151,11 @@ This document tracks the progress of implementing first-class logging throughout
 **Estimated:** 0% complete
 
 ### 11. Export Server
+
 **File:** `src/cync_controller/exporter.py` (lines TBD, 18 log calls)
 
 **Priority Areas:**
+
 - Export server lifecycle
 - HTTP endpoint handling
 - Device export workflow
@@ -153,6 +171,7 @@ This document tracks the progress of implementing first-class logging throughout
 ## 🎯 Success Metrics
 
 ### Target Improvements
+
 - ✅ Dual-format logging infrastructure
 - ✅ Automatic correlation tracking
 - ✅ Performance instrumentation framework
@@ -162,6 +181,7 @@ This document tracks the progress of implementing first-class logging throughout
 - 🔲 Structured context in all important logs
 
 ### Current Progress
+
 - **Infrastructure:** 100% complete ✅
 - **Core Refactoring:** ~20% complete ⏳
 - **Overall:** ~35% complete
@@ -201,13 +221,13 @@ This document tracks the progress of implementing first-class logging throughout
 
 | File             | Total Logs | Refactored | Remaining | Progress |
 | ---------------- | ---------- | ---------- | --------- | -------- |
-| `main.py`        | 16         | 16         | 0         | 100% ✅   |
-| `server.py`      | 82         | ~33        | ~49       | 40% ⏳    |
-| `devices.py`     | 199        | 0          | 199       | 0% 🔲     |
-| `mqtt_client.py` | 155        | 0          | 155       | 0% 🔲     |
-| `cloud_api.py`   | 46         | 0          | 46        | 0% 🔲     |
-| `utils.py`       | 25         | 0          | 25        | 0% 🔲     |
-| `exporter.py`    | 18         | 0          | 18        | 0% 🔲     |
+| `main.py`        | 16         | 16         | 0         | 100% ✅  |
+| `server.py`      | 82         | ~33        | ~49       | 40% ⏳   |
+| `devices.py`     | 199        | 0          | 199       | 0% 🔲    |
+| `mqtt_client.py` | 155        | 0          | 155       | 0% 🔲    |
+| `cloud_api.py`   | 46         | 0          | 46        | 0% 🔲    |
+| `utils.py`       | 25         | 0          | 25        | 0% 🔲    |
+| `exporter.py`    | 18         | 0          | 18        | 0% 🔲    |
 | **Total**        | **541**    | **~49**    | **~492**  | **~9%**  |
 
 ## 🛠️ Development Workflow
@@ -234,4 +254,3 @@ ha addons logs local_cync-controller --follow
 - **Refactoring Guide:** `LOGGING_REFACTORING_GUIDE.md`
 - **Logging Standards:** `.cursor/rules/logging-mandatory.mdc`
 - **Example Code:** See `main.py` and `server.py` (CloudRelayConnection, NCyncServer)
-

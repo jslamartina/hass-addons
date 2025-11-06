@@ -3,6 +3,7 @@
 ## Problem Statement
 
 When users rapidly toggle Cync devices in Home Assistant GUI, race conditions cause state desynchronization:
+
 - GUI shows OFF, but physical device is ON
 - Or vice versa
 
@@ -14,6 +15,7 @@ When users rapidly toggle Cync devices in Home Assistant GUI, race conditions ca
 - Clear `pending_command` only when 0x83 received
 
 **Why it didn't work:**
+
 - Cync devices send 0x48 ACKs with embedded status data
 - Callbacks update MQTT state immediately from ACKs
 - **0x83 broadcasts are NOT reliably sent after every command**
@@ -43,6 +45,7 @@ GUI Updates ✓
 ### Implementation
 
 **Throttle Entry Point** (`devices.py::set_power`):
+
 ```python
 if self.pending_command:
     logger.debug(f"⏸️  THROTTLED: Command rejected")
@@ -53,6 +56,7 @@ logger.debug(f"🚀 Command sent - awaiting confirmation")
 ```
 
 **Throttle Exit Point** (`devices.py::parse` - 0x48 ACK handler):
+
 ```python
 if success:
     # Execute callback (updates MQTT)
@@ -92,17 +96,18 @@ if success:
 **Test Case:** Rapid toggle Hallway Floodlight 1 (10 clicks in 2 seconds)
 
 **Expected Behavior:**
+
 - First click: 🚀 Command sent, pending=True
 - Next 9 clicks: ⏸️ THROTTLED (rejected)
 - Device ACKs: ✅ Confirmed, pending=False
 - Next click: 🚀 Command sent (new cycle)
 
 **Current Status:**
+
 - 🚀 Logging works
 - ⏸️ Throttling works (but permanently locked after first command)
 - ✅ Never triggered (wrong handler)
 
 ---
 
-*Last Updated: October 13, 2025 20:40 UTC*
-
+_Last Updated: October 13, 2025 20:40 UTC_

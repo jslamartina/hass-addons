@@ -16,6 +16,7 @@ When HTTP API calls fail (non-200 status codes), the script often only logs the 
 - ❌ Some functions capture the body but don't log it
 
 **Example of insufficient logging:**
+
 ```bash
 log_warn "EMQX configuration returned HTTP $http_code"
 # Missing: What did the API say? Why did it fail?
@@ -27,17 +28,17 @@ log_warn "EMQX configuration returned HTTP $http_code"
 
 ### Functions with HTTP Calls
 
-| Function                                 | Line(s) | Current Logging             | Body Captured? | Body Logged?     |
-| ---------------------------------------- | ------- | --------------------------- | -------------- | ---------------- |
-| `create_first_user()`                    | 150-182 | ✅ Good - logs body on error | ✅ Yes          | ✅ Yes (line 179) |
-| `complete_onboarding()`                  | 201-227 | ✅ Good - logs response      | ✅ Yes          | ✅ Yes (line 220) |
-| `configure_emqx()`                       | 414-430 | ❌ Only HTTP code            | ✅ Yes          | ❌ No             |
-| `enable_emqx_sidebar()`                  | 438-456 | ❌ Only HTTP code            | ✅ Yes          | ❌ No             |
-| `configure_mqtt_integration()`           | 570-620 | ❌ Only HTTP code            | ✅ Yes          | ❌ No             |
-| `configure_cync_lan()`                   | 694-712 | ❌ Only HTTP code            | ✅ Yes          | ❌ No             |
-| `enable_cync_sidebar()`                  | 721-739 | ❌ Only HTTP code            | ✅ Yes          | ❌ No             |
-| `get_ha_auth_token()` (password auth)    | 266-276 | ❌ Silent failure            | ❌ No           | ❌ No             |
-| `get_ha_auth_token()` (long-lived token) | 280-295 | ❌ Silent failure            | ❌ No           | ❌ No             |
+| Function                                 | Line(s) | Current Logging              | Body Captured? | Body Logged?      |
+| ---------------------------------------- | ------- | ---------------------------- | -------------- | ----------------- |
+| `create_first_user()`                    | 150-182 | ✅ Good - logs body on error | ✅ Yes         | ✅ Yes (line 179) |
+| `complete_onboarding()`                  | 201-227 | ✅ Good - logs response      | ✅ Yes         | ✅ Yes (line 220) |
+| `configure_emqx()`                       | 414-430 | ❌ Only HTTP code            | ✅ Yes         | ❌ No             |
+| `enable_emqx_sidebar()`                  | 438-456 | ❌ Only HTTP code            | ✅ Yes         | ❌ No             |
+| `configure_mqtt_integration()`           | 570-620 | ❌ Only HTTP code            | ✅ Yes         | ❌ No             |
+| `configure_cync_lan()`                   | 694-712 | ❌ Only HTTP code            | ✅ Yes         | ❌ No             |
+| `enable_cync_sidebar()`                  | 721-739 | ❌ Only HTTP code            | ✅ Yes         | ❌ No             |
+| `get_ha_auth_token()` (password auth)    | 266-276 | ❌ Silent failure            | ❌ No          | ❌ No             |
+| `get_ha_auth_token()` (long-lived token) | 280-295 | ❌ Silent failure            | ❌ No          | ❌ No             |
 
 ---
 
@@ -46,6 +47,7 @@ log_warn "EMQX configuration returned HTTP $http_code"
 ### Approach 1: Add Consistent Body Logging (Recommended)
 
 **Pattern to implement:**
+
 ```bash
 local response
 response=$(curl -sf -w "\n%{http_code}" -X POST \
@@ -66,12 +68,13 @@ else
   # ← ADD THIS
   if [ -n "$body" ]; then
     log_warn "Response body:"
-    echo "$body" | jq '.' 2>/dev/null || echo "$body"
+    echo "$body" | jq '.' 2> /dev/null || echo "$body"
   fi
 fi
 ```
 
 **Benefits:**
+
 - ✅ Shows full API error message
 - ✅ Formatted JSON if possible, raw otherwise
 - ✅ Consistent pattern across all functions
@@ -107,15 +110,15 @@ api_call() {
   # Log results
   if [ "$http_code" = "200" ] || [ "$http_code" = "201" ]; then
     log_info "$description: Success (HTTP $http_code)"
-    echo "$body"  # Return body to stdout
+    echo "$body" # Return body to stdout
     return 0
   else
     log_warn "$description: Failed (HTTP $http_code)"
     if [ -n "$body" ]; then
       log_warn "Response body:"
-      echo "$body" | jq '.' 2>/dev/null || echo "$body"
+      echo "$body" | jq '.' 2> /dev/null || echo "$body"
     fi
-    echo "$body"  # Return body even on error (for parsing flow_id, etc)
+    echo "$body" # Return body even on error (for parsing flow_id, etc)
     return 1
   fi
 }
@@ -128,11 +131,13 @@ response=$(api_call "Configure EMQX" "POST" \
 ```
 
 **Benefits:**
+
 - ✅ DRY (Don't Repeat Yourself)
 - ✅ Consistent logging everywhere
 - ✅ Easier to maintain
 
 **Drawbacks:**
+
 - More complex to implement
 - Harder to customize per-function
 
@@ -145,6 +150,7 @@ response=$(api_call "Configure EMQX" "POST" \
 Add body logging to functions that already capture the body but don't log it:
 
 #### 1. `configure_emqx()` (Lines 414-430)
+
 ```bash
 else
   log_warn "EMQX configuration returned HTTP $http_code"
@@ -156,6 +162,7 @@ fi
 ```
 
 #### 2. `enable_emqx_sidebar()` (Lines 438-456)
+
 ```bash
 else
   log_warn "EMQX sidebar configuration returned HTTP $http_code"
@@ -168,6 +175,7 @@ fi
 ```
 
 #### 3. `configure_mqtt_integration()` - Initial flow (Lines 570-620)
+
 ```bash
 else
   log_warn "MQTT integration config flow returned HTTP $http_code"
@@ -179,6 +187,7 @@ fi
 ```
 
 #### 4. `configure_mqtt_integration()` - Complete flow (Lines 590-615)
+
 ```bash
 else
   log_warn "Failed to complete MQTT config (HTTP $complete_http_code)"
@@ -192,6 +201,7 @@ fi
 ```
 
 #### 5. `configure_cync_lan()` (Lines 694-712)
+
 ```bash
 else
   log_warn "Cync Controller configuration returned HTTP $http_code"
@@ -204,6 +214,7 @@ fi
 ```
 
 #### 6. `enable_cync_sidebar()` (Lines 721-739)
+
 ```bash
 else
   log_warn "Cync Controller sidebar configuration returned HTTP $http_code"
@@ -216,6 +227,7 @@ fi
 ```
 
 #### 7. `get_ha_auth_token()` - Password auth (Lines 266-276)
+
 ```bash
 temp_token=$(curl -sf -X POST \
   "$HA_URL/auth/token" \
@@ -237,7 +249,7 @@ if [ -z "$temp_token" ]; then
   auth_body=$(echo "$auth_response" | head -n -1)
   log_warn "Password auth failed (HTTP $auth_http_code)"
   if [ -n "$auth_body" ]; then
-    log_warn "Response: $(echo "$auth_body" | jq -c '.' 2>/dev/null || echo "$auth_body")"
+    log_warn "Response: $(echo "$auth_body" | jq -c '.' 2> /dev/null || echo "$auth_body")"
   fi
   log_info "MQTT integration will need to be configured manually"
   return 1
@@ -245,6 +257,7 @@ fi
 ```
 
 #### 8. `get_ha_auth_token()` - Long-lived token creation (Lines 280-295)
+
 ```bash
 long_lived_token=$(curl -sf -X POST \
   "$HA_URL/api/auth/long_lived_access_token" \
@@ -270,7 +283,7 @@ else
   token_body=$(echo "$token_response" | head -n -1)
   log_warn "Token creation failed (HTTP $token_http_code)"
   if [ -n "$token_body" ]; then
-    log_warn "Response: $(echo "$token_body" | jq -c '.' 2>/dev/null || echo "$token_body")"
+    log_warn "Response: $(echo "$token_body" | jq -c '.' 2> /dev/null || echo "$token_body")"
   fi
   log_info "MQTT integration will need to be configured manually"
   return 1
@@ -297,6 +310,7 @@ After implementing changes, test scenarios where HTTP errors occur:
 - [ ] JSON parsing errors in response
 
 **Expected:** All error scenarios show:
+
 1. HTTP status code
 2. Full response body (formatted if JSON)
 3. Clear context about what operation failed
@@ -306,11 +320,13 @@ After implementing changes, test scenarios where HTTP errors occur:
 ## Example Output
 
 ### Before
+
 ```
 [setup-fresh-ha.sh] ⚠ EMQX configuration returned HTTP 400
 ```
 
 ### After
+
 ```
 [setup-fresh-ha.sh] ⚠ EMQX configuration returned HTTP 400
 [setup-fresh-ha.sh] ⚠ Response: {"result":"error","message":"Invalid option 'env_vars': expected list, got string"}
@@ -323,29 +339,34 @@ After implementing changes, test scenarios where HTTP errors occur:
 ## Formatting Considerations
 
 ### Option 1: Compact JSON (Recommended for logs)
+
 ```bash
-echo "$body" | jq -c '.' 2>/dev/null || echo "$body"
+echo "$body" | jq -c '.' 2> /dev/null || echo "$body"
 ```
+
 - Single line output
 - Easier to grep through logs
 - Still readable
 
 ### Option 2: Pretty-printed JSON
+
 ```bash
-echo "$body" | jq '.' 2>/dev/null || echo "$body"
+echo "$body" | jq '.' 2> /dev/null || echo "$body"
 ```
+
 - Multi-line output
 - More readable for complex responses
 - Takes up more log space
 
 ### Option 3: Hybrid
+
 ```bash
 # For short responses (< 200 chars), use compact
 # For long responses, pretty-print
 if [ ${#body} -lt 200 ]; then
-  echo "$body" | jq -c '.' 2>/dev/null || echo "$body"
+  echo "$body" | jq -c '.' 2> /dev/null || echo "$body"
 else
-  echo "$body" | jq '.' 2>/dev/null || echo "$body"
+  echo "$body" | jq '.' 2> /dev/null || echo "$body"
 fi
 ```
 
@@ -356,15 +377,18 @@ fi
 ## Summary
 
 ### Changes Needed
+
 - **8 functions** need improved error logging
 - **Total lines to add:** ~40-50 lines
 - **Complexity:** Low (copy-paste pattern)
 - **Risk:** Very low (only adds logging, doesn't change logic)
 
 ### Priority
+
 **HIGH** - Debugging API failures is currently very difficult without response bodies.
 
 ### Estimated Effort
+
 - Phase 1: 30-45 minutes
 - Testing: 15-30 minutes
 - Total: ~1 hour
@@ -373,4 +397,3 @@ fi
 
 **Status:** 📋 Ready to implement
 **Recommendation:** Start with Phase 1 (add body logging to existing functions)
-

@@ -14,7 +14,11 @@
 
    ```javascript
    // ✅ GOOD: Click the entity card to open dialog
-   await page.locator("div").filter({ hasText: "Hallway Lights" }).nth(5).click();
+   await page
+     .locator("div")
+     .filter({ hasText: "Hallway Lights" })
+     .nth(5)
+     .click();
    ```
 
 2. **Click interactive elements directly** - Use sliders, textboxes, and switches when available:
@@ -219,4 +223,3 @@ await page.getByLabel("Close").click();
 ---
 
 _For more information, see [AGENTS.md](../../AGENTS.md) in the repository root._
-

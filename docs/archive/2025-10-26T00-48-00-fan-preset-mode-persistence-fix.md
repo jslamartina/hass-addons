@@ -9,6 +9,7 @@
 ### 1. Addon Logging (Enhanced Diagnostic)
 
 Added comprehensive logging to trace command flow:
+
 - MQTT message reception (line 267)
 - Fan percentage commands (line 449)
 - Fan preset commands (line 494)
@@ -30,6 +31,7 @@ TCP Pool: 8/8 ready_to_control
 ### 3. Missing MQTT Commands
 
 When E2E test runs 5 slider commands (0%, 25%, 50%, 75%, 100%):
+
 - **Expected**: 5 MQTT messages on topic `cync_controller_addon/set/HASSID/percentage`
 - **Actual**: 0 MQTT messages received
 - **Logs**: No `>>> FAN PERCENTAGE COMMAND` entries
@@ -52,10 +54,12 @@ To fix this, we need to verify:
 ### Phase 1: Check Home Assistant Entity
 
 In Home Assistant Developer Tools → States:
+
 - Search for `fan.master_bedroom_fan_switch`
 - Check if entity exists
 
 If YES: Check entity attributes for:
+
 ```
 percentage: <value>
 percentage_step: 1
@@ -68,6 +72,7 @@ If NO: Fan entity doesn't exist → Discovery failed
 ### Phase 2: Verify MQTT Discovery
 
 Check addon logs at startup for:
+
 ```
 Registering fan device: Master Bedroom Fan Switch
 Publishing percentage_command_topic: cync_controller_addon/set/{id}/percentage
@@ -108,6 +113,7 @@ If addon does NOT receive → Issue is MQTT broker/networking
 Most likely: Home Assistant's MQTT integration is not running or not connected to the MQTT broker.
 
 **Test this by**:
+
 1. Check HA Settings → Devices & Services → MQTT
 2. Verify connection status shows "Connected"
 3. If not connected, configure MQTT integration with:

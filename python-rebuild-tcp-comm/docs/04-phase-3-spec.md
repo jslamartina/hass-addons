@@ -26,6 +26,7 @@ Phase 3 completes the migration by routing 100% of traffic to the new reliable t
 ## Migration Stages
 
 ### Stage 1: Increase to 75% (Week 1)
+
 ```yaml
 duration: 3-4 days
 canary_percentage: 75%
@@ -37,6 +38,7 @@ rollback: Reduce to 50%
 ```
 
 ### Stage 2: Increase to 90% (Week 1-2)
+
 ```yaml
 duration: 3-4 days
 canary_percentage: 90%
@@ -48,6 +50,7 @@ rollback: Reduce to 75%
 ```
 
 ### Stage 3: Full Cutover (Week 2)
+
 ```yaml
 duration: 1 day (monitored closely)
 canary_percentage: 100%
@@ -60,6 +63,7 @@ rollback: Reduce to 90% immediately if issues
 ```
 
 ### Stage 4: Legacy Deprecation (Week 3-4)
+
 ```yaml
 duration: 7-10 days
 actions:
@@ -70,6 +74,7 @@ actions:
 ```
 
 ### Stage 5: Code Removal (Week 4-6)
+
 ```yaml
 duration: 7-14 days
 actions:
@@ -90,6 +95,7 @@ validation:
 ### 1. Remove Legacy Transport
 
 **Files to Remove**:
+
 ```bash
 # Legacy TCP device code (after migration)
 cync_controller/devices/tcp_device.py  # Parts related to direct socket I/O
@@ -102,6 +108,7 @@ async def write(self, data: bytes) -> bool:
 ```
 
 **Replacement**:
+
 ```python
 # New unified transport
 from rebuild_tcp_comm.transport import ReliableTransport
@@ -139,14 +146,16 @@ await reliable_transport.send_reliable(message)
 ### 3. Update Configuration
 
 **Remove**:
+
 ```yaml
 # config.yaml (remove after migration)
-canary_percentage: 100  # No longer needed
-dark_launch_enabled: false  # No longer needed
-legacy_transport_enabled: false  # Remove legacy
+canary_percentage: 100 # No longer needed
+dark_launch_enabled: false # No longer needed
+legacy_transport_enabled: false # Remove legacy
 ```
 
 **Keep**:
+
 ```yaml
 # config.yaml (production config)
 reliable_transport:
@@ -172,39 +181,48 @@ reliable_transport:
 ## Common Issues
 
 ### High Latency (p99 > 1500ms)
+
 **Symptoms**: Dashboard shows elevated latency
 **Diagnosis**:
+
 - Check network connectivity
 - Review retry rates (may indicate packet loss)
 - Check queue depths (backpressure?)
 
 **Resolution**:
+
 1. Check Prometheus: `tcp_comm_packet_latency_seconds`
 2. If retry rate high: investigate network
 3. If queue full: increase queue size or throttle senders
 4. Page on-call if SLO violated
 
 ### Low Success Rate (< 99.9%)
+
 **Symptoms**: Increased error rate
 **Diagnosis**:
+
 - Check error breakdown by type
 - Review device logs
 - Check ACK timeout rates
 
 **Resolution**:
+
 1. Identify error pattern (timeouts vs decode errors)
 2. If timeouts: check network/device availability
 3. If decode errors: check protocol compatibility
 4. Rollback if SLO budget exhausted
 
 ### Queue Exhaustion
+
 **Symptoms**: Queue full events, dropped messages
 **Diagnosis**:
+
 - Check send queue depth
 - Review throughput metrics
 - Check for slow consumers
 
 **Resolution**:
+
 1. Increase queue size (config change)
 2. Add backpressure at source
 3. Scale horizontally if needed
@@ -213,6 +231,7 @@ reliable_transport:
 ### 2. SRE Training
 
 **Topics**:
+
 - Dashboard navigation
 - Alert interpretation
 - Rollback procedures
@@ -220,6 +239,7 @@ reliable_transport:
 - Escalation paths
 
 **Hands-on Exercises**:
+
 - Trigger test alerts
 - Practice rollback
 - Interpret metrics
@@ -228,6 +248,7 @@ reliable_transport:
 ### 3. Documentation
 
 **Files to Create**:
+
 ```
 docs/
 ├── architecture/
@@ -255,18 +276,21 @@ docs/
 ### 30-Day Monitoring Period
 
 **Week 1-2** (Days 1-14):
+
 - Daily SLO review
 - Proactive monitoring
 - Quick response to anomalies
 - Daily standup with team
 
 **Week 3-4** (Days 15-30):
+
 - Weekly SLO review
 - Automated alerting primary
 - Standard on-call rotation
 - Weekly review meeting
 
 **Success Criteria**:
+
 - 30 consecutive days with SLOs met
 - Zero critical incidents
 - Error budget > 10% remaining
@@ -280,39 +304,46 @@ docs/
 # 30-Day SLO Compliance Report
 
 ## Period
+
 Start: 2025-11-15
 End: 2025-12-15
 
 ## SLO Results
 
 ### Toggle Success Rate
+
 - Target: 99.9%
 - Actual: 99.95%
 - Status: ✓ PASS
 
 ### Toggle Latency (p99)
+
 - Target: ≤ 1500ms
 - Actual: 1247ms
 - Status: ✓ PASS
 
 ### Packet Loss Rate
+
 - Target: < 1%
 - Actual: 0.3%
 - Status: ✓ PASS
 
 ### Error Budget
+
 - Allowed: 0.1%
 - Consumed: 0.05%
 - Remaining: 50%
 - Status: ✓ HEALTHY
 
 ## Incidents
+
 - Total: 2 minor incidents
 - Impact: < 0.01% of traffic
 - MTTR: < 30 minutes average
 - Root causes identified and mitigated
 
 ## Recommendations
+
 - Continue current configuration
 - No immediate actions required
 - Schedule quarterly SLO review
@@ -372,8 +403,8 @@ tests/test_dark_launch.py
 tests/test_legacy_transport.py
 
 # Keep and update
-tests/test_reliable_transport.py  # Update to use production config
-tests/test_integration.py  # Remove legacy paths
+tests/test_reliable_transport.py # Update to use production config
+tests/test_integration.py        # Remove legacy paths
 ```
 
 ### 3. Update Dependencies
@@ -398,23 +429,27 @@ tests/test_integration.py  # Remove legacy paths
 # TCP Rebuild Migration Retrospective
 
 ## What Went Well
+
 - Phased approach minimized risk
 - Comprehensive testing prevented production issues
 - SLO monitoring provided early warning
 - Team collaboration was excellent
 
 ## What Could Be Improved
+
 - Initial timeline estimates were optimistic
 - More chaos testing earlier would have helped
 - Documentation could have been completed sooner
 
 ## Lessons Learned
+
 1. Dark launch is invaluable for validation
 2. Error budgets prevent premature rollout
 3. Automated rollback is essential
 4. Comprehensive metrics are non-negotiable
 
 ## Action Items
+
 1. Apply phased migration pattern to future projects
 2. Create migration playbook for other teams
 3. Improve time estimation for large refactors
@@ -457,13 +492,13 @@ tests/test_integration.py  # Remove legacy paths
 
 ## Risks & Mitigation
 
-| Risk | Impact | Probability | Mitigation |
-|------|--------|-------------|------------|
-| Undetected edge case | High | Low | 30-day monitoring; gradual rollout |
-| Documentation gaps | Medium | Medium | Peer review; SRE validation |
-| Knowledge loss | Medium | Low | Training sessions; detailed docs |
-| Regression after cleanup | Medium | Low | Comprehensive test suite |
-| Customer impact | Critical | Very Low | Gradual rollout; SLO compliance |
+| Risk                     | Impact   | Probability | Mitigation                         |
+| ------------------------ | -------- | ----------- | ---------------------------------- |
+| Undetected edge case     | High     | Low         | 30-day monitoring; gradual rollout |
+| Documentation gaps       | Medium   | Medium      | Peer review; SRE validation        |
+| Knowledge loss           | Medium   | Low         | Training sessions; detailed docs   |
+| Regression after cleanup | Medium   | Low         | Comprehensive test suite           |
+| Customer impact          | Critical | Very Low    | Gradual rollout; SLO compliance    |
 
 ---
 
@@ -496,6 +531,7 @@ tests/test_integration.py  # Remove legacy paths
 **Schedule**: Every 3 months
 **Attendees**: Engineering + SRE + Product
 **Agenda**:
+
 - SLO performance review
 - Incident analysis
 - Capacity planning
@@ -504,6 +540,7 @@ tests/test_integration.py  # Remove legacy paths
 ### Continuous Improvement
 
 **Potential Enhancements**:
+
 - Adaptive retry policies
 - ML-based anomaly detection
 - Predictive alerting
@@ -515,6 +552,7 @@ tests/test_integration.py  # Remove legacy paths
 ## Conclusion
 
 Phase 3 completes the TCP rebuild program, delivering:
+
 - ✅ Traceable operations (per-packet correlation)
 - ✅ Reliable delivery (ACK/NACK + retries + idempotency)
 - ✅ Observable system (comprehensive metrics + dashboards)
@@ -525,4 +563,3 @@ Phase 3 completes the TCP rebuild program, delivering:
 ---
 
 **Next Steps**: Maintain and iterate; apply learnings to future projects.
-

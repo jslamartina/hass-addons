@@ -1,15 +1,16 @@
-Only 5 [3 HTTP/BT, 2 BT] Cync Devices connected; 1 Cync Android App, 2 Wi-Fi/BT and 2 BT only. 
+Only 5 [3 HTTP/BT, 2 BT] Cync Devices connected; 1 Cync Android App, 2 Wi-Fi/BT and 2 BT only.
 All HTTP devices are redirected to their own `socat` MITM instance.
 
-| Device | Type                                    | ID  | IP          | MAC               |
-|-----|-----------------------------------------|-----|-------------|-------------------|
-| 1 | BT bulb                                 | 2   | N/A         | 78:6D:EB:28:EA:30 |
-| 2 | BT bulb                                 | 3   | N/A         | 78:6D:EB:28:D4:D1 |
-| 3 | Wi-Fi/BT Plug                           | 5   | 10.0.2.211  | 34:13:43:70:D8:C7 |
-| 4 | Wi-Fi/BT Direct Connect Full Color A19 RGBW Bulb | 7   | 10.0.2.215  | 78:6D:EB:E0:1C:90 |
-| 5 | Android Cync App                       | N/A | 10.0.1.2    | D2:F8:70:D6:EB:4D |
+| Device | Type                                             | ID  | IP         | MAC               |
+| ------ | ------------------------------------------------ | --- | ---------- | ----------------- |
+| 1      | BT bulb                                          | 2   | N/A        | 78:6D:EB:28:EA:30 |
+| 2      | BT bulb                                          | 3   | N/A        | 78:6D:EB:28:D4:D1 |
+| 3      | Wi-Fi/BT Plug                                    | 5   | 10.0.2.211 | 34:13:43:70:D8:C7 |
+| 4      | Wi-Fi/BT Direct Connect Full Color A19 RGBW Bulb | 7   | 10.0.2.215 | 78:6D:EB:E0:1C:90 |
+| 5      | Android Cync App                                 | N/A | 10.0.1.2   | D2:F8:70:D6:EB:4D |
 
 # App
+
 - The App is connected via Wi-Fi, BT is Off.
 - `>` is the App to server
 - `<` is the server to App
@@ -407,17 +408,16 @@ All HTTP devices are redirected to their own `socat` MITM instance.
 
 ```
 
-
 # NEW STUFF
 
 ```text
 # device ID 7 connects to cloud server so now 3 devices are in mesh
-> 
+>
  83 00 00 00 25 {37 96 24 69 00 5a 00 7e 25 00 00  ....%7.$i.Z.~%..
  00 fa db 13 00 7c 22 11 07 00 07 00 db 11 02 00  .....|".........
  01 64 fe f8 00 00 00 00 f4 7e}                    .d.......~
  [83 00 00 00] header
- [25] DATA LENGTH = 37 int // {} len = 37 
+ [25] DATA LENGTH = 37 int // {} len = 37
  [37 96 24 69] device id
  [00 5a 00] queue id
  [7e] start boundary
@@ -426,8 +426,8 @@ All HTTP devices are redirected to their own `socat` MITM instance.
  msg_id           [ctrl]        inc         ID      ID                ?  st bri tmp   R   G   B   ?  ?  chksum
     [37 00 00 00 250 219 19 00 124   34 17 [07] 00 [07] 00 219 17 02 00 [01 100 254 248  00  00] 00 00 244] bulb: int
     [33 00 00 00 250 219 19 00  52   34 17 [05] 00 [05] 00 219 17 02 01 [01  100 00  00  00  00] 00 00 179] plug: int
-    
-    Need to figure out what the ? byte is ( it is only 0 when the device connects, all other packets like it have 01)    
+
+    Need to figure out what the ? byte is ( it is only 0 when the device connects, all other packets like it have 01)
  [7e] end boundary
 --
 < 2024/03/16 09:56:41.296214  length=31 from=1234 to=1264
@@ -437,7 +437,7 @@ All HTTP devices are redirected to their own `socat` MITM instance.
 > 2024/03/16 09:56:41.333009  length=12 from=208 to=219
  7b 00 00 00 07 37 96 24 69 00 5a 00              {....7.$i.Z.
 --
-# App seems to send out 
+# App seems to send out
 > 2024/03/16 09:56:41.944299  length=12 from=220 to=231
  a3 00 00 00 07 15 1f 79 da 9a 56 00              .......y..V.
 --

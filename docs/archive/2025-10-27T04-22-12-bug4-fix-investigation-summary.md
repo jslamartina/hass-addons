@@ -10,12 +10,14 @@
 When turning off a light group in Home Assistant, all member switches should turn off and their UI should update to reflect the "off" state. However, the switches don't update properly.
 
 **Expected Behavior**:
+
 1. User turns off light group
 2. Group command sent to all member devices
 3. All member switches turn off physically
 4. All member switches show "off" state in Home Assistant UI
 
 **Actual Behavior**:
+
 1. User turns off light group
 2. Group command sent
 3. Physical devices turn off ✅
@@ -28,6 +30,7 @@ When turning off a light group in Home Assistant, all member switches should tur
 Group commands don't trigger individual 0x83 status packets from member switches. The system sends the group command successfully, but because individual devices don't send back their status updates after a group command, the Home Assistant UI doesn't reflect the new state.
 
 **Protocol Behavior**:
+
 - Individual device commands → Device sends 0x83 status packet → HA updates
 - Group commands → No individual status packets → HA doesn't update
 
@@ -40,6 +43,7 @@ Group commands don't trigger individual 0x83 status packets from member switches
 The theory was to call `sync_group_switches()` immediately after sending group commands to force a status refresh of all member switches.
 
 **Implementation Points**:
+
 - Would need to be called after group off/on commands
 - Should query individual switch states
 - Update HA via MQTT with current states
@@ -65,6 +69,7 @@ def test_group_turns_off_all_switches(ha_login: Page, ha_base_url: str):
 ```
 
 **Test Steps**:
+
 1. Navigate to overview dashboard
 2. Identify target group (Hallway Lights) and member switches
 3. Turn off the group
@@ -82,11 +87,13 @@ def test_group_turns_off_all_switches(ha_login: Page, ha_base_url: str):
 ## Current Status
 
 ### ✅ What We Have
+
 - Comprehensive E2E test that documents expected behavior
 - Clear understanding of root cause
 - Identified solution approach (`sync_group_switches()`)
 
 ### ❌ What's Missing
+
 - Actual implementation of `sync_group_switches()` calls after group commands
 - Code changes to mqtt_client.py or server.py to trigger status refresh
 - Verification that the fix works
@@ -96,11 +103,13 @@ def test_group_turns_off_all_switches(ha_login: Page, ha_base_url: str):
 **Location**: `cync-controller/src/cync_controller/mqtt_client.py`
 
 **Functions that need updating**:
+
 - Group off command handler
 - Group on command handler
 - Any other group state change handlers
 
 **Required Change**:
+
 ```python
 async def handle_group_command(self, group_id, command):
     # Send group command
@@ -128,12 +137,14 @@ async def handle_group_command(self, group_id, command):
 ## Why It Wasn't Fixed
 
 During the logging implementation session, we focused on:
+
 - Creating the logging infrastructure
 - Refactoring all Python modules
 - Creating E2E test infrastructure
 - **Creating the test for Bug 4** ← We did this
 
 But we did NOT:
+
 - Actually implement the fix
 - Call `sync_group_switches()` after group commands
 - Verify the fix works
@@ -147,6 +158,7 @@ The test exists as a regression test for when the bug IS fixed, but the underlyi
 Once the fix is implemented:
 
 1. **Run the E2E test**:
+
    ```bash
    cd cync-controller
    pytest tests/e2e/test_group_control.py::test_group_turns_off_all_switches -v
@@ -184,4 +196,3 @@ We created comprehensive E2E tests that document the expected behavior and provi
 The test exists and is ready to verify the fix, but the bug itself remains in the codebase.
 
 **Estimated effort to fix**: ~30 minutes (locate handlers, add sync calls, test)
-

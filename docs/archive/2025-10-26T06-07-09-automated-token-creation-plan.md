@@ -5,6 +5,7 @@
 ## The Challenge
 
 We need a **bootstrap token** to authenticate with WebSocket, but we can't get one programmatically because:
+
 - Password grant is deprecated (`grant_type=password` returns "unsupported_grant_type")
 - Login flow is complex and requires CSRF tokens
 - We need an existing token to create a new token (chicken-and-egg problem)
@@ -28,11 +29,11 @@ async function createTokenFullyAutomated() {
   await page.fill('[name="username"]', USERNAME);
   await page.fill('[name="password"]', PASSWORD);
   await page.click('button[type="submit"]');
-  await page.waitForLoadState('networkidle');
+  await page.waitForLoadState("networkidle");
 
   // 3. Extract bootstrap token from localStorage
   const bootstrapToken = await page.evaluate(() => {
-    const tokens = localStorage.getItem('hassTokens');
+    const tokens = localStorage.getItem("hassTokens");
     return JSON.parse(tokens).access_token;
   });
 
@@ -52,22 +53,26 @@ async function createLongLivedTokenViaWebSocket(bootstrapToken) {
   return new Promise((resolve, reject) => {
     const ws = new WebSocket(WS_URL);
 
-    ws.on('message', (data) => {
+    ws.on("message", (data) => {
       const message = JSON.parse(data);
 
-      if (message.type === 'auth_required') {
-        ws.send(JSON.stringify({
-          type: 'auth',
-          access_token: bootstrapToken
-        }));
-      } else if (message.type === 'auth_ok') {
-        ws.send(JSON.stringify({
-          id: 1,
-          type: 'auth/long_lived_access_token',
-          client_name: 'Setup Script',
-          lifespan: 3650
-        }));
-      } else if (message.type === 'result' && message.success) {
+      if (message.type === "auth_required") {
+        ws.send(
+          JSON.stringify({
+            type: "auth",
+            access_token: bootstrapToken,
+          }),
+        );
+      } else if (message.type === "auth_ok") {
+        ws.send(
+          JSON.stringify({
+            id: 1,
+            type: "auth/long_lived_access_token",
+            client_name: "Setup Script",
+            lifespan: 3650,
+          }),
+        );
+      } else if (message.type === "result" && message.success) {
         ws.close();
         resolve(message.result);
       }
@@ -108,7 +113,7 @@ get_ha_auth_token() {
     log_success "Long-lived access token created automatically"
 
     # Save to credentials file for future use
-    if grep -q "LONG_LIVED_ACCESS_TOKEN=" "$CREDENTIALS_FILE" 2>/dev/null; then
+    if grep -q "LONG_LIVED_ACCESS_TOKEN=" "$CREDENTIALS_FILE" 2> /dev/null; then
       sed -i "s|^LONG_LIVED_ACCESS_TOKEN=.*|LONG_LIVED_ACCESS_TOKEN=$new_token|" "$CREDENTIALS_FILE"
     else
       echo "LONG_LIVED_ACCESS_TOKEN=$new_token" >> "$CREDENTIALS_FILE"
@@ -130,36 +135,38 @@ get_ha_auth_token() {
 **File:** `scripts/create-token-automated.js`
 
 ```javascript
-const { chromium } = require('playwright');
-const WebSocket = require('ws');
-const fs = require('fs');
-const path = require('path');
+const { chromium } = require("playwright");
+const WebSocket = require("ws");
+const fs = require("fs");
+const path = require("path");
 
-const HA_URL = process.env.HA_URL || 'http://localhost:8123';
-const WS_URL = HA_URL.replace('http', 'ws') + '/api/websocket';
-const USERNAME = process.env.HASS_USERNAME || 'dev';
-const PASSWORD = process.env.HASS_PASSWORD || 'dev';
-const TOKEN_NAME = 'Setup Script';
-const CREDENTIALS_FILE = path.join(__dirname, '..', 'hass-credentials.env');
+const HA_URL = process.env.HA_URL || "http://localhost:8123";
+const WS_URL = HA_URL.replace("http", "ws") + "/api/websocket";
+const USERNAME = process.env.HASS_USERNAME || "dev";
+const PASSWORD = process.env.HASS_PASSWORD || "dev";
+const TOKEN_NAME = "Setup Script";
+const CREDENTIALS_FILE = path.join(__dirname, "..", "hass-credentials.env");
 
 async function createTokenFullyAutomated() {
-  console.log('[auto-token] Starting fully automated token creation...');
+  console.log("[auto-token] Starting fully automated token creation...");
 
   // Phase 1: Get bootstrap token via browser automation
   const bootstrapToken = await getBootstrapToken();
   if (!bootstrapToken) {
-    throw new Error('Failed to get bootstrap token');
+    throw new Error("Failed to get bootstrap token");
   }
 
-  console.log('[auto-token] Bootstrap token obtained, creating long-lived token...');
+  console.log(
+    "[auto-token] Bootstrap token obtained, creating long-lived token...",
+  );
 
   // Phase 2: Create long-lived token via WebSocket
   const longLivedToken = await createLongLivedTokenViaWebSocket(bootstrapToken);
   if (!longLivedToken) {
-    throw new Error('Failed to create long-lived token');
+    throw new Error("Failed to create long-lived token");
   }
 
-  console.log('[auto-token] Long-lived token created successfully');
+  console.log("[auto-token] Long-lived token created successfully");
 
   // Phase 3: Save to credentials file
   updateCredentialsFile(longLivedToken);
@@ -168,11 +175,11 @@ async function createTokenFullyAutomated() {
 }
 
 async function getBootstrapToken() {
-  console.log('[auto-token] Launching browser for login...');
+  console.log("[auto-token] Launching browser for login...");
 
   const browser = await chromium.launch({
     headless: true,
-    args: ['--no-sandbox', '--disable-setuid-sandbox']
+    args: ["--no-sandbox", "--disable-setuid-sandbox"],
   });
 
   try {
@@ -180,19 +187,19 @@ async function getBootstrapToken() {
 
     // Navigate to Home Assistant
     await page.goto(HA_URL, { timeout: 30000 });
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState("networkidle");
 
     // Login
-    console.log('[auto-token] Logging in...');
+    console.log("[auto-token] Logging in...");
     await page.fill('[name="username"]', USERNAME);
     await page.fill('[name="password"]', PASSWORD);
     await page.click('button[type="submit"]');
-    await page.waitForLoadState('networkidle', { timeout: 10000 });
+    await page.waitForLoadState("networkidle", { timeout: 10000 });
 
     // Extract token from localStorage
-    console.log('[auto-token] Extracting bootstrap token...');
+    console.log("[auto-token] Extracting bootstrap token...");
     const tokenData = await page.evaluate(() => {
-      const hassTokens = localStorage.getItem('hassTokens');
+      const hassTokens = localStorage.getItem("hassTokens");
       if (hassTokens) {
         const parsed = JSON.parse(hassTokens);
         return parsed.access_token;
@@ -201,100 +208,106 @@ async function getBootstrapToken() {
     });
 
     if (!tokenData) {
-      throw new Error('No token found in localStorage');
+      throw new Error("No token found in localStorage");
     }
 
-    console.log('[auto-token] Bootstrap token extracted');
+    console.log("[auto-token] Bootstrap token extracted");
     return tokenData;
-
   } finally {
     await browser.close();
   }
 }
 
 async function createLongLivedTokenViaWebSocket(bootstrapToken) {
-  console.log('[auto-token] Creating long-lived token via WebSocket...');
+  console.log("[auto-token] Creating long-lived token via WebSocket...");
 
   return new Promise((resolve, reject) => {
     const ws = new WebSocket(WS_URL);
     let messageId = 1;
 
-    ws.on('open', () => {
-      console.log('[auto-token] WebSocket connected');
+    ws.on("open", () => {
+      console.log("[auto-token] WebSocket connected");
     });
 
-    ws.on('message', (data) => {
+    ws.on("message", (data) => {
       try {
         const message = JSON.parse(data);
 
-        if (message.type === 'auth_required') {
-          console.log('[auto-token] Authenticating with bootstrap token...');
-          ws.send(JSON.stringify({
-            type: 'auth',
-            access_token: bootstrapToken
-          }));
-
-        } else if (message.type === 'auth_ok') {
-          console.log('[auto-token] Authenticated, requesting long-lived token...');
-          ws.send(JSON.stringify({
-            id: messageId++,
-            type: 'auth/long_lived_access_token',
-            client_name: TOKEN_NAME,
-            lifespan: 3650
-          }));
-
-        } else if (message.type === 'result' && message.success) {
-          console.log('[auto-token] Long-lived token created!');
+        if (message.type === "auth_required") {
+          console.log("[auto-token] Authenticating with bootstrap token...");
+          ws.send(
+            JSON.stringify({
+              type: "auth",
+              access_token: bootstrapToken,
+            }),
+          );
+        } else if (message.type === "auth_ok") {
+          console.log(
+            "[auto-token] Authenticated, requesting long-lived token...",
+          );
+          ws.send(
+            JSON.stringify({
+              id: messageId++,
+              type: "auth/long_lived_access_token",
+              client_name: TOKEN_NAME,
+              lifespan: 3650,
+            }),
+          );
+        } else if (message.type === "result" && message.success) {
+          console.log("[auto-token] Long-lived token created!");
           ws.close();
           resolve(message.result);
-
-        } else if (message.type === 'result' && !message.success) {
-          reject(new Error('Failed to create token: ' + JSON.stringify(message)));
-
-        } else if (message.type === 'auth_invalid') {
-          reject(new Error('Authentication failed: ' + message.message));
+        } else if (message.type === "result" && !message.success) {
+          reject(
+            new Error("Failed to create token: " + JSON.stringify(message)),
+          );
+        } else if (message.type === "auth_invalid") {
+          reject(new Error("Authentication failed: " + message.message));
         }
       } catch (error) {
         reject(error);
       }
     });
 
-    ws.on('error', reject);
-    ws.on('close', () => {
-      console.log('[auto-token] WebSocket closed');
+    ws.on("error", reject);
+    ws.on("close", () => {
+      console.log("[auto-token] WebSocket closed");
     });
   });
 }
 
 function updateCredentialsFile(token) {
-  console.log('[auto-token] Updating credentials file...');
+  console.log("[auto-token] Updating credentials file...");
 
-  let content = '';
+  let content = "";
   if (fs.existsSync(CREDENTIALS_FILE)) {
-    content = fs.readFileSync(CREDENTIALS_FILE, 'utf8');
+    content = fs.readFileSync(CREDENTIALS_FILE, "utf8");
   }
 
-  if (content.includes('LONG_LIVED_ACCESS_TOKEN=')) {
+  if (content.includes("LONG_LIVED_ACCESS_TOKEN=")) {
     content = content.replace(
       /LONG_LIVED_ACCESS_TOKEN=.*/g,
-      `LONG_LIVED_ACCESS_TOKEN=${token}`
+      `LONG_LIVED_ACCESS_TOKEN=${token}`,
     );
   } else {
     content += `\nLONG_LIVED_ACCESS_TOKEN=${token}\n`;
   }
 
   fs.writeFileSync(CREDENTIALS_FILE, content);
-  console.log('[auto-token] Credentials file updated');
+  console.log("[auto-token] Credentials file updated");
 }
 
 // Run the automated token creation
 createTokenFullyAutomated()
   .then((token) => {
-    console.log('[auto-token] ✅ Success! Token:', token.substring(0, 50) + '...');
+    console.log(
+      "[auto-token] ✅ Success! Token:",
+      token.substring(0, 50) + "...",
+    );
     process.exit(0);
   })
   .catch((error) => {
-    console.error('[auto-token] ❌ Error:', error.message);
+    console.error("[auto-token] ❌ Error:", error.message);
     process.exit(1);
   });
 ```

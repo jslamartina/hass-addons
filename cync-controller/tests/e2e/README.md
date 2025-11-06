@@ -20,7 +20,9 @@ python -m pytest tests/e2e/ -v -s
 Reusable helpers in `scripts/playwright/` provide shared utilities for all e2e tests:
 
 ### TypeScript Helpers (`scripts/playwright/helpers.ts`)
+
 Browser automation functions for Playwright:
+
 - `loginToHA()` - Authenticate with Home Assistant
 - `navigateToAddonConfig()` - Navigate to add-on configuration page
 - `navigateToIngress()` - Navigate to add-on ingress page
@@ -29,7 +31,9 @@ Browser automation functions for Playwright:
 - `toggleEntity()` - Toggle entity (switch, light, etc.)
 
 ### Python Helpers (`scripts/playwright/addon_helpers.py`)
+
 Supervisor API and system operations:
+
 - `get_supervisor_token()` - Get Supervisor API token
 - `get_addon_config()` - Retrieve add-on configuration
 - `update_addon_config()` - Update add-on configuration
@@ -67,6 +71,7 @@ Supervisor API and system operations:
 ### Test Execution Categories
 
 **Automated Tests (No Device Required):**
+
 - ✅ Config management (20 tests) - Log levels, config changes, cloud relay switching - All passing
 - ✅ State sync (8 tests) - MQTT updates, subgroup aggregation, simultaneous commands - All passing
 - ✅ Restart button (3 tests) - Button visibility, error handling, config persistence - All passing
@@ -74,6 +79,7 @@ Supervisor API and system operations:
 - **Total: 37 automated tests (all passing)**
 
 **Tests Requiring Devices:**
+
 - ⚠️ Basic commands (7 tests) - 2 passing, 3 failing (missing entities: Floodlight 1 brightness/color, Counter Switch)
 - ⚠️ Group control (7 tests) - 4 passing, 1 failing (Hallway Lights timeout), 2 skipped (expected)
 - ⚠️ MQTT recovery (7 tests) - 2 passing, 3 failing (MQTT broker control not available), 2 skipped (expected)
@@ -127,28 +133,33 @@ python -m pytest tests/e2e/test_group_control.py -v -s
 **Failing Tests (Expected when infrastructure is missing):**
 
 **Basic Commands (3 failures):**
+
 - `test_set_brightness` - Requires "Floodlight 1" entity with brightness support
 - `test_set_color_temperature` - Requires "Floodlight 1" entity with color temp support
 - `test_toggle_switch` - Requires "Counter Switch" entity
 - **Status**: ✅ Tests now FAIL properly when entities missing (removed skips)
 
 **Group Control (1 failure):**
+
 - `test_group_turns_on_all_switches` - Timeout waiting for group to turn on
 - **Status**: ⚠️ May indicate intermittent issue with group command execution
 
 **MQTT Recovery (3 failures):**
+
 - `test_addon_handles_mqtt_disconnect` - MQTT broker control not available
 - `test_addon_reconnects_after_mqtt_recovery` - MQTT broker control not available
 - `test_entities_unavailable_during_mqtt_disconnect` - MQTT broker control not available
 - **Status**: ✅ Tests now FAIL properly when MQTT broker control unavailable (removed skips)
 
 **Group Control (1 skipped):**
+
 - `test_comprehensive_flicker_detection` - Known Home Assistant UI rendering limitation
 - **Root Cause**: HA UI can show brief state transitions during rendering
 - **Impact**: Backend sync is correct; UI flicker is cosmetic
 - **Status**: ✅ Skipped by design - documented limitation, not a bug
 
 **MQTT Recovery (2 skipped):**
+
 - `test_addon_handles_mqtt_disconnect` - MQTT broker control
 - `test_addon_reconnects_after_mqtt_recovery` - MQTT broker control
 - `test_entities_unavailable_during_mqtt_disconnect` - MQTT broker control
@@ -157,6 +168,7 @@ python -m pytest tests/e2e/test_group_control.py -v -s
 - **Status**: ✅ Skipped by design - environment limitation, not a test failure
 
 **OTP Flow (1 skipped):**
+
 - Requires live Cync account with OTP capability
 - **Root Cause**: Cannot test without live account
 - **Impact**: Manual testing only
@@ -167,19 +179,22 @@ python -m pytest tests/e2e/test_group_control.py -v -s
 Group control tests verify that the backend correctly syncs all switches when group commands are issued:
 
 **Status**: ✅ All group control tests passing
+
 - `test_group_turns_off_all_switches` - Verifies switches sync to OFF when group turned OFF
 - `test_group_turns_on_all_switches` - Verifies switches sync to ON when group turned ON
 - `test_individual_switch_control_still_works` - Verifies individual control still works
 - `test_individual_switch_toggle_no_flicker` - Verifies individual switches don't flicker
 
 **Test Skipped**:
+
 - `test_comprehensive_flicker_detection` - Skipped due to known Home Assistant UI rendering delays (not a bug in Cync Controller)
 
 **Evidence**:
+
 - ✅ Backend logs confirm all switches correctly synced via MQTT
 - ✅ Commands execute successfully with proper ACK handling
 - ✅ Tests verify sync works correctly for both ON and OFF group commands
-- ⚠️  UI may show brief state transitions due to HA rendering delays (cosmetic only)
+- ⚠️ UI may show brief state transitions due to HA rendering delays (cosmetic only)
 
 ### Restart Button Tests (All Passing)
 
@@ -189,6 +204,7 @@ The restart button tests (`test_restart_button.py`) verify Bug 2 & 3 fixes:
 **Bug 3**: Restart button disappears after navigation
 
 **Test Status**:
+
 - All 3 tests passing ✅
 - Verifies button shows success message instead of error (Bug 2 fix)
 - Verifies button persists visibility after navigation (Bug 3 fix)

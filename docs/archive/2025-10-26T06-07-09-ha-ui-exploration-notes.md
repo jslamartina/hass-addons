@@ -45,12 +45,14 @@ The Home Assistant UI features a left sidebar with the following main sections:
 ### Add-on Configuration
 
 **Enabled Features:**
+
 - ✓ Start on boot
 - ✗ Watchdog (disabled)
 - ✓ Add to sidebar
 - ✓ Ingress (web UI enabled)
 
 **Badges:**
+
 - Rating: 7
 - Host access enabled
 - Apparmor enabled
@@ -72,6 +74,7 @@ The add-on provides three main components:
 ### Device Export Interface
 
 The Cync Controller sidebar link opens an ingress page (`/local_cync-controller/ingress`) with:
+
 - **Start Export** button - Attempts to use cached tokens first, prompts for OTP if needed
 - **OTP Input Field** - For entering the emailed one-time password
 - **Submit OTP** button - Submits OTP and caches valid tokens
@@ -79,6 +82,7 @@ The Cync Controller sidebar link opens an ingress page (`/local_cync-controller/
 ### Bridge Status Entities
 
 The following binary sensors/buttons are exposed (all currently showing "Unavailable"):
+
 - Cync emailed OTP (number input)
 - Restart Cync Controller (button)
 - Start Export (button)
@@ -96,26 +100,31 @@ The following binary sensors/buttons are exposed (all currently showing "Unavail
 The system currently manages the following Cync devices:
 
 **Fan Devices (1):**
+
 - Master Bedroom Fan Switch (on/off control)
 
 **Light Devices (18):**
 
 #### Hallway (9 lights)
-- Hallway 4way Switch *(checked, 33% brightness)*
-- Hallway Counter Switch *(checked)*
-- Hallway Floodlight 1-6 *(all checked)*
-- Hallway Front Switch *(checked)*
+
+- Hallway 4way Switch _(checked, 33% brightness)_
+- Hallway Counter Switch _(checked)_
+- Hallway Floodlight 1-6 _(all checked)_
+- Hallway Front Switch _(checked)_
 
 #### Kitchen (3 lights - offline/disabled)
-- Kitchen Floodlight 1-3 *(all disabled/unavailable)*
+
+- Kitchen Floodlight 1-3 _(all disabled/unavailable)_
 
 #### Living Room (6 lights - off)
-- Living Room Floodlight 1-6 *(all unchecked)*
-- Living Room Lamp *(disabled/unavailable)*
+
+- Living Room Floodlight 1-6 _(all unchecked)_
+- Living Room Lamp _(disabled/unavailable)_
 
 ### Device Control Interface
 
 Clicking on any active light entity opens a modal dialog with:
+
 - Current brightness percentage
 - Last update timestamp
 - Visual brightness indicator (lightbulb graphic)
@@ -124,6 +133,7 @@ Clicking on any active light entity opens a modal dialog with:
 - Additional options: History, Settings, Device Info, Related entities
 
 **Example:** Hallway 4way Switch
+
 - Current state: On at 33% brightness
 - Last changed: 9 minutes ago
 - Controls: Brightness slider + toggle button
@@ -160,11 +170,11 @@ Clicking on any active light entity opens a modal dialog with:
 
 Two add-ons are currently installed and running:
 
-1. **Cync Controller** *(running)*
+1. **Cync Controller** _(running)_
    - Local controller for Cync/C by GE smart devices
    - Requires DNS redirection
 
-2. **EMQX** *(running)*
+2. **EMQX** _(running)_
    - Open-source MQTT broker
    - Alternative to Mosquitto
 
@@ -187,6 +197,7 @@ Two add-ons are currently installed and running:
 ### Integration Status
 
 The Cync Controller is installed and the add-on container is running, but the internal services (TCP server, MQTT client, export server) are showing as unavailable. This suggests either:
+
 1. The add-on needs to be restarted
 2. Configuration is incomplete (MQTT credentials, DNS setup)
 3. The services haven't been started yet
@@ -194,6 +205,7 @@ The Cync Controller is installed and the add-on container is running, but the in
 ### DNS Requirement
 
 A prominent alert on the add-on info page states:
+
 > "DNS redirection is REQUIRED, please see [here](https://github.com/jslamartina/hass-addons/tree/dev/docs/user/dns-setup.md) for documentation and examples"
 
 This is critical for the nCync TCP server to intercept device communications.
@@ -208,6 +220,7 @@ This is critical for the nCync TCP server to intercept device communications.
 ### Architecture Pattern
 
 The Cync Controller integration follows a clean architecture:
+
 1. Devices connect to the local TCP server (thinking they're reaching the cloud)
 2. TCP server handles device protocol
 3. MQTT client bridges device states to Home Assistant
@@ -236,6 +249,7 @@ The Cync Controller integration follows a clean architecture:
 ### Integration Points
 
 The Cync Controller integration exposes entities through MQTT discovery following the Home Assistant MQTT JSON schema. Key entity types:
+
 - `binary_sensor.*` - Status indicators
 - `button.*` - Action triggers
 - `light.*` - Light controls with brightness
@@ -245,6 +259,7 @@ The Cync Controller integration exposes entities through MQTT discovery followin
 ### Browser Testing Capabilities
 
 The Playwright integration allows automated testing of:
+
 - Login flows
 - Device control interactions (clicking switches, adjusting brightness)
 - Export workflow testing (OTP submission)

@@ -12,6 +12,25 @@ from typing import Dict
 __all__ = [
     "PacketMetadata",
     "PACKET_METADATA",
+    "HANDSHAKE_0x23_DEV_TO_CLOUD",
+    "HELLO_ACK_0x28_CLOUD_TO_DEV",
+    "STATUS_BROADCAST_0x83_DEV_TO_CLOUD",
+    "STATUS_ACK_0x88_CLOUD_TO_DEV",
+    "HEARTBEAT_DEV_0xD3_DEV_TO_CLOUD",
+    "HEARTBEAT_CLOUD_0xD8_CLOUD_TO_DEV",
+    "DEVICE_INFO_0x43_DEV_TO_CLOUD",
+    "INFO_ACK_0x48_CLOUD_TO_DEV",
+    "DEVICE_INFO_0x43_FRAMED_1",
+    "DEVICE_INFO_0x43_FRAMED_2",
+    "DEVICE_INFO_0x43_FRAMED_3",
+    "STATUS_BROADCAST_0x83_FRAMED_4",
+    "STATUS_BROADCAST_0x83_FRAMED_5",
+    "STATUS_BROADCAST_0x83_FRAMED_6",
+    "STATUS_BROADCAST_0x83_FRAMED_7",
+    "STATUS_BROADCAST_0x83_FRAMED_8",
+    "STATUS_BROADCAST_0x83_FRAMED_9",
+    "STATUS_BROADCAST_0x83_FRAMED_10",
+    "STATUS_BROADCAST_0x83_FRAMED_11",
 ]
 
 
@@ -186,6 +205,151 @@ MESH_INFO_REQUEST_0x73_METADATA: PacketMetadata = PacketMetadata(
 )
 
 
+# ============================================================================
+# Additional Checksum Validation Fixtures (Phase 0.5 Deliverable #4)
+# ============================================================================
+
+# Device Info packets with 0x7e framing and checksums
+DEVICE_INFO_0x43_FRAMED_1: bytes = bytes.fromhex(
+    "43 00 00 00 1e 32 5d 53 17 01 01 06 c6 20 02 00 ab c5 20 02 00 04 c4 20 02 00 01 c3 20 02 00 05 c2 90 00 "
+    "83 00 00 00 32 32 5d 53 17 00 01 00 00 00 00 00 00 fa 00 20 00 00 00 00 00 00 00 00 ea 00 00 00 86 01 00 "
+    "30 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 c1 7e"
+)
+DEVICE_INFO_0x43_FRAMED_1_METADATA: PacketMetadata = PacketMetadata(
+    device_type="device",
+    firmware_version="unknown",
+    captured_at="2025-11-06T08:20:44.920590",
+    device_id="32:5d:53:17",
+    operation="device_info",
+    notes="90-byte device info with 0x7e framing, checksum 0xc1"
+)
+
+DEVICE_INFO_0x43_FRAMED_2: bytes = bytes.fromhex(
+    "43 00 00 00 1e 3d 54 66 a6 01 01 06 c6 20 02 00 ab c5 20 02 00 04 c4 20 02 00 01 c3 20 02 00 04 c2 90 00 "
+    "83 00 00 00 32 3d 54 66 a6 00 01 00 00 00 00 00 00 fa 00 20 00 00 00 00 00 00 00 00 ea 00 00 00 86 01 00 "
+    "30 00 31 35 38 00 00 00 00 00 00 00 00 00 00 00 00 00 5f 7e"
+)
+DEVICE_INFO_0x43_FRAMED_2_METADATA: PacketMetadata = PacketMetadata(
+    device_type="device",
+    firmware_version="unknown",
+    captured_at="2025-11-06T08:20:48.437312",
+    device_id="3d:54:66:a6",
+    operation="device_info",
+    notes="90-byte device info with 0x7e framing, checksum 0x5f, different endpoint"
+)
+
+DEVICE_INFO_0x43_FRAMED_3: bytes = bytes.fromhex(
+    "43 00 00 00 1e 45 88 0d 50 01 01 06 c6 20 02 00 ab c5 20 02 00 04 c4 20 02 00 01 c3 20 02 00 04 c2 90 00 "
+    "83 00 00 00 32 45 88 0d 50 00 01 00 00 00 00 00 00 fa 00 20 00 00 00 00 00 00 00 00 ea 00 00 00 86 01 00 "
+    "30 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 c1 7e"
+)
+DEVICE_INFO_0x43_FRAMED_3_METADATA: PacketMetadata = PacketMetadata(
+    device_type="device",
+    firmware_version="unknown",
+    captured_at="2025-11-06T08:20:59.868595",
+    device_id="45:88:0d:50",
+    operation="device_info",
+    notes="90-byte device info with 0x7e framing, checksum 0xc1 (same as FRAMED_1), different endpoint"
+)
+
+# Status Broadcast packets with diverse endpoints and checksums
+STATUS_BROADCAST_0x83_FRAMED_4: bytes = bytes.fromhex(
+    "83 00 00 00 26 3d 54 6d e6 00 09 00 7e 1f 00 00 00 fa db 14 00 95 2b 00 1a 00 ff ff ea 11 02 1a a1 01 0b 01 00 00 00 00 00 8c 7e"
+)
+STATUS_BROADCAST_0x83_FRAMED_4_METADATA: PacketMetadata = PacketMetadata(
+    device_type="device",
+    firmware_version="unknown",
+    captured_at="2025-11-06T08:24:00.900807",
+    device_id="3d:54:6d:e6",
+    operation="status_broadcast",
+    notes="43-byte status broadcast with checksum 0x8c"
+)
+
+STATUS_BROADCAST_0x83_FRAMED_5: bytes = bytes.fromhex(
+    "83 00 00 00 26 32 5d 3e ad 00 0d 00 7e 1f 00 00 00 fa db 14 00 51 2c 00 1a 00 ff ff ea 11 02 1a a1 01 0b 01 00 00 00 00 00 49 7e"
+)
+STATUS_BROADCAST_0x83_FRAMED_5_METADATA: PacketMetadata = PacketMetadata(
+    device_type="device",
+    firmware_version="unknown",
+    captured_at="2025-11-06T08:24:00.917160",
+    device_id="32:5d:3e:ad",
+    operation="status_broadcast",
+    notes="43-byte status broadcast with checksum 0x49"
+)
+
+STATUS_BROADCAST_0x83_FRAMED_6: bytes = bytes.fromhex(
+    "83 00 00 00 26 60 b1 74 37 00 0d 00 7e 1f 00 00 00 fa db 14 00 4a 2e 00 1a 00 ff ff ea 11 02 1a a1 01 0b 01 00 00 00 00 00 44 7e"
+)
+STATUS_BROADCAST_0x83_FRAMED_6_METADATA: PacketMetadata = PacketMetadata(
+    device_type="device",
+    firmware_version="unknown",
+    captured_at="2025-11-06T08:24:00.986016",
+    device_id="60:b1:74:37",
+    operation="status_broadcast",
+    notes="43-byte status broadcast with checksum 0x44"
+)
+
+STATUS_BROADCAST_0x83_FRAMED_7: bytes = bytes.fromhex(
+    "83 00 00 00 26 60 b1 7a 37 00 0a 00 7e 1f 00 00 00 fa db 14 00 15 2e 00 1a 00 ff ff ea 11 02 1a a1 01 0b 01 00 00 00 00 00 0f 7e"
+)
+STATUS_BROADCAST_0x83_FRAMED_7_METADATA: PacketMetadata = PacketMetadata(
+    device_type="device",
+    firmware_version="unknown",
+    captured_at="2025-11-06T08:24:00.989269",
+    device_id="60:b1:7a:37",
+    operation="status_broadcast",
+    notes="43-byte status broadcast with checksum 0x0f"
+)
+
+STATUS_BROADCAST_0x83_FRAMED_8: bytes = bytes.fromhex(
+    "83 00 00 00 26 60 b1 7c b4 00 0d 00 7e 1f 00 00 00 fa db 14 00 01 2e 00 1a 00 ff ff ea 11 02 1a a1 01 0b 01 00 00 00 00 00 fb 7e"
+)
+STATUS_BROADCAST_0x83_FRAMED_8_METADATA: PacketMetadata = PacketMetadata(
+    device_type="device",
+    firmware_version="unknown",
+    captured_at="2025-11-06T08:24:01.000025",
+    device_id="60:b1:7c:b4",
+    operation="status_broadcast",
+    notes="43-byte status broadcast with checksum 0xfb"
+)
+
+STATUS_BROADCAST_0x83_FRAMED_9: bytes = bytes.fromhex(
+    "83 00 00 00 26 60 b1 8e 42 00 10 00 7e 24 00 00 00 fa db 14 00 f6 2d 00 1a 00 ff ff ea 11 02 1a a1 01 0b 01 00 00 00 00 00 ef 7e"
+)
+STATUS_BROADCAST_0x83_FRAMED_9_METADATA: PacketMetadata = PacketMetadata(
+    device_type="device",
+    firmware_version="unknown",
+    captured_at="2025-11-06T08:24:01.015140",
+    device_id="60:b1:8e:42",
+    operation="status_broadcast",
+    notes="43-byte status broadcast with checksum 0xef"
+)
+
+STATUS_BROADCAST_0x83_FRAMED_10: bytes = bytes.fromhex(
+    "83 00 00 00 26 38 e8 ee 97 00 0d 00 7e 1f 00 00 00 fa db 14 00 05 2c 00 1a 00 ff ff ea 11 02 1a a1 01 0b 01 00 00 00 00 00 fd 7e"
+)
+STATUS_BROADCAST_0x83_FRAMED_10_METADATA: PacketMetadata = PacketMetadata(
+    device_type="device",
+    firmware_version="unknown",
+    captured_at="2025-11-06T08:24:01.018870",
+    device_id="38:e8:ee:97",
+    operation="status_broadcast",
+    notes="43-byte status broadcast with checksum 0xfd, different endpoint"
+)
+
+STATUS_BROADCAST_0x83_FRAMED_11: bytes = bytes.fromhex(
+    "83 00 00 00 26 38 e8 dd 4d 00 14 00 7e 1f 00 00 00 fa db 14 00 aa 2b 00 1a 00 ff ff ea 11 02 1a a1 01 0b 01 00 00 00 00 00 a1 7e"
+)
+STATUS_BROADCAST_0x83_FRAMED_11_METADATA: PacketMetadata = PacketMetadata(
+    device_type="device",
+    firmware_version="unknown",
+    captured_at="2025-11-06T08:24:01.017582",
+    device_id="38:e8:dd:4d",
+    operation="status_broadcast",
+    notes="43-byte status broadcast with checksum 0xa1"
+)
+
+
 # Metadata registry for parameterized tests
 PACKET_METADATA: Dict[str, PacketMetadata] = {
     "HANDSHAKE_0x23": HANDSHAKE_0x23_METADATA,
@@ -200,4 +364,16 @@ PACKET_METADATA: Dict[str, PacketMetadata] = {
     "TOGGLE_OFF_0x73": TOGGLE_OFF_0x73_METADATA,
     "DATA_ACK_0x7B": DATA_ACK_0x7B_METADATA,
     "MESH_INFO_REQUEST_0x73": MESH_INFO_REQUEST_0x73_METADATA,
+    # Checksum validation fixtures
+    "DEVICE_INFO_0x43_FRAMED_1": DEVICE_INFO_0x43_FRAMED_1_METADATA,
+    "DEVICE_INFO_0x43_FRAMED_2": DEVICE_INFO_0x43_FRAMED_2_METADATA,
+    "DEVICE_INFO_0x43_FRAMED_3": DEVICE_INFO_0x43_FRAMED_3_METADATA,
+    "STATUS_BROADCAST_0x83_FRAMED_4": STATUS_BROADCAST_0x83_FRAMED_4_METADATA,
+    "STATUS_BROADCAST_0x83_FRAMED_5": STATUS_BROADCAST_0x83_FRAMED_5_METADATA,
+    "STATUS_BROADCAST_0x83_FRAMED_6": STATUS_BROADCAST_0x83_FRAMED_6_METADATA,
+    "STATUS_BROADCAST_0x83_FRAMED_7": STATUS_BROADCAST_0x83_FRAMED_7_METADATA,
+    "STATUS_BROADCAST_0x83_FRAMED_8": STATUS_BROADCAST_0x83_FRAMED_8_METADATA,
+    "STATUS_BROADCAST_0x83_FRAMED_9": STATUS_BROADCAST_0x83_FRAMED_9_METADATA,
+    "STATUS_BROADCAST_0x83_FRAMED_10": STATUS_BROADCAST_0x83_FRAMED_10_METADATA,
+    "STATUS_BROADCAST_0x83_FRAMED_11": STATUS_BROADCAST_0x83_FRAMED_11_METADATA,
 }

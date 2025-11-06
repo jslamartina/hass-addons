@@ -29,6 +29,7 @@ Phase 1b implements native Cync protocol ACK/response handling with reliability 
 ## Deliverables
 
 ### Code
+
 - [ ] `src/transport/reliable_layer.py` - ReliableTransport class (~250-300 lines)
 - [ ] `src/transport/connection_manager.py` - Connection state machine (~150-200 lines)
 - [ ] `src/transport/deduplication.py` - LRU dedup cache (~100-120 lines)
@@ -36,6 +37,7 @@ Phase 1b implements native Cync protocol ACK/response handling with reliability 
 - [ ] 25+ unit tests covering all retry/dedup/connection scenarios
 
 ### Features
+
 - [ ] Native Cync ACK packet handling (0x28, 0x7B, 0x88, 0xD8)
 - [ ] Connection state machine (disconnected, connecting, connected, reconnecting)
 - [ ] Handshake flow (0x23 → 0x28)
@@ -48,6 +50,7 @@ Phase 1b implements native Cync protocol ACK/response handling with reliability 
 - [ ] Automatic reconnection with exponential backoff
 
 ### Metrics (New)
+
 ```python
 # ACK/Response metrics
 tcp_comm_ack_received_total{device_id, ack_type, outcome}  # Counter (ack_type: 0x28, 0x7B, 0x88, 0xD8)
@@ -78,27 +81,29 @@ The table below specifies where each metric should be recorded in the codebase.
 **⚠️ Line Number Guidance (Technical Review Finding 4.5 - Enhanced)**: Line numbers are **approximate** and WILL drift during implementation/refactoring. Use method names and trigger events as **primary reference**.
 
 **Best Practices**:
+
 - Mark recording locations with comments: `# METRIC: tcp_comm_ack_received_total`
 - After implementation: Update table to remove line numbers, keep method names only
 - Focus on trigger events (e.g., "after ACK validated") not exact line positions
 
-| Metric | Code Location | Trigger Event | Implementation Guidance |
-|--------|---------------|---------------|-------------------------|
-| `tcp_comm_ack_received_total` | `ReliableTransport.handle_ack()` (after validation) | After ACK packet validated (checksum valid, type recognized) | Labels: `outcome=matched` if msg_id found in pending_acks, `outcome=orphaned` if no match |
-| `tcp_comm_ack_timeout_total` | `ReliableTransport.send_reliable()` (in retry loop, after timeout) | After timeout waiting for ACK | Record immediately after timeout exception caught |
-| `tcp_comm_idempotent_drop_total` | `ReliableTransport.recv_reliable()` (after dedup check) | Duplicate detected in dedup cache (cache hit) | Record before raising DuplicatePacketError |
-| `tcp_comm_retry_attempts_total` | `ReliableTransport.send_reliable()` (in retry loop) | Each retry attempt | Increment with label `attempt_number={attempt}` |
-| `tcp_comm_message_abandoned_total` | `ReliableTransport.send_reliable()` (after max retries) | After max_retries exceeded | Record before returning SendResult(success=False) |
-| `tcp_comm_connection_state` | `ConnectionManager.connect()/disconnect()/reconnect()` (in state transition) | On state transition | Set gauge to new state value when updating self.state |
-| `tcp_comm_handshake_total` | `ConnectionManager.connect()` (after handshake attempt) | After handshake completes (success or failure) | Record with label `outcome={success/failed}` |
-| `tcp_comm_reconnection_total` | `ConnectionManager.reconnect()` (on entry) | On reconnection trigger | Record with label `reason={reason}` before reconnect logic |
-| `tcp_comm_heartbeat_total` | `ConnectionManager._packet_router()` (after heartbeat) | After heartbeat exchange (success, timeout, invalid) | Record with label `outcome={success/timeout/invalid}` |
-| `tcp_comm_dedup_cache_size` | `LRUCache.add()/cleanup()` (after operation) | After cache add/cleanup operation | Set gauge to `len(self.cache)` |
-| `tcp_comm_dedup_cache_hits_total` | `ReliableTransport.recv_reliable()` (on cache hit) | On cache hit (duplicate packet detected) | Record immediately after `dedup_cache.contains()` returns True |
-| `tcp_comm_dedup_cache_evictions_total` | `LRUCache.add()` (when evicting) | On LRU eviction (when cache full, oldest removed) | Record when evicting oldest entry from OrderedDict |
-| `tcp_comm_state_lock_hold_seconds` | `ConnectionManager.with_state_check()` (after release) | After releasing state lock | Record duration, log warning if > 10ms |
+| Metric                                 | Code Location                                                                | Trigger Event                                                | Implementation Guidance                                                                   |
+| -------------------------------------- | ---------------------------------------------------------------------------- | ------------------------------------------------------------ | ----------------------------------------------------------------------------------------- |
+| `tcp_comm_ack_received_total`          | `ReliableTransport.handle_ack()` (after validation)                          | After ACK packet validated (checksum valid, type recognized) | Labels: `outcome=matched` if msg_id found in pending_acks, `outcome=orphaned` if no match |
+| `tcp_comm_ack_timeout_total`           | `ReliableTransport.send_reliable()` (in retry loop, after timeout)           | After timeout waiting for ACK                                | Record immediately after timeout exception caught                                         |
+| `tcp_comm_idempotent_drop_total`       | `ReliableTransport.recv_reliable()` (after dedup check)                      | Duplicate detected in dedup cache (cache hit)                | Record before raising DuplicatePacketError                                                |
+| `tcp_comm_retry_attempts_total`        | `ReliableTransport.send_reliable()` (in retry loop)                          | Each retry attempt                                           | Increment with label `attempt_number={attempt}`                                           |
+| `tcp_comm_message_abandoned_total`     | `ReliableTransport.send_reliable()` (after max retries)                      | After max_retries exceeded                                   | Record before returning SendResult(success=False)                                         |
+| `tcp_comm_connection_state`            | `ConnectionManager.connect()/disconnect()/reconnect()` (in state transition) | On state transition                                          | Set gauge to new state value when updating self.state                                     |
+| `tcp_comm_handshake_total`             | `ConnectionManager.connect()` (after handshake attempt)                      | After handshake completes (success or failure)               | Record with label `outcome={success/failed}`                                              |
+| `tcp_comm_reconnection_total`          | `ConnectionManager.reconnect()` (on entry)                                   | On reconnection trigger                                      | Record with label `reason={reason}` before reconnect logic                                |
+| `tcp_comm_heartbeat_total`             | `ConnectionManager._packet_router()` (after heartbeat)                       | After heartbeat exchange (success, timeout, invalid)         | Record with label `outcome={success/timeout/invalid}`                                     |
+| `tcp_comm_dedup_cache_size`            | `LRUCache.add()/cleanup()` (after operation)                                 | After cache add/cleanup operation                            | Set gauge to `len(self.cache)`                                                            |
+| `tcp_comm_dedup_cache_hits_total`      | `ReliableTransport.recv_reliable()` (on cache hit)                           | On cache hit (duplicate packet detected)                     | Record immediately after `dedup_cache.contains()` returns True                            |
+| `tcp_comm_dedup_cache_evictions_total` | `LRUCache.add()` (when evicting)                                             | On LRU eviction (when cache full, oldest removed)            | Record when evicting oldest entry from OrderedDict                                        |
+| `tcp_comm_state_lock_hold_seconds`     | `ConnectionManager.with_state_check()` (after release)                       | After releasing state lock                                   | Record duration, log warning if > 10ms                                                    |
 
 **Implementation Notes**:
+
 - Record metrics **immediately after event completes** (e.g., after validation, after timeout)
 - For gauges (connection_state, cache_size): set absolute value
 - For counters: increment by 1 (or by attempt_number for retries)
@@ -117,14 +122,14 @@ Phase 1b uses multiple timeout values for different operations. This guide docum
 
 **Architectural Decision**: Balanced timeout hierarchy (Option C from performance target review)
 
-| Operation | Default | Rationale | Used In |
-|-----------|---------|-----------|---------|
-| **Handshake Timeout** | 5s | Initial connection (2.5× ACK timeout for slower setup) | `ConnectionManager.connect()` |
-| **ACK Wait Timeout** | 2s | Data channel timeout (2.5× p99 target of 800ms) | `ReliableTransport.send_reliable()` |
-| **Send Timeout** | 2s | Network I/O timeout (matches ACK timeout) | `conn.send()` wrapper |
-| **Heartbeat Send Interval** | 60s | How often to send 0xD3 heartbeat packets | `ConnectionManager._packet_router()` |
-| **Heartbeat ACK Timeout** | 10s | How long to wait for 0xD8 response; max(3× ACK, 10s) | `ConnectionManager._packet_router()` |
-| **Global ACK Cleanup** | 30s | Catch-all for stuck ACKs; 15× ACK timeout for safety | `ReliableTransport._cleanup_expired_acks()` |
+| Operation                   | Default | Rationale                                              | Used In                                     |
+| --------------------------- | ------- | ------------------------------------------------------ | ------------------------------------------- |
+| **Handshake Timeout**       | 5s      | Initial connection (2.5× ACK timeout for slower setup) | `ConnectionManager.connect()`               |
+| **ACK Wait Timeout**        | 2s      | Data channel timeout (2.5× p99 target of 800ms)        | `ReliableTransport.send_reliable()`         |
+| **Send Timeout**            | 2s      | Network I/O timeout (matches ACK timeout)              | `conn.send()` wrapper                       |
+| **Heartbeat Send Interval** | 60s     | How often to send 0xD3 heartbeat packets               | `ConnectionManager._packet_router()`        |
+| **Heartbeat ACK Timeout**   | 10s     | How long to wait for 0xD8 response; max(3× ACK, 10s)   | `ConnectionManager._packet_router()`        |
+| **Global ACK Cleanup**      | 30s     | Catch-all for stuck ACKs; 15× ACK timeout for safety   | `ReliableTransport._cleanup_expired_acks()` |
 
 **Note**: ACK timeout changed from 5s to 2s based on performance target hierarchy (p99 target = 800ms, timeout = 2.5× p99 = 2000ms).
 
@@ -133,6 +138,7 @@ Phase 1b uses multiple timeout values for different operations. This guide docum
 **Heartbeat Timeout Scaling (Formula Clarification - Technical Review Finding 3.4 Enhanced)**:
 
 The heartbeat timeout uses formula: `max(3 × ack_timeout, 10s)` which ensures:
+
 - **Minimum threshold**: Never less than 10s - accounts for network jitter and device processing variance even with low ACK timeouts
 - **Scales with ACK timeout**: Increases proportionally if ACK timeout increases
 - **Why 10s minimum (rationale)**:
@@ -166,16 +172,19 @@ Recommended ACK Timeout = p99_ack_latency × 2.5
 ```
 
 **Example Calculation**:
+
 - Target p99 ACK latency = 800ms (from performance targets)
 - Recommended ACK timeout = 800ms × 2.5 = 2000ms
 - Default: 2s
 
 **If Phase 0.5 measures different p99**:
+
 - Phase 0.5 measures p99 ACK latency = 300ms
 - Recommended ACK timeout = 300ms × 2.5 = 750ms
 - Round up to: 1s (nice round number)
 
 **Dependent Timeouts** (scaled from ACK timeout):
+
 - Handshake: 2.5× ACK timeout (allows for slower initial setup)
 - Heartbeat: max(3× ACK timeout, 10s) (tolerates network jitter, min 10s)
 - Cleanup: 15× ACK timeout (safety margin for stuck ACKs)
@@ -254,12 +263,14 @@ timeouts_adjusted = TimeoutConfig(measured_p99_ms=1200.0)
 ```
 
 **Benefits**:
+
 - ✅ **Eliminates cascading changes**: If Phase 0.5 measures p99=1200ms instead of 800ms, change only 1 line
 - ✅ **Maintains timeout relationships**: All dependent timeouts scale automatically
 - ✅ **Self-documenting**: Formula shows timeout derivation clearly
 - ✅ **Easy testing**: Can test with different p99 values without code changes
 
 **Enforcement Scope**:
+
 - **Mandatory in `src/` production code**: Ensures timeout consistency and formula-based scaling
 - **Optional in tests**: Tests may use hard-coded values for simplicity (e.g., `ack_timeout=1.0` in unit tests)
 
@@ -268,6 +279,7 @@ timeouts_adjusted = TimeoutConfig(measured_p99_ms=1200.0)
 **Enforcement Mechanism (Technical Review Finding 4.2 - Added)**:
 
 **Option 1: Custom Linting Rule** (recommended for automated enforcement):
+
 ```python
 # .ruff_custom_rules/timeout_config_enforcement.py
 """Custom ruff rule to enforce TimeoutConfig usage."""
@@ -288,21 +300,26 @@ def check_timeout_hardcoding(node):
 ```
 
 **Option 2: Code Review Checklist** (manual, simpler to implement):
-```markdown
+
+````markdown
 ## Phase 1b Code Review Checklist
 
 ### TimeoutConfig Enforcement
+
 - [ ] All ReliableTransport instances use `timeouts.ack_timeout_seconds` (NOT hardcoded values)
 - [ ] All ConnectionManager instances use `timeouts.handshake_timeout_seconds` and `timeouts.heartbeat_timeout_seconds`
 - [ ] TimeoutConfig initialized with Phase 0.5 measured_p99_ms value
 - [ ] No hardcoded timeout literals in src/ directory (tests may use literals)
 
 **Search command to verify**:
+
 ```bash
 # Should return ZERO matches in src/ directory
 grep -r "timeout=[0-9]" src/
 ```
-```
+````
+
+````
 
 **Recommended**: Use Option 2 (code review checklist) for Phase 1b. Add Option 1 (custom linting) in Phase 2 if needed.
 
@@ -361,21 +378,24 @@ conn_mgr = ConnectionManager(
     handshake_timeout=5,  # 2.5× ACK timeout
     heartbeat_timeout=10,  # max(3× ACK, 10s)
 )
-```
+````
 
 ### Timeout Validation (Phase 1d)
 
 Phase 1d chaos testing will validate timeout choices:
 
 **Test 1: Baseline Performance** (no chaos)
+
 - Verify ACK timeout > p99 actual latency
 - Success rate should be > 99.9%
 
 **Test 2: High Latency** (500ms added delay)
+
 - Verify ACK timeout tolerates latency spikes
 - Success rate should remain > 99%
 
 **Test 3: Packet Loss** (20% drop rate)
+
 - Verify retry logic with ACK timeout
 - Success rate should be > 99% with retries
 
@@ -485,6 +505,7 @@ class ACKTimeoutError(CyncProtocolError):
 ```
 
 **Exception Hierarchy Summary**:
+
 ```
 CyncProtocolError (Phase 1a - base)
 ├── PacketDecodeError (Phase 1a)
@@ -546,13 +567,13 @@ except DuplicatePacketError as e:
 
 #### Quick Reference: Phase 1b Exceptions
 
-| Exception | When Raised | Typical Action |
-|-----------|-------------|----------------|
-| `CyncConnectionError` | Connection not established | Reconnect |
-| `HandshakeError` | Handshake failed | Retry handshake or fail |
-| `PacketReceiveError` | Network receive failure | Reconnect |
-| `DuplicatePacketError` | Duplicate packet received | Log and ignore (normal) |
-| `ACKTimeoutError` | ACK not received | Retry send |
+| Exception              | When Raised                | Typical Action          |
+| ---------------------- | -------------------------- | ----------------------- |
+| `CyncConnectionError`  | Connection not established | Reconnect               |
+| `HandshakeError`       | Handshake failed           | Retry handshake or fail |
+| `PacketReceiveError`   | Network receive failure    | Reconnect               |
+| `DuplicatePacketError` | Duplicate packet received  | Log and ignore (normal) |
+| `ACKTimeoutError`      | ACK not received           | Retry send              |
 
 ---
 
@@ -569,6 +590,7 @@ Phase 1b introduces three separate identifier systems for different purposes. Un
 **Need to detect duplicates?** → Use `dedup_key` (Full Fingerprint hash)
 
 **Quick Reference Card**:
+
 - **msg_id**: ACK matching over network
 - **correlation_id**: Log tracing and metrics
 - **dedup_key**: Duplicate detection
@@ -576,6 +598,7 @@ Phase 1b introduces three separate identifier systems for different purposes. Un
 #### The Three Identifiers
 
 **msg_id (3-byte wire protocol identifier)**
+
 - **Purpose**: ACK matching over the network
 - **Type**: `bytes` (3 bytes)
 - **Generation**: Sequential counter (0x000000 → 0xFFFFFF, wraps)
@@ -583,6 +606,7 @@ Phase 1b introduces three separate identifier systems for different purposes. Un
 - **Use for deduplication**: NO (use `dedup_key` instead)
 
 **correlation_id (UUID v7 for observability)**
+
 - **Purpose**: Internal event tracking and observability
 - **Type**: `str` (UUID v7 format)
 - **Generation**: `str(uuid.uuid7())` per send/receive operation
@@ -590,6 +614,7 @@ Phase 1b introduces three separate identifier systems for different purposes. Un
 - **Use for deduplication**: NO (use `dedup_key` instead)
 
 **dedup_key (Deterministic hash for duplicate detection)**
+
 - **Purpose**: Identify duplicate packets arriving multiple times
 - **Type**: `str` (deterministic hash)
 - **Generation**: `f"{packet_type:02x}:{endpoint.hex()}:{msg_id.hex()}:{sha256(payload).hexdigest()[:16]}"`
@@ -619,12 +644,14 @@ packet_2 = await recv_reliable()
 #### Common Mistakes to Avoid
 
 ❌ **WRONG: Using correlation_id for deduplication**
+
 ```python
 # BAD - correlation_id is unique per call, won't detect duplicates!
 dedup_key = correlation_id  # UUID v7, never matches duplicates
 ```
 
 ✅ **CORRECT: Use dedup_key for cache, correlation_id for logs**
+
 ```python
 # Generate both
 correlation_id = str(uuid.uuid7())  # For this event
@@ -636,6 +663,7 @@ if await self.dedup_cache.contains(dedup_key):  # Check for duplicate
 ```
 
 ❌ **WRONG: Using msg_id for deduplication**
+
 ```python
 # BAD - msg_id may change on retry (device behavior unknown)
 # Also, 3-byte msg_id has collision risk (16M values)
@@ -643,6 +671,7 @@ dedup_key = msg_id.hex()
 ```
 
 ✅ **CORRECT: Use Full Fingerprint dedup_key**
+
 ```python
 # GOOD - Includes msg_id PLUS packet_type, endpoint, payload hash
 dedup_key = f"{packet_type:02x}:{endpoint.hex()}:{msg_id.hex()}:{payload_hash}"
@@ -650,27 +679,30 @@ dedup_key = f"{packet_type:02x}:{endpoint.hex()}:{msg_id.hex()}:{payload_hash}"
 
 #### Comparison Table
 
-| Identifier | Purpose | Type | Sent Over Wire | Use for Dedup | Use for Logging |
-|------------|---------|------|----------------|---------------|-----------------|
-| **msg_id** | ACK matching | `bytes` (3) | YES | ❌ NO | ✅ Yes (secondary) |
-| **correlation_id** | Event tracking | `str` (UUID v7) | NO | ❌ NO | ✅ YES (primary) |
-| **dedup_key** | Duplicate detection | `str` (hash) | NO | ✅ YES | ⚠️ Metadata only |
+| Identifier         | Purpose             | Type            | Sent Over Wire | Use for Dedup | Use for Logging    |
+| ------------------ | ------------------- | --------------- | -------------- | ------------- | ------------------ |
+| **msg_id**         | ACK matching        | `bytes` (3)     | YES            | ❌ NO         | ✅ Yes (secondary) |
+| **correlation_id** | Event tracking      | `str` (UUID v7) | NO             | ❌ NO         | ✅ YES (primary)   |
+| **dedup_key**      | Duplicate detection | `str` (hash)    | NO             | ✅ YES        | ⚠️ Metadata only   |
 
 #### Implementation Checklist
 
 **When sending**:
+
 - [ ] Generate `msg_id` for wire protocol (3 bytes)
 - [ ] Generate `correlation_id` for logging (UUID v7)
 - [ ] Track mapping: `msg_id.hex()` → `correlation_id` for ACK matching
 - [ ] Log with `correlation_id` and `msg_id`
 
 **When receiving**:
+
 - [ ] Generate `correlation_id` for this reception event (UUID v7)
 - [ ] Generate `dedup_key` from packet content (deterministic)
 - [ ] Check cache using `dedup_key` (not correlation_id!)
 - [ ] Log with `correlation_id` and `dedup_key`
 
 **When matching ACK**:
+
 - [ ] Extract `msg_id` from ACK packet (3 bytes from wire)
 - [ ] Reverse-lookup: `msg_id.hex()` → `correlation_id`
 - [ ] Find pending message: `pending_acks[correlation_id]`
@@ -948,14 +980,15 @@ class ReliableTransport:
 
 ⚠️ **PENDING PHASE 0.5 VALIDATION**: The positions below are **UNVALIDATED ASSUMPTIONS** based on legacy code patterns that may be incorrect. Actual positions will be confirmed during Phase 0.5 packet capture and documented in the validation report.
 
-| ACK Type | Packet Name | msg_id Present? | Position (TBD from Phase 0.5) | Confidence | Phase 0.5 Status |
-|----------|-------------|-----------------|-------------------------------|------------|------------------|
-| 0x28 | HELLO_ACK | TBD | TBD | ⏳ Pending | Phase 0.5 Deliverable #2 will validate |
-| 0x7B | DATA_ACK | TBD | TBD | ⏳ Pending | Phase 0.5 Deliverable #2 will validate |
-| 0x88 | STATUS_ACK | TBD | TBD | ⏳ Pending | Phase 0.5 Deliverable #2 will validate |
-| 0xD8 | HEARTBEAT_ACK | TBD | TBD | ⏳ Pending | Phase 0.5 Deliverable #2 will validate |
+| ACK Type | Packet Name   | msg_id Present? | Position (TBD from Phase 0.5) | Confidence | Phase 0.5 Status                       |
+| -------- | ------------- | --------------- | ----------------------------- | ---------- | -------------------------------------- |
+| 0x28     | HELLO_ACK     | TBD             | TBD                           | ⏳ Pending | Phase 0.5 Deliverable #2 will validate |
+| 0x7B     | DATA_ACK      | TBD             | TBD                           | ⏳ Pending | Phase 0.5 Deliverable #2 will validate |
+| 0x88     | STATUS_ACK    | TBD             | TBD                           | ⏳ Pending | Phase 0.5 Deliverable #2 will validate |
+| 0xD8     | HEARTBEAT_ACK | TBD             | TBD                           | ⏳ Pending | Phase 0.5 Deliverable #2 will validate |
 
 **Phase 0.5 Deliverable Requirements** (see acceptance criteria):
+
 1. Real captured ACK packets (hex dumps) for all 4 types
 2. Annotated breakdown showing actual msg_id positions (if present)
 3. Validation of whether msg_id even exists in each ACK type
@@ -963,6 +996,7 @@ class ReliableTransport:
 5. Recommendation for ACK matching strategy based on findings
 
 **Implementation Guidance:**
+
 - Phase 1b spec provides the architecture (ACK matching concept)
 - Phase 0.5 provides the data (actual positions from real packets)
 - **DO NOT START Phase 1b implementation** until Phase 0.5 validation complete
@@ -974,6 +1008,7 @@ class ReliableTransport:
 If Phase 0.5 validation finds that ACK packets do **NOT** contain msg_id, implement connection-level matching:
 
 **Strategy**: FIFO Request-Response Queue
+
 ```python
 class ReliableTransport:
     def __init__(self):
@@ -1004,12 +1039,14 @@ class ReliableTransport:
 ```
 
 **Trade-offs**:
+
 - ✅ Simpler implementation (no msg_id extraction logic)
 - ✅ Guaranteed correct matching (serialized requests)
 - ❌ Lower throughput (one request at a time)
 - ❌ Higher latency for bulk operations
 
 **Performance Impact**:
+
 - **Single device**: No impact (same as parallel matching for 1 device)
 - **Group operations (10 devices)**: ~10× slower
   - Parallel matching: 10 devices × 200ms (parallel ACK wait) = ~200ms total
@@ -1451,6 +1488,7 @@ for attempt in range(max_retries):
 **Why This Matters:**
 
 Without the lock, this race can occur:
+
 1. Thread A: `send_reliable()` checks `state == CONNECTED` → passes
 2. Thread B: `reconnect()` sets `state = RECONNECTING`
 3. Thread B: `disconnect()` closes connection
@@ -1461,11 +1499,13 @@ With the lock, state transitions and checks are serialized, preventing this race
 **Why Lock Release Before Network I/O Matters:**
 
 Without releasing lock before network I/O, deadlock can occur:
+
 1. Thread A: Acquires lock, calls `conn.send()` which blocks on network hang
 2. Thread B: Waits for lock indefinitely
 3. No progress possible - system stuck
 
 With lock released before network I/O:
+
 1. Thread A: Acquires lock briefly for state check + encoding (fast)
 2. Thread A: Releases lock, then performs network I/O with separate timeout
 3. Thread B: Can acquire lock for its own operations
@@ -1473,6 +1513,7 @@ With lock released before network I/O:
 5. System can recover automatically
 
 **Timeout Selection**:
+
 - 2s for network I/O timeout (matches ACK timeout from performance targets)
 - Lock held for minimal time (<1ms for state check + encoding)
 - No deadlock possible since network I/O outside critical section
@@ -1549,6 +1590,7 @@ Full Fingerprint (Option C) provides maximum robustness. See implementation at l
 ```
 
 **Observability vs Deduplication:**
+
 - **dedup_key**: Deterministic from packet content (for duplicate detection)
 - **correlation_id**: Unique per reception (UUID v7, for log tracing)
 - Both tracked in recv_reliable() for comprehensive observability
@@ -1560,6 +1602,7 @@ Full Fingerprint (Option C) provides maximum robustness. See implementation at l
 **Collision Probability**: **0%** (within single connection lifetime)
 
 **Rationale**:
+
 - Sequential counter with wrapping at 16.7M (2^24)
 - Typical connection duration: hours to days
 - Typical message count: thousands to millions
@@ -1567,12 +1610,14 @@ Full Fingerprint (Option C) provides maximum robustness. See implementation at l
 - In practice: impossible for smart home usage patterns
 
 **Benefits**:
+
 - ✅ **Zero collision risk** - no collision handling needed in ACK matching
 - ✅ **Deterministic behavior** - sequential IDs aid debugging
 - ✅ **Simple implementation** - single counter, no complex tracking
 - ✅ **Predictable logs** - msg_ids increment in order
 
 **Implementation** (from Phase 1a):
+
 ```python
 class ReliableTransport:
     def __init__(self):
@@ -1586,6 +1631,7 @@ class ReliableTransport:
 ```
 
 **Deduplication Independence**:
+
 - **msg_id**: 3-byte wire protocol identifier for ACK matching
 - **dedup_key**: Deterministic hash for collision-free deduplication (based on packet content)
 - **correlation_id**: UUID v7 for observability only (NOT used for deduplication)
@@ -1641,12 +1687,14 @@ packet_2 = await recv_reliable()
 **Common Mistake to Avoid:**
 
 ❌ **WRONG**: Using correlation_id as dedup_key
+
 ```python
 # BAD - correlation_id is unique per call, won't detect duplicates!
 dedup_key = correlation_id  # UUID v7, never matches
 ```
 
 ✅ **CORRECT**: Use dedup_key for cache, correlation_id for logs
+
 ```python
 # Deduplication check
 if await self.dedup_cache.contains(dedup_key):  # deterministic key
@@ -1665,10 +1713,10 @@ if await self.dedup_cache.contains(dedup_key):  # deterministic key
 
 **Table Summary:**
 
-| Identifier | Purpose | Generation | Uniqueness | Used For |
-|------------|---------|------------|------------|----------|
-| **dedup_key** | Duplicate detection | Deterministic hash of packet content | Same packet → same key | LRU cache lookup |
-| **correlation_id** | Event tracking | UUID v7 per reception | Different every call | Logging, metrics, tracing |
+| Identifier         | Purpose             | Generation                           | Uniqueness             | Used For                  |
+| ------------------ | ------------------- | ------------------------------------ | ---------------------- | ------------------------- |
+| **dedup_key**      | Duplicate detection | Deterministic hash of packet content | Same packet → same key | LRU cache lookup          |
+| **correlation_id** | Event tracking      | UUID v7 per reception                | Different every call   | Logging, metrics, tracing |
 
 ---
 
@@ -1709,6 +1757,7 @@ class RetryPolicy:
 Before starting Phase 1b implementation, perform formal handoff review:
 
 **Phase 0.5 → Phase 1b Handoff Checklist:**
+
 - [ ] Verify Phase 0.5 ACK validation complete (deliverables #1-8 signed off)
 - [ ] Review `docs/protocol/validation-report.md` for ACK msg_id presence findings
 - [ ] **CRITICAL**: Review ACK latency measurements from Phase 0.5 Tier 2 criteria:
@@ -1728,6 +1777,7 @@ Before starting Phase 1b implementation, perform formal handoff review:
 - [ ] Select implementation path based on findings (Parallel vs FIFO)
 
 **Example Timeout Recalibration**:
+
 ```python
 # If Phase 0.5 measured p99 ACK latency = 1200ms (instead of assumed 800ms):
 timeouts = TimeoutConfig(measured_p99_ms=1200.0)
@@ -1752,16 +1802,19 @@ transport = ReliableTransport(
 Based on Phase 0.5 findings, choose approach:
 
 **Path A: msg_id Present in ACK Packets** (if validated)
+
 - Implementation: Parallel ACK matching using msg_id → correlation_id reverse-lookup
 - Architecture: As specified in § ReliableTransport Class
 - Proceed with: Main implementation plan (Steps 1-5 below)
 
 **Path B: msg_id Absent in ACK Packets** (if not found)
+
 - Implementation: FIFO request-response queue with serialized requests
 - Architecture: Use fallback strategy (see § Fallback Strategy)
 - Proceed with: Modified implementation plan
 
 **Path C: Ambiguous Findings** (if inconsistent)
+
 - Capture additional samples to clarify, or
 - Implement FIFO approach (safer fallback)
 - Document ambiguity
@@ -1769,6 +1822,7 @@ Based on Phase 0.5 findings, choose approach:
 ---
 
 ### Step 1: Connection Management
+
 - Implement `ConnectionManager` class
 - Connection state machine (disconnected, connecting, connected, reconnecting)
 - Handshake flow (0x23 → 0x28)
@@ -1780,30 +1834,35 @@ Based on Phase 0.5 findings, choose approach:
 The state lock pattern prevents deadlock and race conditions between retry loops and reconnection logic. Verify each item during implementation:
 
 **Lock Acquisition Rules**:
+
 - [ ] Lock acquired BEFORE state check in `send_reliable()` retry loop
 - [ ] Lock acquired BEFORE all state transitions (CONNECTING → CONNECTED, etc.)
 - [ ] Lock released BEFORE network I/O operations (conn.send/recv)
 - [ ] Lock held for minimal time (<1ms for typical state check + encoding)
 
 **Network I/O Separation** (Deadlock Prevention):
+
 - [ ] Network I/O (conn.send/recv) has separate timeout (2s), independent of lock
 - [ ] Lock released before `await conn.send(packet)` call
 - [ ] Lock released before `await conn.recv()` call
 - [ ] State check → encoding → release lock → network I/O pattern verified
 
 **Lock Hold Time Monitoring**:
+
 - [ ] Lock hold time instrumented with timing wrapper
 - [ ] Log warning if lock held > 10ms (indicates potential issue)
 - [ ] Metric `tcp_comm_state_lock_hold_seconds` recorded (histogram)
 - [ ] Lock hold warnings tracked in `_lock_hold_warnings` counter
 
 **Unit Tests** (Verify Lock Correctness):
+
 - [ ] Test: Verify no deadlock if network hangs (mock conn.send() to block indefinitely, verify timeout fires and lock released)
 - [ ] Test: Verify reconnect during send_reliable() handles state correctly (trigger reconnect mid-retry, verify send_reliable() detects state change)
 - [ ] Test: Verify concurrent sends work correctly (launch 10 send_reliable() calls with asyncio.gather, verify no race conditions)
 - [ ] Test: Verify lock hold time < 10ms for typical operations (instrument and measure)
 
 **Implementation Pattern Example**:
+
 ```python
 for attempt in range(max_retries):
     # Acquire lock for state check + encoding (FAST operations only)
@@ -1832,7 +1891,8 @@ for attempt in range(max_retries):
 **Enforcement Mechanism (Technical Review Finding 4.1 - Added)**:
 
 **Option 1: Custom Linting Rule** (automated enforcement):
-```python
+
+````python
 # .ruff_custom_rules/state_lock_enforcement.py
 """Custom ruff rule to detect network I/O inside state lock critical sections."""
 
@@ -1857,9 +1917,10 @@ def check_lock_pattern_violation(node):
     # Check: If within "async with self._state_lock" block
     # Flag: Any await call to self.conn.send/recv/read/write
     pass
-```
+````
 
 **Option 2: Unit Test Enforcement** (verifies runtime behavior):
+
 ```python
 # tests/unit/transport/test_connection_lock_safety.py
 
@@ -1895,10 +1956,12 @@ async def test_lock_released_before_network_io():
 ```
 
 **Option 3: Code Review Checklist** (manual verification):
-```markdown
+
+````markdown
 ## Phase 1b Step 3 Lock Pattern Review
 
 ### Connection State Lock Rules Verification
+
 - [ ] Lock acquired BEFORE state check in send_reliable() retry loop
 - [ ] Lock released BEFORE await conn.send() call
 - [ ] Lock released BEFORE await conn.recv() call
@@ -1906,12 +1969,15 @@ async def test_lock_released_before_network_io():
 - [ ] Pattern verified: `async with lock: check + encode` → `release` → `await network_io()`
 
 **Verification commands**:
+
 ```bash
 # Search for potential violations (manual review needed)
 # Flag any conn.send/recv calls that might be inside lock blocks
 grep -A 5 "async with self._state_lock" src/transport/
 ```
-```
+````
+
+````
 
 **Recommended**: Use Option 2 (unit tests) + Option 3 (code review) for Phase 1b. Add Option 1 (linting) in Phase 2 if pattern violations recur.
 
@@ -2096,28 +2162,30 @@ async def test_dedup_cache_lru_eviction():
     await cache.add("73:3987c857:000004:a4b5c6d7e8f9g0h1", {})  # Should evict first
     assert await cache.contains("73:3987c857:000001:a1b2c3d4e5f6g7h8") is False
     assert await cache.contains("73:3987c857:000004:a4b5c6d7e8f9g0h1") is True
-```
+````
 
 ---
 
 ## Risks & Mitigation
 
-| Risk | Impact | Mitigation |
-|------|--------|------------|
-| ACK timeout tuning | Medium | Lab testing with various network conditions; configurable timeouts |
-| Dedup false negatives | Low | UUID v7 collision-resistant keys eliminate msg_id collision risk; comprehensive unit tests verify cache behavior |
-| Retry storms | Medium | Exponential backoff with jitter; max retry limits |
-| Cache memory growth | Low | LRU eviction + TTL expiry; monitor cache size metric |
+| Risk                  | Impact | Mitigation                                                                                                       |
+| --------------------- | ------ | ---------------------------------------------------------------------------------------------------------------- |
+| ACK timeout tuning    | Medium | Lab testing with various network conditions; configurable timeouts                                               |
+| Dedup false negatives | Low    | UUID v7 collision-resistant keys eliminate msg_id collision risk; comprehensive unit tests verify cache behavior |
+| Retry storms          | Medium | Exponential backoff with jitter; max retry limits                                                                |
+| Cache memory growth   | Low    | LRU eviction + TTL expiry; monitor cache size metric                                                             |
 
 ---
 
 ## Dependencies
 
 **Prerequisites**:
+
 - Phase 1a complete (protocol codec working)
 - Phase 0 TCPConnection available
 
 **External**:
+
 - None
 
 ---
@@ -2125,6 +2193,7 @@ async def test_dedup_cache_lru_eviction():
 ## Next Phase
 
 **Phase 1c**: Backpressure & Queues (3-4 days)
+
 - Add bounded send/receive queues
 - Overflow policies (block, drop, reject)
 - Queue depth metrics
@@ -2136,4 +2205,3 @@ async def test_dedup_cache_lru_eviction():
 - **Phase 1 Program**: `02-phase-1-spec.md` - Architecture details
 - **Phase 1a**: `02b-phase-1a-protocol-codec.md` - Protocol codec (prerequisite)
 - **Phase 1c**: `02d-phase-1c-backpressure.md` - Next phase
-

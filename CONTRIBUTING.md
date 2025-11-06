@@ -86,7 +86,7 @@ When you modify files, check for new errors by running `ruff check` on the speci
 ruff check cync-controller/src/cync_lan/mqtt_client.py cync-controller/src/cync_lan/devices.py
 
 # ❌ WRONG: Don't grep for specific line numbers or filter output
-ruff check cync-controller/src/cync_lan/mqtt_client.py | grep "1708"  # Misses other errors!
+ruff check cync-controller/src/cync_lan/mqtt_client.py | grep "1708" # Misses other errors!
 
 # ✅ CORRECT: Full output shows ALL errors (pre-existing + new)
 # Compare error count before and after your changes
@@ -131,7 +131,7 @@ Use [ShellCheck](https://www.shellcheck.net/wiki/) for shell script analysis:
   if [ ! -d "/path/to/dir" ]; then
     mkdir -p /path/to/dir
   fi
-
+  
   # ✅ BETTER: mkdir -p is inherently idempotent
   mkdir -p /path/to/dir
   ```
@@ -149,11 +149,11 @@ Use [ShellCheck](https://www.shellcheck.net/wiki/) for shell script analysis:
 
   ```bash
   # ✅ GOOD: Use -f for file operations
-  ln -sf /source /target  # Overwrites existing symlink
-  cp -f source dest       # Overwrites existing file
-
+  ln -sf /source /target # Overwrites existing symlink
+  cp -f source dest      # Overwrites existing file
+  
   # ✅ GOOD: Use || true for non-critical operations
-  docker network create my-network 2>/dev/null || true
+  docker network create my-network 2> /dev/null || true
   ```
 
 - ✅ **Cleanup stale state** - Remove partial/corrupted state before creating:
@@ -167,8 +167,8 @@ Use [ShellCheck](https://www.shellcheck.net/wiki/) for shell script analysis:
 
 ```bash
 # File creation - use conditional or -p flag
-mkdir -p /path/to/dir                    # Always safe
-[ -f /path/file ] || touch /path/file    # Create if missing
+mkdir -p /path/to/dir                 # Always safe
+[ -f /path/file ] || touch /path/file # Create if missing
 
 # Package installation - check first
 dpkg -l | grep -q package || apt-get install -y package
@@ -177,31 +177,31 @@ dpkg -l | grep -q package || apt-get install -y package
 grep -q "config_line" /etc/config || echo "config_line" >> /etc/config
 
 # Service management - restart vs start
-systemctl restart service  # Works whether running or not
+systemctl restart service # Works whether running or not
 # Better than: systemctl start service (fails if already running)
 
 # Docker operations - use || true or check first
-docker rm -f container_name 2>/dev/null || true  # Safe cleanup
-docker network create net 2>/dev/null || true   # Create if missing
+docker rm -f container_name 2> /dev/null || true # Safe cleanup
+docker network create net 2> /dev/null || true   # Create if missing
 
 # Git operations - safe patterns
-git pull || git clone https://repo.git  # Pull if exists, clone if not
-git checkout -b branch || git checkout branch  # Create or switch
+git pull || git clone https://repo.git        # Pull if exists, clone if not
+git checkout -b branch || git checkout branch # Create or switch
 ```
 
 **Anti-patterns (non-idempotent):**
 
 ```bash
 # ❌ BAD: Fails on second run
-mkdir /path/to/dir              # Error: directory exists
-docker network create my-net    # Error: network exists
-ln -s /source /target           # Error: file exists
+mkdir /path/to/dir           # Error: directory exists
+docker network create my-net # Error: network exists
+ln -s /source /target        # Error: file exists
 
 # ❌ BAD: Appends on every run (duplicates)
-echo "export PATH=/new:$PATH" >> ~/.bashrc  # Duplicates every run
+echo "export PATH=/new:$PATH" >> ~/.bashrc # Duplicates every run
 
 # ❌ BAD: Side effects accumulate
-counter=$((counter + 1))        # Increments on every run
+counter=$((counter + 1)) # Increments on every run
 ```
 
 **Testing for idempotency:**
@@ -211,7 +211,7 @@ The simplest test is to run your script twice in succession:
 ```bash
 # Should succeed both times with same result
 ./my-script.sh
-./my-script.sh  # Should not fail or change state
+./my-script.sh # Should not fail or change state
 ```
 
 **Examples from this repo:**
@@ -243,7 +243,6 @@ The simplest test is to run your script twice in succession:
 1. **Title Format:** Use clear, descriptive titles in the format: `[component] Brief description`
    - Examples: `[cync-controller] Fix device availability flickering`, `[docs] Update AGENTS.md standard compliance`
 2. **Pre-submission Checklist:**
-
    - [ ] **MANDATORY: Zero linting errors** - Run `npm run lint` and verify all checks pass
    - [ ] **MANDATORY: Code is formatted** - Run `npm run format:check` with no issues
    - [ ] Used auto-fix tools: `npm run lint:python:fix` and `npm run format`
@@ -324,4 +323,3 @@ When you complete a task or fix an issue, **document your findings in `docs/arch
 ---
 
 _For more information, see [Cursor Rules Guide](.cursor/RULES_GUIDE.md)._
-

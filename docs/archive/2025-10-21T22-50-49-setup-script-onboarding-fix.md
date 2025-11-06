@@ -15,6 +15,7 @@ The `setup-fresh-ha.sh` script was failing during the onboarding process with HT
 3. **HA State Issue**: Home Assistant's internal services weren't fully initialized after user creation
 
 The error showed:
+
 ```
 ConnectionRefusedError: [Errno 111] Connect call failed ('172.17.0.2', 19531)
 ```
@@ -61,6 +62,7 @@ fi
 ## Testing Results
 
 After the fix:
+
 1. ✅ User created successfully
 2. ✅ HTTP 400 detected and handled
 3. ✅ Home Assistant restarted automatically
@@ -112,4 +114,3 @@ After the fix:
 **Status**: ✅ Fixed and tested
 **Date**: October 21, 2025
 **Author**: AI Assistant (Claude Sonnet 4.5)
-

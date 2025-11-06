@@ -42,6 +42,7 @@ curl -X POST http://localhost:8123/auth/token \
 ```
 
 This means:
+
 - Fresh onboarding creates a valid token (returned during user creation)
 - But on already-onboarded instances, tokens cannot be programmatically refreshed
 - The only way to create new long-lived tokens is via the UI or WebSocket API (which also requires an existing valid token)
@@ -51,11 +52,13 @@ This means:
 ### 1. Removed Obsolete Password Grant Code
 
 **Deleted lines 260-316** from `setup-fresh-ha.sh`:
+
 - Old code attempted to use `grant_type=password` which is no longer supported
 - Tried to create tokens via `/auth/token` endpoint (returns "unsupported_grant_type")
 - This code path never worked on modern Home Assistant installations
 
 **Simplified `get_ha_auth_token()` function** to:
+
 - Check for token from onboarding (fresh HA setup)
 - Check for token in credentials file
 - Provide clear instructions if no token available
@@ -69,6 +72,7 @@ Created `/workspaces/hass-addons/scripts/update-token.sh` to guide users through
 ```
 
 **What it does:**
+
 - Provides step-by-step instructions to create a token via UI
 - Accepts the token via secure input (hidden)
 - Validates the token against the Home Assistant API
@@ -79,6 +83,7 @@ Created `/workspaces/hass-addons/scripts/update-token.sh` to guide users through
 Modified `setup-fresh-ha.sh` to validate tokens before use:
 
 **Added function (lines 596-620):**
+
 ```bash
 validate_ha_auth_token() {
   log_info "Validating authentication token..."
@@ -120,12 +125,14 @@ validate_ha_auth_token() {
 To test the fix:
 
 1. **With invalid token:**
+
    ```bash
    ./scripts/setup-fresh-ha.sh
    # Should show clear "token is invalid" message and skip MQTT setup
    ```
 
 2. **Update token:**
+
    ```bash
    ./scripts/update-token.sh
    # Follow prompts to create and save new token
@@ -147,6 +154,7 @@ To test the fix:
 - `hass-credentials.env` - Contains `LONG_LIVED_ACCESS_TOKEN`
 
 **Deleted files:**
+
 - `scripts/create-token-auto.js` - Failed Playwright automation (Shadow DOM issues)
 - `scripts/create-token-manual.sh` - Duplicate of update-token.sh
 
@@ -173,4 +181,3 @@ Potential enhancements:
 **Status:** ✅ Fixed
 **Impact:** Medium - affects fresh HA setup on already-onboarded instances
 **Workaround:** Manual token creation via `./scripts/update-token.sh`
-

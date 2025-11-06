@@ -8,8 +8,8 @@
 
 ## 📊 Quick Status
 
-| Phase   | Status          | Tests | Coverage | Timeline     |
-| ------- | --------------- | ----- | -------- | ------------ |
+| Phase   | Status           | Tests | Coverage | Timeline     |
+| ------- | ---------------- | ----- | -------- | ------------ |
 | Phase 1 | ✅ **COMPLETE**  | 69    | 96.21%   | Oct 24, 2025 |
 | Phase 2 | ✅ **COMPLETE**  | 149   | 38.14%   | Oct 24, 2025 |
 | Phase 3 | ❌ **CANCELLED** | 0     | N/A      | Cancelled    |
@@ -27,6 +27,7 @@ This document outlines a three-tiered testing approach for the Cync Controller a
 3. **End-to-End Tests** - Full workflow testing (Playwright/browser automation)
 
 **Goals:**
+
 - ✅ Enable confident refactoring of core components
 - ✅ Catch regressions early in development
 - ✅ Provide fast feedback loops for developers
@@ -34,6 +35,7 @@ This document outlines a three-tiered testing approach for the Cync Controller a
 - ✅ Support CI/CD automation
 
 **Timeline:**
+
 - Phase 1 (Foundation): ✅ **COMPLETE** (October 24, 2025) - Critical packet parsing modules
 - Phase 2 (Core Unit Tests): ✅ **COMPLETE** (October 24, 2025) - All core business logic modules
 - Phase 3 (Integration Tests): 📋 Planned (2-3 weeks) - Docker-based component interaction testing
@@ -42,6 +44,7 @@ This document outlines a three-tiered testing approach for the Cync Controller a
 - **Remaining:** ~3-5 weeks for Phases 3-4
 
 **Current Status:**
+
 - ✅ **Phase 1 Complete** - 69 unit tests, 96% coverage of critical modules (packet_parser, packet_checksum)
 - ✅ **Phase 2 Complete** - 123 additional unit tests, 35.33% overall coverage (devices, MQTT, server, cloud API)
 - 📋 Phase 3 Pending - Integration tests
@@ -68,6 +71,7 @@ This document outlines a three-tiered testing approach for the Cync Controller a
 ### Existing Testing Infrastructure
 
 **✅ Currently Available:**
+
 - Playwright setup (`playwright.config.ts`, browser automation tools)
 - Automated add-on configuration scripts (`scripts/configure-addon.sh`)
 - Cloud relay test suite (`scripts/test-cloud-relay.sh`)
@@ -79,6 +83,7 @@ This document outlines a three-tiered testing approach for the Cync Controller a
 - **✅ npm test scripts** - `test:unit`, `test:unit:cov`, `test:unit:fast`
 
 **📋 In Progress (Phase 2+):**
+
 - Integration test suite
 - Comprehensive E2E test coverage
 - CI/CD test automation
@@ -88,6 +93,7 @@ This document outlines a three-tiered testing approach for the Cync Controller a
 ### Key Components Requiring Tests
 
 **Core Python Modules:**
+
 - `server.py` - NCyncServer, CloudRelayConnection, packet handling
 - `devices.py` - CyncDevice, CyncGroup, CyncTCPDevice, command handling
 - `mqtt_client.py` - MQTTClient, discovery, state management
@@ -97,6 +103,7 @@ This document outlines a three-tiered testing approach for the Cync Controller a
 - `metadata/model_info.py` - Device metadata and classification
 
 **Critical Workflows:**
+
 - Device discovery and registration
 - Command flow with ACK handling
 - MQTT discovery and state updates
@@ -164,11 +171,11 @@ Unit tests validate individual components in isolation with mocked dependencies.
 ```bash
 # Add to pyproject.toml [project.optional-dependencies]
 test = [
-    "pytest>=8.3.0",
-    "pytest-asyncio>=0.24.0",
-    "pytest-mock>=3.14.0",
-    "pytest-cov>=6.0.0",
-    "pytest-timeout>=2.3.0",
+"pytest>=8.3.0",
+"pytest-asyncio>=0.24.0",
+"pytest-mock>=3.14.0",
+"pytest-cov>=6.0.0",
+"pytest-timeout>=2.3.0",
 ]
 
 # Install
@@ -206,6 +213,7 @@ cync-controller/
 **Priority:** 🔴 Critical - Core protocol implementation
 
 **Test Cases:**
+
 - Parse valid 0x73 control packets
 - Parse valid 0x83 mesh info packets
 - Parse valid 0x43 broadcast packets
@@ -264,6 +272,7 @@ class TestPacketParser:
 **Priority:** 🔴 Critical - Validates packet integrity
 
 **Test Cases:**
+
 - Calculate checksum for valid packets
 - Verify checksum calculation matches expected values
 - Test edge cases (empty data, single byte, max length)
@@ -299,6 +308,7 @@ class TestPacketChecksum:
 **Priority:** 🟡 High - Core business logic
 
 **Test Cases:**
+
 - Device initialization and configuration
 - State management (on/off, brightness, color)
 - Command creation and validation
@@ -395,6 +405,7 @@ class TestCyncGroup:
 **Priority:** 🟡 High - Integration with Home Assistant
 
 **Test Cases:**
+
 - MQTT connection handling
 - Discovery message generation
 - State publishing and formatting
@@ -466,6 +477,7 @@ class TestMQTTClient:
 **Priority:** 🟡 High - Core networking logic
 
 **Test Cases:**
+
 - NCyncServer initialization
 - TCP connection handling
 - CloudRelayConnection proxy behavior
@@ -546,6 +558,7 @@ class TestCloudRelayConnection:
 **Priority:** 🟢 Medium - Less frequently used
 
 **Test Cases:**
+
 - Authentication flow
 - Device export functionality
 - API error handling
@@ -610,14 +623,14 @@ Integration tests validate component interactions with real dependencies (MQTT b
 
 ```yaml
 # tests/integration/docker-compose.test.yml
-version: '3.8'
+version: "3.8"
 
 services:
   emqx:
     image: emqx/emqx:latest
     ports:
-      - "18083:18083"  # Dashboard
-      - "1883:1883"    # MQTT
+      - "18083:18083" # Dashboard
+      - "1883:1883" # MQTT
     environment:
       - EMQX_NAME=test_broker
       - EMQX_HOST=127.0.0.1
@@ -671,6 +684,7 @@ tests/
 #### 1. MQTT Integration Tests
 
 **Test Cases:**
+
 - Add-on connects to MQTT broker
 - Discovery messages published correctly
 - State updates propagate to MQTT
@@ -746,6 +760,7 @@ class TestMQTTIntegration:
 #### 2. Device Control Integration Tests
 
 **Test Cases:**
+
 - Send command through full stack (MQTT → Server → Device → ACK)
 - Verify ACK callbacks execute correctly
 - Test `pending_command` flag lifecycle
@@ -814,6 +829,7 @@ class TestDeviceControl:
 #### 3. Cloud Relay Integration Tests
 
 **Test Cases:**
+
 - Relay mode proxy setup
 - Packet forwarding device → cloud
 - Packet forwarding cloud → device
@@ -904,6 +920,7 @@ End-to-end tests validate complete user workflows through the Home Assistant UI 
 ### Setup Requirements
 
 **Already configured:**
+
 - ✅ `playwright.config.ts` exists
 - ✅ MCP tools available in Cursor
 - ✅ Test scripts in `cync-controller/tests/e2e/`
@@ -921,6 +938,7 @@ cync-controller/tests/e2e/
 ```
 
 **Utility Scripts (in `scripts/playwright/`):**
+
 - `delete-all-mqtt-entities-except-bridge.ts` - Entity cleanup utility
 - `delete-mqtt-entities.ts` - Specific entity deletion
 - `delete-entities.ts` - Generic entity deletion
@@ -930,6 +948,7 @@ cync-controller/tests/e2e/
 #### 1. Add-on Configuration Tests
 
 **Test Cases:**
+
 - Navigate to add-on configuration page
 - Modify configuration options
 - Verify configuration persists
@@ -940,46 +959,46 @@ cync-controller/tests/e2e/
 **Example Test:**
 
 ```typescript
-import { test, expect } from '@playwright/test';
+import { test, expect } from "@playwright/test";
 
-test.describe('Add-on Configuration', () => {
+test.describe("Add-on Configuration", () => {
   test.beforeEach(async ({ page }) => {
     // Login
-    await page.goto('http://localhost:8123');
-    await page.fill('input[name="username"]', 'dev');
-    await page.fill('input[name="password"]', 'dev');
+    await page.goto("http://localhost:8123");
+    await page.fill('input[name="username"]', "dev");
+    await page.fill('input[name="password"]', "dev");
     await page.click('button[type="submit"]');
-    await page.waitForURL('**/lovelace/**');
+    await page.waitForURL("**/lovelace/**");
   });
 
-  test('should update cloud relay configuration', async ({ page }) => {
+  test("should update cloud relay configuration", async ({ page }) => {
     // Navigate to add-on
-    await page.goto('http://localhost:8123/hassio/addon/local_cync-controller');
+    await page.goto("http://localhost:8123/hassio/addon/local_cync-controller");
 
     // Switch to Configuration tab
-    const frame = page.frameLocator('iframe');
-    await frame.getByRole('tab', { name: 'Configuration' }).click();
+    const frame = page.frameLocator("iframe");
+    await frame.getByRole("tab", { name: "Configuration" }).click();
 
     // Enable cloud relay
-    await frame.getByLabel('Cloud Relay Enabled').check();
-    await frame.getByLabel('Forward to Cloud').check();
+    await frame.getByLabel("Cloud Relay Enabled").check();
+    await frame.getByLabel("Forward to Cloud").check();
 
     // Save
-    await frame.getByRole('button', { name: 'Save' }).click();
+    await frame.getByRole("button", { name: "Save" }).click();
 
     // Verify saved
-    await expect(frame.getByText('Configuration saved')).toBeVisible();
+    await expect(frame.getByText("Configuration saved")).toBeVisible();
 
     // Restart add-on
-    await frame.getByRole('tab', { name: 'Info' }).click();
-    await frame.getByRole('button', { name: 'Restart' }).click();
+    await frame.getByRole("tab", { name: "Info" }).click();
+    await frame.getByRole("button", { name: "Restart" }).click();
 
     // Verify logs show relay mode
-    await frame.getByRole('tab', { name: 'Log' }).click();
-    await expect(frame.getByText('Cloud relay mode enabled')).toBeVisible();
+    await frame.getByRole("tab", { name: "Log" }).click();
+    await expect(frame.getByText("Cloud relay mode enabled")).toBeVisible();
   });
 
-  test('should validate MQTT configuration', async ({ page }) => {
+  test("should validate MQTT configuration", async ({ page }) => {
     // ... similar pattern for MQTT settings
   });
 });
@@ -988,6 +1007,7 @@ test.describe('Add-on Configuration', () => {
 #### 2. Device Control Tests
 
 **Test Cases:**
+
 - Turn device on/off via UI
 - Adjust brightness
 - Change color temperature
@@ -998,45 +1018,51 @@ test.describe('Add-on Configuration', () => {
 **Example Test:**
 
 ```typescript
-test.describe('Device Control', () => {
-  test('should turn light on via UI', async ({ page }) => {
+test.describe("Device Control", () => {
+  test("should turn light on via UI", async ({ page }) => {
     // Navigate to dashboard
-    await page.goto('http://localhost:8123/lovelace/0');
+    await page.goto("http://localhost:8123/lovelace/0");
 
     // Find device card
-    const lightCard = page.locator('[data-entity-id="light.living_room_light"]');
+    const lightCard = page.locator(
+      '[data-entity-id="light.living_room_light"]',
+    );
 
     // Verify initial state (off)
-    await expect(lightCard).toHaveAttribute('data-state', 'off');
+    await expect(lightCard).toHaveAttribute("data-state", "off");
 
     // Click to turn on
     await lightCard.click();
 
     // Wait for state update
-    await expect(lightCard).toHaveAttribute('data-state', 'on', { timeout: 5000 });
+    await expect(lightCard).toHaveAttribute("data-state", "on", {
+      timeout: 5000,
+    });
 
     // Verify UI reflects state
-    await expect(lightCard.locator('.state-label')).toHaveText('On');
+    await expect(lightCard.locator(".state-label")).toHaveText("On");
   });
 
-  test('should adjust brightness', async ({ page }) => {
-    await page.goto('http://localhost:8123/lovelace/0');
+  test("should adjust brightness", async ({ page }) => {
+    await page.goto("http://localhost:8123/lovelace/0");
 
-    const lightCard = page.locator('[data-entity-id="light.living_room_light"]');
+    const lightCard = page.locator(
+      '[data-entity-id="light.living_room_light"]',
+    );
 
     // Open more-info dialog
-    await lightCard.click({ button: 'right' });
-    await page.getByText('More info').click();
+    await lightCard.click({ button: "right" });
+    await page.getByText("More info").click();
 
     // Adjust brightness slider
-    const brightnessSlider = page.locator('.brightness-slider');
-    await brightnessSlider.fill('75');
+    const brightnessSlider = page.locator(".brightness-slider");
+    await brightnessSlider.fill("75");
 
     // Verify brightness updated
-    await expect(brightnessSlider).toHaveValue('75');
+    await expect(brightnessSlider).toHaveValue("75");
 
     // Close dialog
-    await page.keyboard.press('Escape');
+    await page.keyboard.press("Escape");
   });
 });
 ```
@@ -1044,6 +1070,7 @@ test.describe('Device Control', () => {
 #### 3. MQTT Integration Tests
 
 **Test Cases:**
+
 - Verify entities appear in UI after add-on start
 - Test entity attributes and metadata
 - Verify suggested area assignment
@@ -1053,37 +1080,37 @@ test.describe('Device Control', () => {
 **Example Test:**
 
 ```typescript
-test.describe('MQTT Integration', () => {
-  test('should show discovered entities', async ({ page }) => {
+test.describe("MQTT Integration", () => {
+  test("should show discovered entities", async ({ page }) => {
     // Navigate to entities page
-    await page.goto('http://localhost:8123/config/entities');
+    await page.goto("http://localhost:8123/config/entities");
 
     // Filter to MQTT entities
-    await page.fill('input[placeholder="Search entities"]', 'cync');
+    await page.fill('input[placeholder="Search entities"]', "cync");
 
     // Verify entities present
-    const entityRows = page.locator('.entity-row');
+    const entityRows = page.locator(".entity-row");
     await expect(entityRows).toHaveCountGreaterThan(0);
 
     // Click first entity
     await entityRows.first().click();
 
     // Verify entity details
-    await expect(page.getByText('Integration: MQTT')).toBeVisible();
-    await expect(page.getByText('Device class:')).toBeVisible();
+    await expect(page.getByText("Integration: MQTT")).toBeVisible();
+    await expect(page.getByText("Device class:")).toBeVisible();
   });
 
-  test('should assign correct suggested areas', async ({ page }) => {
-    await page.goto('http://localhost:8123/config/entities');
+  test("should assign correct suggested areas", async ({ page }) => {
+    await page.goto("http://localhost:8123/config/entities");
 
     // Find device with known room
-    await page.fill('input[placeholder="Search entities"]', 'living_room');
+    await page.fill('input[placeholder="Search entities"]', "living_room");
 
-    const entity = page.locator('.entity-row').first();
+    const entity = page.locator(".entity-row").first();
     await entity.click();
 
     // Verify area
-    await expect(page.getByText('Area: Living Room')).toBeVisible();
+    await expect(page.getByText("Area: Living Room")).toBeVisible();
   });
 });
 ```
@@ -1091,6 +1118,7 @@ test.describe('MQTT Integration', () => {
 #### 4. Error Handling Tests
 
 **Test Cases:**
+
 - Add-on fails gracefully when MQTT unavailable
 - UI shows appropriate errors for failed commands
 - Offline devices show unavailable status
@@ -1360,7 +1388,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: "20"
       - name: Install dependencies
         run: npm install
       - name: Run linters
@@ -1373,7 +1401,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: '3.13'
+          python-version: "3.13"
       - name: Install dependencies
         run: |
           cd cync-controller
@@ -1394,7 +1422,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: '3.13'
+          python-version: "3.13"
       - name: Start test environment
         run: |
           docker-compose -f tests/integration/docker-compose.test.yml up -d
@@ -1422,7 +1450,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: "20"
       - name: Install dependencies
         run: npm install
       - name: Install Playwright browsers
@@ -1481,8 +1509,8 @@ exit 0
 
 ### Coverage Targets
 
-| Component                | Target Coverage | Current    | Status         | Priority      |
-| ------------------------ | --------------- | ---------- | -------------- | ------------- |
+| Component                | Target Coverage | Current    | Status          | Priority       |
+| ------------------------ | --------------- | ---------- | --------------- | -------------- |
 | `packet_checksum.py`     | 95%             | **100%**   | ✅ **EXCEEDED** | 🔴 Critical    |
 | `packet_parser.py`       | 90%             | **95.76%** | ✅ **EXCEEDED** | 🔴 Critical    |
 | `const.py`               | 90%             | **90.70%** | ✅ **MET**      | 🔴 Critical    |
@@ -1497,6 +1525,7 @@ exit 0
 | `main.py`                | N/A             | **0%**     | ⚪ Integration  | 🟢 Low (Entry) |
 
 **Phase 1+2 Achievement:** 38.14% overall coverage (1,588/4,164 statements) - **All targets met or exceeded!** ✨
+
 - **Critical modules (packet_parser, packet_checksum):** 95-100% ✨
 - **Configuration modules (const, structs, metadata):** 70-91% ✨
 - **Business logic modules:** cloud_api 76%, devices/utils 34%, mqtt/server 27% ✨
@@ -1506,6 +1535,7 @@ exit 0
 ### Test Metrics Dashboard
 
 **Proposed Metrics:**
+
 - Test count by tier (unit/integration/e2e)
 - Test execution time by tier
 - Coverage percentage by module
@@ -1513,6 +1543,7 @@ exit 0
 - Test failure rate over time
 
 **Tools:**
+
 - pytest-html for HTML reports
 - pytest-cov for coverage
 - Coverage.py for detailed coverage analysis
@@ -1593,6 +1624,7 @@ exit 0
    - ✅ All npm test scripts work correctly
 
 **Deliverables:** ✅ **ALL ACHIEVED**
+
 - ✅ Working pytest setup with all dependencies installed (pytest 8.4.2)
 - ✅ **69 unit tests** created and passing
   - 41 tests for `packet_parser.py` (**95.76% coverage** - exceeds 90% target)
@@ -1606,6 +1638,7 @@ exit 0
 **Test Execution Time:** < 1 second (0.12s for all 69 tests) ⚡
 
 **Files Created:**
+
 - `cync-controller/.coveragerc` - Coverage configuration
 - `cync-controller/pytest.ini` - Pytest configuration
 - `cync-controller/tests/unit/conftest.py` - Shared fixtures
@@ -1619,6 +1652,7 @@ exit 0
 **Goals:** Test core business logic components
 
 **Tasks:**
+
 - [x] **Task 1: Write device model tests (`test_devices.py`)** ✅
   - Test device initialization and configuration
   - Test state management (on/off, brightness, color)
@@ -1666,6 +1700,7 @@ exit 0
   - Add troubleshooting tips for common test issues
 
 **Deliverables:** ✅ **ALL ACHIEVED**
+
 - ✅ Comprehensive unit test suite covering all core modules (218 total tests)
   - 48 tests for `devices.py` (initialization, properties, commands, groups)
   - 36 tests for `mqtt_client.py` (connection, publishing, discovery, conversions)
@@ -1678,6 +1713,7 @@ exit 0
 **Test Execution Time:** < 0.8 seconds for all 218 tests ⚡
 
 **Files Created:**
+
 - `cync-controller/tests/unit/test_devices.py` - 48 tests
 - `cync-controller/tests/unit/test_mqtt_client.py` - 36 tests
 - `cync-controller/tests/unit/test_server.py` - 19 tests
@@ -1696,6 +1732,7 @@ exit 0
 **Goals:** ~~Test component interactions with real dependencies~~
 
 **Tasks:**
+
 - ❌ Create Docker Compose test environment
 - ❌ Build mock Cync device
 - ❌ Write MQTT integration tests
@@ -1713,6 +1750,7 @@ exit 0
 **Goals:** Test complete workflows through UI
 
 **Tasks:**
+
 - ✅ Expand E2E test coverage
 - ✅ Write add-on configuration tests
 - ✅ Write device control tests
@@ -1722,6 +1760,7 @@ exit 0
 - ✅ Add `npm run test:e2e` scripts
 
 **Deliverables:**
+
 - Comprehensive E2E test suite
 - Test helpers and utilities
 - Documentation for E2E testing
@@ -1731,6 +1770,7 @@ exit 0
 **Goals:** Automate tests in CI/CD pipeline
 
 **Tasks:**
+
 - ✅ Create GitHub Actions workflow
 - ✅ Set up automated testing on PRs
 - ✅ Configure coverage reporting
@@ -1738,6 +1778,7 @@ exit 0
 - ✅ Create test summary dashboard
 
 **Deliverables:**
+
 - Automated CI/CD pipeline
 - Pre-commit hooks
 - Test metrics dashboard
@@ -1747,6 +1788,7 @@ exit 0
 **Goals:** Document testing practices and establish maintenance processes
 
 **Tasks:**
+
 - ✅ Write comprehensive testing guide
 - ✅ Document test patterns and conventions
 - ✅ Create troubleshooting guide for test failures
@@ -1754,6 +1796,7 @@ exit 0
 - ✅ Train team on testing practices
 
 **Deliverables:**
+
 - Testing documentation
 - Troubleshooting guide
 - Team training materials
@@ -1785,6 +1828,7 @@ exit 0
 ### A. Testing Best Practices
 
 **General:**
+
 - Write tests before refactoring (document current behavior)
 - Test behavior, not implementation
 - Use descriptive test names (`test_device_offline_threshold_requires_three_reports`)
@@ -1792,6 +1836,7 @@ exit 0
 - Avoid test interdependencies
 
 **Unit Tests:**
+
 - Mock external dependencies
 - Test one thing at a time
 - Use parametrized tests for multiple inputs
@@ -1799,6 +1844,7 @@ exit 0
 - Keep tests fast (< 100ms per test)
 
 **Integration Tests:**
+
 - Use real components where possible
 - Clean up resources after tests
 - Use Docker for environment consistency
@@ -1806,6 +1852,7 @@ exit 0
 - Accept slower execution (< 5s per test)
 
 **E2E Tests:**
+
 - Test complete user workflows
 - Use page object pattern for maintainability
 - Handle async operations properly
@@ -1815,6 +1862,7 @@ exit 0
 ### B. Common Testing Pitfalls
 
 **Avoid:**
+
 - ❌ Testing implementation details (e.g., internal variables)
 - ❌ Tests that depend on execution order
 - ❌ Hardcoded timeouts (use retries with exponential backoff)
@@ -1824,6 +1872,7 @@ exit 0
 - ❌ Overly complex test setup
 
 **Do:**
+
 - ✅ Test observable behavior
 - ✅ Use fixtures for common setup
 - ✅ Make tests deterministic and repeatable
@@ -1834,6 +1883,7 @@ exit 0
 ### C. Troubleshooting Test Failures
 
 **Unit Test Failures:**
+
 1. Check if code change broke expected behavior
 2. Verify mocks are configured correctly
 3. Check for race conditions in async tests
@@ -1841,6 +1891,7 @@ exit 0
 5. Review test logs for assertion details
 
 **Integration Test Failures:**
+
 1. Check Docker container logs
 2. Verify network connectivity between containers
 3. Ensure MQTT broker is accessible
@@ -1848,6 +1899,7 @@ exit 0
 5. Verify test data fixtures are loaded
 
 **E2E Test Failures:**
+
 1. Check Playwright screenshots/videos
 2. Review browser console logs
 3. Verify Home Assistant is running
@@ -1857,12 +1909,14 @@ exit 0
 ### D. References
 
 **External Resources:**
+
 - [pytest Documentation](https://docs.pytest.org/)
 - [Playwright Documentation](https://playwright.dev/)
 - [Home Assistant Testing Guide](https://developers.home-assistant.io/docs/development_testing)
 - [Docker Compose for Testing](https://docs.docker.com/compose/)
 
 **Project Documentation:**
+
 - [AGENTS.md](../../AGENTS.md) - Development guidelines
 - [Architecture Guide](architecture.md) - System design
 - [Browser Automation Guide](browser-automation.md) - Playwright patterns
@@ -1872,4 +1926,3 @@ exit 0
 ---
 
 _Last updated: October 24, 2025_
-

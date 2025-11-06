@@ -99,7 +99,6 @@ print("Valid config:", bool(config.get("name")))
 
 Process multi-megabyte files without tokenizing them into context. Ideal for bulk transformations and file analysis.
 
-
 ### 🌐 Web Content Fetching (`mcp-server-fetch`)
 
 Fetch web pages as simplified markdown or raw HTML.
@@ -158,7 +157,6 @@ mcp_web_fetch_fetch(
   max_length=10000
 )
 ```
-
 
 ## Configuration
 

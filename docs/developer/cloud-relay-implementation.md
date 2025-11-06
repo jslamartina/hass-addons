@@ -11,6 +11,7 @@ Successfully integrated MITM proxy functionality into the cync-controller Python
 ## Files Modified/Created in Git Repo
 
 ### Modified Files (3):
+
 1. **`src/cync_lan/const.py`**
    - Added 6 cloud relay constants
    - Environment variable loading for all relay options
@@ -25,6 +26,7 @@ Successfully integrated MITM proxy functionality into the cync-controller Python
    - Updated `reload_env()` method
 
 ### New Files (3):
+
 4. **`src/cync_lan/packet_parser.py`**
    - Copied from mitm/ tools
    - Parses 11 packet types
@@ -56,12 +58,12 @@ Location: `/mnt/supervisor/addons/local/hass-addons/cync-controller/`
 
 ```bash
 On branch hass_addon
-Modified:   src/cync_lan/const.py
-Modified:   src/cync_lan/server.py
-Modified:   src/cync_lan/structs.py
-New:        src/cync_lan/packet_checksum.py
-New:        src/cync_lan/packet_parser.py
-New:        docs/CLOUD_RELAY.md
+Modified: src/cync_lan/const.py
+Modified: src/cync_lan/server.py
+Modified: src/cync_lan/structs.py
+New: src/cync_lan/packet_checksum.py
+New: src/cync_lan/packet_parser.py
+New: docs/CLOUD_RELAY.md
 ```
 
 ## Configuration
@@ -70,12 +72,12 @@ Add to your add-on configuration:
 
 ```yaml
 cloud_relay:
-  enabled: false                      # Enable relay mode (default)
-  forward_to_cloud: true              # Forward to cloud (default)
-  cloud_server: "35.196.85.236"       # Cloud server IP
-  cloud_port: 23779                   # Cloud server port
-  debug_packet_logging: false         # Verbose packet logs
-  disable_ssl_verification: false     # Debug SSL mode (insecure)
+  enabled: false # Enable relay mode (default)
+  forward_to_cloud: true # Forward to cloud (default)
+  cloud_server: "35.196.85.236" # Cloud server IP
+  cloud_port: 23779 # Cloud server port
+  debug_packet_logging: false # Verbose packet logs
+  disable_ssl_verification: false # Debug SSL mode (insecure)
 ```
 
 ## Build and Test
@@ -94,41 +96,49 @@ ha addons logs local_cync-controller --follow
 ## Testing Modes
 
 ### 1. Default (Backward Compatibility)
+
 ```yaml
 cloud_relay:
   enabled: false
 ```
+
 - Existing LAN-only behavior
 - No changes required to existing configs
 
 ### 2. Cloud Relay with Forwarding
+
 ```yaml
 cloud_relay:
   enabled: true
   forward_to_cloud: true
 ```
+
 - Acts as transparent proxy
 - Devices → Relay → Cloud
 - MQTT integration works
 - Cloud app still functions
 
 ### 3. Debug Logging
+
 ```yaml
 cloud_relay:
   enabled: true
   forward_to_cloud: true
   debug_packet_logging: true
 ```
+
 - Same as #2 but with verbose packet logs
 - Good for protocol analysis
 
 ### 4. LAN-only with Inspection
+
 ```yaml
 cloud_relay:
   enabled: true
   forward_to_cloud: false
   debug_packet_logging: true
 ```
+
 - Blocks cloud communication
 - Still logs packets locally
 - Maximum privacy
@@ -194,6 +204,7 @@ _register_new_connection()
 ## Next Steps
 
 1. **Test the build:**
+
    ```bash
    cd /mnt/supervisor/addons/local/hass-addons/cync-controller
    ./rebuild.sh
@@ -222,21 +233,25 @@ _register_new_connection()
 ## Troubleshooting
 
 ### Build fails
+
 - Check Python syntax errors
 - Verify all imports are correct
 - Check linter output
 
 ### Relay won't connect to cloud
+
 - Verify internet connectivity
 - Check firewall rules (port 23779)
 - Try `disable_ssl_verification: true`
 
 ### Devices not connecting
+
 - Verify DNS redirection still configured
 - Check add-on is listening: `netstat -an | grep 23779`
 - Restart devices
 
 ### No packet logs
+
 - Verify `debug_packet_logging: true`
 - Check log level is DEBUG
 - Confirm relay mode is enabled
@@ -257,4 +272,3 @@ _register_new_connection()
 **Implementation:** Complete
 **Testing:** Ready to begin
 **Status:** Awaiting user validation
-

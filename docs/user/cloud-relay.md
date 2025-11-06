@@ -18,6 +18,7 @@ Device ←→ Cync Controller Relay ←→ Cync Cloud
 ```
 
 This architecture provides:
+
 - **Packet Inspection**: See exactly what devices and cloud are saying
 - **Protocol Analysis**: Reverse engineer new device features
 - **Cloud Backup**: Devices continue working even if relay fails (they fall back to cloud)
@@ -29,11 +30,13 @@ This architecture provides:
 **Important:** Cloud relay mode is currently **read-only** for protocol inspection and debugging.
 
 **What works:**
+
 - ✅ Device status updates to MQTT/Home Assistant
 - ✅ Packet logging and inspection
 - ✅ Real-time monitoring of device states
 
 **What doesn't work:**
+
 - ❌ Sending commands from Home Assistant
 - ❌ Local control of devices
 - ❌ MQTT command messages
@@ -52,12 +55,12 @@ Add the `cloud_relay` section to your add-on configuration:
 
 ```yaml
 cloud_relay:
-  enabled: false                      # Enable relay mode (default: false)
-  forward_to_cloud: true              # Forward packets to cloud (default: true)
-  cloud_server: "35.196.85.236"       # Cync cloud server IP (default: 35.196.85.236)
-  cloud_port: 23779                   # Cync cloud port (default: 23779)
-  debug_packet_logging: false         # Log all packets (default: false)
-  disable_ssl_verification: false     # Disable SSL verify - DEBUG ONLY (default: false)
+  enabled: false # Enable relay mode (default: false)
+  forward_to_cloud: true # Forward packets to cloud (default: true)
+  cloud_server: "35.196.85.236" # Cync cloud server IP (default: 35.196.85.236)
+  cloud_port: 23779 # Cync cloud port (default: 23779)
+  debug_packet_logging: false # Log all packets (default: false)
+  disable_ssl_verification: false # Disable SSL verify - DEBUG ONLY (default: false)
 ```
 
 ### Configuration Options
@@ -76,12 +79,14 @@ cloud_relay:
 ### Mode 1: Normal LAN-only (Relay Disabled)
 
 **Configuration:**
+
 ```yaml
 cloud_relay:
   enabled: false
 ```
 
 **Behavior:**
+
 - Default mode - add-on acts as local Cync cloud replacement
 - No cloud communication
 - Requires DNS redirection
@@ -94,6 +99,7 @@ cloud_relay:
 ### Mode 2: Cloud Relay with Forwarding
 
 **Configuration:**
+
 ```yaml
 cloud_relay:
   enabled: true
@@ -102,6 +108,7 @@ cloud_relay:
 ```
 
 **Behavior:**
+
 - Devices connect to add-on, add-on forwards to real cloud
 - Transparent proxy - devices work as if connected directly to cloud
 - MQTT integration shows device states (read-only)
@@ -115,6 +122,7 @@ cloud_relay:
 ### Mode 3: Cloud Relay with Debug Logging
 
 **Configuration:**
+
 ```yaml
 cloud_relay:
   enabled: true
@@ -123,6 +131,7 @@ cloud_relay:
 ```
 
 **Behavior:**
+
 - Same as Mode 2, but logs all packet details
 - Useful for protocol analysis and debugging
 - Can generate large logs
@@ -130,6 +139,7 @@ cloud_relay:
 **Use When:** Debugging device behavior or reverse engineering protocol.
 
 **Example Log Output:**
+
 ```
 [CLOUD->DEV] 0x43 DEVICE_INFO | EP:1b dc da 3e | CTR:0x15 | LEN:314
   Device Statuses (12 devices):
@@ -142,6 +152,7 @@ cloud_relay:
 ### Mode 4: LAN-only with Packet Inspection
 
 **Configuration:**
+
 ```yaml
 cloud_relay:
   enabled: true
@@ -150,6 +161,7 @@ cloud_relay:
 ```
 
 **Behavior:**
+
 - Devices connect to add-on
 - Packets are parsed and logged
 - **No forwarding to cloud** - cloud connection blocked
@@ -162,6 +174,7 @@ cloud_relay:
 ### Mode 5: Debug Mode (SSL Verification Disabled)
 
 **Configuration:**
+
 ```yaml
 cloud_relay:
   enabled: true
@@ -171,11 +184,13 @@ cloud_relay:
 ```
 
 **Behavior:**
+
 - Same as Mode 3, but disables SSL certificate verification
 - **⚠️ INSECURE** - vulnerable to MITM attacks
 - Only for local testing/development
 
 **Security Warning:**
+
 ```
 ============================================================
 ⚠️  SSL VERIFICATION DISABLED - DEBUG MODE ACTIVE ⚠️
@@ -193,6 +208,7 @@ DO NOT use on untrusted networks or production systems!
 **Goal:** Understand how Cync devices communicate
 
 **Configuration:**
+
 ```yaml
 cloud_relay:
   enabled: true
@@ -201,6 +217,7 @@ cloud_relay:
 ```
 
 **Workflow:**
+
 1. Enable relay with debug logging
 2. Trigger device actions in Cync app or Home Assistant
 3. Review logs to see packet structures
@@ -213,6 +230,7 @@ cloud_relay:
 **Goal:** Figure out why a device isn't responding correctly
 
 **Configuration:**
+
 ```yaml
 cloud_relay:
   enabled: true
@@ -221,6 +239,7 @@ cloud_relay:
 ```
 
 **Workflow:**
+
 1. Enable relay mode
 2. Reproduce the issue
 3. Check logs for:
@@ -236,6 +255,7 @@ cloud_relay:
 **Goal:** Ensure add-on works without internet
 
 **Configuration:**
+
 ```yaml
 cloud_relay:
   enabled: true
@@ -243,6 +263,7 @@ cloud_relay:
 ```
 
 **Workflow:**
+
 1. Enable relay without forwarding
 2. Test all device functions
 3. Verify MQTT integration works
@@ -255,6 +276,7 @@ cloud_relay:
 **Goal:** Keep cloud as fallback while using Home Assistant
 
 **Configuration:**
+
 ```yaml
 cloud_relay:
   enabled: true
@@ -278,6 +300,7 @@ echo "73 00 00 00 1e 1b dc da 3e 00 13 00 7e 0d 01 00 00 f8 8e 0c 00 0e 01 00 00
 ```
 
 The relay will:
+
 1. Detect the file
 2. Parse the hex bytes
 3. Inject packet to device
@@ -319,15 +342,18 @@ The relay uses the packet parser from the MITM research tools. See `docs/protoco
 ### SSL Verification
 
 **By default**, the relay uses SSL with verification **disabled** because:
+
 1. Cync cloud uses self-signed certificates
 2. The IP address doesn't match the certificate hostname
 3. We're intentionally performing MITM interception
 
 **In secure mode** (`disable_ssl_verification: false`):
+
 - SSL is used but verification is still disabled (Cync limitation)
 - Provides encryption but not identity verification
 
 **In debug mode** (`disable_ssl_verification: true`):
+
 - Explicitly disables all SSL checks
 - Logs prominent security warnings
 - **NEVER use on untrusted networks**
@@ -335,6 +361,7 @@ The relay uses the packet parser from the MITM research tools. See `docs/protoco
 ### Network Isolation
 
 **Recommendations:**
+
 - Run relay mode only on trusted local networks
 - Use VLANs to isolate IoT devices
 - Monitor logs for unexpected traffic
@@ -343,12 +370,14 @@ The relay uses the packet parser from the MITM research tools. See `docs/protoco
 ### Data Privacy
 
 **What's logged:**
+
 - Packet types and directions
 - Device IDs and status
 - Command structures
 - Endpoint identifiers
 
 **What's NOT logged:**
+
 - Account credentials (never transmitted after initial export)
 - Personal information
 - Network passwords
@@ -362,6 +391,7 @@ The relay uses the packet parser from the MITM research tools. See `docs/protoco
 **Symptoms:** Log shows "Failed to connect to cloud"
 
 **Solutions:**
+
 1. Check internet connectivity: `ping 35.196.85.236`
 2. Verify firewall allows outbound connections on port 23779
 3. Check cloud server IP hasn't changed (update `cloud_server` if needed)
@@ -373,6 +403,7 @@ The relay uses the packet parser from the MITM research tools. See `docs/protoco
 **Symptoms:** No device connections visible in logs
 
 **Solutions:**
+
 1. Verify DNS redirection is still configured (relay mode still requires DNS)
 2. Check devices are on same network
 3. Restart devices to force reconnection
@@ -393,6 +424,7 @@ The relay uses the packet parser from the MITM research tools. See `docs/protoco
 **Symptoms:** SSL handshake failures
 
 **Solutions:**
+
 1. Try `disable_ssl_verification: true` (debug mode)
 2. Check system time is correct (SSL certificates are time-sensitive)
 3. Verify cloud server IP/port are correct
@@ -404,6 +436,7 @@ The relay uses the packet parser from the MITM research tools. See `docs/protoco
 **Symptoms:** Injection files ignored
 
 **Check:**
+
 1. Relay mode is enabled
 2. Device has connected (relay knows endpoint)
 3. File path is correct: `/tmp/cync_inject_*.txt`
@@ -476,6 +509,7 @@ cloud_relay:
 ### Multiple Relay Instances
 
 Not recommended, but possible:
+
 - Run multiple add-on instances on different ports
 - Configure different devices to use different relays
 - Useful for A/B testing protocol changes
@@ -522,4 +556,3 @@ A: No. Authentication happens during device setup via the cloud API (not the TCP
 
 **Last Updated:** October 2025
 **Version:** 0.0.4.0
-

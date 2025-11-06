@@ -77,6 +77,31 @@ REAL_FIXTURES = {
     "STATUS_BROADCAST_0x83_FRAMED_3": bytes.fromhex(
         "83 00 00 00 26 3d 54 86 1c 00 0b 00 7e 1f 00 00 00 fa db 14 00 f0 2b 00 1a 00 ff ff ea 11 02 1a a1 01 0b 01 00 00 00 00 00 e7 7e"
     ),
+    # Additional diverse STATUS_BROADCAST packets for comprehensive validation
+    "STATUS_BROADCAST_0x83_FRAMED_4": bytes.fromhex(
+        "83 00 00 00 26 3d 54 6d e6 00 09 00 7e 1f 00 00 00 fa db 14 00 95 2b 00 1a 00 ff ff ea 11 02 1a a1 01 0b 01 00 00 00 00 00 8c 7e"
+    ),
+    "STATUS_BROADCAST_0x83_FRAMED_5": bytes.fromhex(
+        "83 00 00 00 26 32 5d 3e ad 00 0d 00 7e 1f 00 00 00 fa db 14 00 51 2c 00 1a 00 ff ff ea 11 02 1a a1 01 0b 01 00 00 00 00 00 49 7e"
+    ),
+    "STATUS_BROADCAST_0x83_FRAMED_6": bytes.fromhex(
+        "83 00 00 00 26 60 b1 74 37 00 0d 00 7e 1f 00 00 00 fa db 14 00 4a 2e 00 1a 00 ff ff ea 11 02 1a a1 01 0b 01 00 00 00 00 00 44 7e"
+    ),
+    "STATUS_BROADCAST_0x83_FRAMED_7": bytes.fromhex(
+        "83 00 00 00 26 60 b1 7a 37 00 0a 00 7e 1f 00 00 00 fa db 14 00 15 2e 00 1a 00 ff ff ea 11 02 1a a1 01 0b 01 00 00 00 00 00 0f 7e"
+    ),
+    "STATUS_BROADCAST_0x83_FRAMED_8": bytes.fromhex(
+        "83 00 00 00 26 60 b1 7c b4 00 0d 00 7e 1f 00 00 00 fa db 14 00 01 2e 00 1a 00 ff ff ea 11 02 1a a1 01 0b 01 00 00 00 00 00 fb 7e"
+    ),
+    "STATUS_BROADCAST_0x83_FRAMED_9": bytes.fromhex(
+        "83 00 00 00 26 60 b1 8e 42 00 10 00 7e 24 00 00 00 fa db 14 00 f6 2d 00 1a 00 ff ff ea 11 02 1a a1 01 0b 01 00 00 00 00 00 ef 7e"
+    ),
+    "STATUS_BROADCAST_0x83_FRAMED_10": bytes.fromhex(
+        "83 00 00 00 26 38 e8 ee 97 00 0d 00 7e 1f 00 00 00 fa db 14 00 05 2c 00 1a 00 ff ff ea 11 02 1a a1 01 0b 01 00 00 00 00 00 fd 7e"
+    ),
+    "STATUS_BROADCAST_0x83_FRAMED_11": bytes.fromhex(
+        "83 00 00 00 26 38 e8 dd 4d 00 14 00 7e 1f 00 00 00 fa db 14 00 aa 2b 00 1a 00 ff ff ea 11 02 1a a1 01 0b 01 00 00 00 00 00 a1 7e"
+    ),
 }
 
 

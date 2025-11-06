@@ -7,6 +7,7 @@
 ## ⚠️ DNS Redirection Required
 
 You **must** configure DNS redirection to route these domains to your Home Assistant server:
+
 - `cm-sec.gelighting.com`
 - `cm.gelighting.com`
 - `cm-ge.xlink.cn`
@@ -33,40 +34,47 @@ Without DNS redirection, your devices will continue using the cloud and this add
 ## 🆕 New in v0.0.4.13
 
 ### Production-Grade Structured Logging
+
 - **Dual-format output**: JSON for machine parsing, human-readable for developers
 - **Correlation ID tracking** across async operations for debugging
 - **Performance instrumentation** with configurable thresholds
 - **Visual prefixes**: ═ ✓ → ⚠️ ✗ for quick log scanning
 
 ### Comprehensive Test Infrastructure
+
 - **24 unit test files** covering all core modules (90%+ coverage)
 - **10 E2E test files** using Playwright for browser automation
 - **Integration tests** for mesh refresh performance
 
 ### Critical Bug Fixes
+
 - Fixed OTP submission reliability (works on first try)
 - Fixed restart button behavior and persistence
 - Fixed group switch synchronization issues
 - Fixed random device offline issues
 
 ### Cloud Relay Mode
+
 Optional MITM proxy functionality for packet inspection and debugging:
+
 - **Transparent proxy** between devices and cloud
 - **Packet inspection** and real-time logging
 - **File-based packet injection** for testing
 
 **Configuration:**
+
 ```yaml
 cloud_relay:
-  enabled: false                      # Enable relay mode
-  forward_to_cloud: true              # Forward to cloud
-  debug_packet_logging: false         # Verbose logs
-  disable_ssl_verification: false     # Debug mode only
+  enabled: false # Enable relay mode
+  forward_to_cloud: true # Forward to cloud
+  debug_packet_logging: false # Verbose logs
+  disable_ssl_verification: false # Debug mode only
 ```
 
 **[📖 Complete Cloud Relay Documentation →](https://github.com/jslamartina/hass-addons/blob/dev/docs/user/cloud-relay.md)**
 
 ### Enhanced MQTT Discovery
+
 - **Name-based entity IDs** instead of numeric IDs
 - **Color mode compliance** for Home Assistant 2025.3+
 - **Smart area grouping** based on device names

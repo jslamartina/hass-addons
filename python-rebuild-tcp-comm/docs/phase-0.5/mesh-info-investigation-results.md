@@ -11,6 +11,7 @@
 Mesh info requests injected via MITM proxy are acknowledged by devices but **do NOT trigger mesh info responses**. Devices send standard 0x7B ACKs but never send the expected 0x73 packets containing mesh info data or the small mesh info ACK.
 
 **Root Cause**: Injected mesh info requests are treated as invalid or unauthorized. Devices may require:
+
 1. Proper authentication/session state
 2. The request to originate from the device that owns the queue_id
 3. Specific handshake or authorization not present in raw packet injection
@@ -24,22 +25,27 @@ Mesh info requests injected via MITM proxy are acknowledged by devices but **do 
 **Method**: Inspected `/tmp/mitm-stdout.log` for packets after mesh info injection at `2025-11-06T08:59:12`
 
 **Results**:
+
 - ✅ Injection successful: 25 identical packets sent to all active connections
 - ✅ Devices responded: 25x 0x7B ACK packets received
 - ❌ No mesh info ACK: No 0x73 packets with `f9 52 01` inner struct
 - ❌ No mesh info data: No 0x73 packets with length > 50 bytes
 
 **Actual Response**:
+
 ```
 7b 00 00 00 07 45 88 0f 3a 00 00 00
 ```
+
 - Type: 0x7B (DATA_ACK)
 - Length: 7 bytes
 - Queue ID: 45 88 0f 3a 00
 - msg_id: 00 00 (matches request)
 
 **Expected Responses (NOT received)**:
+
 1. Small mesh info ACK:
+
    ```
    73 00 00 00 [length] [queue_id] 00 00 00 7e 1f 00 00 00 f9 52 01 00 00 53 7e
    ```
@@ -54,10 +60,12 @@ Mesh info requests injected via MITM proxy are acknowledged by devices but **do 
 ### 2. Pattern Matching Validation ✅
 
 **Test Script Detection Logic**:
+
 - Pattern: Searches for `"f9 52 01"` substring in hex string (line 459)
 - Filter: `direction == "DEV→CLOUD" and hex.startswith("73") and length > 50` (line 471)
 
 **Production Code Expectations** (`tcp_packet_handler.py` lines 524-564):
+
 - Small ACK: 0x73 packet with inner_struct length 10, containing `7e 1f 00 00 00 f9 52 01 00 00 53 7e`
 - Large data: 0x73 packet with inner_struct length >= 15, containing 24-byte device structs
 
@@ -72,6 +80,7 @@ Mesh info requests injected via MITM proxy are acknowledged by devices but **do 
 **Actual Search Window**: Analyzed entire log (08:57:55 to 09:04:47 = ~7 minutes)
 
 **Results**:
+
 - 0x73 DEV→CLOUD packets in 2-second window: **0**
 - 0x73 DEV→CLOUD packets in 30-second window: **0**
 - 0x73 DEV→CLOUD packets in entire log: **0**
@@ -83,6 +92,7 @@ Mesh info requests injected via MITM proxy are acknowledged by devices but **do 
 ### 4. Packet Structure Comparison ✅
 
 **Production Code** (`tcp_device.py` lines 213-266):
+
 ```python
 mesh_info_data = bytes(list(DEVICE_STRUCTS.requests.x73))  # 73
 mesh_info_data += bytes([0x00, 0x00, 0x00])                # 00 00 00
@@ -93,6 +103,7 @@ mesh_info_data += bytes([0x7E, 0x1F, ...])                 # inner struct
 ```
 
 **Test Script** (`test-toggle-injection.py` lines 112-153):
+
 ```python
 header = bytes([0x73, 0x00, 0x00, 0x00, 0x18])
 queue_id = endpoint + bytes([0x00])
@@ -102,6 +113,7 @@ packet = header + queue_id + msg_id_bytes + inner_struct
 ```
 
 **Injected Packet**:
+
 ```
 73 00 00 00 18 45 88 0f 3a 00 00 00 00 7e 1f 00 00 00 f8 52 06 00 00 00 ff ff 00 00 56 7e
 ```
@@ -114,14 +126,15 @@ packet = header + queue_id + msg_id_bytes + inner_struct
 
 **Expected vs Actual**:
 
-| Expected | Actual | Status |
-|----------|--------|--------|
-| Small mesh info ACK (0x73 with `f9 52 01`) | 0x7B DATA_ACK | ❌ Different |
-| Large mesh info data (0x73, length > 50) | None | ❌ Not received |
+| Expected                                   | Actual        | Status          |
+| ------------------------------------------ | ------------- | --------------- |
+| Small mesh info ACK (0x73 with `f9 52 01`) | 0x7B DATA_ACK | ❌ Different    |
+| Large mesh info data (0x73, length > 50)   | None          | ❌ Not received |
 
 **Normal Packet Flow Analysis**:
 
 In the entire log (25 connections, ~7 minutes):
+
 - 0x23 DEV→CLOUD: 25 (handshake)
 - 0x28 CLOUD→DEV: 25 (handshake ACK)
 - 0x43 DEV→CLOUD: 7 (device info)
@@ -134,11 +147,13 @@ In the entire log (25 connections, ~7 minutes):
 - 0xD8 CLOUD→DEV: 599 (heartbeat ACK)
 
 **Key Observations**:
+
 1. **0x73 is only CLOUD→DEV** (control commands to devices)
 2. **0x83 is DEV→CLOUD** (status broadcasts from devices) - **NOT PRESENT**
 3. **0x43 is DEV→CLOUD** (device info responses) - 7 packets exist
 
 **Architectural Insight**:
+
 - In production code, mesh info comes via **0x83 status broadcasts**, not 0x73 responses
 - These broadcasts are triggered by `ask_for_mesh_info()` but sent as separate 0x83 packets
 - The 0x73 mesh info request may act as a trigger, not a request-response pattern
@@ -155,12 +170,14 @@ In the entire log (25 connections, ~7 minutes):
 #### 1. Primary Device Architecture
 
 From `server.py` lines 494-597:
+
 - System designates one `primary_tcp_device` (first to connect)
 - **Only the primary device processes mesh info responses** (line 386-387)
 - This prevents duplicate MQTT publishes when multiple devices respond
-- Any device can *send* mesh info requests, but only primary *processes* responses
+- Any device can _send_ mesh info requests, but only primary _processes_ responses
 
 **Impact on Injection**:
+
 - MITM proxy injects to **all 25 connections simultaneously**
 - Server doesn't track these connections as "primary"
 - Even if devices respond, no server exists to process them
@@ -169,11 +186,13 @@ From `server.py` lines 494-597:
 #### 2. Device Type Analysis
 
 **Connected Devices** (25 total):
+
 - **17 devices with `45 88`, `32 5d`, `38 e8`, `3d 54`, `25 e5`, `64 a4` prefixes** - Bridge/hub devices
 - **7 devices with `60 b1` prefix** - Regular mesh devices (these sent 0x43 packets)
 - Target endpoint `45 88 0f 3a` is in the bridge category
 
 **Endpoint Patterns**:
+
 - `45 88 0f 3a` - Target tested (bridge device, sent 0x7B ACKs only)
 - `60 b1 xx xx` - Regular devices (sent 0x43 device info packets)
 - Different device types behave differently
@@ -193,6 +212,7 @@ From `server.py` lines 494-597:
 #### 5. Mesh Info Response Flow
 
 **Production Flow** (`tcp_packet_handler.py` lines 386-387, 493-495):
+
 ```
 1. App calls ask_for_mesh_info() on primary TCP device
 2. Primary device sends 0x73 mesh info request to its connection
@@ -202,6 +222,7 @@ From `server.py` lines 494-597:
 ```
 
 **Injection Flow**:
+
 ```
 1. MITM injects 0x73 to all 25 connections
 2. Devices send 0x7B ACKs (acknowledged)
@@ -212,6 +233,7 @@ From `server.py` lines 494-597:
 #### 6. Architectural Constraint
 
 The code explicitly checks `self.tcp_device == g.ncync_server.primary_tcp_device` before processing:
+
 - 0x43 device info responses (line 320-322)
 - 0x83 status broadcasts (line 386-387)
 - 0x73 control channel packets (line 493-495)
@@ -227,6 +249,7 @@ The code explicitly checks `self.tcp_device == g.ncync_server.primary_tcp_device
 Update `toggle-injection-test.md` line 195-208 with confirmed findings:
 
 **Findings**:
+
 - ⚠️ Injection successful but devices do not send mesh info responses
 - **Confirmed causes**:
   1. Devices acknowledge with 0x7B ACK but never send 0x73 mesh info data
@@ -272,11 +295,13 @@ Update `toggle-injection-test.md` line 195-208 with confirmed findings:
 **Key Finding**: Mesh info requests injected via MITM proxy are acknowledged but do not trigger mesh info responses. This is **architectural by design** - only the primary TCP device processes mesh info responses to prevent duplicates.
 
 **Answer to "Are we sending to a bridge device?"**:
+
 - ✅ YES - Endpoint `45 88 0f 3a` is a bridge device (one of 18 bridge-type devices)
 - ❌ BUT - This doesn't matter because injection bypasses the primary device architecture
 - ⚠️ ALSO - Even if responses arrive, no server exists to process them
 
 **Root Cause Summary**:
+
 1. **Primary Device Architecture**: Only one device processes responses (prevents duplicates)
 2. **Injection Bypasses Server**: No server state to track primary device or process responses
 3. **Authentication Required**: Devices need session context to send mesh info
@@ -295,4 +320,3 @@ Update `toggle-injection-test.md` line 195-208 with confirmed findings:
 ## Files to Update
 
 - `docs/protocol/toggle-injection-test.md` - Update Test 6 findings with confirmed root cause
-

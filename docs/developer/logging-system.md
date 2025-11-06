@@ -32,6 +32,7 @@ The Cync Controller uses a production-grade structured logging system with dual-
 ```
 
 Components:
+
 - Timestamp: ISO format
 - Level: DEBUG, INFO, WARNING, ERROR, CRITICAL
 - Location: File:line
@@ -62,10 +63,11 @@ Set in `run.sh` from `config.yaml`:
 
 ```yaml
 # config.yaml
-debug_log_level: true  # true=DEBUG, false=INFO
+debug_log_level: true # true=DEBUG, false=INFO
 ```
 
 Corresponds to:
+
 - `CYNC_DEBUG`: Enable/disable debug logging
 - `CYNC_LOG_FORMAT`: "json", "human", or "both" (default: "both")
 - `CYNC_LOG_JSON_FILE`: Path to JSON log file (default: "/var/log/cync_controller.json")
@@ -132,6 +134,7 @@ Log messages use visual prefixes for quick scanning:
 - **✗** (errors): Failures requiring attention
 
 Example:
+
 ```
 2025-10-27 12:00:00 INFO [main:42] [abc123] > ════════════════════════════════════════
 2025-10-27 12:00:01 INFO [main:45] [abc123] > → Initializing Cync Controller
@@ -200,6 +203,7 @@ CYNC_PERF_TRACKING = True     # Enable/disable
 ### Instrumented Operations
 
 Current instrumented functions:
+
 - `tcp_write`: Device TCP writes
 - `tcp_read`: Device TCP reads
 - `cloud_connect`: Cloud connection establishment
@@ -259,6 +263,7 @@ docker exec addon_local_cync-controller \
 ### When to Log
 
 **Always Log:**
+
 - Function entry/exit (especially async)
 - State changes (with before/after values)
 - External operations (network, file I/O)
@@ -267,6 +272,7 @@ docker exec addon_local_cync-controller \
 - User actions
 
 **Don't Log:**
+
 - Sensitive data (tokens, passwords)
 - Excessive loop iterations (log summary instead)
 - Already-logged information
@@ -379,4 +385,3 @@ def get_correlation_id() -> str:
 - **Troubleshooting**: See `docs/user/troubleshooting.md` for common issues
 - **Examples**: See existing modules for usage patterns
 - **Configuration**: See `cync-controller/src/cync_controller/const.py`
-

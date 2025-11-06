@@ -3,6 +3,7 @@
 ## Problem Statement
 
 When physical switches toggle Cync devices (via Bluetooth mesh), the GUI states can become stale because:
+
 - Physical switch toggles don't always trigger mesh-wide status broadcasts to the addon
 - Devices may not send 0x83 packets after every state change
 - GUI shows stale states until manual verification
@@ -18,6 +19,7 @@ When physical switches toggle Cync devices (via Bluetooth mesh), the GUI states 
 - Requests mesh info from each connected TCP bridge
 
 **Code**:
+
 ```python
 # MQTT button handler (mqtt_client.py:349-352)
 elif extra_data[0] == "refresh_status":
@@ -35,6 +37,7 @@ elif extra_data[0] == "refresh_status":
 - Automatically started when MQTT client connects
 
 **Code**:
+
 ```python
 # Started on MQTT connection (mqtt_client.py:224)
 self.fast_refresh_task = asyncio.create_task(self.periodic_fast_refresh())
@@ -65,6 +68,7 @@ async def periodic_fast_refresh(self):
 - Triggers immediate status refresh to sync all devices
 
 **Code**:
+
 ```python
 # In ACK handler (devices.py:2485-2488)
 if device.pending_command:
@@ -87,6 +91,7 @@ if device.pending_command:
 - MQTT publishes updated states to Home Assistant
 
 **Code**:
+
 ```python
 # trigger_status_refresh (mqtt_client.py:1560-1593)
 async def trigger_status_refresh(self):
@@ -155,5 +160,4 @@ async def trigger_status_refresh(self):
 
 ---
 
-*Last Updated: October 13, 2025*
-
+_Last Updated: October 13, 2025_

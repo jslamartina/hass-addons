@@ -1,16 +1,18 @@
-Only 5 [3 HTTP/BT, 2 BT] Cync Devices connected; 1 Cync Android App, 2 Wi-Fi/BT and 2 BT only. 
+Only 5 [3 HTTP/BT, 2 BT] Cync Devices connected; 1 Cync Android App, 2 Wi-Fi/BT and 2 BT only.
 All HTTP devices are redirected to their own `socat` MITM instance.
 
-| Device | Type                                    | ID  | IP          | MAC               |
-|-----|-----------------------------------------|-----|-------------|-------------------|
-| 1 | BT bulb                                 | 2   | N/A         | 78:6D:EB:28:EA:30 |
-| 2 | BT bulb                                 | 3   | N/A         | 78:6D:EB:28:D4:D1 |
-| 3 | Wi-Fi/BT Plug                           | 5   | 10.0.2.211  | 34:13:43:70:D8:C7 |
-| 4 | Wi-Fi/BT Direct Connect Full Color A19 RGBW Bulb | 7   | 10.0.2.215  | 78:6D:EB:E0:1C:90 |
-| 5 | Android Cync App                       | N/A | 10.0.1.2    | D2:F8:70:D6:EB:4D |
+| Device | Type                                             | ID  | IP         | MAC               |
+| ------ | ------------------------------------------------ | --- | ---------- | ----------------- |
+| 1      | BT bulb                                          | 2   | N/A        | 78:6D:EB:28:EA:30 |
+| 2      | BT bulb                                          | 3   | N/A        | 78:6D:EB:28:D4:D1 |
+| 3      | Wi-Fi/BT Plug                                    | 5   | 10.0.2.211 | 34:13:43:70:D8:C7 |
+| 4      | Wi-Fi/BT Direct Connect Full Color A19 RGBW Bulb | 7   | 10.0.2.215 | 78:6D:EB:E0:1C:90 |
+| 5      | Android Cync App                                 | N/A | 10.0.1.2   | D2:F8:70:D6:EB:4D |
 
-# Plug 
+# Plug
+
 The plug is the BT 'master/hub' device. All other Cync devices are connected to it via BT.
+
 - The plug is connected via Wi-Fi
 - The plug is being turned on/off 3 times
 - `<` is the server to plug
@@ -185,7 +187,7 @@ The plug is the BT 'master/hub' device. All other Cync devices are connected to 
  00 f8 52 06 00 00 00 ff ff 00 00 56 7e           ..R........V~
  [1F 00 00 00  F8 52 06 00 00 00  FF  FF 00 00 56] HEX
  [31  0  0  0 248 82  6  0  0  0 255 255  0  0 86] int
- inc  ?  ?  ?  ctrl   
+ inc  ?  ?  ?  ctrl
 --
 # MESH DATA AND DEVICE TYPE/ MASTER HUB ID
 > 2024/03/11 00:16:09.350416  length=137 from=1367 to=1503
@@ -261,7 +263,7 @@ The plug is the BT 'master/hub' device. All other Cync devices are connected to 
   248 - 17 = 231
   inc -64(why?) + state + id % 256
   33 - 64 + 1 + 5 % 256 = 231
-  
+
 --
 # CONTROL ACK -  73 ack with 73 and 7b
 > 2024/03/11 00:16:19.880453  length=36 from=1595 to=1630
@@ -308,9 +310,9 @@ The plug is the BT 'master/hub' device. All other Cync devices are connected to 
  checksum 231
  inc -64(why?) + state + id % 256
  34 - 64 + 0 + 5 % 256 = 231 <---- CORRECT!
- 
+
 --
-# device acks control with inner msg id 22 and 7b 
+# device acks control with inner msg id 22 and 7b
 > 2024/03/11 00:16:22.438807  length=36 from=1704 to=1739
  73 00 00 00 13 2d e4 b5 d2 00 03 00 7e 22 00 00  s....-......~"..
  00 f9 d0 01 00 00 d1 7e |7b 00 00 00 07 2d e4 b5  .......~{....-..
@@ -320,7 +322,7 @@ The plug is the BT 'master/hub' device. All other Cync devices are connected to 
  7b 00 00 00 07 2d e4 b5 d2 00 03 00              {....-......
 --
 # device acks 73 with 83 inner msg id 22 and sends device status for itself
-# NOTICE: in 0x83 packet state = 0 but brightness = 0x64 (100) 
+# NOTICE: in 0x83 packet state = 0 but brightness = 0x64 (100)
 # but in the appended 0x43 packet, brightness is set to 0.
 # obviously there is logic to change that.
 > 2024/03/11 00:16:23.284468  length=73 from=1740 to=1812

@@ -11,6 +11,7 @@
 The script had multiple issues with error handling:
 
 #### Issue 1.1: Silent curl failures in `complete_onboarding()`
+
 **Location:** Lines 173-176 (before fix)
 
 ```bash
@@ -21,6 +22,7 @@ response=$(curl -sf -w "\n%{http_code}" -X POST \
 ```
 
 **Problem:**
+
 - `curl -f` fails with exit code 22 on HTTP 4xx/5xx errors
 - `2>&1` redirects stderr to stdout, capturing it in the variable
 - User never sees the actual error message from curl
@@ -29,6 +31,7 @@ response=$(curl -sf -w "\n%{http_code}" -X POST \
 **Impact:** When the onboarding endpoint returned 404 (already completed), the error was hidden but the function continued successfully.
 
 #### Issue 1.2: No state checking before starting addons
+
 **Location:** Lines 342-352 (`start_emqx()`) and 450-460 (`start_cync_lan()`)
 
 ```bash
@@ -40,12 +43,13 @@ start_emqx() {
     return 0
   else
     log_error "Failed to start EMQX"
-    return 1  # ← Script exits here with set -e
+    return 1 # ← Script exits here with set -e
   fi
 }
 ```
 
 **Problem:**
+
 - Script doesn't check if addon is already running
 - `ha addons start` returns exit code 1 when addon is already started
 - With `set -e`, the script exits immediately
@@ -54,6 +58,7 @@ start_emqx() {
 ### 2. The Actual Error
 
 **What happened:**
+
 1. ✅ Onboarding was already complete from a previous run
 2. ✅ User creation skipped (already exists)
 3. ⚠️ `complete_onboarding()` called `/api/onboarding/core_config` → returned 404
@@ -66,22 +71,26 @@ start_emqx() {
    - `set -e` caused immediate script exit
 
 **Evidence from trace:**
+
 ```bash
 + start_emqx
 + log_info 'Starting EMQX add-on...'
 + echo -e '\033[0;32m[setup-fresh-ha.sh]\033[0m Starting EMQX add-on...'
-[0;32m[setup-fresh-ha.sh][0m Starting EMQX add-on...
+[0
+32m[setup-fresh-ha.sh][0m Starting EMQX add-on...
 + ha addons start a0d7b954_emqx
 + log_error 'Failed to start EMQX'
 + echo -e '\033[0;31m[setup-fresh-ha.sh]\033[0m Failed to start EMQX'
-[0;31m[setup-fresh-ha.sh][0m Failed to start EMQX
+[0
+31m[setup-fresh-ha.sh][0m Failed to start EMQX
 + return 1
 ```
 
 Verification:
+
 ```bash
 $ ha addons info a0d7b954_emqx --raw-json | jq '.data.state'
-"started"  # ← Already running!
+"started" # ← Already running!
 ```
 
 ## Solutions Implemented
@@ -89,6 +98,7 @@ $ ha addons info a0d7b954_emqx --raw-json | jq '.data.state'
 ### Fix 1: Improve error visibility in `complete_onboarding()`
 
 **Changes:**
+
 1. Added `|| true` to prevent curl failure from exiting
 2. Extract response body separately
 3. Handle 404 explicitly (onboarding already complete)
@@ -105,7 +115,7 @@ complete_onboarding() {
   response=$(curl -sf -w "\n%{http_code}" -X POST \
     "$HA_URL/api/onboarding/core_config" \
     -H "Content-Type: application/json" \
-    -d "{}" 2>&1) || true  # Don't exit on curl failure
+    -d "{}" 2>&1) || true # Don't exit on curl failure
 
   http_code=$(echo "$response" | tail -n1)
   local body
@@ -130,6 +140,7 @@ complete_onboarding() {
 ### Fix 2: Check addon state before starting
 
 **Changes to `start_emqx()` and `start_cync_lan()`:**
+
 1. Check current addon state before attempting to start
 2. Return success if already running
 3. Provide helpful error messages with state information
@@ -164,11 +175,13 @@ start_emqx() {
 **Problem:** Declaring and assigning local variables in one line masks return values
 
 **Before:**
+
 ```bash
 local body=$(echo "$response" | sed '$d')
 ```
 
 **After:**
+
 ```bash
 local body
 body=$(echo "$response" | sed '$d')
@@ -177,6 +190,7 @@ body=$(echo "$response" | sed '$d')
 ## Test Results
 
 **Before fix:**
+
 ```bash
 $ ./setup-fresh-ha.sh
 # ... output ...
@@ -186,6 +200,7 @@ $ ./setup-fresh-ha.sh
 ```
 
 **After fix:**
+
 ```bash
 $ ./setup-fresh-ha.sh
 # ... output ...
@@ -223,6 +238,3 @@ shellcheck scripts/setup-fresh-ha.sh
 ha addons info a0d7b954_emqx --raw-json | jq '.data.state'
 ha addons info local_cync-controller --raw-json | jq '.data.state'
 ```
-
-
-

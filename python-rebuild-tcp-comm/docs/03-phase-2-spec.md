@@ -148,8 +148,8 @@ slos:
 
   toggle_latency_p99:
     description: "99th percentile toggle latency"
-    target: 1500ms  # Field (production)
-    target_lab: 800ms  # Lab (controlled)
+    target: 1500ms # Field (production)
+    target_lab: 800ms # Lab (controlled)
     window: 7d
 
   packet_loss_rate:
@@ -201,6 +201,7 @@ class ErrorBudget:
 ### 1. Prometheus Queries
 
 **Success Rate (SLO)**:
+
 ```promql
 # 30-day success rate
 sum(rate(tcp_comm_packet_sent_total{outcome="success"}[30d]))
@@ -214,6 +215,7 @@ sum(rate(tcp_comm_packet_sent_total{transport="new"}[5m]))
 ```
 
 **Latency (SLO)**:
+
 ```promql
 # p99 latency by transport
 histogram_quantile(0.99,
@@ -227,6 +229,7 @@ histogram_quantile(0.99,
 ```
 
 **Error Budget**:
+
 ```promql
 # Error budget consumption (30d)
 1 - (
@@ -237,6 +240,7 @@ histogram_quantile(0.99,
 ```
 
 **Queue Health**:
+
 ```promql
 # Queue depth by transport
 tcp_comm_send_queue_size{transport="new"}
@@ -301,9 +305,9 @@ rate(tcp_comm_queue_full_total{transport="new"}[5m])
           }
         ],
         "thresholds": [
-          {"value": 0.999, "color": "green"},
-          {"value": 0.995, "color": "yellow"},
-          {"value": 0, "color": "red"}
+          { "value": 0.999, "color": "green" },
+          { "value": 0.995, "color": "yellow" },
+          { "value": 0, "color": "red" }
         ]
       }
     ]
@@ -375,38 +379,38 @@ groups:
 ```yaml
 # alertmanager.yml
 route:
-  group_by: ['alertname', 'transport']
+  group_by: ["alertname", "transport"]
   group_wait: 30s
   group_interval: 5m
   repeat_interval: 4h
-  receiver: 'tcp-rebuild-team'
+  receiver: "tcp-rebuild-team"
 
   routes:
     - match:
         severity: page
-      receiver: 'pagerduty'
+      receiver: "pagerduty"
 
     - match:
         severity: ticket
-      receiver: 'jira'
+      receiver: "jira"
 
     - match:
         severity: warning
-      receiver: 'slack'
+      receiver: "slack"
 
 receivers:
-  - name: 'pagerduty'
+  - name: "pagerduty"
     pagerduty_configs:
-      - service_key: '<PD_SERVICE_KEY>'
+      - service_key: "<PD_SERVICE_KEY>"
 
-  - name: 'jira'
+  - name: "jira"
     webhook_configs:
-      - url: '<JIRA_WEBHOOK>'
+      - url: "<JIRA_WEBHOOK>"
 
-  - name: 'slack'
+  - name: "slack"
     slack_configs:
-      - api_url: '<SLACK_WEBHOOK>'
-        channel: '#tcp-rebuild-alerts'
+      - api_url: "<SLACK_WEBHOOK>"
+        channel: "#tcp-rebuild-alerts"
 ```
 
 ---
@@ -414,12 +418,14 @@ receivers:
 ## Rollout Plan
 
 ### Stage 1: Dark Launch (Week 1)
+
 - **Canary %**: 0% (dark launch only)
 - **Goal**: Validate metrics collection
 - **Validation**: Metrics match legacy transport
 - **Rollback**: Disable dark launch flag
 
 ### Stage 2: Initial Canary (Week 1-2)
+
 - **Canary %**: 10%
 - **Duration**: 3 days
 - **Goal**: Detect critical issues early
@@ -427,6 +433,7 @@ receivers:
 - **Rollback**: Set `CANARY_PERCENTAGE=0`
 
 ### Stage 3: Expanded Canary (Week 2)
+
 - **Canary %**: 25%
 - **Duration**: 4 days
 - **Goal**: Validate under moderate load
@@ -434,6 +441,7 @@ receivers:
 - **Rollback**: Reduce to 10% or 0%
 
 ### Stage 4: Majority Canary (Week 3-4)
+
 - **Canary %**: 50%
 - **Duration**: 7 days
 - **Goal**: Full load validation
@@ -443,6 +451,7 @@ receivers:
 ### Rollback Procedure
 
 **Automatic**:
+
 ```python
 class AutoRollback:
     """Automatic rollback on SLO violation."""
@@ -469,6 +478,7 @@ class AutoRollback:
 ```
 
 **Manual**:
+
 ```bash
 # Immediate rollback
 kubectl set env deployment/cync-controller CANARY_PERCENTAGE=0
@@ -516,13 +526,13 @@ curl http://cync-controller:9400/metrics | grep canary_percentage
 
 ## Risks & Mitigation
 
-| Risk | Impact | Probability | Mitigation |
-|------|--------|-------------|------------|
-| Production outage | Critical | Low | Auto-rollback + dark launch validation |
-| SLO violations | High | Medium | Gradual rollout + error budget tracking |
-| Alert fatigue | Medium | Medium | Tuned thresholds + escalation policies |
-| Performance regression | High | Low | Latency SLO + benchmarking |
-| Rollback failure | Critical | Very Low | Tested rollback + feature flag fallback |
+| Risk                   | Impact   | Probability | Mitigation                              |
+| ---------------------- | -------- | ----------- | --------------------------------------- |
+| Production outage      | Critical | Low         | Auto-rollback + dark launch validation  |
+| SLO violations         | High     | Medium      | Gradual rollout + error budget tracking |
+| Alert fatigue          | Medium   | Medium      | Tuned thresholds + escalation policies  |
+| Performance regression | High     | Low         | Latency SLO + benchmarking              |
+| Rollback failure       | Critical | Very Low    | Tested rollback + feature flag fallback |
 
 ---
 
@@ -548,4 +558,3 @@ curl http://cync-controller:9400/metrics | grep canary_percentage
 ## Next Phase
 
 Phase 3: Full migration and legacy deprecation (see `04-phase-3-spec.md`)
-

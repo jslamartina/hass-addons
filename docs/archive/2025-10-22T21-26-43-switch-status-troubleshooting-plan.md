@@ -1,4 +1,5 @@
 <!-- 66e240c8-0646-449a-96d5-cda0d1929f88 f629ab25-63d7-4bbd-b92f-ea0086bd673b -->
+
 # Troubleshoot Cync Switch Status Reporting
 
 ## Overview
@@ -40,7 +41,7 @@ Verify switches are correctly identified:
 **Diagnostic:** Add temporary logging in `parse_device_status()` at line 785:
 
 ```python
-logger.info("%s Device %s: is_switch=%s, is_light=%s, is_plug=%s", 
+logger.info("%s Device %s: is_switch=%s, is_light=%s, is_plug=%s",
             lp, device.name, device.is_switch, device.is_light, device.is_plug)
 ```
 
@@ -128,7 +129,6 @@ logger.info("%s Publishing to topic '%s': %s", lp, tpc, msg)
 
 1. Toggle a switch physically
 2. Check logs for:
-
    - Status packet received (0x83 or 0x43)
    - `parse_status()` called with correct device ID
    - `parse_device_status()` called
@@ -158,19 +158,19 @@ Monitor MQTT messages to ensure switches send correct format:
 **Expected for regular switches:**
 
 ```json
-{"state": "ON"}
+{ "state": "ON" }
 ```
 
 **Expected for dimmer switches:**
 
 ```json
-{"state": "ON", "brightness": 100}
+{ "state": "ON", "brightness": 100 }
 ```
 
 **NOT expected for switches:**
 
 ```json
-{"state": "ON", "color_mode": "brightness"}  // WRONG - should not have color_mode
+{ "state": "ON", "color_mode": "brightness" } // WRONG - should not have color_mode
 ```
 
 ## Common Root Causes

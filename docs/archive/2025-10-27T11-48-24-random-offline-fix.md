@@ -9,6 +9,7 @@
 Devices were randomly going offline despite being connected and responsive. Root cause: a race condition between two conflicting availability management systems.
 
 **Race Condition Flow**:
+
 1. Device firmware sends status packet with `connected_to_mesh = 0`
 2. `server.parse_status()` increments `offline_count`
 3. After 3 failures, device marked offline: `device.online = False`
@@ -44,6 +45,7 @@ Added structured logging to track offline detection progression:
 ```
 
 Each log includes:
+
 - Device ID and name
 - Current offline_count value
 - Online status (before/after)
@@ -67,11 +69,13 @@ else:
 ## Key Behavior Changes
 
 ### Before Fix
+
 - Device offline report → immediately back online on next update → flickering
 - Hard to debug: no clear offline/online transitions in logs
 - False "device unavailable" states that resolved immediately
 
 ### After Fix
+
 - Device offline report → offline_count increments
 - After 3 consecutive failures → device marked offline
 - Stays offline until it sends valid packet again
@@ -108,17 +112,20 @@ The implementation has been completed and is ready for testing:
 ## Deployment Steps
 
 1. **Review changes**:
+
    ```bash
    git diff cync-controller/src/cync_controller/mqtt_client.py
    git diff cync-controller/src/cync_controller/server.py
    ```
 
 2. **Rebuild the add-on** (Python files changed):
+
    ```bash
    cd cync-controller && ./rebuild.sh
    ```
 
 3. **Start add-on**:
+
    ```bash
    ha addons start local_cync-controller
    ```
@@ -155,11 +162,13 @@ were made in a previous commit and include logic to call `sync_group_devices()` 
 the method just passes without doing anything. This suggests groups are expected to be handled elsewhere.
 
 **Likely Root Causes**:
+
 1. Group status updates from `update_subgroup_switch_state()` may be affected
 2. Group discovery registration might not be publishing correctly
 3. The change removed group-specific optimistic publishing logic
 
 **Investigation Needed**:
+
 - [ ] Verify `parse_status()` is updating groups correctly
 - [ ] Check if groups are being discovered on MQTT startup
 - [ ] Test group state updates when devices change state

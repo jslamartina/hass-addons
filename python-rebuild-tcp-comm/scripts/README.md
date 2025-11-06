@@ -5,13 +5,16 @@ Common development tasks for the TCP communication rebuild project.
 ## Available Scripts
 
 ### Setup
+
 - **`setup.sh`** - Set up the development environment (install Poetry and dependencies)
 
 ### Development
+
 - **`run.sh`** - Run the toggler with configurable options
 - **`debug.sh`** - Run the toggler with debug logging enabled
 
 ### Testing
+
 - **`test-all.sh`** - Run all tests (unit + integration)
   - `test-all.sh -v` or `--verbose` - Verbose output
   - `test-all.sh -c` or `--coverage` - Generate coverage report
@@ -24,19 +27,23 @@ Common development tasks for the TCP communication rebuild project.
   - `test-integration.sh --html` - Generate HTML report
 
 ### Code Quality
+
 - **`lint.sh`** - Run linting (ruff) and type checking (mypy)
 - **`format.sh`** - Auto-format code with ruff
 
 ### Build & Deploy
+
 - **`build.sh`** - Build and validate the entire project
 - **`clean.sh`** - Remove build artifacts and caches
 
 ### Utilities
+
 - **`check-metrics.sh`** - Check if metrics endpoint is accessible and view current metrics
 
 ## Usage Examples
 
 ### Quick Start
+
 ```bash
 # Setup environment (first time only)
 ./scripts/setup.sh
@@ -52,6 +59,7 @@ Common development tasks for the TCP communication rebuild project.
 ```
 
 ### Running the Toggler
+
 ```bash
 # With defaults (DEVICE123 @ 192.168.1.100:9000)
 ./scripts/run.sh
@@ -70,6 +78,7 @@ DEVICE_ID=MYDEVICE DEVICE_HOST=10.0.0.5 ./scripts/run.sh
 ```
 
 ### Testing
+
 ```bash
 # Run all tests (unit + integration)
 ./scripts/test-all.sh
@@ -87,7 +96,7 @@ DEVICE_ID=MYDEVICE DEVICE_HOST=10.0.0.5 ./scripts/run.sh
 
 # With coverage (unit tests only)
 ./scripts/test-unit.sh -c
-open htmlcov/index.html  # View coverage report
+open htmlcov/index.html # View coverage report
 
 # Integration tests with HTML report
 ./scripts/test-integration.sh --html
@@ -95,6 +104,7 @@ open test-reports/integration-report.html
 ```
 
 ### Code Quality
+
 ```bash
 # Check code
 ./scripts/lint.sh
@@ -104,6 +114,7 @@ open test-reports/integration-report.html
 ```
 
 ### Building
+
 ```bash
 # Full build with validation
 ./scripts/build.sh
@@ -113,6 +124,7 @@ open test-reports/integration-report.html
 ```
 
 ### Debugging
+
 ```bash
 # Run with debug logging
 ./scripts/debug.sh
@@ -155,4 +167,3 @@ These scripts are designed to work in CI environments:
 - name: Build
   run: ./scripts/build.sh
 ```
-

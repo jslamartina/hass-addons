@@ -1,4 +1,5 @@
 <!-- 9703c891-e072-4b1d-9310-a11b8501b2ca 90ff178b-d20e-4715-875f-afa924d7b5fe -->
+
 # Plan: Remove Symlink to Fix Semantic Search
 
 ## Problem Analysis

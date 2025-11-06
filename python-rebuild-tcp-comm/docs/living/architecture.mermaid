@@ -1,0 +1,88 @@
+---
+project_id: 9a2485fd-95c8-4328-8c5b-9887221e1055
+id: 8e7a2f78-9ec7-4400-b3dd-24ca4030593e
+config:
+    layout: elk
+---
+graph TD
+    subgraph Application["Application Layer"]
+        Client[Client Code]
+    end
+
+    subgraph Backpressure["Backpressure Layer (Phase 1c)"]
+        RecvQueue[BoundedQueue - Receive<br/>Policy: BLOCK/DROP_OLDEST/REJECT<br/>Max: 100 messages]
+        BulkSend[Bulk Send Operations<br/>Uses asyncio.gather\(\)<br/>No queue layer]:::conceptNode
+    end
+
+    subgraph ReliableLayer["Reliable Transport Layer (Phase 1b)"]
+        ConnMgr[ConnectionManager<br/>- Handshake: 0x23 → 0x28<br/>- Heartbeat: 0xD3 → 0xD8<br/>- Reconnection with backoff<br/>- State machine]
+        ReliableTransport[ReliableTransport<br/>- send_reliable with ACK wait<br/>- recv_reliable with auto-ACK<br/>- Pending message tracking<br/>- ACK matching by msg_id]
+        LRUCache[LRUCache<br/>Deduplication<br/>1000 entries, 5min TTL<br/>Key: dedup_key (Full Fingerprint)]
+        RetryPolicy[RetryPolicy<br/>Exponential backoff + jitter<br/>Max 3 retries]
+    end
+
+    subgraph ProtocolLayer["Protocol Codec Layer (Phase 1a)"]
+        Encoder[CyncProtocol.encode<br/>0x23, 0x73, 0x83, 0xD3, etc.<br/>Checksum calculation]
+        Decoder[CyncProtocol.decode<br/>Packet type parsing<br/>Checksum validation]
+        Framer[PacketFramer<br/>TCP stream buffering<br/>Header-based extraction<br/>Multi-packet handling]
+        Checksum[Checksum Algorithm<br/>Sum % 256 between 0x7e markers]
+    end
+
+    subgraph Network["Network Layer"]
+        TCPSocket[TCP Socket<br/>asyncio streams]
+    end
+
+    subgraph Testing["Testing Infrastructure (Phase 1d)"]
+        Chaos[ChaosConfig<br/>- Latency injection<br/>- Packet loss<br/>- Reordering<br/>- Duplicates<br/>- Corruption]:::wideNode
+        Simulator[CyncDeviceSimulator<br/>Speaks real protocol<br/>ACK/response handling]:::wideNode
+    end
+
+    %% Send Path
+    Client -->|send_reliable\(\)| ReliableTransport
+    Client -.->|bulk: asyncio.gather\(\)| BulkSend
+    BulkSend -.->|parallel send_reliable\(\)| ReliableTransport
+    ReliableTransport -->|encode packet| Encoder
+    ReliableTransport -.->|track pending ACK<br/>msg_id + correlation_id| ReliableTransport
+    ReliableTransport -.->|retry on timeout| RetryPolicy
+    Encoder -->|generate bytes| Checksum
+    Checksum -->|validated packet| TCPSocket
+    ConnMgr -.->|manage connection| TCPSocket
+
+    %% Receive Path
+    TCPSocket -->|raw bytes| Framer
+    Framer -->|complete packets| Decoder
+    Decoder -->|validate checksum| Checksum
+    Decoder -->|parsed packet| ReliableTransport
+    ReliableTransport -->|check duplicate| LRUCache
+    LRUCache -.->|cache hit: drop| ReliableTransport
+    LRUCache -.->|cache miss: process| RecvQueue
+    ReliableTransport -->|ACK packets<br/>0x28, 0x7B, 0x88, 0xD8| ReliableTransport
+    ReliableTransport -.->|match ACK by msg_id| ReliableTransport
+    RecvQueue -->|deliver| Client
+
+    %% Connection Management
+    ConnMgr -.->|handshake 0x23 → 0x28| ReliableTransport
+    ConnMgr -.->|periodic heartbeat<br/>0xD3 → 0xD8| ReliableTransport
+    ConnMgr -.->|reconnect on failure| RetryPolicy
+
+    %% Testing Path
+    Simulator -.->|simulated device| TCPSocket
+    Chaos -.->|chaos injection| Simulator
+
+    %% Styling
+    classDef appLayer fill:#e1f5ff,stroke:#0288d1,stroke-width:2px,color:#000,text-align:left
+    classDef queueLayer fill:#fff3e0,stroke:#f57c00,stroke-width:2px,color:#000,text-align:left
+    classDef reliableLayer fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px,color:#000,text-align:left
+    classDef protocolLayer fill:#e8f5e9,stroke:#388e3c,stroke-width:2px,color:#000,text-align:left
+    classDef networkLayer fill:#fce4ec,stroke:#c2185b,stroke-width:2px,color:#000,text-align:left
+    classDef testingLayer fill:#fff9c4,stroke:#f9a825,stroke-width:2px,color:#000,text-align:left
+    classDef wideNode fill:#fff9c4,stroke:#f9a825,stroke-width:2px,color:#000,min-width:300px,text-align:left
+    classDef conceptNode fill:#f5f5f5,stroke:#9e9e9e,stroke-width:2px,stroke-dasharray: 5 5,color:#000,text-align:left
+
+    class Client appLayer
+    class RecvQueue queueLayer
+    class BulkSend conceptNode
+    class ConnMgr,ReliableTransport,LRUCache,RetryPolicy reliableLayer
+    class Encoder,Decoder,Framer,Checksum protocolLayer
+    class TCPSocket networkLayer
+    class Simulator,Chaos testingLayer

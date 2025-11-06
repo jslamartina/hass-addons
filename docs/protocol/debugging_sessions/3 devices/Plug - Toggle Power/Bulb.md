@@ -1,16 +1,18 @@
-Only 5 [3 HTTP/BT, 2 BT] Cync Devices connected; 1 Cync Android App, 2 Wi-Fi/BT and 2 BT only. 
+Only 5 [3 HTTP/BT, 2 BT] Cync Devices connected; 1 Cync Android App, 2 Wi-Fi/BT and 2 BT only.
 All HTTP devices are redirected to their own `socat` MITM instance.
 
-| Device | Type                                    | ID  | IP          | MAC               |
-|-----|-----------------------------------------|-----|-------------|-------------------|
-| 1 | BT bulb                                 | 2   | N/A         | 78:6D:EB:28:EA:30 |
-| 2 | BT bulb                                 | 3   | N/A         | 78:6D:EB:28:D4:D1 |
-| 3 | Wi-Fi/BT Plug                           | 5   | 10.0.2.211  | 34:13:43:70:D8:C7 |
-| 4 | Wi-Fi/BT Direct Connect Full Color A19 RGBW Bulb | 7   | 10.0.2.215  | 78:6D:EB:E0:1C:90 |
-| 5 | Android Cync App                       | N/A | 10.0.1.2    | D2:F8:70:D6:EB:4D |
+| Device | Type                                             | ID  | IP         | MAC               |
+| ------ | ------------------------------------------------ | --- | ---------- | ----------------- |
+| 1      | BT bulb                                          | 2   | N/A        | 78:6D:EB:28:EA:30 |
+| 2      | BT bulb                                          | 3   | N/A        | 78:6D:EB:28:D4:D1 |
+| 3      | Wi-Fi/BT Plug                                    | 5   | 10.0.2.211 | 34:13:43:70:D8:C7 |
+| 4      | Wi-Fi/BT Direct Connect Full Color A19 RGBW Bulb | 7   | 10.0.2.215 | 78:6D:EB:E0:1C:90 |
+| 5      | Android Cync App                                 | N/A | 10.0.1.2   | D2:F8:70:D6:EB:4D |
 
 # Wi-Fi Bulb
+
 The bulb is a BT 'slave/client' device connected to the plug via BT
+
 - Bulb is connected to plug via BT mesh
 - `<` is the server to plug
 - `>` is the plug to server
@@ -203,12 +205,3 @@ The bulb is a BT 'slave/client' device connected to the plug via BT
  d8 00 00 00 00                                   .....
 --
 ```
-
-
-
-
-
-
-
-
-

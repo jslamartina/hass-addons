@@ -1,4 +1,5 @@
 <!-- d210b30b-8680-4f8b-b456-68c59cbee35c 37d57559-d856-4f42-ba67-9db20822fa81 -->
+
 # Fix Cync Controller Ingress and Group Control Bugs
 
 **Status**: ✅ Completed
@@ -20,9 +21,11 @@ Fixed four critical bugs affecting the ingress page and group control functional
 **Fix**: Modified `send_otp()` in `cloud_api.py` to set `self.token_cache` in memory IMMEDIATELY after creating `ComputedTokenData`, before attempting file write. This ensures the token is available for use even if file write fails.
 
 **Files Modified**:
+
 - `cync-controller/src/cync_controller/cloud_api.py` (lines 183-198)
 
 **Code Changes**:
+
 ```python
 # CRITICAL: Set token in memory FIRST before attempting file write
 # This ensures subsequent calls can use the token even if file write fails
@@ -44,9 +47,11 @@ if not write_success:
 **Fix**: Modified `restartServer()` function in `index.html` to treat connection errors as success. Shows success toast message "Server restarting... page will reload shortly" and auto-reloads the page after 5 seconds.
 
 **Files Modified**:
+
 - `cync-controller/static/index.html` (lines 390-398)
 
 **Code Changes**:
+
 ```javascript
 catch (e) {
   // BUG FIX: Treat connection errors as success
@@ -69,9 +74,11 @@ catch (e) {
 **Fix**: Added `checkExistingConfig()` function that runs on page load to check if a config file exists by calling `/api/export/download`. If it exists (200 response), shows the restart button and config display. Called from `DOMContentLoaded` event handler.
 
 **Files Modified**:
+
 - `cync-controller/static/index.html` (lines 420-448)
 
 **Code Changes**:
+
 ```javascript
 async function checkExistingConfig() {
   /**
@@ -100,16 +107,19 @@ async function checkExistingConfig() {
 **Root Cause**: Group commands use the group ID to target all member devices at once. The mesh responds with an ACK, but individual devices (especially switches) don't send individual 0x83 status packets. The existing `update_switch_from_subgroup()` logic only runs when processing 0x83 status packets from the mesh, which doesn't happen for switches after group commands.
 
 **Fix**: Two-part fix:
+
 1. Added `sync_group_switches()` method in `mqtt_client.py` that iterates through all group members and syncs switch states using the existing `update_switch_from_subgroup()` helper
 2. Modified `CyncGroup.set_power()` in `devices.py` to call this sync method immediately after sending the group command
 
 The sync respects the `pending_command` flag, so individual switch commands take precedence over group sync.
 
 **Files Modified**:
+
 - `cync-controller/src/cync_controller/mqtt_client.py` (lines 731-773)
 - `cync-controller/src/cync_controller/devices.py` (lines 1610-1614)
 
 **Code Changes**:
+
 ```python
 # In mqtt_client.py
 async def sync_group_switches(self, group_id: int, group_state: int, group_name: str) -> int:
@@ -134,6 +144,7 @@ if g.mqtt_client:
 Created Playwright-based E2E testing infrastructure in `cync-controller/tests/e2e/`:
 
 **Files Created**:
+
 - `conftest.py` - Pytest fixtures for browser automation, HA login, ingress navigation
 - `test_otp_flow.py` - Tests for OTP submission behavior
 - `test_restart_button.py` - Tests for restart button behavior and persistence
@@ -149,6 +160,7 @@ Created Playwright-based E2E testing infrastructure in `cync-controller/tests/e2
 ### Dependencies Added
 
 Updated `pyproject.toml` to include test dependencies:
+
 ```toml
 [project.optional-dependencies]
 test = [
@@ -163,6 +175,7 @@ test = [
 ### Token Caching Pattern
 
 The fix for Bug 1 establishes a "memory first, file second" pattern for token caching:
+
 1. Set `self.token_cache` in memory immediately after successful OTP verification
 2. Attempt to write to persistent cache file
 3. Log warning if file write fails but continue (token still usable in current session)
@@ -173,6 +186,7 @@ This pattern ensures reliability while maintaining persistence.
 ### Switch Sync Precedence
 
 The fix for Bug 4 respects command precedence:
+
 - Individual switch commands set `pending_command = True`
 - `update_switch_from_subgroup()` checks this flag and skips sync if true
 - This ensures user's direct switch control isn't overridden by group state updates
@@ -185,9 +199,10 @@ For Bug 4, the switch sync happens immediately after sending the group command (
 ## Linting & Formatting
 
 All changes passed linting requirements:
+
 ```bash
-npm run lint:python:fix  # No issues
-npm run format:python    # Formatted successfully
+npm run lint:python:fix # No issues
+npm run format:python   # Formatted successfully
 npm run lint            # All checks pass
 ```
 
@@ -214,6 +229,7 @@ npm run lint            # All checks pass
 ### Automated Testing
 
 E2E tests created but require:
+
 - Running Home Assistant instance
 - Configured Cync Controller addon
 - Valid Cync account credentials
@@ -239,4 +255,3 @@ Tests marked with `@pytest.mark.skip` for manual execution.
 
 _Implementation completed: 2025-10-27_
 _Archived from: fix-ingress-and-group-bugs.plan.md_
-

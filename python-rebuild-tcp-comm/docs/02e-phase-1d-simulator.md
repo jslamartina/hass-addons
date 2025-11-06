@@ -27,6 +27,7 @@ Phase 1d builds a realistic Cync device simulator that speaks the real protocol 
 ## Deliverables
 
 ### Code
+
 - [ ] `tests/simulator/cync_device_simulator.py` - Main simulator (~300-350 lines)
 - [ ] `tests/simulator/chaos_config.py` - Chaos configuration (~80-100 lines)
 - [ ] `tests/integration/test_simulator.py` - Integration tests (10+ tests)
@@ -34,6 +35,7 @@ Phase 1d builds a realistic Cync device simulator that speaks the real protocol 
 - [ ] `tests/integration/test_chaos_probabilistic.py` - Probabilistic chaos tests (1+ tests, nightly-only) - **Technical Review Finding 5.3**
 
 ### Features
+
 - [ ] Simulator speaks real Cync protocol (uses Phase 1a codec)
 - [ ] Responds to: handshake (0x23), data (0x73), heartbeat (0xD3)
 - [ ] Sends: ACKs, status broadcasts, heartbeats
@@ -41,6 +43,7 @@ Phase 1d builds a realistic Cync device simulator that speaks the real protocol 
 - [ ] Network chaos injection: latency, loss, reordering, duplicates, corruption
 
 ### Testing
+
 - [ ] 10+ integration tests (full protocol flows)
 - [ ] 5+ chaos tests (reliability under adverse conditions)
 - [ ] Performance validation (p99 < 800ms baseline, < 1500ms with chaos)
@@ -261,6 +264,7 @@ class DeviceState:
 ## Implementation Plan
 
 ### Step 1: Basic Simulator
+
 - Implement `CyncDeviceSimulator` class
 - TCP server setup
 - Handle handshake and data packets
@@ -268,18 +272,21 @@ class DeviceState:
 - Unit tests for simulator
 
 ### Step 2: Chaos Injection
+
 - Implement `ChaosConfig` class
 - Add latency, packet loss, duplication
 - Configurable chaos parameters
 - Unit tests for chaos behaviors
 
 ### Step 3: Integration Tests
+
 - 10+ integration tests with simulator
 - Test full protocol flows (handshake, toggle, heartbeat)
 - Test reliability layer against simulator
 - Performance measurement
 
 ### Step 4: Chaos Tests
+
 - 5+ chaos tests with various network conditions
 - Validate retries under packet loss
 - Validate idempotency under duplication
@@ -294,6 +301,7 @@ class DeviceState:
   - Rationale: Probabilistic tests have 1% false positive rate even with large samples - unsuitable for CI
 
 **CI Configuration** (required to prevent flaky builds):
+
 ```yaml
 # .github/workflows/ci.yml or pytest.ini
 [tool:pytest]
@@ -303,6 +311,7 @@ addopts = --ignore=tests/integration/test_chaos_probabilistic.py  # Exclude from
 [tool:pytest:nightly]
 addopts = tests/integration/test_chaos_probabilistic.py  # Run only probabilistic tests
 ```
+
 - Performance validation report
 
 ---
@@ -627,22 +636,24 @@ async def test_network_partition():
 **Architectural Decision**: Balanced performance hierarchy (Option C from performance target review)
 
 **Targets based on smart home UX requirements:**
+
 - User perceives < 200ms as "instant"
 - User accepts < 1s for commands
 - Anything > 2s feels "broken"
 
-| Metric | Aspirational Target | Adjusted Target (If Phase 0.5 Differs) | Validation Target | Phase 1 Measured |
-|--------|---------------------|----------------------------------------|-------------------|------------------|
-| p50 latency | < 100ms | < (measured_p50 + 20ms) | Use adjusted | TBD |
-| p95 latency | < 300ms | < (measured_p95 + 50ms) | Use adjusted | TBD |
-| p99 latency | < 800ms | < (measured_p99 + 100ms) | Use adjusted | TBD |
-| Success rate | > 99.9% | > 99.9% (non-negotiable) | Same for both | TBD |
+| Metric       | Aspirational Target | Adjusted Target (If Phase 0.5 Differs) | Validation Target | Phase 1 Measured |
+| ------------ | ------------------- | -------------------------------------- | ----------------- | ---------------- |
+| p50 latency  | < 100ms             | < (measured_p50 + 20ms)                | Use adjusted      | TBD              |
+| p95 latency  | < 300ms             | < (measured_p95 + 50ms)                | Use adjusted      | TBD              |
+| p99 latency  | < 800ms             | < (measured_p99 + 100ms)               | Use adjusted      | TBD              |
+| Success rate | > 99.9%             | > 99.9% (non-negotiable)               | Same for both     | TBD              |
 
 **Updated from original**: p95 target reduced from 500ms to 300ms, p99 target reduced from 1000ms to 800ms based on balanced hierarchy decision.
 
 **Target Interpretation (Technical Review Finding 2.5 - Simplified to Two Tiers)**:
 
 **Two-Tier Target System** (approved simplification):
+
 - **Aspirational Targets**: Design goals based on UX research (p50 < 100ms, p95 < 300ms, p99 < 800ms)
   - Purpose: Guide optimization efforts
   - Status: Documentation only (not validation criteria)
@@ -652,6 +663,7 @@ async def test_network_partition():
   - **This is what we validate against**
 
 **Example Adjustment**:
+
 - Phase 0.5 measures p99 ACK latency = 1200ms (instead of assumed 800ms)
 - **Aspirational target** = 800ms (unchanged - design goal)
 - **Adjusted target** = 1200ms + 100ms = 1300ms
@@ -663,6 +675,7 @@ async def test_network_partition():
 **Acceptance Criteria Clarification**: Phase 1d acceptance criteria use **adjusted targets**, not aspirational targets.
 
 **Measurement Method:**
+
 - Run Phase 1d simulator with no chaos
 - Send 1000 toggle commands
 - Measure end-to-end latency (send → ACK received)
@@ -729,11 +742,11 @@ Phase 1d baseline tests validate the "no send_queue" architectural decision (aut
 
 ### With Chaos (20% loss, 100ms latency)
 
-| Metric | Target | Measurement |
-|--------|--------|-------------|
-| p99 latency | < 1500ms | TBD |
-| Success rate | > 99% | TBD |
-| Retransmit rate | < 5% | TBD |
+| Metric          | Target   | Measurement |
+| --------------- | -------- | ----------- |
+| p99 latency     | < 1500ms | TBD         |
+| Success rate    | > 99%    | TBD         |
+| Retransmit rate | < 5%     | TBD         |
 
 **Chaos targets unchanged**: p99 < 1500ms with chaos is acceptable (allows for retry overhead).
 
@@ -742,12 +755,14 @@ Phase 1d baseline tests validate the "no send_queue" architectural decision (aut
 ## Acceptance Criteria
 
 ### Functional
+
 - [ ] Simulator speaks real Cync protocol
 - [ ] Handles handshake, data, heartbeat packets
 - [ ] Configurable chaos parameters
 - [ ] Device state updates correctly
 
 ### Testing
+
 - [ ] 10+ integration tests pass
 - [ ] 5+ chaos tests pass (deterministic + high-volume probabilistic)
 - [ ] 100% test pass rate
@@ -755,12 +770,14 @@ Phase 1d baseline tests validate the "no send_queue" architectural decision (aut
 - [ ] No flaky tests
 
 ### Performance
+
 - [ ] p99 latency < 800ms (no chaos) - or adjusted target from Phase 0.5
 - [ ] p99 latency < 1500ms (with chaos)
 - [ ] Success rate > 99.9% (no chaos)
 - [ ] Success rate > 99% (20% packet loss)
 
 ### Memory Leak Detection (Technical Review Finding 5.4 - Added)
+
 - [ ] Memory leak test executed for 9 hours minimum
 - [ ] Memory growth < 5% over 8-hour window (after 1-hour warmup)
 - [ ] No unbounded cache/dict growth observed
@@ -772,6 +789,7 @@ Phase 1d baseline tests validate the "no send_queue" architectural decision (aut
   - **Acceptance**: Memory growth < 5% from baseline to end
   - **Failure**: Growth >= 5% indicates leak → investigate with `tracemalloc.take_snapshot()`
 - [ ] Test implementation in `tests/integration/test_memory_leak.py`:
+
   ```python
   import tracemalloc
 
@@ -800,6 +818,7 @@ Phase 1d baseline tests validate the "no send_queue" architectural decision (aut
   ```
 
 ### Quality
+
 - [ ] No ruff errors
 - [ ] No mypy errors (strict mode)
 - [ ] Full type annotations
@@ -809,15 +828,15 @@ Phase 1d baseline tests validate the "no send_queue" architectural decision (aut
 
 ## Chaos Test Matrix
 
-| Test | Packet Loss | Latency | Duplicates | Reorder | Expected Outcome |
-|------|-------------|---------|------------|---------|------------------|
-| Baseline | 0% | 0ms | 0% | 0% | p99 < 800ms, 100% success |
-| Mild Loss | 5% | 0ms | 0% | 0% | p99 < 900ms, > 99.5% success |
-| High Loss | 20% | 0ms | 0% | 0% | p99 < 1200ms, > 99% success |
-| High Latency | 0% | 500ms | 0% | 0% | p99 < 1500ms, 100% success |
-| Duplicates | 0% | 0ms | 50% | 0% | Idempotency, 100% success |
-| Reordering | 0% | 0ms | 0% | 30% | Correct order, 100% success |
-| Combined | 10% | 100ms | 10% | 10% | p99 < 1500ms, > 98% success, 1000+ msg sample |
+| Test         | Packet Loss | Latency | Duplicates | Reorder | Expected Outcome                              |
+| ------------ | ----------- | ------- | ---------- | ------- | --------------------------------------------- |
+| Baseline     | 0%          | 0ms     | 0%         | 0%      | p99 < 800ms, 100% success                     |
+| Mild Loss    | 5%          | 0ms     | 0%         | 0%      | p99 < 900ms, > 99.5% success                  |
+| High Loss    | 20%         | 0ms     | 0%         | 0%      | p99 < 1200ms, > 99% success                   |
+| High Latency | 0%          | 500ms   | 0%         | 0%      | p99 < 1500ms, 100% success                    |
+| Duplicates   | 0%          | 0ms     | 50%        | 0%      | Idempotency, 100% success                     |
+| Reordering   | 0%          | 0ms     | 0%         | 30%     | Correct order, 100% success                   |
+| Combined     | 10%         | 100ms   | 10%        | 10%     | p99 < 1500ms, > 98% success, 1000+ msg sample |
 
 **Note**: Combined test is the most realistic chaos scenario - validates production readiness under multiple concurrent failure modes.
 
@@ -930,14 +949,14 @@ async def test_handshake_flow(simulator, simulator_port):
 
 **Which tests run in parallel vs serial:**
 
-| Test Category | Execution Mode | Rationale | Example Command |
-|---------------|----------------|-----------|-----------------|
-| **Unit tests** | Always parallel | Isolated, no shared state | `pytest -n auto tests/unit/` |
-| **Integration tests** | Parallel with port allocation | File-based locking prevents port collisions | `pytest -n 4 tests/integration/test_simulator.py` |
-| **Chaos tests (deterministic)** | Parallel | Zero flakiness (deterministic drop patterns) | `pytest -n 4 -m "chaos and not chaos_probabilistic"` |
-| **Chaos tests (probabilistic)** | Serial OR nightly-only | 1% false positive rate (statistical variance) | `pytest -m chaos_probabilistic` (nightly builds only) |
-| **Load tests** | Serial | Measures system capacity (parallel would interfere) | `pytest tests/integration/test_performance.py` |
-| **Memory leak tests** | Serial | Long-running (9 hours), measures growth | `pytest tests/integration/test_memory_leak.py` |
+| Test Category                   | Execution Mode                | Rationale                                           | Example Command                                       |
+| ------------------------------- | ----------------------------- | --------------------------------------------------- | ----------------------------------------------------- |
+| **Unit tests**                  | Always parallel               | Isolated, no shared state                           | `pytest -n auto tests/unit/`                          |
+| **Integration tests**           | Parallel with port allocation | File-based locking prevents port collisions         | `pytest -n 4 tests/integration/test_simulator.py`     |
+| **Chaos tests (deterministic)** | Parallel                      | Zero flakiness (deterministic drop patterns)        | `pytest -n 4 -m "chaos and not chaos_probabilistic"`  |
+| **Chaos tests (probabilistic)** | Serial OR nightly-only        | 1% false positive rate (statistical variance)       | `pytest -m chaos_probabilistic` (nightly builds only) |
+| **Load tests**                  | Serial                        | Measures system capacity (parallel would interfere) | `pytest tests/integration/test_performance.py`        |
+| **Memory leak tests**           | Serial                        | Long-running (9 hours), measures growth             | `pytest tests/integration/test_memory_leak.py`        |
 
 **Parallel Test Execution**:
 
@@ -958,6 +977,7 @@ pytest tests/integration/test_chaos_probabilistic.py -m chaos_probabilistic
 **Race Condition Prevention**:
 
 **File-Based Locking**:
+
 - Uses `fcntl.flock()` for exclusive lock during port probing
 - Lock file: `/tmp/pytest_port_allocation.lock`
 - Blocks concurrent port probes until lock released
@@ -965,6 +985,7 @@ pytest tests/integration/test_chaos_probabilistic.py -m chaos_probabilistic
 - No worker count limitations (supports any number of workers)
 
 **Benefits**:
+
 - ✅ No port collisions in parallel tests (race-free)
 - ✅ Works with pytest-xdist out of the box
 - ✅ No manual port management needed
@@ -976,21 +997,23 @@ pytest tests/integration/test_chaos_probabilistic.py -m chaos_probabilistic
 
 ## Risks & Mitigation
 
-| Risk | Impact | Mitigation |
-|------|--------|------------|
-| Simulator doesn't match real devices | High | Validate against Phase 0.5 captures; test with real device |
-| Chaos tests too slow | Low | Run in parallel; mark with `@pytest.mark.chaos` for selective execution |
-| Performance targets not met | Medium | Profile code; optimize hot paths; adjust targets if unrealistic |
+| Risk                                 | Impact | Mitigation                                                              |
+| ------------------------------------ | ------ | ----------------------------------------------------------------------- |
+| Simulator doesn't match real devices | High   | Validate against Phase 0.5 captures; test with real device              |
+| Chaos tests too slow                 | Low    | Run in parallel; mark with `@pytest.mark.chaos` for selective execution |
+| Performance targets not met          | Medium | Profile code; optimize hot paths; adjust targets if unrealistic         |
 
 ---
 
 ## Dependencies
 
 **Prerequisites**:
+
 - Phases 1a-1c complete (protocol codec, reliable transport, queues)
 - Phase 0.5 protocol validation available
 
 **External**:
+
 - None
 
 ---
@@ -1008,4 +1031,3 @@ See `03-phase-2-spec.md`
 - **Phase 0.5**: `02a-phase-0.5-protocol-validation.md` - Protocol validation
 - **Phase 1a-1c**: Prerequisites
 - **Phase 2**: `03-phase-2-spec.md` - Next major phase
-

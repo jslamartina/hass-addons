@@ -5,6 +5,7 @@ Lean harness and reliable TCP transport layer for Cync device communication.
 ## Phase 0: Toggle + Log Harness
 
 This phase implements a minimal toggler with:
+
 - JSON structured logging
 - Prometheus metrics
 - Single-device toggle with retry
@@ -61,4 +62,3 @@ mypy src tests
 ## Documentation
 
 See `docs/rebuild-tcp-comm/` for detailed design, migration plan, and runbooks.
-

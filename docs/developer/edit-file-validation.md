@@ -7,6 +7,7 @@ The `validate-edit-context.py` utility performs **byte-to-byte comparison** of c
 **Note:** Always run the validator before each `edit_file` call to ensure your context matches exactly. This prevents silent failures due to whitespace or encoding mismatches.
 
 This prevents common failures due to:
+
 - Whitespace differences (spaces vs tabs)
 - Line ending differences (LF vs CRLF)
 - Encoding issues
@@ -40,11 +41,13 @@ python3 scripts/validate-edit-context.py \
 ### 3. Interpret the Result
 
 **Success:**
+
 ```
 ✓ Context matches at line 42
 ```
 
 **Failure with suggestions:**
+
 ```
 ✗ Context not found in file
   Searching for: "def validate_input(data):"...
@@ -165,6 +168,7 @@ edit_file(
 ### Issue: Context Not Found
 
 **Symptom:**
+
 ```
 ✗ Context not found in file
 ```
@@ -172,18 +176,21 @@ edit_file(
 **Diagnosis:**
 
 1. Check for **whitespace differences**:
+
    ```bash
    # View the file with whitespace visible
    cat -A cync-controller/src/app.py | grep "def foo"
    ```
 
 2. Check for **encoding issues**:
+
    ```bash
    # Verify file encoding
    file cync-controller/src/app.py
    ```
 
 3. Check for **line ending differences** (LF vs CRLF):
+
    ```bash
    # Check for CRLF
    grep -U $'\r' cync-controller/src/app.py && echo "Has CRLF" || echo "Has LF"
@@ -204,6 +211,7 @@ edit_file(
 ### Issue: Tab vs Space Mismatch
 
 **Symptom:**
+
 ```
 ✗ Context not found in file
 Similar lines found:
@@ -211,6 +219,7 @@ Similar lines found:
 ```
 
 **Solution:** Use the exact indentation from the file. Extract with:
+
 ```bash
 # Copy exact lines from file
 sed -n '40,45p' cync-controller/src/app.py
@@ -225,6 +234,7 @@ python3 scripts/test-validate-edit-context.py
 ```
 
 Test coverage includes:
+
 - Exact matches
 - Multiline contexts
 - Tab vs space detection

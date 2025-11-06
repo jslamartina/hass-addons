@@ -13,11 +13,13 @@ Before using these scripts, you need to configure the credentials file.
 ### Creating `hass-credentials.env`
 
 1. **Copy the example file:**
+
    ```bash
    cp hass-credentials.env.example hass-credentials.env
    ```
 
 2. **Edit the file with your credentials:**
+
    ```bash
    nano hass-credentials.env
    ```
@@ -41,6 +43,7 @@ Before using these scripts, you need to configure the credentials file.
    - ⚠️ Never commit this file with real credentials
 
 **Example file contents:**
+
 ```bash
 # Home Assistant credentials
 HASS_USERNAME=dev
@@ -69,16 +72,19 @@ Complete factory reset + automated onboarding in one command.
 **Purpose:** Fast way to get from any state to "fresh but onboarded" state. Combines `reset-ha-to-fresh.sh` + `setup-fresh-ha.sh` into one command.
 
 **Usage:**
+
 ```bash
 ./scripts/reset-ha-to-fresh-onboarded.sh
 ```
 
 **What It Does:**
+
 1. Resets HA to fresh state (calls `reset-ha-to-fresh.sh`)
 2. Runs automated onboarding (calls `setup-fresh-ha.sh`)
 3. Results in fully configured HA with EMQX and Cync Controller
 
 **When to Use:**
+
 - Quick iteration: need fresh onboarded state repeatedly
 - Testing the complete setup flow
 - Don't need to manually test fresh install steps
@@ -94,6 +100,7 @@ Complete factory reset of Home Assistant - **equivalent to rebuilding the devcon
 **Purpose:** Recreates the exact conditions of a fresh devcontainer build without the 10-minute rebuild time. Essential for testing fresh install scenarios and debugging initialization errors that only appear on first boot.
 
 **Usage:**
+
 ```bash
 ./scripts/reset-ha-to-fresh.sh
 ```
@@ -171,6 +178,7 @@ Automated setup script for fresh Home Assistant installations.
 **Purpose:** Automates the complete onboarding process, including user creation, EMQX MQTT broker installation, and Cync Controller add-on setup with test credentials.
 
 **Usage:**
+
 ```bash
 ./setup-fresh-ha.sh
 ```
@@ -267,6 +275,7 @@ Next steps:
 **Idempotency:**
 
 The script is safe to re-run:
+
 - Skips onboarding if already complete
 - Skips add-on installation if already installed
 - Updates configuration if needed
@@ -276,6 +285,7 @@ The script is safe to re-run:
 **Startup Behavior:**
 
 The script uses **async start + state polling** to handle add-on startup:
+
 - Starts add-ons in background (non-blocking)
 - Polls actual add-on state every 5 seconds
 - Shows real-time progress: `stopped` → `startup` → `started`
@@ -307,8 +317,9 @@ The script uses **async start + state polling** to handle add-on startup:
 Programmatically configure the Cync Controller add-on via Supervisor API.
 
 **Usage:**
+
 ```bash
-./configure-addon.sh <command> [args...]
+./configure-addon.sh < command > [args...]
 ```
 
 **Commands:**
@@ -348,6 +359,7 @@ Programmatically configure the Cync Controller add-on via Supervisor API.
 4. Shows relevant logs after restart
 
 **API Endpoints Used:**
+
 - `GET /addons/local_cync-controller/info` - Read current configuration
 - `POST /addons/local_cync-controller/options` - Update configuration
 - `POST /addons/local_cync-controller/restart` - Restart add-on
@@ -359,6 +371,7 @@ Programmatically configure the Cync Controller add-on via Supervisor API.
 Comprehensive automated test suite for all cloud relay operating modes.
 
 **Usage:**
+
 ```bash
 ./test-cloud-relay.sh
 ```
@@ -396,6 +409,7 @@ Comprehensive automated test suite for all cloud relay operating modes.
    - Confirms clean state transition
 
 **Exit Codes:**
+
 - `0` - All tests passed
 - `1` - Some tests failed
 
@@ -408,11 +422,13 @@ Environment variable loader for MCP (Model Context Protocol) servers in Cursor I
 **Purpose:**
 
 Cursor's `mcp.json` doesn't support environment variable expansion (like `${ENV_VAR}`). This wrapper script loads secrets from `.mcp-secrets.env` before launching MCP servers, allowing you to:
+
 - Keep secrets out of version control
 - Share `mcp.json` configurations across machines
 - Manage API keys centrally in one gitignored file
 
 **Usage in `mcp.json`:**
+
 ```json
 {
   "mcpServers": {
@@ -425,16 +441,19 @@ Cursor's `mcp.json` doesn't support environment variable expansion (like `${ENV_
 ```
 
 **Setup:**
+
 1. Copy `.mcp-secrets.env.example` to `.mcp-secrets.env`
 2. Fill in your API keys in `.mcp-secrets.env`
 3. Update `mcp.json` with the absolute path to this script
 
 **Security:**
+
 - `.mcp-secrets.env` is gitignored (never committed)
 - Script validates secrets file exists before running
 - MCP servers inherit environment variables from loaded `.mcp-secrets.env`
 
 **See also:**
+
 - `docs/developer/agents-guide.md` - Full MCP secrets management documentation
 - `.mcp-secrets.env.example` - Template with placeholder values
 
@@ -447,6 +466,7 @@ Safe MQTT entity deletion script for development and testing.
 **Purpose:** Cleanly removes MQTT entities while preserving the Cync Controller configuration.
 
 **Usage:**
+
 ```bash
 # Dry run (preview what will be deleted)
 sudo python3 scripts/delete-mqtt-safe.py --dry-run
@@ -456,6 +476,7 @@ sudo python3 scripts/delete-mqtt-safe.py
 ```
 
 **Features:**
+
 - ✅ Preserves Cync Controller entities
 - ✅ Cleans entity and device registries
 - ✅ Clears restore state (removes history memory)
@@ -471,6 +492,7 @@ Memory usage monitor for test commands (particularly `npm run test:unit`).
 **Purpose:** Tracks RAM usage of test processes and their children to help identify memory-intensive operations.
 
 **Usage:**
+
 ```bash
 # Monitor default test:unit command
 ./scripts/monitor-test-memory.sh
@@ -502,6 +524,7 @@ npm run test:unit:mem
    - Elapsed time
 
 **Output Example:**
+
 ```
 === Memory Monitor for: npm run test:unit ===
 
@@ -532,12 +555,14 @@ Elapsed (wall clock) time (h:mm:ss or m:ss): 0:17.23
 5. Reports final statistics including system-wide memory changes
 
 **Use Cases:**
+
 - Identifying memory-intensive test configurations
 - Comparing RAM usage between different pytest worker counts (`-n auto` vs `-n 2`)
 - Debugging OOM (Out of Memory) errors
 - Optimizing test execution to reduce memory footprint
 
 **See also:**
+
 - `package.json` - `test:unit:mem` npm script
 - `cync-controller/pytest.ini` - Pytest configuration (adjust `-n auto` to limit workers)
 
@@ -555,12 +580,13 @@ SUPERVISOR_TOKEN=$(docker exec hassio_cli env | grep SUPERVISOR_TOKEN | cut -d= 
 
 # API requests use Bearer token authentication
 curl -H "Authorization: Bearer ${SUPERVISOR_TOKEN}" \
-     http://supervisor/addons/local_cync-controller/info
+  http://supervisor/addons/local_cync-controller/info
 ```
 
 ### Configuration Persistence
 
 Unlike manual file edits, API-based configuration changes:
+
 - ✅ Trigger proper Supervisor reload mechanisms
 - ✅ Update `/data/options.json` automatically
 - ✅ Reload environment variables correctly
@@ -581,6 +607,7 @@ Unlike manual file edits, API-based configuration changes:
 **Cause:** The `hassio_cli` container is not running.
 
 **Solution:**
+
 ```bash
 # Check if hassio_cli is running
 docker ps | grep hassio_cli
@@ -594,6 +621,7 @@ ha supervisor restart
 **Cause:** Invalid or expired Supervisor token.
 
 **Solution:**
+
 ```bash
 # Verify token is set
 docker exec hassio_cli env | grep SUPERVISOR_TOKEN
@@ -607,6 +635,7 @@ ha supervisor restart
 **Cause:** Add-on taking longer than expected to restart.
 
 **Solution:**
+
 - Check add-on logs: `ha addons logs local_cync-controller`
 - Manually restart: `ha addons restart local_cync-controller`
 - Check for errors in supervisor logs: `tail -f /tmp/supervisor_run.log`
@@ -656,6 +685,5 @@ wait_for_log "Pattern to wait for" 15 "Wait description"
 
 ---
 
-*Last Updated: October 14, 2025*
-*Status: Production Ready* ✅
-
+_Last Updated: October 14, 2025_
+_Status: Production Ready_ ✅

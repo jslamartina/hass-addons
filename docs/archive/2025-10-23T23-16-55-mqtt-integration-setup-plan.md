@@ -15,7 +15,7 @@
 
 ### Implementation details
 
-1) Add constants and derive configuration ✅
+1. Add constants and derive configuration ✅
 
 - Compute:
   - `MQTT_BROKER_HOST=localhost` (fallback: `MQTT_BROKER_HOST_FALLBACK=a0d7b954-emqx`)
@@ -23,13 +23,14 @@
   - `MQTT_USERNAME=$MQTT_USER`, `MQTT_PASSWORD=$MQTT_PASS`
   - `AUTH_TOKEN=$LONG_LIVED_ACCESS_TOKEN` (created earlier in the script)
 
-2) Wait for EMQX to be reachable ✅
+2. Wait for EMQX to be reachable ✅
 
 - Poll TCP `localhost:1883`; if not reachable within short timeout, try `a0d7b954-emqx:1883` (overall timeout + retries). Use whichever host succeeds for subsequent steps.
 
-3) Run MQTT config flow via REST (idempotent) ✅
+3. Run MQTT config flow via REST (idempotent) ✅
 
 - Start flow:
+
 ```bash
 curl -sf -X POST "$HA_URL/api/config/config_entries/flow" \
   -H "Authorization: Bearer $AUTH_TOKEN" \
@@ -39,6 +40,7 @@ curl -sf -X POST "$HA_URL/api/config/config_entries/flow" \
 
 - If response has `type:"abort"` with reasons like `already_configured` or `single_instance_allowed`, treat as success and skip.
 - Else extract `flow_id` and `data_schema`. Build `user_input` only for fields present (typical fields: `broker`, `port`, `username`, `password`, optionally `discovery`, `client_id`). Submit:
+
 ```bash
 curl -sf -X POST "$HA_URL/api/config/config_entries/flow/$FLOW_ID" \
   -H "Authorization: Bearer $AUTH_TOKEN" \
@@ -48,9 +50,10 @@ curl -sf -X POST "$HA_URL/api/config/config_entries/flow/$FLOW_ID" \
 
 - If another step is returned, repeat: read `data_schema`, fill only known fields with safe defaults. Stop when `type:"create_entry"`.
 
-4) Verify integration is active ✅
+4. Verify integration is active ✅
 
 - Publish a test message via HA service to confirm the `mqtt` domain is loaded:
+
 ```bash
 curl -sf -X POST "$HA_URL/api/services/mqtt/publish" \
   -H "Authorization: Bearer $AUTH_TOKEN" \
@@ -60,7 +63,7 @@ curl -sf -X POST "$HA_URL/api/services/mqtt/publish" \
 
 - On success (HTTP 200), print success message. If 404, the integration didn’t load; log and continue with guidance.
 
-5) Wire into main flow ✅
+5. Wire into main flow ✅
 
 - Call new steps after `start_emqx` and before installing/configuring Cync Controller.
 

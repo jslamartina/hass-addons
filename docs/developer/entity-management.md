@@ -5,6 +5,7 @@ This guide explains the automated tools available for managing MQTT entities in 
 ## The Problem
 
 When developing the Cync Controller Add-on, you often need to:
+
 - Clean up test entities without losing the bridge configuration
 - Test entity rediscovery after changing discovery settings
 - Verify entities appear in correct areas after `suggested_area` changes
@@ -19,6 +20,7 @@ When developing the Cync Controller Add-on, you often need to:
 **Script:** `scripts/delete-mqtt-entities-except-bridge.sh`
 
 **What it does:**
+
 1. ✅ Discovers all MQTT entities
 2. ✅ Preserves Cync Controller (and its entities)
 3. ✅ Deletes everything else
@@ -26,6 +28,7 @@ When developing the Cync Controller Add-on, you often need to:
 5. ✅ Optionally restarts addon
 
 **Safety:**
+
 - Bridge is **never deleted**
 - Dry run mode to preview first
 - Detailed logs and screenshots
@@ -47,6 +50,7 @@ sudo python3 scripts/delete-mqtt-safe.py --restart
 ```
 
 **Features:**
+
 - ✅ Preserves Cync Controller entities
 - ✅ Cleans entity and device registries
 - ✅ Clears restore state (removes history memory)
@@ -97,8 +101,8 @@ ha addons restart local_cync-controller
 ./scripts/delete-mqtt-entities-except-bridge.sh --restart
 
 # Or combined:
-./scripts/delete-mqtt-entities-except-bridge.sh --dry-run && \
-./scripts/delete-mqtt-entities-except-bridge.sh --restart
+./scripts/delete-mqtt-entities-except-bridge.sh --dry-run \
+  && ./scripts/delete-mqtt-entities-except-bridge.sh --restart
 ```
 
 ## Understanding the Output
@@ -126,8 +130,8 @@ Total entities found: 24
 ```bash
 ⚠️ DRY RUN MODE - No entities will be actually deleted
 ℹ️ Entities that WOULD be deleted:
-ℹ️   - Hallway Front Switch
-ℹ️   - Hallway Counter Switch
+ℹ️ - Hallway Front Switch
+ℹ️ - Hallway Counter Switch
 ...
 ```
 
@@ -150,24 +154,24 @@ Use `--dry-run` to verify before actual deletion.
 ### Environment Variables
 
 ```bash
-export HA_BASE_URL="http://localhost:8123"  # HA URL
-export HA_USERNAME="dev"                     # Username
-export HA_PASSWORD="dev"                     # Password
-export ADDON_SLUG="local_cync-controller"          # Addon to restart
-export BRIDGE_NAME="Cync Controller"         # Bridge to preserve
-export RESTART_ADDON="true"                  # Restart after deletion
-export DRY_RUN="true"                        # Preview mode
-export HEADED="1"                            # Show browser
+export HA_BASE_URL="http://localhost:8123" # HA URL
+export HA_USERNAME="dev"                   # Username
+export HA_PASSWORD="dev"                   # Password
+export ADDON_SLUG="local_cync-controller"  # Addon to restart
+export BRIDGE_NAME="Cync Controller"       # Bridge to preserve
+export RESTART_ADDON="true"                # Restart after deletion
+export DRY_RUN="true"                      # Preview mode
+export HEADED="1"                          # Show browser
 ```
 
 ### Shell Flags
 
 ```bash
---dry-run       # Preview without deleting
---restart       # Restart addon after deletion
---headed        # Show browser window
---bridge NAME   # Custom bridge name
---help          # Show help
+--dry-run     # Preview without deleting
+--restart     # Restart addon after deletion
+--headed      # Show browser window
+--bridge NAME # Custom bridge name
+--help        # Show help
 ```
 
 ## Troubleshooting
@@ -175,6 +179,7 @@ export HEADED="1"                            # Show browser
 ### "No entities found"
 
 **Check:**
+
 1. Is MQTT integration running?
 2. Is addon running and publishing entities?
 3. Run with `--headed` to see current page state
@@ -186,6 +191,7 @@ export HEADED="1"                            # Show browser
 ### "Wrong entities selected"
 
 **Check bridge name:**
+
 ```bash
 # Verify bridge name matches exactly
 ./scripts/delete-mqtt-entities-except-bridge.sh \
@@ -195,6 +201,7 @@ export HEADED="1"                            # Show browser
 ### "Deletion failed"
 
 **Debug with screenshots:**
+
 ```bash
 # Check what happened
 ls -la test-results/runs/delete-mqtt-*/screenshots/
@@ -204,11 +211,13 @@ cat test-results/runs/delete-mqtt-*/run.log
 ### "Script is slow"
 
 **Normal execution times:**
+
 - Dry run: ~15-20 seconds
 - Actual deletion (20 entities): ~60-90 seconds
 - With addon restart: Add ~15-20 seconds
 
 **Optimization:**
+
 - Headless mode (default) is faster
 - Headed mode (`--headed`) is slower but helps debugging
 
@@ -224,7 +233,7 @@ npx ts-node scripts/playwright/delete-mqtt-entities.ts \
 
 # With restart
 RESTART_ADDON=true \
-npx ts-node scripts/playwright/delete-mqtt-entities.ts \
+  npx ts-node scripts/playwright/delete-mqtt-entities.ts \
   "Entity 1" "Entity 2"
 ```
 
@@ -246,6 +255,7 @@ npx ts-node scripts/playwright/delete-mqtt-entities.ts \
 ### Audit Trail
 
 Every run creates:
+
 - **run.log** - Complete action log with timestamps
 - **screenshots/** - Visual proof at each step
 - **\*-a11y.yaml** - Machine-readable page state
@@ -266,6 +276,7 @@ Every run creates:
 ### Shadow DOM Handling
 
 Home Assistant UI uses Web Components with Shadow DOM. The script:
+
 - Uses role-based selectors (pierce shadow boundaries)
 - Falls back to programmatic clicks if UI blocks normal clicks
 - Saves accessibility tree for debugging
@@ -296,4 +307,3 @@ If you encounter issues:
 
 **Created:** October 14, 2025
 **Purpose:** Automate MQTT entity management for Cync Controller Add-on development
-

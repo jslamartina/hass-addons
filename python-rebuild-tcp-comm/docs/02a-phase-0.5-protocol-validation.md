@@ -22,23 +22,27 @@
 **Phase Status**: ⏳ IN PROGRESS | **Tier 1 Deliverables**: 2/6 complete, 2/6 in progress, 2/6 not started
 
 **Key Prerequisites**:
+
 - DNS redirection: `cm.gelighting.com → 127.0.0.1` (hard requirement, no alternatives)
 - Port 23779 available
 - TLS termination required (devices use SSL, not plaintext as originally assumed)
 
-**Deliverables Summary**: 2/11 complete, 3/11 in progress, 5/11 not started, 1/11 deferred
-- ✅ MITM Proxy Tool, Checksum Validation Script
-- ⏳ Protocol Capture Document, Test Fixtures, Checksum Validation Results
+**Deliverables Summary**: 3/11 complete, 2/11 in progress, 5/11 not started, 1/11 deferred
+
+- ✅ MITM Proxy Tool, Checksum Validation Script, Checksum Validation Results
+- ⏳ Protocol Capture Document, Test Fixtures
 - ❌ Protocol Validation Report, Updated Protocol Docs, Dedup Verification, Backpressure Testing, Helper Scripts
 - ⚠️ Group Operation Performance (moved to Phase 1d)
 
 **Key Findings**:
-- TLS termination required (devices use self-signed cert CN=*.xlink.cn)
+
+- TLS termination required (devices use self-signed cert CN=\*.xlink.cn)
 - Toggle commands (0x73) and ACKs (0x7B) successfully captured (346 pairs)
 - Checksum algorithm validated (100% match rate on real packets)
 - 1,326+ packets captured from 9 devices
 
 **Navigation**:
+
 - [Implementation Status](#implementation-status-2025-11-06) - Current progress and findings
 - [Goals & Scope](#goals) - What Phase 0.5 accomplishes
 - [Deliverables](#deliverables) - 11 detailed deliverables with code
@@ -53,33 +57,27 @@
 
 ### 📦 Deliverables Status
 
-| # | Deliverable | Status | Location | Notes |
-|---|------------|--------|----------|-------|
-| 1 | MITM Proxy Tool | ✅ Complete | `mitm/mitm-proxy.py` | ~250 lines, operational on port 23779 |
-| 2 | Protocol Capture Document | ⏳ In Progress | `docs/phase-0.5/captures.md` | Has capture data, needs detailed annotation |
-| 3 | Test Fixtures | ⏳ In Progress | `tests/fixtures/real_packets.py` | Has real packet data, needs expansion |
-| 4 | Checksum Validation Results | ⏳ In Progress | `docs/phase-0.5/validation.md` | 5/5 packets validated, needs comprehensive report |
-| 5 | Protocol Validation Report | ❌ Not Started | `docs/protocol/validation-report.md` | Pending capture analysis |
-| 6 | Updated Protocol Documentation | ❌ Not Started | `docs/protocol/packet-structure-validated.md` | Pending validation completion |
-| 7 | Checksum Validation Script | ✅ Complete | `mitm/validate-checksum-REFERENCE-ONLY.py` | Validated 2/2 legacy fixtures |
-| 8 | Full Fingerprint Field Verification | ❌ Not Started | `docs/protocol/deduplication-strategy.md` | Requires retry packet captures |
-| 9 | Device Backpressure Behavior Testing | ❌ Not Started | `docs/protocol/backpressure-behavior.md` | Optional Tier 3 deliverable |
-| 10 | Helper Scripts | ❌ Not Started | `scripts/parse-capture.py` | Pending capture data |
-| 11 | Group Operation Performance | ❌ Deferred | N/A | Moved to Phase 1d per spec line 1592 |
-
-**Completion Summary**:
-- Tier 1 (Blocking Phase 1a): 2/6 complete, 2/6 in progress, 2/6 not started
-- Tier 2 (Important): 0/2 not started
-- Tier 3 (Optional): 0/1 not started
-- Tier 4 (Deferred): 1/1 deferred to Phase 1d
+| #   | Deliverable                          | Status         | Location                                      | Notes                                       |
+| --- | ------------------------------------ | -------------- | --------------------------------------------- | ------------------------------------------- |
+| 1   | MITM Proxy Tool                      | ✅ Complete    | `mitm/mitm-proxy.py`                          | ~250 lines, operational on port 23779       |
+| 2   | Protocol Capture Document            | ⏳ In Progress | `docs/phase-0.5/captures.md`                  | Has capture data, needs detailed annotation |
+| 3   | Test Fixtures                        | ⏳ In Progress | `tests/fixtures/real_packets.py`              | Has real packet data, needs expansion       |
+| 4   | Checksum Validation Results          | ✅ Complete    | `docs/phase-0.5/validation.md`                | 13/13 packets validated (100% match rate)   |
+| 5   | Protocol Validation Report           | ❌ Not Started | `docs/protocol/validation-report.md`          | Pending capture analysis                    |
+| 6   | Updated Protocol Documentation       | ❌ Not Started | `docs/protocol/packet-structure-validated.md` | Pending validation completion               |
+| 7   | Checksum Validation Script           | ✅ Complete    | `mitm/validate-checksum-REFERENCE-ONLY.py`    | Validated 2/2 legacy fixtures               |
+| 8   | Full Fingerprint Field Verification  | ❌ Not Started | `docs/protocol/deduplication-strategy.md`     | Requires retry packet captures              |
+| 9   | Device Backpressure Behavior Testing | ❌ Not Started | `docs/protocol/backpressure-behavior.md`      | Optional Tier 3 deliverable                 |
+| 10  | Helper Scripts                       | ❌ Not Started | `scripts/parse-capture.py`                    | Pending capture data                        |
+| 11  | Group Operation Performance          | ❌ Deferred    | N/A                                           | Moved to Phase 1d per spec line 1592        |
 
 ### 🔍 Key Findings
 
-**Finding 1: TLS Termination Required** - Devices use TLS/SSL with self-signed cert (CN=*.xlink.cn), not plaintext as spec assumed.
+**Finding 1: TLS Termination Required** - Devices use TLS/SSL with self-signed cert (CN=\*.xlink.cn), not plaintext as spec assumed.
 
 **Finding 2: Toggle Commands Successfully Captured** - Captured 346 toggle command pairs (0x73 CLOUD→DEV + 0x7B DEV→CLOUD ACKs), plus 96 status broadcasts (0x83→0x88). Full toggle flow validated.
 
-**Finding 3: Checksum Algorithm Validated** - Legacy algorithm confirmed (100% match rate on 5/5 packets).
+**Finding 3: Checksum Algorithm Validated** - Legacy algorithm confirmed (100% match rate on 13/13 packets: 2 legacy + 11 real from diverse devices).
 
 **Finding 4: Packet Structure Confirmed** - Header, endpoint extraction, queue ID structure validated against real packets.
 
@@ -98,11 +96,13 @@
 **CRITICAL**: Phase 0.5 involves empirical discovery - protocol details (ACK structure, queue ID derivation, checksum algorithm) cannot be known until captured. Accept documented uncertainty; decisions deferred until data available.
 
 **Do NOT Flag** (expected constraints):
+
 - DNS redirection as "SPOF" - it's a hard prerequisite with no alternatives (validated before Phase 0.5 starts)
 - Timeline estimates - hobby project with sequential implementation, no schedule tracking
 - Protocol unknowns - decisions made after data collection, not before
 
 **DO Flag** (actual problems):
+
 - Missing validation steps, incorrect procedures, spec inconsistencies
 - Unclear requirements that would block Phase 1a
 
@@ -113,6 +113,7 @@
 Phase 0.5 validates and documents the real Cync device protocol through packet capture and analysis. This phase bridges Phase 0 (which used a custom test protocol with 0xF00D magic bytes) and Phase 1a (which will implement the real Cync protocol encoder/decoder).
 
 **Why Phase 0.5?**
+
 - Phase 0 used custom test framing (0xF00D + JSON) that won't work with real devices
 - Phase 1 spec assumes protocol knowledge, but we need real-world validation
 - Building from scratch means we can't rely on legacy code assumptions
@@ -133,6 +134,7 @@ Phase 0.5 validates and documents the real Cync device protocol through packet c
 ## Scope
 
 **In Scope:**
+
 - Packet capture of real Cync devices via MITM proxy
 - Documentation of packet flows and structure
 - Hex dumps and annotated examples
@@ -140,6 +142,7 @@ Phase 0.5 validates and documents the real Cync device protocol through packet c
 - Protocol validation against legacy documentation
 
 **Out of Scope:**
+
 - Protocol implementation (Phase 1a)
 - Device simulator (Phase 1d)
 - Encoder/decoder code (Phase 1a)
@@ -153,7 +156,7 @@ Phase 0.5 validates and documents the real Cync device protocol through packet c
 ### Known Packet Types (from legacy `cync-controller`)
 
 | Type   | Name             | Direction | Description                              |
-|--------|------------------|-----------|------------------------------------------|
+| ------ | ---------------- | --------- | ---------------------------------------- |
 | `0x23` | HANDSHAKE        | DEV→CLOUD | Initial connection, device endpoint      |
 | `0x28` | HELLO_ACK        | CLOUD→DEV | Handshake acknowledgment                 |
 | `0x43` | DEVICE_INFO      | DEV→CLOUD | Bulk device status (19 bytes per device) |
@@ -173,6 +176,7 @@ Phase 0.5 validates and documents the real Cync device protocol through packet c
 ### Documented Packet Structure
 
 **Header (5 bytes)**:
+
 ```
 [packet_type][0x00][0x00][length_multiplier][base_length]
 ```
@@ -181,16 +185,18 @@ Phase 0.5 validates and documents the real Cync device protocol through packet c
 - Bytes 1-2: Unknown/padding (usually 0x00)
 - Byte 3: Length multiplier (multiply by 256)
 - Byte 4: Base length
-- **Total data length** = (byte[3] * 256) + byte[4]
+- **Total data length** = (byte[3] \* 256) + byte[4]
 - Header length (5 bytes) NOT included in data length
 
 **Endpoint/Queue ID + Message ID**:
+
 - Varies by packet type
 - 0x23: Endpoint (4 bytes) at positions 5-8
 - 0x73: Queue ID (5 bytes) + msg_id (3 bytes) starting at position 5
 - 0x83: Similar structure to 0x73
 
 **Payload Framing**:
+
 - Often wrapped in `0x7e` start/end markers
 - Checksum: Sum of bytes between 0x7e markers modulo 256
 
@@ -224,15 +230,16 @@ ping cm.gelighting.com
 
 **Common DNS Override Issues & Solutions (Technical Review Finding 2.2 - Enhanced)**:
 
-| Issue | Symptom | Solution |
-|-------|---------|----------|
-| **DNSSEC** | `nslookup` still resolves to real cloud IP | Disable DNSSEC in router settings OR use different network |
-| **DNS-over-HTTPS (DoH)** | Browser bypasses /etc/hosts | Disable DoH in browser settings (Firefox: about:config → network.trr.mode=5) |
-| **Router DNS** | Device ignores /etc/hosts | Configure DNS override in router OR use Pi-hole for network-wide DNS |
-| **Corporate VPN** | VPN enforces specific DNS | Disconnect VPN OR use personal network OR request VPN DNS exception |
-| **Systemd-resolved** | Linux DNS caching | `sudo systemctl restart systemd-resolved` after editing /etc/hosts |
+| Issue                    | Symptom                                    | Solution                                                                     |
+| ------------------------ | ------------------------------------------ | ---------------------------------------------------------------------------- |
+| **DNSSEC**               | `nslookup` still resolves to real cloud IP | Disable DNSSEC in router settings OR use different network                   |
+| **DNS-over-HTTPS (DoH)** | Browser bypasses /etc/hosts                | Disable DoH in browser settings (Firefox: about:config → network.trr.mode=5) |
+| **Router DNS**           | Device ignores /etc/hosts                  | Configure DNS override in router OR use Pi-hole for network-wide DNS         |
+| **Corporate VPN**        | VPN enforces specific DNS                  | Disconnect VPN OR use personal network OR request VPN DNS exception          |
+| **Systemd-resolved**     | Linux DNS caching                          | `sudo systemctl restart systemd-resolved` after editing /etc/hosts           |
 
 **Verification Command**:
+
 ```bash
 # MUST return 127.0.0.1 (not real cloud IP)
 nslookup cm.gelighting.com
@@ -263,6 +270,7 @@ ps -p $(sudo lsof -t -i:23779) -o pid,cmd
 ```
 
 **Prerequisite Summary**:
+
 - ✅ DNS redirection: `cm.gelighting.com` → `127.0.0.1`
 - ✅ Port availability: Port 23779 must be free
 - ✅ Network access: Can reach `35.196.85.236:23779` (real Cync cloud)
@@ -296,6 +304,7 @@ ps -p $(sudo lsof -t -i:23779) -o pid,cmd
 **MITM Proxy**: Minimal TCP proxy (`mitm/mitm-proxy.py`) intercepts device traffic via DNS redirection, logs all packets, and forwards to real cloud with SSL/TLS. Supports packet injection via REST API for testing. See [Deliverable #1](#1-mitm-proxy-tool) for implementation details.
 
 **Key Capabilities**:
+
 - Bidirectional forwarding (device ↔ cloud) with structured logging
 - SSL/TLS termination for upstream cloud connection
 - Packet injection REST API for testing ACK responses
@@ -306,16 +315,20 @@ ps -p $(sudo lsof -t -i:23779) -o pid,cmd
 ### 2. Key Flows to Capture
 
 #### Flow 1: Device Handshake
+
 **Trigger**: Device boots or reconnects
 **Expected Sequence**:
+
 1. `0x23` DEV→CLOUD (handshake with endpoint)
 2. `0x28` CLOUD→DEV (hello ACK)
 
 **Capture Goal**: Full hex dump of both packets, endpoint extraction
 
 #### Flow 2: Device Toggle (Primary Use Case)
+
 **Trigger**: Turn light on/off via Home Assistant
 **Expected Sequence**:
+
 1. `0x73` CLOUD→DEV (control command)
 2. `0x7B` DEV→CLOUD (data ACK)
 3. `0x83` DEV→CLOUD (status broadcast - state change)
@@ -324,24 +337,30 @@ ps -p $(sudo lsof -t -i:23779) -o pid,cmd
 **Capture Goal**: Full hex dump of entire sequence, timing between packets
 
 #### Flow 3: Status Broadcast (Passive)
+
 **Trigger**: Device reports state change (button press, etc.)
 **Expected Sequence**:
+
 1. `0x83` DEV→CLOUD (status broadcast)
 2. `0x88` CLOUD→DEV (status ACK)
 
 **Capture Goal**: Validate 19-byte device payload structure
 
 #### Flow 4: Heartbeat/Keepalive
+
 **Trigger**: Periodic (every ~60 seconds)
 **Expected Sequence**:
+
 1. `0xD3` DEV→CLOUD (heartbeat)
 2. `0xD8` CLOUD→DEV (heartbeat ACK)
 
 **Capture Goal**: Verify timing and minimal payload
 
 #### Flow 5: Device Info Broadcast
+
 **Trigger**: Device boots or on request
 **Expected Sequence**:
+
 1. `0x43` DEV→CLOUD (device info - all devices on endpoint)
 2. `0x48` CLOUD→DEV (info ACK)
 
@@ -350,6 +369,7 @@ ps -p $(sudo lsof -t -i:23779) -o pid,cmd
 ### 3. Packet Analysis Checklist
 
 For each captured packet:
+
 - [ ] Hex dump (full packet bytes)
 - [ ] Header breakdown (type, length calculation)
 - [ ] Endpoint/queue_id/msg_id positions
@@ -366,6 +386,7 @@ For each captured packet:
 **ACK Confidence Thresholds**
 
 Confidence criteria determine which Phase 1b implementation approach to use:
+
 - **High Confidence** → Parallel ACK matching (if msg_id consistently found)
 - **Medium Confidence** → Additional validation samples needed
 - **Low Confidence** → FIFO queue approach (if msg_id absent or inconsistent)
@@ -402,19 +423,21 @@ For each ACK type (0x28, 0x7B, 0x88, 0xD8), the validation must meet these stand
 **Detailed Method** (for each ACK type):
 
 **Step 1: Capture Request→ACK Pairs**
+
 ```bash
 # Example for 0x73 → 0x7B validation
 for i in {1..10}; do
-    # Send command with unique msg_id
-    msg_id=$(printf "%02x%02x%02x" $((i*10)) $((i*20)) $((i*30)))
-    echo "Sending command with msg_id: $msg_id"
-    # Trigger via Home Assistant
-    # Capture both 0x73 and 0x7B packets
-    sleep 2
+  # Send command with unique msg_id
+  msg_id=$(printf "%02x%02x%02x" $((i * 10)) $((i * 20)) $((i * 30)))
+  echo "Sending command with msg_id: $msg_id"
+  # Trigger via Home Assistant
+  # Capture both 0x73 and 0x7B packets
+  sleep 2
 done
 ```
 
 **Step 2: Extract Known msg_id from Request**
+
 ```python
 # For 0x73 data packet
 request_packet = captured_0x73
@@ -423,6 +446,7 @@ print(f"Request msg_id: {msg_id.hex()}")  # e.g., "0a 14 1e"
 ```
 
 **Step 3: Search ACK Packet for msg_id**
+
 ```python
 ack_packet = captured_0x7B
 matches = []
@@ -443,6 +467,7 @@ else:
 ```
 
 **Step 4: Consistency Validation**
+
 ```python
 # Across all 10+ captures
 position_counts = {}
@@ -460,6 +485,7 @@ else:
 ```
 
 **Step 5: False Positive Mitigation**
+
 ```python
 # If multiple positions found, use structural analysis to disambiguate
 def validate_position_structure(ack_packet, position):
@@ -482,13 +508,14 @@ def validate_position_structure(ack_packet, position):
 ```
 
 **Step 6: Documentation**
+
 ```markdown
-| ACK Type | Request Type | msg_id Present? | Position | Confidence | Sample Size | Notes |
-|----------|--------------|-----------------|----------|------------|-------------|-------|
-| 0x7B | 0x73 | YES | bytes 5-7 | High | 10/10 consistent | Immediately after queue_id |
-| 0x88 | 0x83 | YES | bytes 5-7 | High | 10/10 consistent | Same position as 0x7B |
-| 0x28 | 0x23 | NO | N/A | High | 10/10 no match | Handshake ACK has no msg_id |
-| 0xD8 | 0xD3 | UNKNOWN | TBD | Low | Pending capture | Need validation |
+| ACK Type | Request Type | msg_id Present? | Position  | Confidence | Sample Size      | Notes                       |
+| -------- | ------------ | --------------- | --------- | ---------- | ---------------- | --------------------------- |
+| 0x7B     | 0x73         | YES             | bytes 5-7 | High       | 10/10 consistent | Immediately after queue_id  |
+| 0x88     | 0x83         | YES             | bytes 5-7 | High       | 10/10 consistent | Same position as 0x7B       |
+| 0x28     | 0x23         | NO              | N/A       | High       | 10/10 no match   | Handshake ACK has no msg_id |
+| 0xD8     | 0xD3         | UNKNOWN         | TBD       | Low        | Pending capture  | Need validation             |
 ```
 
 **Deliverable**: Update Phase 1b ACK table (02c-phase-1b-reliable-transport.md lines 596-601) with validated positions and confidence levels before Phase 1b implementation starts.
@@ -496,6 +523,7 @@ def validate_position_structure(ack_packet, position):
 **Confidence Level Determination** (guides Phase 1b path selection):
 
 **High Confidence** (enables parallel matching):
+
 - Sample size: ≥10 captures per ACK type (40+ total across all 4 types)
 - Consistency: 100% of captures show msg_id at same byte position
 - Structural validation: Position makes structural sense (not in header, checksum, or length fields)
@@ -503,11 +531,13 @@ def validate_position_structure(ack_packet, position):
 - Result: Phase 1b implements parallel ACK matching
 
 **Medium Confidence** (needs more samples):
+
 - Sample size: 5-9 captures per ACK type (20-35 total)
 - Consistency: ≥80% of captures show msg_id at same position
 - Action: Capture 5+ additional samples to reach High confidence
 
 **Low Confidence** (use FIFO approach):
+
 - Consistency: <80% position match OR multiple ambiguous positions found
 - Firmware variance: Different positions across firmware versions
 - Result: Phase 1b implements FIFO queue (serialized requests)
@@ -517,6 +547,7 @@ def validate_position_structure(ack_packet, position):
 Phase 0.5 MUST produce definitive ACK structure findings before Phase 1b starts. Ambiguous results are NOT acceptable exit criteria.
 
 **If findings are ambiguous after initial 10+ samples per ACK type:**
+
 1. **DO NOT proceed to Phase 1b**
 2. **Capture 10+ ADDITIONAL samples** per ambiguous ACK type
 3. **Analyze firmware variance** (test with different device firmware versions if available)
@@ -526,6 +557,7 @@ Phase 0.5 MUST produce definitive ACK structure findings before Phase 1b starts.
    - Add technical debt item for parallel matching optimization
 
 **Phase 1b gate:** ACK structure validation MUST achieve either:
+
 - **High Confidence** for ALL 4 ACK types (parallel matching ready), OR
 - **Definitive determination** that msg_id absent (FIFO approach documented)
 
@@ -652,6 +684,7 @@ class MITMProxy:
 ```
 
 **Features**:
+
 - Accepts device connections on configurable port (default: 23779)
 - Forwards to real Cync cloud OR localhost cloud relay (configurable)
 - SSL support for real cloud connections
@@ -664,6 +697,7 @@ class MITMProxy:
 - ~300-350 lines using asyncio + aiohttp
 
 **REST API Usage Example**:
+
 ```bash
 # Start MITM proxy
 python mitm/mitm-proxy.py --listen-port 23779 --upstream-host 35.196.85.236 --api-port 8080
@@ -693,10 +727,12 @@ curl -X POST http://localhost:8080/inject \
 While packet injection successfully replicates the **packet structure** from legacy code (e.g., `ask_for_mesh_info()`), it cannot replicate the **architectural context** required for certain operations:
 
 **What CAN be copied via injection:**
+
 - Exact packet byte structure (header, queue_id, msg_id, payload, checksum)
 - Toggle commands (0x73) → Successfully trigger ACK responses (0x7B)
 
 **What CANNOT be replicated via injection:**
+
 - **Authenticated device sessions**: Injected packets bypass the 0x23/0x28 handshake
 - **Primary device architecture**: Only the first connected device processes mesh info responses
 - **Session state**: Devices validate sender credentials before sending 0x83 broadcasts
@@ -705,6 +741,7 @@ While packet injection successfully replicates the **packet structure** from leg
 **Specific Limitation: Mesh Info Requests**
 
 Mesh info requests (0x73 with inner_struct `f8 52 06`) cannot be tested via packet injection:
+
 - Devices acknowledge with 0x7B ACK but **do not send 0x83 broadcasts** (missing auth)
 - Legacy `ask_for_mesh_info()` works because it's called on an authenticated `CyncTCPDevice` instance
 - MITM proxy lacks the session context and primary device designation required
@@ -720,6 +757,7 @@ Mesh info requests (0x73 with inner_struct `f8 52 06`) cannot be tested via pack
 **File**: `docs/protocol/02-phase-0.5-captures.md`
 
 **Contents**:
+
 - Annotated hex dumps for all 5 flows
 - Packet structure validation (confirm or correct legacy docs)
 - **ACK Packet Structure Validation** (Required for Phase 1b):
@@ -728,45 +766,48 @@ Mesh info requests (0x73 with inner_struct `f8 52 06`) cannot be tested via pack
   - Document exact byte positions if msg_id present
   - Provide architectural recommendation for Phase 1b (parallel vs FIFO)
   - Use validation method from lines 429-560 (ACK msg_id Position Validation section)
--   **Queue ID ↔ Endpoint Derivation Validation** (Required for Phase 1a):
-  - Capture 5+ handshake→data sequences (0x23 followed by 0x73/0x83)
-  - Extract endpoint from bytes[6:10] in 0x23 packet (NOTE: Byte 5 is unknown/padding, not part of endpoint)
-  - Extract queue_id from bytes[5:10] in 0x73/0x83 packet
-  - Extract msg_id and determine exact byte positions (e.g., bytes[9:12] or bytes[10:13])
-  - **CRITICAL**: Check for byte overlap between queue_id and msg_id (e.g., Option D where byte 9 is shared)
-  - Compare bytes to identify pattern (Option A: suffix, B: independent, C: embedded, D: overlapping)
-  - Document transformation algorithm with annotated examples
-  - Provide clear guidance on byte extraction for Phase 1a implementation
+- **Queue ID ↔ Endpoint Derivation Validation** (Required for Phase 1a):
+- Capture 5+ handshake→data sequences (0x23 followed by 0x73/0x83)
+- Extract endpoint from bytes[6:10] in 0x23 packet (NOTE: Byte 5 is unknown/padding, not part of endpoint)
+- Extract queue_id from bytes[5:10] in 0x73/0x83 packet
+- Extract msg_id and determine exact byte positions (e.g., bytes[9:12] or bytes[10:13])
+- **CRITICAL**: Check for byte overlap between queue_id and msg_id (e.g., Option D where byte 9 is shared)
+- Compare bytes to identify pattern (Option A: suffix, B: independent, C: embedded, D: overlapping)
+- Document transformation algorithm with annotated examples
+- Provide clear guidance on byte extraction for Phase 1a implementation
 
-  **⚠️ USER DECISION REQUIRED (ONLY IF OVERLAP DETECTED)**: Byte Overlap Handling Strategy
+**⚠️ USER DECISION REQUIRED (ONLY IF OVERLAP DETECTED)**: Byte Overlap Handling Strategy
 
-  **Technical Review Finding 1.3 - Resolved**: This decision is conditional on overlap detection.
+**Technical Review Finding 1.3 - Resolved**: This decision is conditional on overlap detection.
 
-  **If Phase 0.5 finds NO overlap (Options A, B, or C)**: Document extraction algorithm, proceed to Phase 1a (no user decision needed).
+**If Phase 0.5 finds NO overlap (Options A, B, or C)**: Document extraction algorithm, proceed to Phase 1a (no user decision needed).
 
-  **If validation reveals byte overlap (Option D)**, user must approve handling approach:
+**If validation reveals byte overlap (Option D)**, user must approve handling approach:
 
-  **Option A** (Recommended if overlap confirmed): Accept overlapping byte ranges
-  - Acknowledge byte 9 serves dual purpose in both queue_id and msg_id
-  - Document extraction algorithm showing overlap:
-    ```
-    Packet bytes: [... 05 06 07 08 09 10 11 ...]
-    queue_id: packet[5:10] = [05 06 07 08 09]  # bytes 5-9 inclusive
-    msg_id: packet[9:12] = [09 10 11]          # bytes 9-11 inclusive
-    Overlap: byte 9 appears in BOTH identifiers
-    ```
-  - Phase 1a implementation: Extract both with overlapping ranges (simple, follows protocol)
-  - Complexity: Low (straightforward array slicing)
-  - Risk: None (protocol defines it this way)
+**Option A** (Recommended if overlap confirmed): Accept overlapping byte ranges
 
-  **Option B**: Require separate byte ranges (reject overlap)
-  - If validation shows overlap, request protocol clarification or firmware update
-  - Treat overlap as protocol ambiguity requiring resolution
-  - Delay Phase 1a until non-overlapping structure validated
-  - Complexity: High (requires protocol investigation/change)
-  - Risk: Timeline delay if protocol cannot be changed
+- Acknowledge byte 9 serves dual purpose in both queue_id and msg_id
+- Document extraction algorithm showing overlap:
+  ```
+  Packet bytes: [... 05 06 07 08 09 10 11 ...]
+  queue_id: packet[5:10] = [05 06 07 08 09]  # bytes 5-9 inclusive
+  msg_id: packet[9:12] = [09 10 11]          # bytes 9-11 inclusive
+  Overlap: byte 9 appears in BOTH identifiers
+  ```
+- Phase 1a implementation: Extract both with overlapping ranges (simple, follows protocol)
+- Complexity: Low (straightforward array slicing)
+- Risk: None (protocol defines it this way)
 
-  **Recommendation**: Select Option A if overlap is confirmed in validation. Protocol designers may have intentionally shared byte 9 for space efficiency. Phase 1a can handle overlapping extractions without issues.
+**Option B**: Require separate byte ranges (reject overlap)
+
+- If validation shows overlap, request protocol clarification or firmware update
+- Treat overlap as protocol ambiguity requiring resolution
+- Delay Phase 1a until non-overlapping structure validated
+- Complexity: High (requires protocol investigation/change)
+- Risk: Timeline delay if protocol cannot be changed
+
+**Recommendation**: Select Option A if overlap is confirmed in validation. Protocol designers may have intentionally shared byte 9 for space efficiency. Phase 1a can handle overlapping extractions without issues.
+
 - Timing analysis (RTT, inter-packet delays)
 - Edge cases discovered (malformed packets, retries, etc.)
 - Device firmware version correlation
@@ -777,14 +818,15 @@ Mesh info requests (0x73 with inner_struct `f8 52 06`) cannot be tested via pack
   - If any packet > 4KB: Document in validation report and update Phase 1a PacketFramer.MAX_PACKET_SIZE
   - Provide size distribution table:
     ```
-    | Packet Type | Min Size | Max Size | Median | p99 |
-    |-------------|----------|----------|--------|-----|
-    | 0x23        | 31 bytes | 31 bytes | 31     | 31  |
-    | 0x73        | 20 bytes | 150 bytes| 45     | 120 |
-    | 0x83        | 25 bytes | 44 bytes | 29     | 40  |
+    | Packet Type | Min Size | Max Size  | Median | p99 |
+    | ----------- | -------- | --------- | ------ | --- |
+    | 0x23        | 31 bytes | 31 bytes  | 31     | 31  |
+    | 0x73        | 20 bytes | 150 bytes | 45     | 120 |
+    | 0x83        | 25 bytes | 44 bytes  | 29     | 40  |
     ```
 
 **Format Example**:
+
 ```markdown
 ### Flow 1: Device Handshake
 
@@ -792,11 +834,13 @@ Mesh info requests (0x73 with inner_struct `f8 52 06`) cannot be tested via pack
 
 **Packet 1: 0x23 Handshake (DEV→CLOUD)**
 ```
+
 Timestamp: 2025-11-02T10:23:45.123Z
 Direction: DEV→CLOUD
 Raw Hex: 23 00 00 00 1a 03 39 87 c8 57 00 10 31 65 30 37 ...
 
 Breakdown:
+
 - Byte 0: 0x23 (HANDSHAKE)
 - Byte 1-2: 0x00 0x00
 - Byte 3: 0x00 (multiplier = 0)
@@ -804,6 +848,7 @@ Breakdown:
 - Byte 5: 0x03 (unknown/padding)
 - Bytes[6:10]: 0x39 0x87 0xc8 0x57 (endpoint = 0x57c88739 / 1472825145)
 - Bytes[10:26]: 0x00 10 31 65 30 37 ... (auth code - partially redacted)
+
 ```
 
 **Packet 2: 0x28 Hello ACK (CLOUD→DEV)**
@@ -811,6 +856,7 @@ Breakdown:
 ```
 
 **Endpoint Extraction Validation**:
+
 ```python
 # Extract endpoint from 0x23 handshake packet
 handshake_packet = captured_0x23
@@ -944,6 +990,7 @@ PACKET_METADATA: Dict[str, PacketMetadata] = {
 **File**: `docs/protocol/checksum-validation.md`
 
 **Contents**:
+
 - **Checksum Algorithm Specification** (from `cync_controller/packet_checksum.py`):
 
   **Structure**: `[...][0x7E][skip 6 bytes][data to sum...][checksum byte][0x7E]`
@@ -958,6 +1005,7 @@ PACKET_METADATA: Dict[str, PacketMetadata] = {
   4. Result = sum % 256
 
   **Visual Example**:
+
   ```
   Position:  0  1  2  3  4  5  6  7  8  9  10 11 12 13 14
   Bytes:    [header....][0x7E][6 skip bytes][AA][BB][CC][55][0x7E]
@@ -976,6 +1024,7 @@ PACKET_METADATA: Dict[str, PacketMetadata] = {
 - Edge cases (if any discovered)
 
 **If Validation Fails** (mismatches found):
+
 - Document all mismatches with packet examples showing expected vs calculated
 - Trigger Phase 1a contingency plan (see `02b-phase-1a-protocol-codec.md` Step 2)
 - Reserve 2-3 days for reverse-engineering correct algorithm from captured packets
@@ -986,6 +1035,7 @@ PACKET_METADATA: Dict[str, PacketMetadata] = {
 **File**: `docs/protocol/validation-report.md`
 
 **Sections**:
+
 1. **Validation Summary**: What matched legacy docs, what didn't
 2. **Discovered Differences**: New findings vs. assumptions
 3. **Edge Cases**: Malformed packets, retries, firmware variations
@@ -1011,6 +1061,7 @@ PACKET_METADATA: Dict[str, PacketMetadata] = {
 **Purpose**: Validate the checksum algorithm using legacy code reference against real captured packets.
 
 **Prerequisites**:
+
 - Phase 0.5 captured packets available as test fixtures
 - Access to legacy codebase (`cync-controller/`)
 
@@ -1088,6 +1139,7 @@ if __name__ == "__main__":
 ```
 
 **Key Requirements**:
+
 - Test legacy `calculate_checksum_between_markers()` implementation directly
 - Imports from legacy codebase for validation purposes
 - Test against 10+ real captured packets from Phase 0.5
@@ -1102,6 +1154,7 @@ if __name__ == "__main__":
 **Purpose**: Verify that Full Fingerprint required fields (packet_type, endpoint, msg_id, payload) are present and extractable in retry packets.
 
 **Scope**:
+
 - ✅ **What Phase 0.5 Verifies**: Fields EXIST and are EXTRACTABLE from packets
 - ✅ **What Phase 0.5 Verifies**: Fields STABLE across retries (same values in original vs retry)
 - ❌ **What Phase 0.5 Does NOT Test**: Whether strategy correctly identifies duplicates (that's Phase 1b Step 4)
@@ -1116,13 +1169,14 @@ if __name__ == "__main__":
 **Method: Manual Retry Simulation**
 
 1. **Setup MITM Proxy** (standard capture, no packet drop needed):
+
    ```bash
    # Start MITM proxy with standard logging
    python mitm/mitm-proxy.py \
-       --listen-port 23779 \
-       --upstream-host 35.196.85.236 \
-       --upstream-port 23779 \
-       --capture-file mitm/captures/retry-analysis.txt
+     --listen-port 23779 \
+     --upstream-host 35.196.85.236 \
+     --upstream-port 23779 \
+     --capture-file mitm/captures/retry-analysis.txt
    ```
 
 2. **Manual Retry Trigger Process**:
@@ -1130,23 +1184,23 @@ if __name__ == "__main__":
    For each retry capture iteration (repeat 20 times):
 
    a. **Send Command #1** via Home Assistant:
-      - Action: Turn on specific light (e.g., "Living Room Lamp")
-      - Log: "ITERATION_01_ATTEMPT_1" in capture notes
-      - Wait: 2 seconds for completion
+   - Action: Turn on specific light (e.g., "Living Room Lamp")
+   - Log: "ITERATION_01_ATTEMPT_1" in capture notes
+   - Wait: 2 seconds for completion
 
    b. **Send Identical Command #2** (simulated retry):
-      - Action: Turn on SAME light with SAME parameters
-      - Log: "ITERATION_01_ATTEMPT_2" in capture notes
-      - Wait: 2 seconds
+   - Action: Turn on SAME light with SAME parameters
+   - Log: "ITERATION_01_ATTEMPT_2" in capture notes
+   - Wait: 2 seconds
 
    c. **Send Identical Command #3** (second simulated retry):
-      - Action: Turn on SAME light with SAME parameters
-      - Log: "ITERATION_01_ATTEMPT_3" in capture notes
-      - Wait: 2 seconds
+   - Action: Turn on SAME light with SAME parameters
+   - Log: "ITERATION_01_ATTEMPT_3" in capture notes
+   - Wait: 2 seconds
 
    d. **Toggle Off** (reset for next iteration):
-      - Action: Turn off light
-      - Wait: 2 seconds
+   - Action: Turn off light
+   - Wait: 2 seconds
 
    e. **Repeat** for iterations 02-20 with different light/device
 
@@ -1195,10 +1249,11 @@ if __name__ == "__main__":
    ```
 
 5. **Byte-by-Byte Comparison**:
+
    ```bash
    # Analyze captured retry packets
    python scripts/analyze-retry-packets.py captures/retry-analysis.txt \
-       --output docs/protocol/deduplication-strategy.md
+     --output docs/protocol/deduplication-strategy.md
    ```
 
    Analysis script should:
@@ -1250,7 +1305,8 @@ if __name__ == "__main__":
      - Legitimate duplicates vs retries
 
 **Deliverable Format**:
-```markdown
+
+````markdown
 ## Deduplication Strategy Field Verification Results
 
 **Strategy Pre-Selected**: Full Fingerprint (Option C)
@@ -1259,6 +1315,7 @@ if __name__ == "__main__":
 **Test Setup**: 20 toggle commands with manual retry simulation
 
 **Field Verification Results**:
+
 - Full Fingerprint required fields confirmed extractable: [YES/NO for each field]
   - packet_type (byte 0): [PRESENT/ABSENT] [STABLE/VARIES across retries]
   - endpoint (bytes[6:10] or bytes[5:10] depending on packet type): [PRESENT/ABSENT] [STABLE/VARIES]
@@ -1267,11 +1324,13 @@ if __name__ == "__main__":
 - Fields provide sufficient diversity for deduplication: [YES/NO]
 
 **Dynamic Field Analysis** (informative):
+
 - Fields that vary on retry: [list with positions]
 - Fields that remain stable: [list with positions]
 - Full Fingerprint tolerance: [Does it handle the variance correctly?]
 
 **Test Fixtures for Phase 1b**:
+
 ```python
 # Packet pair 1: Toggle light on (original + retry)
 TOGGLE_ON_ORIGINAL = bytes.fromhex("...")
@@ -1282,12 +1341,15 @@ TOGGLE_ON_RETRY = bytes.fromhex("...")
 EXPECTED_DEDUP_KEY_ORIGINAL = "73:3987c857:0a141e:a3f2b9c4d8e1f6a2"
 EXPECTED_DEDUP_KEY_RETRY = "73:3987c857:0a141e:a3f2b9c4d8e1f6a2"  # Should match!
 ```
+````
 
 **Field Verification Conclusion for Phase 1b**:
+
 - Required fields extractable: [YES/NO]
 - Fields stable across retries: [YES/NO]
 - Test fixtures ready for Phase 1b: [YES/NO]
-```
+
+````
 
 **Phase 1b Strategy Validation Note**:
 
@@ -1379,7 +1441,7 @@ if __name__ == "__main__":
     # Parse packets
     # Generate fixtures
     pass
-```
+````
 
 ### 11. Group Operation Performance Validation
 
@@ -1407,12 +1469,14 @@ if __name__ == "__main__":
    - Goal: Confirm `asyncio.gather()` scales adequately
 
 **Deliverables**:
+
 - Performance report: `docs/protocol/group-operation-performance.md`
 - Results table with p50/p95/p99 for 10-device operations
 - State lock hold time measurements
 - Recommendation for Phase 1c (proceed with no send_queue vs add send_queue)
 
 **Decision Criteria**:
+
 - If Phase 1d group validation shows p99 < 2s: "No send_queue" decision validated
 - If Phase 1d group validation shows p99 > 2s: Document findings, proceed without send_queue (optimization deferred to Phase 2)
 
@@ -1425,11 +1489,13 @@ if __name__ == "__main__":
 ### Tier 1: Core Requirements (Blocking)
 
 **MITM Proxy & Captures**:
+
 - [ ] MITM proxy with REST API packet injection (`/inject`, `/status` endpoints)
 - [ ] 5+ flows captured: handshake (0x23→0x28), toggle (0x73→0x7B→0x83→0x88), heartbeat, status, device info
 - [ ] Protocol capture document complete (`docs/phase-0.5/captures.md`)
 
 **Validation**:
+
 - [ ] Checksum algorithm validated against legacy fixtures + 10+ real packets
 - [ ] ACK structure: 10+ samples per type (0x28, 0x7B, 0x88, 0xD8), msg_id presence/absence confirmed
 - [ ] Queue ID ↔ Endpoint derivation validated (5+ handshake→data sequences)
@@ -1451,12 +1517,10 @@ if __name__ == "__main__":
 
 ## Risks & Mitigation
 
-| Risk | Impact | Probability | Mitigation |
-|------|--------|-------------|------------|
-| Packet capture method not working | High | Low | Have multiple capture options ready (tcpdump, proxy, reference logs) |
-| Packet structure differs from docs | Medium | Medium | Document actual structure; update Phase 1a plans |
-| Limited device variety | Low | Medium | Capture what's available; note firmware versions |
-| Checksum algorithm incorrect | Medium | Low | Validate against multiple real packets with checksum validation script |
-| Missing edge cases | Medium | High | Extended capture period; trigger error conditions |
-
-
+| Risk                               | Impact | Probability | Mitigation                                                             |
+| ---------------------------------- | ------ | ----------- | ---------------------------------------------------------------------- |
+| Packet capture method not working  | High   | Low         | Have multiple capture options ready (tcpdump, proxy, reference logs)   |
+| Packet structure differs from docs | Medium | Medium      | Document actual structure; update Phase 1a plans                       |
+| Limited device variety             | Low    | Medium      | Capture what's available; note firmware versions                       |
+| Checksum algorithm incorrect       | Medium | Low         | Validate against multiple real packets with checksum validation script |
+| Missing edge cases                 | Medium | High        | Extended capture period; trigger error conditions                      |

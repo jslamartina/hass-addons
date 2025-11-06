@@ -23,38 +23,45 @@ Implement production-grade structured logging throughout the Python codebase to 
 ### Core Components Created
 
 #### 1. `logging_abstraction.py` (243 lines)
+
 - **`CyncLogger`**: Wrapper around Python's standard logging with dual-format output
 - **`JSONFormatter`**: Outputs structured JSON logs with timestamp, level, correlation ID, and structured context
 - **`HumanReadableFormatter`**: Traditional log format for developer-friendly output
 - **`get_logger()`**: Factory function that configures logger based on environment variables
 
 **Key Features**:
+
 - Supports both printf-style formatting (`logger.info("msg %s", arg)`) and structured logging (`logger.info("msg", extra={...})`)
 - Configurable via `CYNC_LOG_FORMAT`, `CYNC_LOG_JSON_FILE`, `CYNC_LOG_HUMAN_OUTPUT`
 - Automatic inclusion of correlation IDs in all log entries
 
 #### 2. `correlation.py` (117 lines)
+
 - **`get_correlation_id()`**: Retrieves or generates correlation ID for current async context
 - **`set_correlation_id()`**: Sets correlation ID for current context
 - **`ensure_correlation_id()`**: Ensures correlation ID exists
 - **`correlation_context()`**: Context manager for correlation ID lifecycle
 
 **Implementation**:
+
 - Uses `contextvars.ContextVar` for async-safe storage
 - Automatic propagation across async operations
 - Manual override support for testing
 
 #### 3. `instrumentation.py` (167 lines)
+
 - **`@timed`**: Decorator for synchronous functions
 - **`@timed_async`**: Decorator for asynchronous functions
 - **`measure_time()`**: High-precision timing using `time.perf_counter()`
 - **`_log_timing()`**: Logs performance metrics with threshold warnings
 
 **Configuration**:
+
 - `CYNC_PERF_TRACKING`: Enable/disable (default: true)
 - `CYNC_PERF_THRESHOLD_MS`: Threshold for warnings (default: 100ms)
 
 **Instrumented Operations**:
+
 - `tcp_write` (devices.py)
 - `tcp_read` (instrumentation.py)
 - `cloud_connect` (server.py)
@@ -105,6 +112,7 @@ All Python modules updated to use new logging system:
 ### Configuration Updates
 
 **const.py** - Added logging configuration constants:
+
 ```python
 CYNC_LOG_FORMAT = "both"  # json, human, or both
 CYNC_LOG_JSON_FILE = "/var/log/cync_controller.json"
@@ -119,18 +127,22 @@ CYNC_PERF_THRESHOLD_MS = 100
 ## Critical Fixes Applied
 
 ### 1. CyncLogger Printf-Style Formatting Support
+
 **Problem**: Initial implementation only accepted `msg` and `extra` parameters, but existing codebase used printf-style formatting (`logger.info("format %s", arg)`)
 
 **Fix**: Added `*args` support to all logging methods:
+
 ```python
 def info(self, msg: str, *args, extra: dict[str, Any] | None = None, **kwargs):
     self._log(logging.INFO, msg, *args, extra=extra, **kwargs)
 ```
 
 ### 2. Multi-line Logging Calls
+
 **Problem**: `utils.py` and `exporter.py` had 13+ multi-line logging calls that broke with new logger signature
 
 **Fix**: Used Python to automatically convert all multi-line calls to single-line:
+
 ```python
 # Before (multi-line)
 logger.info(
@@ -144,18 +156,22 @@ logger.info("%s UUID found in %s", lp, uuid_file.as_posix())
 ```
 
 ### 3. datetime.UTC Compatibility
+
 **Problem**: Used `datetime.now(datetime.UTC)` which isn't available in Python 3.13's datetime module
 
 **Fix**: Changed to `datetime.now(timezone.utc)` with proper import:
+
 ```python
 from datetime import datetime, timezone
 log_data = {"timestamp": datetime.now(timezone.utc).isoformat()}
 ```
 
 ### 4. Plan/Todo Synchronization
+
 **Problem**: Multiple issues with keeping plan todos and workspace todos in sync
 
 **Fix**: Updated `.cursor/rules/plan-todo-management.mdc` with correct workflow:
+
 - `todo_write()` with `status` field updates workspace todos
 - `create_plan()` with only `id` and `content` (NO `status`) updates plan
 - Status syncs automatically from workspace → plan based on matching IDs
@@ -168,6 +184,7 @@ log_data = {"timestamp": datetime.now(timezone.utc).isoformat()}
 ### Testing Completed (19/19 tasks)
 
 ✅ **Core Implementation**:
+
 - Logging abstraction created and working
 - Correlation tracking operational
 - Performance instrumentation functional
@@ -175,6 +192,7 @@ log_data = {"timestamp": datetime.now(timezone.utc).isoformat()}
 - Documentation updated
 
 ✅ **Verification**:
+
 - Lint & build: PASS (zero errors)
 - Dual-format output: VERIFIED
 - Correlation IDs: VERIFIED (2 unique IDs per session)
@@ -185,6 +203,7 @@ log_data = {"timestamp": datetime.now(timezone.utc).isoformat()}
 - Log analysis: COMPLETED
 
 ✅ **Production Readiness**:
+
 - Zero linting errors
 - Rebuild successful
 - Correlation IDs present in all logs
@@ -197,26 +216,32 @@ log_data = {"timestamp": datetime.now(timezone.utc).isoformat()}
 ### Observed in Production Logs
 
 **Correlation Tracking**:
+
 ```
 10/26/25 22:59:30.224 INFO [logging_abstraction:164] [c88ce93a] > → Initializing Cync Controller
 10/26/25 22:59:30.243 INFO [logging_abstraction:164] [c88ce93a] > ✓ Configuration loaded
 ```
+
 - ✅ 2 unique correlation IDs per session
 - ✅ IDs propagate across all async operations
 
 **Visual Prefixes**:
+
 - ✅ 102× ═ (separators)
 - ✅ 2× ✓ (success)
 - ✅ 4× → (operations starting)
 
 **Structured Context**:
+
 ```
 10/26/25 22:59:30.243 INFO [logging_abstraction:164] [c88ce93a] > ✓ Configuration loaded | device_count=43 | group_count=14
 ```
+
 - ✅ 116+ structured log entries
 - ✅ Context keys: device_count, group_count, device_id, device_name, brightness, capabilities, etc.
 
 **Performance Timing**:
+
 - ✅ 4 operations instrumented
 - ✅ Currently no threshold violations (excellent performance!)
 - ✅ Logs appear when operations exceed 100ms threshold
@@ -224,6 +249,7 @@ log_data = {"timestamp": datetime.now(timezone.utc).isoformat()}
 ### Log Noise Analysis
 
 **Distribution**:
+
 - TCP connection warnings: 81% (expected - devices retrying connections)
 - Device state logs: 19%
 - Structured context working properly
@@ -267,11 +293,13 @@ log_data = {"timestamp": datetime.now(timezone.utc).isoformat()}
 ## Files Modified
 
 ### New Files (3)
+
 - `cync-controller/src/cync_controller/logging_abstraction.py`
 - `cync-controller/src/cync_controller/correlation.py`
 - `cync-controller/src/cync_controller/instrumentation.py`
 
 ### Modified Files (9)
+
 - `cync-controller/src/cync_controller/const.py`
 - `cync-controller/src/cync_controller/main.py`
 - `cync-controller/src/cync_controller/server.py`
@@ -303,4 +331,3 @@ log_data = {"timestamp": datetime.now(timezone.utc).isoformat()}
 The first-class logging implementation is complete and operational. All 29 implementation tasks have been verified, the addon is running stably with 43 devices and 14 groups, and comprehensive observability has been achieved through structured logging, correlation tracking, and performance instrumentation.
 
 The system provides the observability needed to debug issues in production while maintaining clean, readable logs with zero breaking changes to existing functionality.
-

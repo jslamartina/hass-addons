@@ -87,6 +87,7 @@ await bridge_device.write(payload_bytes)
 The add-on outputs structured JSON logs to `/var/log/cync_controller.json` for detailed analysis.
 
 **Access JSON logs:**
+
 ```bash
 # View recent logs
 docker exec addon_local_cync-controller cat /var/log/cync_controller.json | jq '.'
@@ -106,6 +107,7 @@ docker exec addon_local_cync-controller \
 Every async operation gets a unique correlation ID that propagates across the codebase.
 
 **Filter logs by operation:**
+
 ```bash
 # Get correlation ID from any log entry
 # Then filter all related logs
@@ -115,10 +117,12 @@ ha addons logs local_cync-controller | grep "correlation-id"
 ### Performance Issues
 
 **Symptoms:**
+
 - Commands take a long time to execute
 - Logs show "exceeded threshold" warnings
 
 **Interpreting timing logs:**
+
 ```bash
 # View performance warnings
 ha addons logs local_cync-controller --follow | grep "exceeded.*threshold"
@@ -145,6 +149,7 @@ if connected_to_mesh == 0:
 ```
 
 **Monitor offline tracking:**
+
 ```bash
 # Watch offline count progression
 ha addons logs local_cync-controller --follow | grep "OFFLINE_TRACKING"

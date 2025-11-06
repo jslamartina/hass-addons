@@ -52,20 +52,24 @@ python mitm/validate-checksum-REFERENCE-ONLY.py
 ## Directory Structure
 
 ### `captures/`
+
 Packet captures stored with timestamped filenames:
+
 - Format: `capture_YYYYMMDD_HHMMSS.txt`
 - Contains: Bidirectional packet flows with timestamps, direction, and hex dumps
 - Structured JSON logging to stdout
 
 ### `results/`
+
 Analysis results and test output:
+
 - `test-3-latency.json` - ACK latency measurements for timeout tuning
 
 ## Documentation
 
 See `docs/02a-phase-0.5-protocol-validation.md` for:
+
 - Full MITM proxy specification
 - Packet capture methodology
 - Protocol validation results
 - Usage examples
-

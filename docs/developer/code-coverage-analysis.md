@@ -7,6 +7,7 @@
 ## Executive Summary
 
 The codebase has **good foundational coverage** (67.62%) but critical paths are inadequately tested, particularly in:
+
 - **Cloud relay functionality** (relay mode, packet forwarding, injection)
 - **MQTT command processing** (command queue, group commands, fan speed)
 - **Connection management edge cases** (error handling, reconnection, cleanup)
@@ -14,8 +15,8 @@ The codebase has **good foundational coverage** (67.62%) but critical paths are 
 
 ### Coverage by Module (Sorted by Priority)
 
-| Module           | Coverage | Statements | Status         | Priority    |
-| ---------------- | -------- | ---------- | -------------- | ----------- |
+| Module           | Coverage | Statements | Status          | Priority    |
+| ---------------- | -------- | ---------- | --------------- | ----------- |
 | `mqtt_client.py` | 48.35%   | 1,214      | 🔴 **Critical** | **HIGHEST** |
 | `server.py`      | 49.48%   | 483        | 🔴 **Critical** | **HIGH**    |
 | `model_info.py`  | 70.77%   | 65         | 🟡 Good         | Medium      |
@@ -30,6 +31,7 @@ The codebase has **good foundational coverage** (67.62%) but critical paths are 
 **Missing Coverage Areas:**
 
 #### Lines 475-598: Command Processing Logic
+
 ```python
 # Critical paths NOT tested:
 - Group command routing (lines 475-482)
@@ -42,11 +44,13 @@ The codebase has **good foundational coverage** (67.62%) but critical paths are 
 ```
 
 **Impact**: **CRITICAL** - These are the command processing paths that route MQTT messages to devices/groups. Without tests:
+
 - Group commands may not work correctly
 - Fan speed commands may fail silently
 - Device routing may miss edge cases
 
 **Recommendation**: Add integration tests covering:
+
 - Group set_power commands via MQTT
 - Group set_brightness commands via MQTT
 - Fan percentage commands (0, 25, 50, 75, 100%)
@@ -54,6 +58,7 @@ The codebase has **good foundational coverage** (67.62%) but critical paths are 
 - Error handling for invalid device/group IDs
 
 #### Lines 271-389: Message Routing Start
+
 ```python
 # Untested paths:
 - MQTT subscription setup
@@ -62,6 +67,7 @@ The codebase has **good foundational coverage** (67.62%) but critical paths are 
 ```
 
 #### Lines 611-750+: Advanced State Management
+
 ```python
 # Missing coverage:
 - State synchronization
@@ -74,6 +80,7 @@ The codebase has **good foundational coverage** (67.62%) but critical paths are 
 **Missing Coverage Areas:**
 
 #### Lines 105-195: Cloud Relay Mode (Complete Feature)
+
 ```python
 # CloudRelayConnection - ENTIRELY UNTESTED:
 - SSL connection to cloud (lines 58-101)
@@ -85,12 +92,14 @@ The codebase has **good foundational coverage** (67.62%) but critical paths are 
 ```
 
 **Impact**: **CRITICAL** - Cloud relay is a major feature used for debugging and protocol analysis. Without tests:
+
 - Relay mode may fail silently
 - Packet forwarding may break
 - Injection features may not work
 - SSL connection handling is untested
 
 **Recommendation**: Add integration tests:
+
 - Cloud relay startup and shutdown
 - Bidirectional packet forwarding
 - Packet injection (raw bytes)
@@ -98,6 +107,7 @@ The codebase has **good foundational coverage** (67.62%) but critical paths are 
 - SSL connection failure handling
 
 #### Lines 282-362: Connection Management
+
 ```python
 # Error handling and cleanup:
 - Connection edge cases
@@ -107,6 +117,7 @@ The codebase has **good foundational coverage** (67.62%) but critical paths are 
 ```
 
 #### Lines 876-924: Periodic Status Refresh
+
 ```python
 # Background task - NOT tested:
 - 5-minute refresh cycle (lines 876-924)
@@ -116,6 +127,7 @@ The codebase has **good foundational coverage** (67.62%) but critical paths are 
 ```
 
 #### Lines 926-970: Pool Status Monitoring
+
 ```python
 # Background task - NOT tested:
 - 30-second status logging (lines 926-970)
@@ -124,6 +136,7 @@ The codebase has **good foundational coverage** (67.62%) but critical paths are 
 ```
 
 **Recommendation**: Add async task tests:
+
 - Mock asyncio.sleep to speed up tests
 - Verify refresh triggers correctly
 - Verify error handling in background tasks
@@ -134,10 +147,12 @@ The codebase has **good foundational coverage** (67.62%) but critical paths are 
 **Missing Coverage Areas:**
 
 #### Lines 2002-2137: Cloud Relay Integration
+
 - Device compatibility with relay mode
 - Status packet handling in relay mode
 
 #### Lines 2147-2566: Advanced Mesh Operations
+
 - Complex mesh interactions
 - Multi-device coordination
 
@@ -148,11 +163,13 @@ The codebase has **good foundational coverage** (67.62%) but critical paths are 
 **Missing Coverage Areas:**
 
 #### Lines 222-254: API Error Handling
+
 - Network failures
 - Invalid responses
 - Timeout handling
 
 #### Lines 272-331: Token Management Edge Cases
+
 - Token refresh failures
 - Invalid token scenarios
 
@@ -295,21 +312,25 @@ async def test_token_refresh_failure():
 ## Test Implementation Strategy
 
 ### Phase 1: Critical Paths (Week 1-2)
+
 - [ ] MQTT command processing tests (mqtt_client.py lines 475-604)
 - [ ] Cloud relay basic functionality (server.py lines 105-195)
 - [ ] Background task tests (server.py lines 876-970)
 
 ### Phase 2: Edge Cases (Week 3-4)
+
 - [ ] Error handling in command processing
 - [ ] Connection management edge cases
 - [ ] Token refresh error paths
 
 ### Phase 3: Integration Tests (Week 5-6)
+
 - [ ] End-to-end MQTT command flow
 - [ ] Cloud relay integration
 - [ ] Concurrent operation tests
 
 ### Phase 4: Performance (Week 7+)
+
 - [ ] Load testing
 - [ ] Memory profiling
 - [ ] Latency benchmarking
@@ -317,18 +338,21 @@ async def test_token_refresh_failure():
 ## Testing Best Practices
 
 ### Mocking Strategy
+
 1. **Async operations**: Use `asyncio.sleep` mocks with `unittest.mock.patch`
 2. **MQTT client**: Use `aiomqtt.Client` mock
 3. **TCP connections**: Use `asyncio.StreamReader/Writer` mocks
 4. **Background tasks**: Speed up with `asyncio.sleep` mocking
 
 ### Coverage Goals
+
 - **Critical modules** (mqtt_client, server): **80%+**
 - **Infrastructure modules** (cloud_api, devices): **75%+**
 - **Utility modules** (utils, structs, packet_parser): **90%+**
 - **Overall**: **75%+**
 
 ### Test Naming Convention
+
 ```python
 def test_{module}_{feature}_{scenario}():
     """Brief description of what is being tested."""
@@ -348,9 +372,10 @@ While the codebase has **good foundational coverage** (67.62%), **critical opera
 **Recommended Priority**: Focus on mqtt_client.py and server.py immediately - these are the most critical for system reliability.
 
 ---
+
 **Next Steps**:
+
 1. Create test files as outlined above
 2. Run coverage analysis after each batch of new tests
 3. Target 80% coverage for server.py and mqtt_client.py first
 4. Then expand to integration and performance testing
-

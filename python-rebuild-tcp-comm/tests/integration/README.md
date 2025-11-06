@@ -5,6 +5,7 @@ This directory contains integration tests for Phase 0 TCP communication. Unlike 
 ## Overview
 
 Integration tests validate:
+
 - **Packet framing**: Correct Phase 0 packet format (magic bytes, version, length, JSON payload)
 - **TCP communication**: Real socket operations with timeouts and error handling
 - **Retry logic**: Exponential backoff with jitter
@@ -48,6 +49,7 @@ Integration tests validate:
 ### Fixtures (`conftest.py`)
 
 #### `MockTCPServer`
+
 A real asyncio-based TCP server with configurable response modes:
 
 - **SUCCESS**: Immediate ACK response (default)
@@ -57,6 +59,7 @@ A real asyncio-based TCP server with configurable response modes:
 - **REJECT**: Refuses connection
 
 **Example usage:**
+
 ```python
 async def test_example(mock_tcp_server: MockTCPServer):
     # Server automatically started and stopped
@@ -75,23 +78,25 @@ async def test_example(mock_tcp_server: MockTCPServer):
 ```
 
 #### `unique_device_id`
+
 Generates a unique device ID for each test to avoid metric collisions.
 
 #### `unique_metrics_port`
+
 Provides a fixed port for the Prometheus metrics server (19400).
 
 ### Test Cases (`test_toggler_integration.py`)
 
-| Test | Description |
-|------|-------------|
-| `test_happy_path_toggle_success` | Successful toggle with immediate response |
-| `test_packet_format_validation` | Validates exact Phase 0 packet structure |
-| `test_retry_intermittent_connection_failure` | Retry when first connection fails |
-| `test_retry_intermittent_timeout` | Retry when first attempt times out |
-| `test_all_attempts_timeout` | Failure when all attempts timeout |
-| `test_connection_refused` | Failure when no server is listening |
-| `test_connection_closed_during_recv` | Failure when server closes connection |
-| `test_metrics_endpoint_accessible` | Validates Prometheus metrics endpoint |
+| Test                                         | Description                               |
+| -------------------------------------------- | ----------------------------------------- |
+| `test_happy_path_toggle_success`             | Successful toggle with immediate response |
+| `test_packet_format_validation`              | Validates exact Phase 0 packet structure  |
+| `test_retry_intermittent_connection_failure` | Retry when first connection fails         |
+| `test_retry_intermittent_timeout`            | Retry when first attempt times out        |
+| `test_all_attempts_timeout`                  | Failure when all attempts timeout         |
+| `test_connection_refused`                    | Failure when no server is listening       |
+| `test_connection_closed_during_recv`         | Failure when server closes connection     |
+| `test_metrics_endpoint_accessible`           | Validates Prometheus metrics endpoint     |
 
 ## Phase 0 Packet Format
 
@@ -106,6 +111,7 @@ Integration tests validate the exact packet structure:
 ```
 
 **JSON Payload:**
+
 ```json
 {
   "opcode": "toggle",
@@ -118,19 +124,23 @@ Integration tests validate the exact packet structure:
 ## Key Technical Details
 
 ### Port Management
+
 - Tests use `port=0` for OS-assigned ports to avoid conflicts
 - Metrics server uses a fixed high port (19400) but is idempotent
 
 ### Async Coordination
+
 - Server and client run concurrently using asyncio
 - Fixtures handle server lifecycle (start/stop) automatically
 
 ### Timeouts
+
 - Integration tests use default timeouts (1.0s connect, 1.5s I/O)
 - Faster than production for test speed
 - Long enough to validate timeout scenarios
 
 ### Metrics Isolation
+
 - Each test gets a unique device_id
 - Prevents metric collision between tests
 - Metrics server is global and reused (idempotent)
@@ -143,6 +153,7 @@ Integration tests validate the exact packet structure:
 4. **Mark as integration**: `@pytest.mark.asyncio` (implicit via module marker)
 
 Example:
+
 ```python
 @pytest.mark.asyncio
 async def test_my_scenario(
@@ -164,14 +175,17 @@ async def test_my_scenario(
 ## Troubleshooting
 
 ### Tests Hang
+
 - Check if metrics server port (19400) is already in use
 - Increase timeouts in `TCPConnection` if network is slow
 
 ### Connection Refused Errors
+
 - Ensure `MockTCPServer` fixture is properly initialized
 - Check that server port is accessible (localhost)
 
 ### Metric Collisions
+
 - Use `unique_device_id` fixture to avoid collisions
 - Run tests sequentially (not in parallel)
 
@@ -199,10 +213,10 @@ The performance tracker collects latency metrics from **happy-path tests only** 
 
 Performance thresholds are based on Phase 0 lab environment targets:
 
-| Metric | Threshold | Purpose |
-|--------|-----------|---------|
-| **p95** | < 300ms | Primary target (Phase 0) |
-| **p99** | < 800ms | Stretch goal (Phase 1) |
+| Metric  | Threshold | Purpose                  |
+| ------- | --------- | ------------------------ |
+| **p95** | < 300ms   | Primary target (Phase 0) |
+| **p99** | < 800ms   | Stretch goal (Phase 1)   |
 
 **Important**: Threshold violations generate warnings but **do not fail tests**. This allows you to see performance trends without blocking CI.
 
@@ -265,36 +279,39 @@ A machine-readable JSON file is saved for historical tracking and trend analysis
 
 Only successful, realistic scenarios are tracked for performance:
 
-| Test | Tracked? | Reason |
-|------|----------|--------|
-| `test_happy_path_toggle_success` | ✅ Yes | Realistic success case |
-| `test_packet_format_validation` | ✅ Yes | Realistic success case |
-| `test_metrics_endpoint_accessible` | ✅ Yes | Realistic success case |
-| `test_retry_*` | ❌ No | Includes intentional failures |
-| `test_connection_refused` | ❌ No | Intentional error scenario |
-| `test_all_attempts_timeout` | ❌ No | Intentional timeout scenario |
+| Test                               | Tracked? | Reason                        |
+| ---------------------------------- | -------- | ----------------------------- |
+| `test_happy_path_toggle_success`   | ✅ Yes   | Realistic success case        |
+| `test_packet_format_validation`    | ✅ Yes   | Realistic success case        |
+| `test_metrics_endpoint_accessible` | ✅ Yes   | Realistic success case        |
+| `test_retry_*`                     | ❌ No    | Includes intentional failures |
+| `test_connection_refused`          | ❌ No    | Intentional error scenario    |
+| `test_all_attempts_timeout`        | ❌ No    | Intentional timeout scenario  |
 
 This ensures performance metrics reflect **normal operating conditions** rather than error paths.
 
 ### Using Performance Data
 
 **During Development:**
+
 ```bash
 ./scripts/test-integration.sh
 # Review console output for immediate feedback
 ```
 
 **Tracking Trends:**
+
 ```bash
 # Save historical reports with timestamps
 cp test-reports/performance-report.json \
-   test-reports/performance-$(date +%Y%m%d-%H%M%S).json
+  test-reports/performance-$(date +%Y%m%d-%H%M%S).json
 
 # Compare against baseline
 jq '.metrics.p95_ms' test-reports/performance-report.json
 ```
 
 **CI/CD Integration:**
+
 - JSON artifact can be parsed by CI tools
 - Track p95/p99 trends over time
 - Alert on sustained performance degradation
@@ -302,15 +319,18 @@ jq '.metrics.p95_ms' test-reports/performance-report.json
 ### Troubleshooting
 
 **"No performance data collected"**
+
 - Ensure at least one tracked test passes successfully
 - Check that `performance_tracker` fixture is available
 
 **Unexpectedly high latency**
+
 - Check system load (CPU, memory)
 - Verify no background network activity
 - Review metrics server responsiveness
 
 **Want to adjust thresholds?**
+
 - Edit `PerformanceThresholds` in `tests/integration/performance.py`
 - Thresholds should reflect realistic production targets
 
@@ -319,4 +339,3 @@ jq '.metrics.p95_ms' test-reports/performance-report.json
 - **Phase 0 Spec**: `docs/rebuild-tcp-comm/01-phase-0.md`
 - **Unit Tests**: `tests/test_toggler.py`
 - **Helper Scripts**: `scripts/README.md`
-

@@ -112,8 +112,8 @@ pytest cync-controller/tests/integration/
 
 ### Coverage by Module
 
-| Module           | Coverage | Status       | Notes               |
-| ---------------- | -------- | ------------ | ------------------- |
+| Module           | Coverage | Status        | Notes               |
+| ---------------- | -------- | ------------- | ------------------- |
 | `utils.py`       | 95.88%   | ✅ Excellent  | Exceeded 80% target |
 | `main.py`        | 70.80%   | ⚠️ Good       | Close to 80% target |
 | `server.py`      | 49.48%   | ⚠️ Needs work | +15.5% improvement  |
@@ -132,6 +132,7 @@ pytest cync-controller/tests/integration/
 ### Coverage Details
 
 Current coverage includes:
+
 - Core modules: `main.py`, `server.py`, `devices.py`, `mqtt_client.py`
 - Infrastructure: `logging_abstraction.py`, `correlation.py`, `instrumentation.py`
 - Protocol handling: packet parsing, checksum calculation
@@ -140,11 +141,13 @@ Current coverage includes:
 ### Remaining Gaps
 
 **server.py (49.48% coverage)**
+
 - Missing: Cloud relay mode (lines 105-195)
 - Missing: Connection management edge cases
 - Recommendation: Add integration tests for cloud relay scenarios
 
 **mqtt_client.py (48.35% coverage)**
+
 - Missing: Command processor queue management
 - Missing: Group state synchronization
 - Recommendation: Add integration tests for MQTT message handling
@@ -194,6 +197,7 @@ async def test_error_logging(caplog):
 ```
 
 **Why this matters:**
+
 - Ensures critical errors, warnings, and debug messages are logged correctly
 - Tests logging behavior at appropriate levels
 - Uses `caplog` fixture from pytest-logging plugin (included by default)
@@ -249,6 +253,7 @@ pytest tests/integration/ -v
 ### MockTCPDevice
 
 Simulates protocol handshake and basic operations:
+
 - SSL connection establishment
 - 0x7B ACK responses
 - Status packet (0x83) generation
@@ -271,6 +276,7 @@ async def test_command_acknowledgment():
 ## Test Configuration
 
 Configuration files:
+
 - `cync-controller/pytest.ini`: Pytest configuration (includes `-n auto` for parallel execution by default)
 - `playwright.config.ts`: Playwright browser settings
 - `cync-controller/pyproject.toml`: Test dependencies (includes pytest-xdist)
@@ -288,13 +294,15 @@ addopts =
 ```
 
 Or override temporarily:
+
 ```bash
-pytest -n 4  # Use 4 workers for this run
+pytest -n 4 # Use 4 workers for this run
 ```
 
 ## CI/CD Integration
 
 Tests run automatically:
+
 - Unit tests on every commit
 - E2E tests on pull requests
 - Coverage reports generated via GitHub Actions
@@ -339,10 +347,10 @@ npx playwright test tests/e2e/ --pause
 ## Performance Testing
 
 Integration tests include performance benchmarks:
+
 - Mesh refresh latency
 - Command acknowledgment timing
 - MQTT publish throughput
 - TCP connection handling
 
 See `tests/integration/test_mesh_refresh_performance.py` for examples.
-

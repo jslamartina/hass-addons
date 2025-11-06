@@ -12,8 +12,8 @@ This repository contains a Home Assistant add-on for local control of Cync (C by
 
 ### Overall Health Score: **5.5/10**
 
-| Category        | Score | Status              |
-| --------------- | ----- | ------------------- |
+| Category        | Score | Status               |
+| --------------- | ----- | -------------------- |
 | Security        | 3/10  | 🔴 Critical Issues   |
 | Code Quality    | 6/10  | 🟡 Needs Improvement |
 | Architecture    | 5/10  | 🟡 Technical Debt    |
@@ -50,6 +50,7 @@ SEVERITY │       │  SEC-2 │     │
 **Severity:** CRITICAL | **Likelihood:** HIGH | **Impact:** CRITICAL
 
 **Location:**
+
 - `cync-controller/config.yaml:39-45`
 - `cync-controller/config.yaml.backup:39-45`
 - `cync-controller/Dockerfile:38-39`
@@ -60,24 +61,26 @@ Multiple configuration files contain hardcoded credentials that are committed to
 ```yaml
 # cync-controller/config.yaml
 options:
-  account_username: jslamartina@gmail.com  # ❌ Personal email exposed
-  mqtt_user: "dev"                         # ❌ Default credentials
-  mqtt_pass: "dev"                         # ❌ Weak password
+  account_username: jslamartina@gmail.com # ❌ Personal email exposed
+  mqtt_user: "dev" # ❌ Default credentials
+  mqtt_pass: "dev" # ❌ Weak password
 ```
 
 ```dockerfile
 # cync-controller/Dockerfile
 ENV CYNC_MQTT_USER="jslamartina@gmail.com" # ❌ Hardcoded in image
-    CYNC_MQTT_PASS=""                      # ❌ Empty password default
+CYNC_MQTT_PASS=""                          # ❌ Empty password default
 ```
 
 **Impact:**
+
 - Personal email address exposed in public repository
 - Default weak credentials make MQTT broker vulnerable
 - Backup config file (`config.yaml.backup`) duplicates exposure
 - Anyone can access MQTT broker with default credentials
 
 **Remediation (1-2 hours):**
+
 1. Remove `config.yaml.backup` from git history
 2. Add `.backup` to `.gitignore`
 3. Remove all hardcoded credentials from `config.yaml` and `Dockerfile`
@@ -85,12 +88,13 @@ ENV CYNC_MQTT_USER="jslamartina@gmail.com" # ❌ Hardcoded in image
 5. Rotate any exposed credentials immediately
 
 **Example Fix:**
+
 ```yaml
 # config.yaml - Use null/placeholder values
 options:
-  account_username: null  # User must configure
+  account_username: null # User must configure
   account_password: null
-  mqtt_user: null        # Configure via add-on UI
+  mqtt_user: null # Configure via add-on UI
   mqtt_pass: null
 ```
 
@@ -101,6 +105,7 @@ options:
 **Severity:** HIGH | **Likelihood:** HIGH | **Impact:** HIGH
 
 **Locations:**
+
 - `mitm/query_mode.py:13-14`
 - `mitm/send_via_mitm.py:99-100`
 - `mitm/mitm_with_injection.py:493-494, 506-507`
@@ -116,11 +121,13 @@ context.verify_mode = ssl.CERT_NONE  # ❌ No certificate validation
 ```
 
 **Impact:**
+
 - Man-in-the-middle attacks possible
 - No protection against certificate tampering
 - Insecure by design for production use
 
 **Remediation (2-3 hours):**
+
 1. Add clear warnings that MITM tools are for debugging ONLY
 2. Move all MITM tools to separate `/tools` or `/debug` directory
 3. Add `# SECURITY: DEBUG ONLY - DO NOT USE IN PRODUCTION` comments
@@ -139,11 +146,13 @@ context.verify_mode = ssl.CERT_NONE  # ❌ No certificate validation
 Configuration backup file with credentials is tracked in git. This file should never be committed.
 
 **Impact:**
+
 - Credential exposure in git history
 - Potential PII (email addresses) leaked
 - Cannot be fully removed without rewriting git history
 
 **Remediation (30 min):**
+
 ```bash
 # Immediate fix
 git rm cync-controller/config.yaml.backup
@@ -163,12 +172,14 @@ echo "config.yaml.backup" >> .gitignore
 
 **Issue:**
 The repository contains extensive MITM debugging tools, packet analysis scripts, and experimental code mixed with production add-on code. This creates:
+
 - Confusion about what's production-ready
 - Security risks from debugging tools
 - Increased attack surface
 - Maintenance burden
 
 **Files affected:**
+
 ```
 mitm/
 ├── mitm_with_injection.py (671 lines)
@@ -179,6 +190,7 @@ mitm/
 ```
 
 **Remediation (3-4 hours):**
+
 1. Create separate repository for debugging tools
 2. Move MITM tools to `baudneo/cync-debugging-tools` repo
 3. Add clear documentation separating production vs. debug code
@@ -201,12 +213,14 @@ Zero automated tests found. The `package.json` has a failing test script:
 ```
 
 **Impact:**
+
 - No regression detection
 - Difficult to refactor safely
 - No CI/CD quality gates
 - Bug-prone deployments
 
 **Remediation (2-3 days):**
+
 1. Add `pytest` for Python testing
 2. Add `jest` or `vitest` for JavaScript
 3. Create test structure:
@@ -221,6 +235,7 @@ Zero automated tests found. The `package.json` has a failing test script:
 
 **Quick Win (2 hours):**
 Start with smoke tests for critical paths:
+
 - Config parsing
 - MQTT connection
 - Device communication
@@ -234,6 +249,7 @@ Start with smoke tests for critical paths:
 **Severity:** MEDIUM | **Likelihood:** MEDIUM | **Impact:** LOW
 
 **Locations:**
+
 - `mitm/mitm_with_injection.py:72-75, 288-289, 586-593`
 - `mitm/packet_parser.py:20-21`
 
@@ -250,11 +266,13 @@ except Exception:
 ```
 
 **Impact:**
+
 - Critical errors hidden
 - Difficult debugging
 - Data loss risks
 
 **Remediation (1-2 hours):**
+
 ```python
 # Better approach
 try:
@@ -273,6 +291,7 @@ except Exception as e:
 **Severity:** LOW | **Likelihood:** MEDIUM | **Impact:** LOW
 
 **Locations:**
+
 - `mitm/send_via_mitm.py:16-18`
 - `mitm/test_mode_change.py:18-22`
 - `mitm/verify_checksum.py:50-72`
@@ -291,6 +310,7 @@ def calculate_checksum(data):
 ```
 
 **Remediation (1 hour):**
+
 1. Create `cync_protocol/checksum.py`
 2. Centralize algorithm
 3. Add comprehensive tests
@@ -303,6 +323,7 @@ def calculate_checksum(data):
 **Severity:** LOW | **Likelihood:** LOW | **Impact:** MEDIUM
 
 **Locations:**
+
 - `.devcontainer/post-start.sh:52-58, 66-74, 92-119`
 - `mitm/mitm_with_injection.py:411-422`
 
@@ -313,21 +334,23 @@ Multiple busy-wait loops with fixed sleep intervals:
 # .devcontainer/post-start.sh
 until ha supervisor info 2> /dev/null; do
   echo "  Still waiting for Supervisor..."
-  sleep 2  # ❌ Fixed 2s interval, no backoff
+  sleep 2 # ❌ Fixed 2s interval, no backoff
 done
 ```
 
 **Impact:**
+
 - CPU waste during startup
 - Delayed failure detection
 - Poor UX during long waits
 
 **Remediation (2 hours):**
 Implement exponential backoff:
+
 ```bash
 RETRY_DELAY=1
 MAX_DELAY=30
-while ! ha supervisor info 2>/dev/null; do
+while ! ha supervisor info 2> /dev/null; do
   sleep $RETRY_DELAY
   RETRY_DELAY=$((RETRY_DELAY * 2))
   [ $RETRY_DELAY -gt $MAX_DELAY ] && RETRY_DELAY=$MAX_DELAY
@@ -341,9 +364,11 @@ done
 ### JavaScript/HTML Issues
 
 1. **Deprecated API Usage** (`cync-controller/static/index.html:142`)
+
    ```javascript
-   document.execCommand('copy');  // ❌ Deprecated, use Clipboard API
+   document.execCommand("copy"); // ❌ Deprecated, use Clipboard API
    ```
+
    **Fix:** Use modern `navigator.clipboard.writeText()`
 
 2. **Missing Input Validation** (`cync-controller/static/index.html:196`)
@@ -355,19 +380,24 @@ done
 ### Python Issues
 
 3. **Magic Numbers** (throughout `mitm/*.py`)
+
    ```python
    packet[41] = checksum  # ❌ What is position 41?
    ```
+
    **Fix:** Use named constants:
+
    ```python
    CHECKSUM_POSITION = 41
    packet[CHECKSUM_POSITION] = checksum
    ```
 
 4. **Hardcoded IPs** (`mitm/test_mode_change.py:10`)
+
    ```python
    DEVICE_IP = "172.64.66.1"  # ❌ Hardcoded
    ```
+
    **Fix:** Environment variable or config file
 
 5. **Missing Docstrings**
@@ -377,14 +407,15 @@ done
 ### Shell Script Issues
 
 6. **Unquoted Variables** (various `*.sh` files)
+
    ```bash
-   rsync -av --delete $SOURCE $DEST  # ❌ Should be quoted
+   rsync -av --delete $SOURCE $DEST # ❌ Should be quoted
    ```
 
 7. **Missing Error Checks**
    ```bash
-   cd "/mnt/supervisor/..."  # ❌ No check if cd fails
-   python -c "..."           # ❌ No error handling
+   cd "/mnt/supervisor/..." # ❌ No check if cd fails
+   python -c "..."          # ❌ No error handling
    ```
 
 ---
@@ -396,15 +427,17 @@ done
 **Impact:** Reproducibility issues, breaking changes
 
 **Files affected:**
+
 - `cync-controller/Dockerfile:14, 29` - No pip version pins
 - `.github/workflows/*.yaml` - No action version pins
 
 **Remediation:**
+
 ```dockerfile
 # Dockerfile - pin versions
 RUN pip install --no-cache-dir \
-    debugpy==1.8.0 \
-    cync-controller==0.0.3.1
+ debugpy==1.8.0 \
+ cync-controller==0.0.3.1
 ```
 
 ### Outdated GitHub Actions
@@ -440,6 +473,7 @@ RUN pip install --no-cache-dir \
 ### Priority 1: Security
 
 1. **Remove sensitive files** (30 min)
+
    ```bash
    git rm cync-controller/config.yaml.backup
    echo "*.backup" >> .gitignore
@@ -463,6 +497,7 @@ RUN pip install --no-cache-dir \
    - Add error recovery
 
 5. **Add shellcheck** (1 hour)
+
    ```yaml
    # .github/workflows/shellcheck.yaml
    - uses: ludeeus/action-shellcheck@master
@@ -476,6 +511,7 @@ RUN pip install --no-cache-dir \
 ### Priority 3: Maintainability
 
 7. **Add EditorConfig** (15 min)
+
    ```ini
    # .editorconfig
    root = true
@@ -495,24 +531,28 @@ RUN pip install --no-cache-dir \
 ## Larger Efforts (1-3 days each)
 
 ### 1. Test Infrastructure (3 days)
+
 - Set up pytest + coverage
 - Add integration tests
 - CI/CD test pipeline
 - 60% coverage target
 
 ### 2. Repository Restructure (2 days)
+
 - Split debug tools to separate repo
 - Organize by feature
 - Clear production/dev boundaries
 - Update documentation
 
 ### 3. Security Hardening (2 days)
+
 - Implement secrets management
 - Add input validation everywhere
 - Security audit tools
 - Penetration testing
 
 ### 4. Observability (1 day)
+
 - Structured logging
 - Metrics collection
 - Health check endpoints
@@ -523,6 +563,7 @@ RUN pip install --no-cache-dir \
 ## Metrics & Statistics
 
 ### Code Volume
+
 ```
 Total Files:     ~80
 Python Files:    7 (2,347 lines)
@@ -544,6 +585,7 @@ Documentation:   8 (3,421 lines)
 ### Complexity Hotspots
 
 Top 5 most complex files:
+
 1. `mitm/mitm_with_injection.py` - 671 lines, cyclomatic complexity ~45
 2. `.devcontainer/post-start.sh` - 227 lines, 8 nested conditions
 3. `mitm/packet_parser.py` - 237 lines, complex parsing logic
@@ -557,18 +599,21 @@ Top 5 most complex files:
 ### For Engineering Team
 
 **Immediate (This Sprint):**
+
 - Remove all hardcoded credentials (SEC-1)
 - Add security warnings to MITM tools (SEC-2)
 - Delete sensitive backup file (SEC-3)
 - Pin all dependency versions
 
 **Short-term (Next Sprint):**
+
 - Start test coverage initiative
 - Separate debug tools to new repo
 - Implement structured logging
 - Add pre-commit hooks
 
 **Long-term (Next Quarter):**
+
 - Achieve 60% test coverage
 - Full security audit
 - Architecture refactoring
@@ -577,11 +622,13 @@ Top 5 most complex files:
 ### For Product/Management
 
 **Risk Assessment:**
+
 - **Current State:** Medium-High risk due to credential exposure
 - **After Quick Wins:** Medium risk
 - **After Full Remediation:** Low risk
 
 **Effort vs. Impact:**
+
 ```
 High Impact, Low Effort:    ████████ (Security fixes, gitignore)
 High Impact, High Effort:   ████     (Testing, restructure)
@@ -594,6 +641,7 @@ Low Impact, High Effort:    ▌        (Full rewrite - not recommended)
 ## Action Plan Summary
 
 ### Week 1: Critical Security
+
 - [ ] Remove hardcoded credentials
 - [ ] Delete backup files from git
 - [ ] Add security documentation
@@ -601,6 +649,7 @@ Low Impact, High Effort:    ▌        (Full rewrite - not recommended)
 - [ ] Update `.gitignore`
 
 ### Week 2: Code Quality
+
 - [ ] Fix exception handling
 - [ ] Pin dependencies
 - [ ] Add pre-commit hooks
@@ -608,6 +657,7 @@ Low Impact, High Effort:    ▌        (Full rewrite - not recommended)
 - [ ] Code deduplication
 
 ### Week 3-4: Testing & Architecture
+
 - [ ] Create test infrastructure
 - [ ] Write initial test suite
 - [ ] Separate debug tools
@@ -627,6 +677,7 @@ This codebase shows active development and useful functionality, but requires im
 **Estimated effort to reach production-ready state:** ~2-3 weeks
 
 **Recommended next steps:**
+
 1. Execute security quick wins (4 hours)
 2. Add basic test coverage (3 days)
 3. Restructure repository (2 days)
@@ -640,4 +691,3 @@ The repository has good bones and active maintenance. With focused effort on sec
 **Files analyzed:** 80
 **Issues found:** 27 (8 critical/high, 19 medium/low)
 **Estimated remediation effort:** ~10 working days
-

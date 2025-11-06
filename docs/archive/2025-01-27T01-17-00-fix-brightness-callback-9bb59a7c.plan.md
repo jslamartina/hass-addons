@@ -1,4 +1,5 @@
 <!-- 9bb59a7c-e8ad-4651-971b-b2f46ef4b32e f64516b7-f6b9-4853-adfe-b8bb0e39e37a -->
+
 # Fix Brightness Callback Registration Bug
 
 ## Problem

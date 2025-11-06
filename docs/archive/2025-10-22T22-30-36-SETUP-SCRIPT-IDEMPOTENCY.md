@@ -27,6 +27,7 @@ Made the script **idempotent** so it can run on both fresh AND already-configure
 #### 1. `wait_for_ha()` Function (Lines 84-106)
 
 **Before:**
+
 ```bash
 while [ $retry_count -lt $max_retries ]; do
   # Only checks onboarding endpoint
@@ -40,6 +41,7 @@ done
 ```
 
 **After:**
+
 ```bash
 while [ $retry_count -lt $max_retries ]; do
   # Check if onboarding endpoint responds (for fresh HA)
@@ -61,6 +63,7 @@ done
 ```
 
 **Key Addition:**
+
 - Tests `/api/` endpoint which exists on both fresh AND onboarded HA
 - HTTP 401 (Unauthorized) = HA is running but requires auth (onboarded)
 - HTTP 200 (OK) = HA is running and accessible
@@ -72,18 +75,18 @@ The script is now idempotent for all major steps:
 
 | Step                 | Function                       | Idempotent? | How                                          |
 | -------------------- | ------------------------------ | ----------- | -------------------------------------------- |
-| **Wait for HA**      | `wait_for_ha()`                | ✅ YES       | Checks both onboarding AND core API          |
-| **Onboarding**       | `check_onboarding_status()`    | ✅ YES       | Returns false if already done (line 127-129) |
-| **User Creation**    | `create_first_user()`          | ✅ YES       | Skipped if onboarding not needed             |
-| **Supervisor Token** | `get_supervisor_token()`       | ✅ YES       | Uses existing env var if available           |
-| **Add EMQX Repo**    | `add_emqx_repository()`        | ✅ YES       | Checks if repo already exists (line 261)     |
-| **Install EMQX**     | `install_emqx()`               | ✅ YES       | Checks if already installed (line 293-297)   |
-| **Configure EMQX**   | `configure_emqx()`             | ✅ YES       | Updates options (safe to re-run)             |
-| **Start EMQX**       | `start_emqx()`                 | ✅ YES       | Checks current state first (line 399-402)    |
-| **Configure MQTT**   | `configure_mqtt_integration()` | ✅ YES       | Checks if integration exists (line 464-472)  |
-| **Install Cync**     | `install_cync_lan()`           | ✅ YES       | Checks if already installed (line 554-562)   |
-| **Configure Cync**   | `configure_cync_lan()`         | ✅ YES       | Updates options (safe to re-run)             |
-| **Start Cync**       | `start_cync_lan()`             | ✅ YES       | Checks current state first                   |
+| **Wait for HA**      | `wait_for_ha()`                | ✅ YES      | Checks both onboarding AND core API          |
+| **Onboarding**       | `check_onboarding_status()`    | ✅ YES      | Returns false if already done (line 127-129) |
+| **User Creation**    | `create_first_user()`          | ✅ YES      | Skipped if onboarding not needed             |
+| **Supervisor Token** | `get_supervisor_token()`       | ✅ YES      | Uses existing env var if available           |
+| **Add EMQX Repo**    | `add_emqx_repository()`        | ✅ YES      | Checks if repo already exists (line 261)     |
+| **Install EMQX**     | `install_emqx()`               | ✅ YES      | Checks if already installed (line 293-297)   |
+| **Configure EMQX**   | `configure_emqx()`             | ✅ YES      | Updates options (safe to re-run)             |
+| **Start EMQX**       | `start_emqx()`                 | ✅ YES      | Checks current state first (line 399-402)    |
+| **Configure MQTT**   | `configure_mqtt_integration()` | ✅ YES      | Checks if integration exists (line 464-472)  |
+| **Install Cync**     | `install_cync_lan()`           | ✅ YES      | Checks if already installed (line 554-562)   |
+| **Configure Cync**   | `configure_cync_lan()`         | ✅ YES      | Updates options (safe to re-run)             |
+| **Start Cync**       | `start_cync_lan()`             | ✅ YES      | Checks current state first                   |
 
 ## Testing
 
@@ -95,6 +98,7 @@ The script is now idempotent for all major steps:
 ```
 
 **Expected:**
+
 - ✅ Waits for `/api/onboarding` to respond
 - ✅ Creates first user
 - ✅ Completes onboarding
@@ -108,6 +112,7 @@ The script is now idempotent for all major steps:
 ```
 
 **Expected:**
+
 - ✅ Detects HA is responsive via `/api/` (HTTP 401)
 - ✅ Skips onboarding ("already completed")
 - ✅ Checks if EMQX already installed → uses existing or installs
@@ -123,6 +128,7 @@ The script is now idempotent for all major steps:
 ```
 
 **Expected:**
+
 - ✅ Skips already-completed steps
 - ✅ Completes missing steps
 - ✅ No duplicate installations
@@ -131,12 +137,14 @@ The script is now idempotent for all major steps:
 ## Benefits
 
 ### Before (Non-Idempotent):
+
 - ❌ Only worked on fresh HA
 - ❌ Timed out on existing HA (150 second wait)
 - ❌ Couldn't resume from failures
 - ❌ Couldn't re-run for updates
 
 ### After (Idempotent):
+
 - ✅ Works on both fresh AND existing HA
 - ✅ No timeouts (detects HA state quickly)
 - ✅ Can resume from any failure point
@@ -146,12 +154,14 @@ The script is now idempotent for all major steps:
 ## Script Behavior Summary
 
 ### On Fresh Home Assistant:
+
 1. Waits for `/api/onboarding` endpoint
 2. Creates first user and completes onboarding
 3. Installs EMQX, MQTT integration, Cync Controller
 4. **Result:** Fully configured HA
 
 ### On Already-Onboarded HA:
+
 1. Detects HA is running via `/api/` (HTTP 401)
 2. Skips onboarding (already done)
 3. Checks each component:
@@ -173,6 +183,7 @@ configure_mqtt_integration || {
 ```
 
 Most functions:
+
 - ✅ Check prerequisites before running
 - ✅ Return success if already done
 - ✅ Log warnings instead of failing
@@ -181,12 +192,14 @@ Most functions:
 ## Use Cases Enabled
 
 **1. Fresh Setup** (original use case)
+
 ```bash
 # Clean HA → Full setup
 ./scripts/setup-fresh-ha.sh
 ```
 
 **2. Repair Incomplete Setup**
+
 ```bash
 # EMQX failed to install? Re-run the script
 ./scripts/setup-fresh-ha.sh
@@ -194,6 +207,7 @@ Most functions:
 ```
 
 **3. Update Configurations**
+
 ```bash
 # Changed MQTT credentials in hass-credentials.env
 ./scripts/setup-fresh-ha.sh
@@ -201,6 +215,7 @@ Most functions:
 ```
 
 **4. Add Missing Components**
+
 ```bash
 # Manually deleted MQTT integration? Re-run:
 ./scripts/setup-fresh-ha.sh
@@ -208,6 +223,7 @@ Most functions:
 ```
 
 **5. DevContainer Startup**
+
 ```bash
 # Run automatically in post-start.sh
 # Safe to run every time container starts
@@ -229,4 +245,3 @@ Most functions:
 ---
 
 **Status:** ✅ Script is now fully idempotent and can safely run multiple times
-

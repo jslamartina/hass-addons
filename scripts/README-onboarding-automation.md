@@ -13,19 +13,21 @@ HA_URL=http://localhost:8123 python3 scripts/automate-onboarding.py
 
 # With custom credentials
 HA_URL=http://localhost:8123 \
-HASS_USERNAME=dev \
-HASS_PASSWORD=dev \
-python3 scripts/automate-onboarding.py
+  HASS_USERNAME=dev \
+  HASS_PASSWORD=dev \
+  python3 scripts/automate-onboarding.py
 ```
 
 ## Environment Variables
 
 ### Required
+
 - `HA_URL` - Home Assistant URL (default: `http://localhost:8123`)
 - `HASS_USERNAME` - Username for authentication (default: `dev`)
 - `HASS_PASSWORD` - Password for authentication (default: `dev`)
 
 ### Optional Location Configuration
+
 - `ONBOARDING_LATITUDE` - Latitude (default: `41.8781` - Chicago)
 - `ONBOARDING_LONGITUDE` - Longitude (default: `-87.6298` - Chicago)
 - `ONBOARDING_ELEVATION` - Elevation in meters (default: `181`)
@@ -33,9 +35,11 @@ python3 scripts/automate-onboarding.py
 - `ONBOARDING_TIME_ZONE` - IANA timezone (default: `America/Chicago`)
 
 ### Optional Analytics
+
 - `ONBOARDING_ANALYTICS` - Enable analytics: `true` or `false` (default: `false`)
 
 ### Authentication
+
 - `LONG_LIVED_ACCESS_TOKEN` - Existing long-lived token
 - `ONBOARDING_TOKEN` - Onboarding token (fallback)
 
@@ -74,23 +78,26 @@ Based on reverse-engineered protocol analysis:
 ## Examples
 
 ### Default (Chicago)
+
 ```bash
 python3 scripts/automate-onboarding.py
 ```
 
 ### Custom Location
+
 ```bash
 ONBOARDING_LATITUDE=40.7128 \
-ONBOARDING_LONGITUDE=-74.0060 \
-ONBOARDING_TIME_ZONE=America/New_York \
-ONBOARDING_UNIT_SYSTEM=imperial \
-python3 scripts/automate-onboarding.py
+  ONBOARDING_LONGITUDE=-74.0060 \
+  ONBOARDING_TIME_ZONE=America/New_York \
+  ONBOARDING_UNIT_SYSTEM=imperial \
+  python3 scripts/automate-onboarding.py
 ```
 
 ### Enable Analytics
+
 ```bash
 ONBOARDING_ANALYTICS=true \
-python3 scripts/automate-onboarding.py
+  python3 scripts/automate-onboarding.py
 ```
 
 ## Dependencies
@@ -108,5 +115,3 @@ See `test-results/ONBOARDING_PROTOCOL.md` for complete protocol specification.
 - `scripts/setup-fresh-ha.sh` - Full HA setup including onboarding
 - `scripts/create-token-websocket.js` - Token creation via WebSocket
 - `scripts/playwright/trace-onboarding-websocket.ts` - WebSocket trace capture
-
-

@@ -117,6 +117,7 @@ async def my_function():
 ### Configuration
 
 Set in `config.yaml` via `debug_log_level` (0=INFO, 1=DEBUG):
+
 - `CYNC_DEBUG`: Enable debug logging
 - `CYNC_LOG_FORMAT`: "json", "human", or "both"
 - `CYNC_PERF_TRACKING`: Enable performance timing
@@ -266,4 +267,3 @@ ha addons logs local_cync-controller | grep -E "set_power|WRITE CALLED|write_loc
 ---
 
 _For more information, see [AGENTS.md](../../AGENTS.md) in the repository root._
-

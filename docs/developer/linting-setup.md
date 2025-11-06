@@ -3,17 +3,20 @@
 ## What Changed
 
 ### 1. Removed Pylint, Enabled Ruff
+
 - **Removed**: `ms-python.pylint` extension
 - **Removed**: `ms-python.isort` extension (Ruff handles import sorting)
 - **Kept**: `charliermarsh.ruff` extension
 - **Configured**: Ruff native language server to show errors in Problems tab
 
 ### 2. Configuration Updates
+
 - `.devcontainer.json`: Disabled Pylint, removed deprecated Ruff settings
 - `AGENTS.md`: Updated documentation to reflect Ruff as the standard linter
 - `package.json`: Added convenient npm scripts for linting
 
 ### 3. Why Ruff?
+
 - **10-100x faster** than Pylint/Flake8 (written in Rust)
 - **Compatible** with Pylint, Flake8, isort rules
 - **Modern** - supports Python 3.13+ features
@@ -22,6 +25,7 @@
 ## How to Use
 
 ### Command Line
+
 ```bash
 # Run all linters (Python + Shell + Format check)
 npm run lint
@@ -43,6 +47,7 @@ npm run lint:shell
 ```
 
 ### VS Code Problems Tab
+
 - **Ruff errors will now appear automatically** in the Problems tab
 - **No need to run commands** - errors show as you type
 - **Auto-fix on save** - `source.fixAll` and `source.organizeImports` enabled
@@ -56,12 +61,14 @@ npm run lint:shell
 ## Current Status
 
 Running `./scripts/lint-all.sh` shows **61 Ruff errors** (42 auto-fixable):
+
 - Type annotation modernization (Optional[X] → X | None)
 - Import organization issues
 - **Critical**: Syntax errors in `devices.py` (indentation issues)
 - Unused imports and f-strings
 
 ### Priority Fixes
+
 1. **Fix syntax errors** in `devices.py` first (lines 2566-3097)
 2. Run `ruff check . --fix` to auto-fix simple issues
 3. Manually fix remaining type annotations and logic errors
@@ -69,6 +76,7 @@ Running `./scripts/lint-all.sh` shows **61 Ruff errors** (42 auto-fixable):
 ## Documentation Updates
 
 ✅ **AGENTS.md updated** (October 17, 2025):
+
 - Updated "Code Quality and Linting" section with Ruff details
 - Added npm script commands for linting and formatting
 - Updated "Workflow: Making Code Changes" to include linting steps
@@ -78,6 +86,7 @@ Running `./scripts/lint-all.sh` shows **61 Ruff errors** (42 auto-fixable):
 - Added reference to this file in "Critical files to know" section
 
 ✅ **docs/README.md updated** (October 17, 2025):
+
 - File moved from `.cursor/` to `docs/developer/` following naming conventions
 - Renamed from `LINTING_SETUP.md` to `linting-setup.md` (kebab-case)
 - Added to developer documentation structure diagram
@@ -90,6 +99,7 @@ Running `./scripts/lint-all.sh` shows **61 Ruff errors** (42 auto-fixable):
 ## Summary
 
 The repository now uses **Ruff as the standard Python linter** (replacing Pylint), with:
+
 - Automatic error detection in VS Code Problems tab
 - Auto-fix on save enabled
 - Convenient npm scripts for all linting tasks

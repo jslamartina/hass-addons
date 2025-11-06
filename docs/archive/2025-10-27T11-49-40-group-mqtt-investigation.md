@@ -13,18 +13,21 @@ Groups no longer being reported to MQTT after offline detection fix implementati
 ### Browser UI Verification
 
 ✅ **Groups ARE visible in Home Assistant UI**:
+
 - Hallway group with toggle
 - Master group with toggle
 - Kitchen group with toggle
 - Living group with toggle
 
 ✅ **Group toggle functionality WORKS**:
+
 - Clicked "Hallway" group toggle (OFF → ON)
 - Hallway lights and switches responded
 - Floodlights 4 and 6 state changed in UI
 - Group state synchronized correctly
 
 ✅ **Subgroup entities ARE being reported**:
+
 - All group member devices visible
 - Device states updated when group toggled
 - No missing entities
@@ -41,6 +44,7 @@ Groups no longer being reported to MQTT after offline detection fix implementati
 ### Code Review Findings
 
 **server.py lines 804-823** - Subgroup state publishing is intact:
+
 ```python
 # Update subgroups from aggregated member states
 await g.mqtt_client.publish_group_state(
@@ -53,6 +57,7 @@ await g.mqtt_client.publish_group_state(
 ```
 
 This code properly:
+
 - Aggregates member device states
 - Publishes group state to MQTT
 - Updates subgroup entities in Home Assistant
@@ -60,18 +65,19 @@ This code properly:
 ## Conclusion
 
 **FALSE ALARM**: Groups are working correctly. The issue reported was either:
+
 1. Already resolved by previous commits
 2. Misattributed to the offline detection fix
 3. A temporary state that resolved itself
 
 ### Verification Summary
 
-| Component | Status | Evidence |
-|-----------|--------|----------|
-| Group discovery | ✅ Working | Groups visible in UI |
-| Group toggle | ✅ Working | Successfully toggled Hallway group |
-| Member sync | ✅ Working | Lights changed state when group toggled |
-| MQTT publishing | ✅ Working | Group state updates published |
+| Component         | Status     | Evidence                                 |
+| ----------------- | ---------- | ---------------------------------------- |
+| Group discovery   | ✅ Working | Groups visible in UI                     |
+| Group toggle      | ✅ Working | Successfully toggled Hallway group       |
+| Member sync       | ✅ Working | Lights changed state when group toggled  |
+| MQTT publishing   | ✅ Working | Group state updates published            |
 | Subgroup entities | ✅ Working | All member devices listed and functional |
 
 ## No Action Required

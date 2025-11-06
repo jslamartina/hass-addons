@@ -55,20 +55,21 @@ All work must follow these non-negotiable guardrails (see `_00-exec-rules.mdc`):
 
 ### For New Contributors
 
-Start with **[rules/_10-rules-index.mdc](rules/_10-rules-index.mdc)** for:
+Start with **[rules/\_10-rules-index.mdc](rules/_10-rules-index.mdc)** for:
+
 - Fetch-on-demand navigation to all rule modules
 - Essential commands and workflows
 - Topic-specific guidance
 
 ### Common Tasks
 
-| Task | Rule |
-|------|------|
-| Editing Python | [python-changes-require-rebuild.mdc](rules/python-changes-require-rebuild.mdc) |
-| Writing shell scripts | [shell-scripting.mdc](rules/shell-scripting.mdc) |
-| Creating token | [token-creation-flow.mdc](rules/token-creation-flow.mdc) |
-| Submitting PR | [pr-checklist.mdc](rules/pr-checklist.mdc) |
-| Critical "DON'Ts" | [important-dont-rules.mdc](rules/important-dont-rules.mdc) |
+| Task                  | Rule                                                                           |
+| --------------------- | ------------------------------------------------------------------------------ |
+| Editing Python        | [python-changes-require-rebuild.mdc](rules/python-changes-require-rebuild.mdc) |
+| Writing shell scripts | [shell-scripting.mdc](rules/shell-scripting.mdc)                               |
+| Creating token        | [token-creation-flow.mdc](rules/token-creation-flow.mdc)                       |
+| Submitting PR         | [pr-checklist.mdc](rules/pr-checklist.mdc)                                     |
+| Critical "DON'Ts"     | [important-dont-rules.mdc](rules/important-dont-rules.mdc)                     |
 
 ## How Cursor Uses These Rules
 
@@ -89,12 +90,14 @@ Start with **[rules/_10-rules-index.mdc](rules/_10-rules-index.mdc)** for:
 ## Key Resources
 
 Main documentation:
+
 - [AGENTS.md](../AGENTS.md) - Full development guide
 - [CONTRIBUTING.md](../CONTRIBUTING.md) - Code standards
 - [docs/developer/](../docs/developer/) - Architecture and guides
 - [docs/user/](../docs/user/) - User documentation
 
 Development environment:
+
 - [.devcontainer/README.md](../.devcontainer/README.md) - Setup details
 - [hass-credentials.env](../hass-credentials.env) - Credentials reference
 

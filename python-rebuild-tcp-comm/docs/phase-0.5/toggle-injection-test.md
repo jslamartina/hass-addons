@@ -12,6 +12,7 @@
 Successfully validated toggle packet injection via MITM proxy REST API. All toggle commands (ON/OFF) received ACK responses (0x7B) with msg_id correctly echoed at byte position 10. ACK latency well within acceptable limits (p99 < 51ms).
 
 **Key Findings**:
+
 - ✅ Toggle packet structure validated
 - ✅ ACK responses received for both ON and OFF commands
 - ✅ msg_id position confirmed at byte 10 in ACK packets
@@ -28,17 +29,20 @@ Successfully validated toggle packet injection via MITM proxy REST API. All togg
 **Objective**: Inject a valid toggle ON (0x73) packet and verify ACK (0x7B) response
 
 **Input**:
+
 - Endpoint: `45 88 0f 3a`
 - Device ID: 80 (0x50)
 - State: 1 (ON)
 - msg_id: 0x10
 
 **Crafted Packet**:
+
 ```
 73 00 00 00 1f 45 88 0f 3a 00 10 00 00 7e 10 01 00 00 f8 8e 0c 00 10 01 00 00 00 50 00 f7 11 02 01 01 07 7e
 ```
 
 **Packet Breakdown**:
+
 - Header: `73 00 00 00 1f` (type 0x73, length 31 bytes)
 - Queue ID: `45 88 0f 3a 00` (endpoint + 0x00)
 - msg_id: `10 00 00` (0x10, 0x00, 0x00)
@@ -47,6 +51,7 @@ Successfully validated toggle packet injection via MITM proxy REST API. All togg
   - Device ID at positions 27-28: `50 00` (80 little-endian)
 
 **API Response**:
+
 ```json
 {
   "status": "success",
@@ -58,11 +63,13 @@ Successfully validated toggle packet injection via MITM proxy REST API. All togg
 ```
 
 **ACK Response**:
+
 ```
 7b 00 00 00 07 45 88 0f 3a 00 10 00
 ```
 
 **ACK Breakdown**:
+
 - Type: `7b` (DATA_ACK)
 - Length: `07` (7 bytes)
 - Queue ID: `45 88 0f 3a 00` (matches request)
@@ -79,22 +86,26 @@ Successfully validated toggle packet injection via MITM proxy REST API. All togg
 **Objective**: Inject toggle OFF packet with same device/endpoint
 
 **Input**:
+
 - Endpoint: `45 88 0f 3a`
 - Device ID: 80 (0x50)
 - State: 0 (OFF)
 - msg_id: 0x11
 
 **Crafted Packet**:
+
 ```
 73 00 00 00 1f 45 88 0f 3a 00 11 00 00 7e 11 01 00 00 f8 8e 0c 00 11 01 00 00 00 50 00 f7 11 02 00 01 07 7e
 ```
 
 **Changes from Test 1**:
+
 - msg_id: `11` (byte 10) instead of `10`
 - State: `00` (byte 32) instead of `01`
 - Checksum: `07` (unchanged, state byte change offset by msg_id increment)
 
 **ACK Response**:
+
 ```
 7b 00 00 00 07 45 88 0f 3a 00 11 00
 ```
@@ -112,17 +123,20 @@ Successfully validated toggle packet injection via MITM proxy REST API. All togg
 **Objective**: Send 10 toggle commands rapidly to measure ACK latency distribution
 
 **Configuration**:
+
 - Iterations: 10
 - msg_id range: 0x10-0x19
 - State: Alternating ON/OFF
 - Delay between commands: 500ms
 
 **Results**:
+
 - Injections: 10/10 successful
 - ACKs received: 9/10 (90% success rate)
 - Failed ACK: msg_id 0x19 (last command)
 
 **Latency Statistics**:
+
 ```json
 {
   "min": 14.36 ms,
@@ -134,12 +148,14 @@ Successfully validated toggle packet injection via MITM proxy REST API. All togg
 ```
 
 **Analysis**:
+
 - All latencies < 100ms (well within Phase 1b timeout recommendations)
 - p99 = 51ms suggests timeout of ~128ms (p99 × 2.5) would be safe
 - One missed ACK suggests 90% reliability under rapid command injection
 - Latency variance indicates some commands may queue or wait for device processing
 
 **Sample ACK Packets** (msg_id progression):
+
 ```
 msg_id 0x10: 7b 00 00 00 07 45 88 0f 3a 00 10 00  (latency: 13.2ms)
 msg_id 0x11: 7b 00 00 00 07 45 88 0f 3a 00 11 00  (latency: 21.0ms)
@@ -159,15 +175,18 @@ msg_id 0x19: [NO ACK]
 **Objective**: Request mesh info from bridge device and test multi-packet response handling
 
 **Input**:
+
 - Endpoint: `45 88 0f 3a`
 - msg_id: `00 00 00` (always 0x00 for mesh info requests)
 
 **Crafted Packet**:
+
 ```
 73 00 00 00 18 45 88 0f 3a 00 00 00 00 7e 1f 00 00 00 f8 52 06 00 00 00 ff ff 00 00 56 7e
 ```
 
 **Packet Breakdown**:
+
 - Header: `73 00 00 00 18` (type 0x73, length 24 bytes)
 - Queue ID: `45 88 0f 3a 00`
 - msg_id: `00 00 00` (mesh info standard)
@@ -178,6 +197,7 @@ msg_id 0x19: [NO ACK]
   - Checksum: `56`
 
 **API Response**:
+
 ```json
 {
   "status": "success",
@@ -189,10 +209,12 @@ msg_id 0x19: [NO ACK]
 ```
 
 **Expected Response Sequence**:
+
 1. Small ACK (`7e 1f 00 00 00 f9 52 01 00 00 53 7e`) - NOT CAPTURED
 2. Large mesh info data (0x73 DEV→CLOUD with 24-byte device structs) - NOT CAPTURED
 
 **Findings**:
+
 - ⚠️ Injection successful but no mesh info responses captured in test window (2 second wait)
 - Possible causes:
   1. Response pattern matching didn't detect mesh info packets
@@ -201,6 +223,7 @@ msg_id 0x19: [NO ACK]
   4. Response logged but parser didn't recognize format
 
 **Recommendation**:
+
 - Manual log analysis needed to confirm if devices responded
 - May need to extend wait time to 10+ seconds for large mesh responses
 - Consider using actual bridge device connection instead of injected command
@@ -239,12 +262,14 @@ Byte 11: 0x00 (msg_id padding)
 **Consistency**: 100% (all 9 ACKs had msg_id at byte 10)
 
 **Validation Method**:
+
 - Used unique msg_id values (0x10-0x18) to avoid false matches
 - Verified position identical across all 9 captures
 - Position is structurally valid (not in header or checksum)
 - No firmware variance detected
 
 **Recommendation for Phase 1b**:
+
 - Use parallel ACK matching approach
 - Extract msg_id from byte 10 of 0x7B packets
 - Timeout recommendation: 128ms (p99 × 2.5 = 51ms × 2.5)
@@ -258,12 +283,14 @@ Byte 11: 0x00 (msg_id padding)
 Checksum algorithm from legacy `packet_checksum.py` validated against crafted packets:
 
 **Algorithm**:
+
 1. Find first 0x7E marker (start position)
 2. Find last 0x7E marker (end position)
 3. Sum bytes from `packet[start + 6 : end - 1]`
 4. Result = sum % 256
 
 **Test Case 1 (Toggle ON)**:
+
 ```
 Inner struct: 7e 10 01 00 00 f8 8e 0c 00 10 01 00 00 00 50 00 f7 11 02 01 01 [CS] 7e
 Bytes to sum: f8 8e 0c 00 10 01 00 00 00 50 00 f7 11 02 01 01
@@ -272,6 +299,7 @@ Checksum: 767 % 256 = 7 (0x07) ✅
 ```
 
 **Test Case 2 (Toggle OFF)**:
+
 ```
 Inner struct: 7e 11 01 00 00 f8 8e 0c 00 11 01 00 00 00 50 00 f7 11 02 00 01 [CS] 7e
 Bytes to sum: f8 8e 0c 00 11 01 00 00 00 50 00 f7 11 02 00 01
@@ -280,6 +308,7 @@ Checksum: 767 % 256 = 7 (0x07) ✅
 ```
 
 **Mesh Info Request**:
+
 ```
 Inner struct: 7e 1f 00 00 00 f8 52 06 00 00 00 ff ff 00 00 [CS] 7e
 Bytes to sum: 52 06 00 00 00 ff ff 00 00
@@ -298,6 +327,7 @@ Checksum: 598 % 256 = 86 (0x56) ✅
 **Endpoint**: `POST http://localhost:8080/inject`
 
 **Request Format**:
+
 ```json
 {
   "direction": "CLOUD→DEV",
@@ -306,6 +336,7 @@ Checksum: 598 % 256 = 86 (0x56) ✅
 ```
 
 **Response Format**:
+
 ```json
 {
   "status": "success",
@@ -317,6 +348,7 @@ Checksum: 598 % 256 = 86 (0x56) ✅
 ```
 
 **Behavior**:
+
 - ✅ Broadcasts to all active connections (25 devices)
 - ✅ Thread-safe injection with connection lock
 - ✅ Logs injected packets with `[INJECTED]` tag
@@ -326,6 +358,7 @@ Checksum: 598 % 256 = 86 (0x56) ✅
 ### Test Script (`test-toggle-injection.py`)
 
 **Features Validated**:
+
 - ✅ Packet crafting with proper structure
 - ✅ Checksum calculation integration
 - ✅ REST API injection
@@ -336,6 +369,7 @@ Checksum: 598 % 256 = 86 (0x56) ✅
 - ✅ JSON result output
 
 **Usage Examples**:
+
 ```bash
 # Toggle test
 python scripts/test-toggle-injection.py \
@@ -394,6 +428,7 @@ python scripts/test-toggle-injection.py \
 ## Captured Packet Examples for Phase 1b
 
 ### Toggle ON (0x73) Request
+
 ```python
 TOGGLE_ON_0x73_CLOUD_TO_DEV = bytes.fromhex(
     "73 00 00 00 1f 45 88 0f 3a 00 10 00 00 7e 10 01 00 00 "
@@ -402,6 +437,7 @@ TOGGLE_ON_0x73_CLOUD_TO_DEV = bytes.fromhex(
 ```
 
 ### Toggle OFF (0x73) Request
+
 ```python
 TOGGLE_OFF_0x73_CLOUD_TO_DEV = bytes.fromhex(
     "73 00 00 00 1f 45 88 0f 3a 00 11 00 00 7e 11 01 00 00 "
@@ -410,6 +446,7 @@ TOGGLE_OFF_0x73_CLOUD_TO_DEV = bytes.fromhex(
 ```
 
 ### Data ACK (0x7B) Response
+
 ```python
 DATA_ACK_0x7B_DEV_TO_CLOUD = bytes.fromhex(
     "7b 00 00 00 07 45 88 0f 3a 00 10 00"
@@ -417,6 +454,7 @@ DATA_ACK_0x7B_DEV_TO_CLOUD = bytes.fromhex(
 ```
 
 ### Mesh Info Request (0x73)
+
 ```python
 MESH_INFO_REQUEST_0x73_CLOUD_TO_DEV = bytes.fromhex(
     "73 00 00 00 18 45 88 0f 3a 00 00 00 00 7e 1f 00 00 00 "
@@ -433,4 +471,3 @@ Toggle packet injection via MITM proxy REST API is **fully functional and valida
 **Overall Status**: ✅ SUCCESS (4/4 core tests passed, 1 edge case needs investigation)
 
 **Phase 1b Ready**: YES - All required data collected for reliable ACK matching implementation
-

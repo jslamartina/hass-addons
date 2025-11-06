@@ -9,6 +9,7 @@
 ## Problem
 
 Cync switches were not updating their status in the Home Assistant UI, even though:
+
 - Bridge devices were connected ✅
 - Status packets were being received ✅
 - MQTT messages were being sent ✅
@@ -26,6 +27,7 @@ Cync switches were not updating their status in the Home Assistant UI, even thou
 ```
 
 **Why this broke switch status:**
+
 - Home Assistant switch entities don't understand `brightness` or `color_mode` (those are light-only attributes)
 - When HA received these invalid fields, it rejected/ignored the status updates
 - Switches appeared "stuck" in UI even though status packets were flowing correctly
@@ -37,6 +39,7 @@ Modified two functions in `cync-controller/src/cync_lan/mqtt_client.py`:
 ### 1. `parse_device_status()` (lines 790-840)
 
 **Before:**
+
 ```python
 if device.is_plug:
     mqtt_dev_state = power_status.encode()
@@ -48,6 +51,7 @@ else:
 ```
 
 **After:**
+
 ```python
 if device.is_plug:
     mqtt_dev_state = power_status.encode()
@@ -64,6 +68,7 @@ else:
 ### 2. `update_device_state()` (lines 625-640)
 
 **Before:**
+
 ```python
 if device.is_plug:
     mqtt_dev_state = power_status.encode()
@@ -74,6 +79,7 @@ else:
 ```
 
 **After:**
+
 ```python
 if device.is_plug:
     mqtt_dev_state = power_status.encode()
@@ -108,22 +114,25 @@ else:
 ## Device Type MQTT Payloads
 
 ### Plugs (Binary, Raw Bytes)
+
 ```python
 b"ON"  # or b"OFF"
 ```
 
 ### Switches (JSON, State Only)
+
 ```json
-{"state": "ON"}  // or "OFF"
+{ "state": "ON" } // or "OFF"
 ```
 
 ### Lights (JSON, Full Attributes)
+
 ```json
 {
   "state": "ON",
   "brightness": 100,
-  "color_mode": "color_temp",  // or "rgb" or "brightness"
-  "color_temp": 3650           // if color_temp mode
+  "color_mode": "color_temp", // or "rgb" or "brightness"
+  "color_temp": 3650 // if color_temp mode
 }
 ```
 
@@ -153,6 +162,7 @@ ha addons logs local_cync-controller -n 100 | grep -E "Switch.*Sending"
 ## Related Issues
 
 This fix resolves:
+
 - Switches not updating status in UI
 - Switches appearing "stuck" at last state
 - Switches showing stale status after physical toggle
@@ -178,6 +188,7 @@ This fix resolves:
 ## Prevention
 
 To prevent similar issues:
+
 - Always check MQTT payload structure matches entity type
 - Test with debug logging enabled (`debug_log_level: true`)
 - Verify payloads in logs match Home Assistant entity schemas
@@ -186,4 +197,3 @@ To prevent similar issues:
 ---
 
 **Status:** ✅ Fix deployed and verified working in version 0.0.4.8+
-
