@@ -121,7 +121,7 @@ Legacy code must **NEVER be imported or used as a dependency** in production cod
 ### Import Rules: Allowed vs Forbidden
 
 **ALLOWED** (Phase 0.5 validation scripts ONLY):
-- `scripts/validate-checksum-REFERENCE-ONLY.py`: Can import `cync_controller.packet_checksum`
+- `mitm/validate-checksum-REFERENCE-ONLY.py`: Can import `cync_controller.packet_checksum`
 - `scripts/parse-capture.py`: Can import packet type constants for reference
 - Test fixture comparison: Can use legacy packet examples for validation
 
@@ -433,9 +433,9 @@ For clarity, key acronyms used throughout Phase 1 documentation:
 **Goal**: Capture and validate real Cync device protocol behavior
 
 **Key Deliverables**:
-- MITM proxy tool (`scripts/mitm-proxy.py`) for packet capture
+- MITM proxy tool (`mitm/mitm-proxy.py`) for packet capture
 - Packet captures using MITM proxy and cloud relay infrastructure
-- **Checksum validation script (`scripts/validate-checksum.py`)** - Required for Phase 1a
+- **Checksum validation script (`mitm/validate-checksum-REFERENCE-ONLY.py`)** - Required for Phase 1a
 - Documented flows (handshake, toggle, status, heartbeat)
 - Validated packet structure
 - Test fixtures with real packet bytes

@@ -481,7 +481,7 @@ If reverse-engineering time-box (4 hours) expires without finding algorithm:
 
 **Important: NO LEGACY IMPORTS IN PRODUCTION CODE**
 
-The Phase 0.5 validation script (`validate-checksum-REFERENCE-ONLY.py`) imports legacy code, but this is a **one-time exception for validation only**. Phase 1a production code MUST NOT import from legacy codebase.
+The Phase 0.5 validation script (`mitm/validate-checksum-REFERENCE-ONLY.py`) imports legacy code, but this is a **one-time exception for validation only**. Phase 1a production code MUST NOT import from legacy codebase.
 
 **❌ FORBIDDEN Pattern** (will be rejected in code review):
 ```python

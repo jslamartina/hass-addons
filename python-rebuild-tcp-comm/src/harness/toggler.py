@@ -184,7 +184,9 @@ async def send_toggle_packet(
         record_packet_recv(device_id, "timeout")
         return None
 
-    response_hex = response.hex(" ")
+    # Type assertion: response is bytes at this point (checked above)
+    response_bytes: bytes = response
+    response_hex = response_bytes.hex(" ")
     log_packet(
         event="tcp_packet",
         direction="recv",
@@ -197,7 +199,7 @@ async def send_toggle_packet(
     record_packet_recv(device_id, "success")
     record_packet_latency(device_id, total_elapsed_ms / 1000.0)
 
-    return response
+    return response_bytes
 
 
 async def toggle_device_with_retry(

@@ -1,6 +1,6 @@
 # Phase 0.5: Real Protocol Validation & Capture
 
-**Status**: Planning
+**Status**: In Progress
 **Dependencies**: Phase 0 complete ✓
 **Execution**: Sequential solo implementation
 
@@ -17,64 +17,94 @@
 
 ---
 
+## Quick Reference
+
+**Phase Status**: ⏳ IN PROGRESS | **Tier 1 Deliverables**: 2/6 complete, 2/6 in progress, 2/6 not started
+
+**Key Prerequisites**:
+- DNS redirection: `cm.gelighting.com → 127.0.0.1` (hard requirement, no alternatives)
+- Port 23779 available
+- TLS termination required (devices use SSL, not plaintext as originally assumed)
+
+**Deliverables Summary**: 2/11 complete, 3/11 in progress, 5/11 not started, 1/11 deferred
+- ✅ MITM Proxy Tool, Checksum Validation Script
+- ⏳ Protocol Capture Document, Test Fixtures, Checksum Validation Results
+- ❌ Protocol Validation Report, Updated Protocol Docs, Dedup Verification, Backpressure Testing, Helper Scripts
+- ⚠️ Group Operation Performance (moved to Phase 1d)
+
+**Key Findings**:
+- TLS termination required (devices use self-signed cert CN=*.xlink.cn)
+- Toggle commands (0x73) and ACKs (0x7B) successfully captured (346 pairs)
+- Checksum algorithm validated (100% match rate on real packets)
+- 1,326+ packets captured from 9 devices
+
+**Navigation**:
+- [Implementation Status](#implementation-status-2025-11-06) - Current progress and findings
+- [Goals & Scope](#goals) - What Phase 0.5 accomplishes
+- [Deliverables](#deliverables) - 11 detailed deliverables with code
+- [Protocol Background](#protocol-background) - Packet types and structure
+- [Acceptance Criteria](#acceptance-criteria) - Completion requirements
+
+---
+
+## Implementation Status (2025-11-06)
+
+**Phase Status**: ⏳ IN PROGRESS
+
+### 📦 Deliverables Status
+
+| # | Deliverable | Status | Location | Notes |
+|---|------------|--------|----------|-------|
+| 1 | MITM Proxy Tool | ✅ Complete | `mitm/mitm-proxy.py` | ~250 lines, operational on port 23779 |
+| 2 | Protocol Capture Document | ⏳ In Progress | `docs/phase-0.5/captures.md` | Has capture data, needs detailed annotation |
+| 3 | Test Fixtures | ⏳ In Progress | `tests/fixtures/real_packets.py` | Has real packet data, needs expansion |
+| 4 | Checksum Validation Results | ⏳ In Progress | `docs/phase-0.5/validation.md` | 5/5 packets validated, needs comprehensive report |
+| 5 | Protocol Validation Report | ❌ Not Started | `docs/protocol/validation-report.md` | Pending capture analysis |
+| 6 | Updated Protocol Documentation | ❌ Not Started | `docs/protocol/packet-structure-validated.md` | Pending validation completion |
+| 7 | Checksum Validation Script | ✅ Complete | `mitm/validate-checksum-REFERENCE-ONLY.py` | Validated 2/2 legacy fixtures |
+| 8 | Full Fingerprint Field Verification | ❌ Not Started | `docs/protocol/deduplication-strategy.md` | Requires retry packet captures |
+| 9 | Device Backpressure Behavior Testing | ❌ Not Started | `docs/protocol/backpressure-behavior.md` | Optional Tier 3 deliverable |
+| 10 | Helper Scripts | ❌ Not Started | `scripts/parse-capture.py` | Pending capture data |
+| 11 | Group Operation Performance | ❌ Deferred | N/A | Moved to Phase 1d per spec line 1592 |
+
+**Completion Summary**:
+- Tier 1 (Blocking Phase 1a): 2/6 complete, 2/6 in progress, 2/6 not started
+- Tier 2 (Important): 0/2 not started
+- Tier 3 (Optional): 0/1 not started
+- Tier 4 (Deferred): 1/1 deferred to Phase 1d
+
+### 🔍 Key Findings
+
+**Finding 1: TLS Termination Required** - Devices use TLS/SSL with self-signed cert (CN=*.xlink.cn), not plaintext as spec assumed.
+
+**Finding 2: Toggle Commands Successfully Captured** - Captured 346 toggle command pairs (0x73 CLOUD→DEV + 0x7B DEV→CLOUD ACKs), plus 96 status broadcasts (0x83→0x88). Full toggle flow validated.
+
+**Finding 3: Checksum Algorithm Validated** - Legacy algorithm confirmed (100% match rate on 5/5 packets).
+
+**Finding 4: Packet Structure Confirmed** - Header, endpoint extraction, queue ID structure validated against real packets.
+
+**Finding 5: Mesh Info Injection Not Feasible** - Packet injection cannot replicate session context; see `docs/protocol/mesh-info-investigation-results.md`.
+
+### 📊 Capture Results
+
+- **Total**: 1,326+ packets from 9 devices
+- **Flows**: Handshake (25), Toggle commands (346), Toggle ACKs (346), Status (96), Heartbeat (599), Device Info (7+)
+- **Validation**: Checksum 100%, protocol structure confirmed, full toggle flow captured
+
+---
+
 ## Guidance for Technical Reviewers
 
-**CRITICAL PRINCIPLE**: Phase 0.5 involves empirical discovery of protocol details that **cannot be known in advance**. Some aspects will be uncertain until actual packet captures are analyzed.
+**CRITICAL**: Phase 0.5 involves empirical discovery - protocol details (ACK structure, queue ID derivation, checksum algorithm) cannot be known until captured. Accept documented uncertainty; decisions deferred until data available.
 
-**Protocol Unknowns** (resolved during Phase 0.5):
-1. **ACK packet structure** - msg_id presence/position unknown until captured
-2. **Queue ID/Endpoint byte overlap** - Relationship unknown until captured
-3. **Checksum algorithm validation** - May require adjustment based on real packets
+**Do NOT Flag** (expected constraints):
+- DNS redirection as "SPOF" - it's a hard prerequisite with no alternatives (validated before Phase 0.5 starts)
+- Timeline estimates - hobby project with sequential implementation, no schedule tracking
+- Protocol unknowns - decisions made after data collection, not before
 
-**What Technical Reviewers Should NOT Flag (These Are EXPECTED, Not Risks)**:
-
-❌ **DNS Redirection as "Single Point of Failure"**
-- Phase 0.5 REQUIRES DNS redirection (`cm.gelighting.com` → `127.0.0.1`) - this is the ONLY capture method
-- DNS prerequisite validation happens BEFORE Phase 0.5 begins (see § DNS Redirection Prerequisite)
-- If DNS blocked (DNSSEC, DoH, VPN, etc.) → Phase 0.5 cannot proceed → this is EXPECTED
-- Do NOT flag this as a "risk" requiring mitigation
-- Do NOT ask for "alternative capture methods" or "fallback strategies"
-- ACCEPT: DNS is a hard prerequisite. If unavailable, escalate and stop. No alternatives.
-
-❌ **Timeline/Schedule/Duration Estimates**
-- This is a one-person hobby project in sequential order
-- Do NOT track time estimates, day counts, hour budgets, or duration predictions
-- Do NOT create "risk scenarios" with "+X days" timeline impact
-- Do NOT flag "daily breakdowns" as "too prescriptive" needing "more flexibility"
-- ACCEPT: Implementation steps listed in order. No schedule tracking.
-
-❌ **Protocol Unknowns Before Data Collection**
-- ACK msg_id presence/position unknown until captured → Decisions deferred to Phase 1b Step 0 (Prerequisites Check)
-- Checksum algorithm unvalidated until tested → May need adjustment, contingency documented
-- Do NOT demand elaborate decision trees for every possible ambiguous outcome
-- Do NOT require pre-commitment to implementation paths before empirical data available
-- Do NOT try to pre-plan for every edge case when dealing with genuine unknowns
-- ACCEPT: Uncertainty documented. Decisions made when data available.
-
-**What Technical Reviewers Should NOT Do**:
-- ❌ Demand elaborate decision trees for every possible ambiguous outcome
-- ❌ Require pre-commitment to implementation paths before empirical data available
-- ❌ Try to pre-plan for every edge case when dealing with genuine unknowns
-- ❌ Re-review architectural decisions already made in prior planning sessions
-
-**What Technical Reviewers SHOULD Flag (Actual Problems)**:
-- ✅ **Actual Bugs**: Missing validation steps, incorrect capture procedures, gaps in packet analysis
-- ✅ **Missing Guidance**: Unclear deliverable requirements that would block Phase 1a
-- ✅ **Spec Inconsistencies**: Contradictions within this spec or with Phase 1a/1b specs
-- ✅ Document uncertainty clearly and objectively
-- ✅ Note which implementation paths remain possible after validation
-- ✅ Accept that Phase 0.5 findings will drive Phase 1a-1d implementation decisions
-- ✅ Trust that implementation teams will make decisions when data is available
-
-**Example of Proper Uncertainty Handling**:
-
-If Phase 0.5 finds ACK msg_id position is ambiguous (inconsistent across samples):
-- **Document**: "ACK msg_id position varies: bytes 5-7 (80% of samples), bytes 6-8 (20% of samples)"
-- **Note**: "Two implementation paths possible: (1) Parallel ACK matching with position table, (2) FIFO queue approach"
-- **Defer**: "Implementation decision made in Phase 1b Step 0 (Prerequisites Check) based on these findings"
-- **No elaborate decision trees needed** - implementer will choose based on actual data
-
-**Why This Matters**: Pre-planning for unknowns is **wasteful** (time/effort spent creating plans that get invalidated by empirical findings). Better to accept uncertainty, document it clearly, and make informed decisions when data is available.
+**DO Flag** (actual problems):
+- Missing validation steps, incorrect procedures, spec inconsistencies
+- Unclear requirements that would block Phase 1a
 
 ---
 
@@ -103,7 +133,7 @@ Phase 0.5 validates and documents the real Cync device protocol through packet c
 ## Scope
 
 **In Scope:**
-- Packet capture of real Cync devices via cloud relay
+- Packet capture of real Cync devices via MITM proxy
 - Documentation of packet flows and structure
 - Hex dumps and annotated examples
 - Test fixture generation
@@ -166,13 +196,13 @@ Phase 0.5 validates and documents the real Cync device protocol through packet c
 
 ---
 
-## DNS Redirection Prerequisite (Day -1)
+## DNS Redirection Prerequisite (Completed)
 
 **Mandatory Requirement (Technical Review Finding 2.2 - Resolved)**: MITM proxy and cloud relay both require DNS redirection to intercept device traffic. This must be verified before Phase 0.5 begins.
 
 **Approved as hard requirement**: No alternative capture methods. If DNS blocked, Phase 0.5 cannot proceed (documented escalation paths below).
 
-### Verification Steps (Day -1)
+### Verification Steps
 
 **Test DNS Override Capability**:
 
@@ -215,6 +245,28 @@ nslookup cm.gelighting.com
 # Address: 127.0.0.1
 ```
 
+**Port Availability Check (Required)**:
+
+The MITM proxy requires port 23779 to be available (same port as Cync cloud protocol).
+
+```bash
+# Check if port 23779 is available
+sudo lsof -i :23779 || echo "Port 23779 is available"
+
+# If port in use, identify the process
+ps -p $(sudo lsof -t -i:23779) -o pid,cmd
+
+# Common scenarios:
+# - Cloud relay mode running: Stop add-on or disable cloud_relay.enabled
+# - Old MITM proxy: Kill process with: kill $(sudo lsof -t -i:23779)
+# - Other service: Identify and stop the service before proceeding
+```
+
+**Prerequisite Summary**:
+- ✅ DNS redirection: `cm.gelighting.com` → `127.0.0.1`
+- ✅ Port availability: Port 23779 must be free
+- ✅ Network access: Can reach `35.196.85.236:23779` (real Cync cloud)
+
 **Escalation Paths (if DNS validation fails)**:
 
 1. **Option A: Fix DNS Issue** (recommended)
@@ -239,210 +291,17 @@ nslookup cm.gelighting.com
 
 ## Methodology
 
-### 1. Packet Capture Approach
+### Packet Capture Approach
 
-**Method: MITM Proxy (ONLY METHOD)**
+**MITM Proxy**: Minimal TCP proxy (`mitm/mitm-proxy.py`) intercepts device traffic via DNS redirection, logs all packets, and forwards to real cloud with SSL/TLS. Supports packet injection via REST API for testing. See [Deliverable #1](#1-mitm-proxy-tool) for implementation details.
 
-We will implement a minimal MITM (Man-in-the-Middle) proxy in `python-rebuild-tcp-comm/` as the packet capture tool. This approach provides complete control over packet logging and capture format while maintaining independence from the existing cloud relay implementation.
+**Key Capabilities**:
+- Bidirectional forwarding (device ↔ cloud) with structured logging
+- SSL/TLS termination for upstream cloud connection
+- Packet injection REST API for testing ACK responses
+- Captures saved to `mitm/captures/` directory with timestamps
 
-**Note**: Both MITM proxy and cloud relay modes require DNS redirection - there is no alternative capture method that avoids this requirement.
-
-**MITM Proxy Requirements**:
-
-The proxy implementation (`scripts/mitm-proxy.py`) must provide:
-
-- **TCP Server**: Accept device connections on configurable port (default: 23779)
-  - **REQUIRES DNS REDIRECTION**: Device must resolve `cm.gelighting.com` → `127.0.0.1` (see DNS setup below)
-  - Device connects via plaintext TCP (thinks it's connecting to cloud)
-- **Bidirectional Forwarding**: Forward packets between device and upstream server
-  - Upstream can be real Cync cloud (35.196.85.236:23779) OR localhost cloud relay for testing
-  - **Device → Proxy**: Plaintext TCP (no SSL from device perspective)
-  - **Proxy → Cloud**: SSL/TLS connection when forwarding to real cloud
-  - Uses `ssl.create_default_context()` for upstream SSL validation
-- **Structured Logging**: Log all packets to stdout in structured JSON format
-  - Timestamp (ISO 8601 with milliseconds)
-  - Direction ("DEV→CLOUD" or "CLOUD→DEV")
-  - Hex dump of full packet
-  - Packet length
-- **Raw Capture Storage**: Save raw packet captures to `python-rebuild-tcp-comm/captures/` directory
-  - Filename format: `capture_YYYYMMDD_HHMMSS.txt` with timestamped hex dumps
-  - Optional `.pcap` format support for Wireshark analysis
-- **Clean Shutdown**: Graceful connection handling and task cleanup on SIGINT/SIGTERM
-- **Implementation Size**: ~200-250 lines using asyncio, based on `CloudRelayConnection` architecture pattern from `cync-controller/src/cync_controller/server.py` (reference only, not integrated)
-  - Core proxy logic: ~120 lines
-  - SSL handling + error cases: ~40 lines
-  - Logging + capture: ~40 lines
-  - Annotation support (optional): ~30 lines
-  - CLI argument parsing: ~20 lines
-
----
-
-### SSL/TLS Handling for MITM
-
-**Device → Proxy Connection** (Port 23779):
-- Device connects via DNS redirection (thinks proxy is cloud)
-- Connection is **plaintext TCP** (no SSL from device perspective)
-- Requires DNS redirection: `cm.gelighting.com → 127.0.0.1`
-- Device sends unencrypted Cync protocol packets
-
-**Proxy → Cloud Connection** (35.196.85.236:23779):
-- Proxy forwards to real cloud via SSL/TLS
-- Uses system CA certificates for validation
-- Python: `ssl.create_default_context()` (line 279 in implementation)
-- Proxy acts as SSL client to cloud
-
-**SSL/TLS Certificate Validation Scenarios**:
-
-**SSL Context Selection (Decision Tree)**:
-
-Choose SSL context based on upstream host:
-1. **Upstream = localhost?** → Scenario 2 (No SSL)
-2. **Upstream = real cloud (35.196.85.236)?** → Scenario 1 (Production with cert validation)
-3. **Upstream = custom host?** → Check certificate:
-   - Valid cert from trusted CA → Scenario 1 (Production)
-   - Self-signed cert → Scenario 3 (Dev only, log warning)
-   - Custom CA cert → Scenario 4 (Enterprise, provide CA bundle path)
-
-**Implementation**: Auto-detect based on `--upstream-host` CLI argument
-
----
-
-**Scenario 1: Production Cloud (Recommended)**
-```python
-# Forward to real Cync cloud with certificate validation
-ssl_context = ssl.create_default_context()
-# Validates against system CA certificates
-# Will fail if cert invalid/expired
-```
-
-**Scenario 2: Localhost Cloud Relay (Testing)**
-```python
-# Forward to localhost cloud relay (no SSL needed)
-ssl_context = None  # No SSL for localhost
-upstream_host = "localhost"
-upstream_port = 23780  # Cloud relay port
-```
-
-**Scenario 3: Self-Signed Certificate (Development Only)**
-
-⚠️ **WARNING**: Only use for development/testing. NEVER in production.
-
-```python
-# Disable certificate validation (INSECURE)
-ssl_context = ssl.create_default_context()
-ssl_context.check_hostname = False  # Skip hostname verification
-ssl_context.verify_mode = ssl.CERT_NONE  # Skip certificate validation
-
-# Log warning
-logger.warning("SSL certificate validation DISABLED - development only!")
-```
-
-**Scenario 4: Custom CA Certificate**
-```python
-# Use custom CA certificate (enterprise environments)
-ssl_context = ssl.create_default_context(cafile="/path/to/custom_ca.pem")
-# Validates against custom CA only
-```
-
-**Error Handling**:
-
-```python
-# In MITM proxy connect method
-try:
-    cloud_reader, cloud_writer = await asyncio.open_connection(
-        self.upstream_host,
-        self.upstream_port,
-        ssl=self.ssl_context
-    )
-except ssl.SSLError as e:
-    logger.error("SSL connection failed: %s", e)
-    # Common causes:
-    # - Certificate expired
-    # - Hostname mismatch
-    # - Untrusted CA
-    # - Network issue during SSL handshake
-    raise
-
-except ConnectionRefusedError:
-    logger.error("Cloud connection refused (check host/port)")
-    raise
-
-except asyncio.TimeoutError:
-    logger.error("Cloud connection timeout (check network)")
-    raise
-```
-
-**Implementation Checklist**:
-- [ ] Use `ssl.create_default_context()` for production cloud
-- [ ] Use `ssl_context=None` for localhost testing
-- [ ] Never disable cert validation in production
-- [ ] Log SSL errors with actionable messages
-- [ ] Test both scenarios: real cloud + localhost relay
-
-**DNS Redirection Requirement**:
-
-The MITM proxy **requires** DNS redirection to be in place. The device must resolve the cloud hostname to the proxy's IP address.
-
-```bash
-# Example: DNS redirection via /etc/hosts
-cm.gelighting.com → 127.0.0.1
-```
-
-**Prerequisite Validation (Day -1)**:
-- DNS redirection must be validated BEFORE Phase 0.5 begins
-- If DNS unavailable → Phase 0.5 cannot proceed
-- No alternative capture methods supported in this spec
-
-**Architecture Pattern** (from cloud relay reference):
-```python
-class MITMProxy:
-    """Minimal MITM proxy for Cync protocol packet capture."""
-
-    async def handle_device(self, reader, writer):
-        """Handle device connection and forward to upstream."""
-        # 1. Connect to upstream (cloud or cloud relay)
-        cloud_reader, cloud_writer = await asyncio.open_connection(
-            self.upstream_host, self.upstream_port, ssl=self.ssl_context
-        )
-
-        # 2. Bidirectional forwarding with logging
-        await asyncio.gather(
-            self._forward_and_log(reader, cloud_writer, "DEV→CLOUD"),
-            self._forward_and_log(cloud_reader, writer, "CLOUD→DEV"),
-        )
-
-    async def _forward_and_log(self, src, dst, direction):
-        """Forward packets and log hex dumps."""
-        while True:
-            data = await src.read(4096)
-            if not data:
-                break
-            # Log with timestamp, direction, hex dump (structured JSON to stdout)
-            self._log_packet(data, direction)
-            # Save to capture file
-            self._save_capture(data, direction)
-            # Forward to destination
-            dst.write(data)
-            await dst.drain()
-```
-
-**Reference Materials** (for cross-validation only, NOT alternatives):
-
-- **Legacy Cloud Relay Logs**: Review existing cloud relay logs from `cync-controller` for pattern validation
-  - Useful for cross-referencing MITM proxy captures
-  - Look for logs with "CLOUD→DEV" and "DEV→CLOUD" prefixes
-  - File: `cync-controller/src/cync_controller/packet_parser.py` for structure understanding
-  - **Not a capture method**: Reference only
-
-- **tcpdump/Wireshark**: Supplementary low-level troubleshooting
-  ```bash
-  # Capture packets for troubleshooting only
-  tcpdump -i any -w cync_packets.pcap tcp port 23779
-  ```
-  - Useful for debugging MITM proxy issues
-  - **Not a capture method**: Troubleshooting tool only
-
-**Note**: These are reference/troubleshooting tools, NOT alternative capture methods. Phase 0.5 requires MITM proxy with DNS redirection.
+**Prerequisites**: DNS redirection (`cm.gelighting.com → 127.0.0.1`), port 23779 available, TLS termination configured.
 
 ### 2. Key Flows to Capture
 
@@ -688,7 +547,7 @@ Phase 0.5 includes 11 deliverables covering packet capture, protocol validation,
 
 ### 1. MITM Proxy Tool
 
-**File**: `scripts/mitm-proxy.py`
+**File**: `mitm/mitm-proxy.py`
 
 **Purpose**: Minimal TCP proxy for capturing Cync protocol packets with bidirectional forwarding and comprehensive logging.
 
@@ -700,10 +559,10 @@ Phase 0.5 includes 11 deliverables covering packet capture, protocol validation,
 Minimal MITM proxy for Cync protocol packet capture.
 
 Usage:
-    python scripts/mitm-proxy.py --listen-port 23779 --upstream-host 35.196.85.236 --upstream-port 23779
+    python mitm/mitm-proxy.py --listen-port 23779 --upstream-host 35.196.85.236 --upstream-port 23779
 
     # Or forward to localhost cloud relay for testing:
-    python scripts/mitm-proxy.py --listen-port 23779 --upstream-host localhost --upstream-port 23780 --no-ssl
+    python mitm/mitm-proxy.py --listen-port 23779 --upstream-host localhost --upstream-port 23780 --no-ssl
 """
 
 import asyncio
@@ -798,8 +657,61 @@ class MITMProxy:
 - SSL support for real cloud connections
 - Structured JSON logging to stdout
 - Raw capture files saved to `captures/` directory
+- **REST API for packet injection** (port 8080):
+  - POST `/inject` - Inject arbitrary packet
+  - GET `/status` - Check connection status
 - Clean shutdown on SIGINT/SIGTERM
-- ~150-200 lines using asyncio
+- ~300-350 lines using asyncio + aiohttp
+
+**REST API Usage Example**:
+```bash
+# Start MITM proxy
+python mitm/mitm-proxy.py --listen-port 23779 --upstream-host 35.196.85.236 --api-port 8080
+
+# In another terminal, inject a Toggle command
+curl -X POST http://localhost:8080/inject \
+  -H "Content-Type: application/json" \
+  -d '{
+    "direction": "CLOUD→DEV",
+    "hex": "73 00 00 00 1e 1b dc da 3e 00 13 00 7e 0d 01 00 00 f8 8e 0c 00 0e 01 00 00 00 a0 00 f7 11 02 01 01 55 7e"
+  }'
+
+# Response:
+# {
+#   "status": "success",
+#   "timestamp": "2025-11-06T10:23:45.123Z",
+#   "direction": "CLOUD→DEV",
+#   "length": 35,
+#   "connections": 1
+# }
+
+# Check proxy logs for injected packet and resulting ACK (0x7B)
+```
+
+**Packet Injection Limitations**:
+
+While packet injection successfully replicates the **packet structure** from legacy code (e.g., `ask_for_mesh_info()`), it cannot replicate the **architectural context** required for certain operations:
+
+**What CAN be copied via injection:**
+- Exact packet byte structure (header, queue_id, msg_id, payload, checksum)
+- Toggle commands (0x73) → Successfully trigger ACK responses (0x7B)
+
+**What CANNOT be replicated via injection:**
+- **Authenticated device sessions**: Injected packets bypass the 0x23/0x28 handshake
+- **Primary device architecture**: Only the first connected device processes mesh info responses
+- **Session state**: Devices validate sender credentials before sending 0x83 broadcasts
+- **Response processing infrastructure**: No packet handler exists to process responses
+
+**Specific Limitation: Mesh Info Requests**
+
+Mesh info requests (0x73 with inner_struct `f8 52 06`) cannot be tested via packet injection:
+- Devices acknowledge with 0x7B ACK but **do not send 0x83 broadcasts** (missing auth)
+- Legacy `ask_for_mesh_info()` works because it's called on an authenticated `CyncTCPDevice` instance
+- MITM proxy lacks the session context and primary device designation required
+
+**For mesh info testing**: Use production code with real `CyncTCPDevice` instances, not packet injection.
+
+**Investigation Results**: Full analysis documented in `docs/protocol/mesh-info-investigation-results.md` (299 lines)
 
 **Reference**: Architecture based on `CloudRelayConnection._forward_with_inspection()` from existing cloud relay (reference only, not integrated)
 
@@ -1092,7 +1004,7 @@ PACKET_METADATA: Dict[str, PacketMetadata] = {
 
 ### 7. Checksum Validation Script
 
-**File**: `scripts/validate-checksum-REFERENCE-ONLY.py`
+**File**: `mitm/validate-checksum-REFERENCE-ONLY.py`
 
 **⚠️ CRITICAL ARCHITECTURE EXCEPTION**: This validation script is the **ONLY** exception to the "No Legacy Imports" principle (see Phase 1 spec lines 21-27). This script imports legacy code **for validation purposes only** to confirm the algorithm is correct. Phase 1a implementation MUST copy the validated algorithm, NOT import it. See Phase 1a Step 2 for correct implementation pattern.
 
@@ -1206,11 +1118,11 @@ if __name__ == "__main__":
 1. **Setup MITM Proxy** (standard capture, no packet drop needed):
    ```bash
    # Start MITM proxy with standard logging
-   python scripts/mitm-proxy.py \
+   python mitm/mitm-proxy.py \
        --listen-port 23779 \
        --upstream-host 35.196.85.236 \
        --upstream-port 23779 \
-       --capture-file captures/retry-analysis.txt
+       --capture-file mitm/captures/retry-analysis.txt
    ```
 
 2. **Manual Retry Trigger Process**:
@@ -1240,7 +1152,7 @@ if __name__ == "__main__":
 
 3. **Packet Labeling in MITM Proxy**:
 
-   Update `scripts/mitm-proxy.py` to support manual annotations:
+   Update `mitm/mitm-proxy.py` to support manual annotations:
 
    ```python
    # Add to MITM proxy
@@ -1508,102 +1420,32 @@ if __name__ == "__main__":
 
 ## Acceptance Criteria
 
-**Organization**: Criteria grouped into 4 tiers by importance and blocking status
+**Completion Requirement**: Tier 1 complete (blocks Phase 1a). Tier 2-3 best-effort (document gaps if incomplete).
 
-**Deliverable Priority Tiers**:
-- **Tier 1 (Required - BLOCKS Phase 1a)**: Core protocol validation deliverables (1, 2, 4, 5, 6, 7)
-  - MITM proxy, captures, checksum validation, documentation
-  - **Phase 1a cannot start without these**
-  - **Completion Criterion**: All Tier 1 deliverables complete
+### Tier 1: Core Requirements (Blocking)
 
-- **Tier 2 (Important but not blocking)**: Supporting deliverables (3, 8)
-  - Test fixtures (can be generated during Phase 1a if needed)
-  - Dedup field verification (Phase 1b can proceed without, just needs more unit tests)
-  - **If incomplete**: Document gaps and proceed to Phase 1a
+**MITM Proxy & Captures**:
+- [ ] MITM proxy with REST API packet injection (`/inject`, `/status` endpoints)
+- [ ] 5+ flows captured: handshake (0x23→0x28), toggle (0x73→0x7B→0x83→0x88), heartbeat, status, device info
+- [ ] Protocol capture document complete (`docs/phase-0.5/captures.md`)
 
-- **Tier 3 (Optional enhancements)**: Enhanced validation (9)
-  - Device backpressure behavior (Phase 1c can use conservative defaults)
-  - **If incomplete**: Use conservative defaults, no blocker
+**Validation**:
+- [ ] Checksum algorithm validated against legacy fixtures + 10+ real packets
+- [ ] ACK structure: 10+ samples per type (0x28, 0x7B, 0x88, 0xD8), msg_id presence/absence confirmed
+- [ ] Queue ID ↔ Endpoint derivation validated (5+ handshake→data sequences)
+- [ ] Updated protocol documentation (`docs/protocol/packet-structure-validated.md`)
 
-- **Tier 4 (Deferred to later phase)**: Group operation performance (11)
-  - Moved to Phase 1d (not Phase 0.5)
-  - **Not part of Phase 0.5 completion**
+### Tier 2: Quality Criteria (Non-blocking)
 
-**Phase 0.5 Completion Criterion**: Tier 1 deliverables complete. Tier 2-3 completed on best-effort basis - do not block Phase 1a start. If Tier 2-3 incomplete, document gaps and proceed with known limitations.
+- [ ] Test fixtures populated with real packet data
+- [ ] ACK latency measured (100+ samples per type, p50/p95/p99 calculated)
+- [ ] Dedup field verification (20+ retry pairs, Full Fingerprint validated)
+- [ ] Complete hex dumps for all flows with timing data
 
----
+### Tier 3: Optional
 
-### Tier 1: Core Requirements (Blocking Phase 1a)
-
-These criteria are essential for Phase 0.5 completion and block Phase 1a:
-
-**Checksum Validation (Required for Phase 1a)**:
-- [ ] Checksum algorithm validated against legacy test fixtures
-- [ ] Checksum re-validated against 10+ real captured packets
-- [ ] `docs/protocol/checksum-validation.md` created with validation results
-
-**ACK Structure Validation (Required for Phase 1b)**:
-- [ ] All 4 ACK types captured with 10+ samples each (0x28, 0x7B, 0x88, 0xD8)
-- [ ] msg_id presence/absence documented with High confidence
-- [ ] If ACK validation is ambiguous (multiple positions found, or inconsistent across samples), capture 10+ additional samples from different firmware versions before declaring Path C
-- [ ] Phase 1b implementation path selected (parallel vs FIFO, or Path C escalation if ambiguous)
-
-**Queue ID Derivation (Required for Phase 1a)**:
-- [ ] Queue ID ↔ Endpoint derivation algorithm validated and documented
-- [ ] 5+ handshake→data sequences captured for validation
-
-**Protocol Capture Document (Required)**:
-- [ ] Protocol Capture Document complete (`docs/protocol/02-phase-0.5-captures.md`)
-- [ ] Updated protocol documentation complete (`docs/protocol/packet-structure-validated.md`)
-
----
-
-### Tier 2: Quality Criteria
-
-These 15 criteria are important for quality and completeness:
-
-**Functional Captures**:
-- [ ] Captured at least 3 complete toggle sequences (on/off/on)
-- [ ] Captured handshake flow from 2+ different devices
-- [ ] Captured status broadcast (passive state change)
-- [ ] Captured heartbeat sequence
-- [ ] Captured device info broadcast
-- [ ] All hex dumps are complete (no truncation)
-- [ ] Timing data recorded (RTT, inter-packet delays)
-
-**ACK Latency Measurement** (for Phase 1b timeout tuning):
-- [ ] Measured ACK latency for all 4 ACK types (0x28, 0x7B, 0x88, 0xD8)
-- [ ] Sample size ≥100 per ACK type
-- [ ] Calculated percentiles: p50, p95, p99, max
-- [ ] Recommended timeout values provided (using formula: p99 × 2.5)
-
-**Deduplication Strategy Validation** (validates Full Fingerprint for Phase 1b):
-- [ ] Captured 20+ retry packet pairs (manual retry simulation)
-- [ ] Full Fingerprint fields validated as extractable and stable
-- [ ] Full Fingerprint produces same dedup_key for retry packets (validated)
-- [ ] Test fixtures provided for Phase 1b dedup tests (5+ packet pairs)
-
----
-
-### Tier 3: Additional Quality Criteria
-
-These 10 criteria enhance quality and completeness:
-
-**Documentation Polish**:
-- [ ] Edge cases documented (if any discovered)
-- [ ] Multiple device types/firmware versions captured (if available)
-- [ ] Validation report includes device firmware correlation
-- [ ] Protocol differences from legacy docs clearly highlighted
-
-**Validation Depth**:
-- [ ] At least 10 unique packets captured per flow type
-- [ ] msg_id extraction positions confirmed for data packets (0x73, 0x83)
-- [ ] Endpoint extraction confirmed
-- [ ] 0x7e framing confirmed for data payloads
-
-**Additional Deliverables**:
-- [ ] Deliverable #9: Device backpressure behavior tested
-- [ ] Deliverable #11: Group operation performance (Note: Validated in Phase 1d instead)
+- [ ] Device backpressure behavior tested
+- [ ] Edge cases and firmware variations documented
 
 ---
 
@@ -1617,119 +1459,4 @@ These 10 criteria enhance quality and completeness:
 | Checksum algorithm incorrect | Medium | Low | Validate against multiple real packets with checksum validation script |
 | Missing edge cases | Medium | High | Extended capture period; trigger error conditions |
 
----
-
-## Implementation Steps (Sequential Order)
-
-**Step 0: DNS Prerequisite Validation**
-- Test DNS override capability (`/etc/hosts` or router configuration)
-- Verify `cm.gelighting.com` resolves to `127.0.0.1`
-- Check for DNS blockers (DNSSEC, DoH, VPN)
-- If DNS works → proceed; if blocked → Phase 0.5 cannot continue
-
-**Step 1: MITM Proxy Implementation**
-- Implement `scripts/mitm-proxy.py` (~200 lines)
-- SSL/TLS connection handling
-- Bidirectional forwarding with logging
-- Structured JSON output to stdout
-- Raw capture storage to `captures/` directory
-- Test with real device
-
-**Step 2: Checksum Validation Preparation**
-- Implement `scripts/validate-checksum-REFERENCE-ONLY.py` skeleton
-- Import legacy checksum algorithm: `from cync_controller.packet_checksum import calculate_checksum_between_markers`
-- Create test harness structure for validation
-
-**Step 3: Initial Packet Capture + Checksum Algorithm Validation**
-
-**Packet Capture**:
-- Capture basic flows (handshake, toggle)
-- Handshake flows (0x23 → 0x28)
-- Toggle flows (0x73, 0x7B, 0x83, 0x88)
-- Initial hex dump review
-
-**Checksum Algorithm Validation**:
-- Run checksum validation script against legacy test fixtures
-- Validate algorithm against known-good packets from legacy codebase test suite
-- Create `docs/protocol/checksum-validation.md` (preliminary)
-- Document algorithm specification and validation methodology
-- Output: Algorithm validated and documented, ready for Phase 1a to copy
-
-**Step 4: Additional Flow Capture + Checksum Re-validation**
-
-**Packet Capture**:
-- Capture status broadcasts, heartbeats, device info
-- Edge case triggers (disconnects, errors)
-- **ACK Latency Measurement**: Send 100+ commands per ACK type, record timestamps
-  - **Sample size rationale**: n=100 provides stable p99 estimate (±10% margin at 95% confidence)
-    - Smaller samples (n=20-50): High p99 variance (±30% margin) - insufficient for timeout tuning
-    - Larger samples (n=200+): Minimal accuracy improvement (<5%) for 2× effort - diminishing returns
-    - n=100 is sweet spot: Stable p99 with reasonable capture time
-  - Measure time between request sent and ACK received
-  - Calculate latency distribution (p50, p95, p99, max)
-  - Test all 4 ACK types: 0x28 (handshake), 0x7B (data), 0x88 (status), 0xD8 (heartbeat)
-- Capture 10+ complete packet sequences for validation
-
-**Checksum Re-validation Against Real Packets**:
-- Re-run checksum validation script against 10+ newly captured packets
-- Update `docs/protocol/checksum-validation.md` with real-world validation results
-- Table columns: packet type, expected checksum, calculated checksum, match status
-- Document any algorithm discrepancies or edge cases found in real packets
-- **Confirmation**: Algorithm works correctly with real device traffic
-
-**Step 5: Documentation and Test Fixtures**
-- Annotate hex dumps with checksum calculation details
-- Generate test fixtures with validated checksums (`tests/fixtures/real_packets.py`)
-- Write validation report (`docs/protocol/validation-report.md`)
-- Update protocol documentation (`docs/protocol/packet-structure-validated.md`)
-- Document chosen capture method and rationale
-
-**Step 6: Review and Phase 1a Handoff**
-- Review captures and validation results
-- Final validation against legacy code
-- Verify all acceptance criteria met
-- Prepare materials for Phase 1a:
-  - ✓ Protocol Capture Document (Deliverable #2)
-  - ✓ Checksum Validation Results (Deliverable #4)
-  - ✓ Updated Protocol Documentation (Deliverable #6)
-  - ✓ Deduplication Field Verification (Deliverable #8)
-- Phase 1a starts after this completes
-
----
-
-## Success Metrics
-
-- ✅ **Complete**: 5/5 key flows captured with annotations
-- ✅ **Accurate**: Protocol structure validated or corrected
-- ✅ **Usable**: Test fixtures ready for Phase 1a
-- ✅ **Documented**: Clear handoff materials for implementation
-
----
-
-## Next Phase
-
-**Phase 1a**: Cync Protocol Codec (1 week)
-- Implement encoder/decoder based on Phase 0.5 captures
-- Use test fixtures for unit testing
-- Validate against real devices
-
----
-
-## Related Documentation
-
-- **Phase 0**: `01-phase-0.md` - Test harness foundation
-- **Phase 1a**: `02b-phase-1a-protocol-codec.md` - Protocol implementation
-- **Discovery**: `00-discovery.md` - Original protocol notes
-- **Legacy Packet Parser**: `cync-controller/src/cync_controller/packet_parser.py`
-- **Legacy Protocol Docs**: `docs/protocol/packet_structure.md`
-
----
-
-## Notes
-
-**Important**: This phase is critical for de-risking Phase 1a. Don't skip the capture step - real-world validation prevents costly rework later.
-
-**Tip**: Capture more than you think you need. Storage is cheap, re-capturing is expensive.
-
-**Warning**: Redact any auth codes or sensitive data in public documentation.
 
