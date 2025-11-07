@@ -4,7 +4,7 @@ Welcome to the Cync Controller documentation! This guide helps you find the righ
 
 ## 📁 Documentation Structure
 
-```
+```text
 docs/
 ├── user/              # User-facing documentation
 │   ├── dns-setup.md
@@ -171,7 +171,7 @@ Historical documentation and completed testing artifacts.
 
 ## 🤖 For AI Agents
 
-**Always start with [Cursor Rules Guide](../.cursor/RULES_GUIDE.md)!**
+### Always start with [Cursor Rules Guide](../.cursor/RULES_GUIDE.md)
 
 It contains:
 
@@ -184,7 +184,7 @@ It contains:
 - ✅ Coding conventions
 - ✅ Critical DO and DON'T rules
 
-**Quick commands:**
+### Quick commands
 
 ```bash
 ha addons logs local_cync-controller    # View logs
@@ -239,7 +239,7 @@ npm run lint:python:fix                 # Auto-fix Python issues
 
 **Date:** October 14, 2025
 
-**Changes:**
+#### Changes
 
 - ✅ Moved all documentation to `/docs` folder
 - ✅ Created clear hierarchy: user/developer/protocol
@@ -247,7 +247,7 @@ npm run lint:python:fix                 # Auto-fix Python issues
 - ✅ Updated all cross-references
 - ✅ Created this navigation index
 
-**Result:**
+### Result
 
 - Organized: Clear structure
 - Consolidated: No redundancy

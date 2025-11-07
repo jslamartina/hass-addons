@@ -1,0 +1,23 @@
+# .cursorignore - Override .gitignore for Cursor indexing
+#
+# This file allows Cursor to index files that are excluded from git.
+# Use negation patterns (!) to include directories/files for indexing.
+#
+# Files included here will be:
+# - Searchable via codebase_search and indexed lookups
+# - Still excluded from git (via .gitignore)
+# - Available for context in Cursor's AI features
+
+# Include working files and code reviews in Cursor's index
+!working-files/**
+!code-reviews/**
+
+# Still exclude certain file types even within included directories
+*.db
+*.db-journal
+*.log
+*.tar.gz
+*.tar
+*.zip
+
+

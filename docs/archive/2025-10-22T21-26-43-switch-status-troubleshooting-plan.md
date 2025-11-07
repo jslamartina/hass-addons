@@ -1,6 +1,8 @@
+# 2025 10 22T21 26 43 Switch Status Troubleshooting Plan
+
 <!-- 66e240c8-0646-449a-96d5-cda0d1929f88 f629ab25-63d7-4bbd-b92f-ea0086bd673b -->
 
-# Troubleshoot Cync Switch Status Reporting
+## Troubleshoot Cync Switch Status Reporting
 
 ## Overview
 
@@ -18,7 +20,7 @@ Check addon logs for:
 - `parse_status()` being called with switch device data
 - Look for "Internal STATUS for [device_name]" debug messages
 
-**Diagnostic command:**
+### Diagnostic command
 
 ```bash
 ha addons logs local_cync-controller | grep -E "0x83|0x43|Internal STATUS|parse_status"
@@ -90,8 +92,8 @@ Verify switches are registered correctly:
 **Diagnostic:** Check EMQX or mosquitto logs for discovery messages:
 
 ```bash
-# If using EMQX addon, check WebSocket or logs
-# Look for homeassistant/switch/*/config topics
+## If using EMQX addon, check WebSocket or logs
+## Look for homeassistant/switch/*/config topics
 ```
 
 ### 6. Compare Switch vs Light Code Paths
@@ -141,7 +143,7 @@ logger.info("%s Publishing to topic '%s': %s", lp, tpc, msg)
 If switches are getting `color_mode` incorrectly, modify `parse_device_status()` lines 824-831:
 
 ```python
-# Only add color_mode for lights, not switches
+## Only add color_mode for lights, not switches
 if not color_mode_set and (device.is_light or not device.is_switch):
     if device.supports_temperature:
         mqtt_dev_state["color_mode"] = "color_temp"
@@ -155,19 +157,19 @@ if not color_mode_set and (device.is_light or not device.is_switch):
 
 Monitor MQTT messages to ensure switches send correct format:
 
-**Expected for regular switches:**
+#### Expected for regular switches
 
 ```json
 { "state": "ON" }
 ```
 
-**Expected for dimmer switches:**
+### Expected for dimmer switches
 
 ```json
 { "state": "ON", "brightness": 100 }
 ```
 
-**NOT expected for switches:**
+### NOT expected for switches
 
 ```json
 { "state": "ON", "color_mode": "brightness" } // WRONG - should not have color_mode

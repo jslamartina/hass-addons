@@ -218,7 +218,12 @@ build/
 dist/
 
 code-reviews/**
+working-files/**
+
 .ruff_cache/
 **/__pycache__/
 .mypy_cache/
 .pytest_cache/
+
+# Vale prose linter
+.vale/

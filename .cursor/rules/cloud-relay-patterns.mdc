@@ -4,9 +4,9 @@ description: Cloud relay mode patterns and limitations
 
 # Cloud Relay Mode Patterns
 
-**⚠️ Cloud relay mode is READ-ONLY for monitoring and inspection.**
+## ⚠️ Cloud relay mode is READ-ONLY for monitoring and inspection
 
-**Commands from Home Assistant DO NOT work in relay mode** - you'll see `No TCP bridges available!` errors.
+**Commands from Home Assistant DON'T work in relay mode** - you'll see `No TCP bridges available!` errors.
 
 **Rule:** Disable relay mode for normal local control.
 
@@ -24,69 +24,78 @@ description: Cloud relay mode patterns and limitations
 ## Configuration Presets
 
 ```bash
-# Baseline (LAN-only, normal operation)
+## Baseline (LAN-only, normal operation)
 ./scripts/configure-addon.sh preset-baseline
 
-# Relay with cloud forwarding (packet inspection)
+## Relay with cloud forwarding (packet inspection)
 ./scripts/configure-addon.sh preset-relay-with-forward
 
-# Relay with debug logging (protocol analysis)
+## Relay with debug logging (protocol analysis)
 ./scripts/configure-addon.sh preset-relay-debug
 
-# LAN-only relay (privacy mode, blocks cloud)
+## LAN-only relay (privacy mode, blocks cloud)
 ./scripts/configure-addon.sh preset-lan-only
-```
+$()$(
+  markdown
 
-## Configuration Options
+  ## Configuration Options
 
-```yaml
+)$()yaml
 cloud_relay:
-  enabled: false                      # Enable relay mode
-  forward_to_cloud: true              # Forward packets to cloud
-  cloud_server: "35.196.85.236"       # Cync cloud IP
-  cloud_port: 23779                   # Cync cloud port
-  debug_packet_logging: false         # Verbose packet logging
-```
+enabled: false                # Enable relay mode
+forward_to_cloud: true        # Forward packets to cloud
+cloud_server: "35.196.85.236" # Cync cloud IP
+cloud_port: 23779             # Cync cloud port
+debug_packet_logging: false   # Verbose packet logging
+$()$(
+  markdown
 
-**Security Warning:** Never use `disable_ssl_verification: true` in production.
+  **Security Warning:** Never use
+)disable_ssl_verification: true$(
+  in production.
 
-## Switching Modes
+  ## Switching Modes
 
-```bash
-# Enable relay for debugging
+)$()bash
+## Enable relay for debugging
 ./scripts/configure-addon.sh preset-relay-debug
 
-# Monitor logs
+## Monitor logs
 ha addons logs local_cync-controller --follow | grep "packet"
 
-# Return to normal mode
+## Return to normal mode
 ./scripts/configure-addon.sh preset-baseline
 ```
 
 ## Operating Modes
 
-**Mode 1: Baseline (Recommended)**
+### Mode 1: Baseline (Recommended)
+
 - ✅ Full local control
 - ✅ Commands work from Home Assistant
 - ❌ No packet inspection
 
-**Mode 2: Relay with Cloud Forwarding**
+### Mode 2: Relay with Cloud Forwarding
+
 - ✅ Devices still work (cloud receives packets)
 - ✅ Basic packet logging
 - ❌ Commands from HA don't work
 
-**Mode 3: LAN-Only with Inspection**
+### Mode 3: LAN-Only with Inspection
+
 - ✅ Blocks all cloud communication
 - ✅ Logs what devices attempt to send
 - ❌ Devices lose cloud functionality
 
 ## Known Issues
 
-**Commands Don't Work**
+### Commands Don't Work
+
 - Symptom: Turning on lights in HA has no effect
 - Cause: Relay mode is read-only
 - Fix: Disable relay mode for normal operation
 
-**Devices Show Offline**
+### Devices Show Offline
+
 - Cause: Relay doesn't maintain bidirectional TCP connections properly
 - Fix: Use relay temporarily, return to baseline for daily use

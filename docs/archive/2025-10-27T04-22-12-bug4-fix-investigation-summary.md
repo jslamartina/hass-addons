@@ -1,7 +1,8 @@
 # Bug 4: Group Switch Sync Issue - Status Summary
 
 **Date**: October 26, 2025
-**Status**: ⚠️ **NOT RESOLVED - Test Created, Fix Pending**
+
+## Status**: ⚠️**NOT RESOLVED - Test Created, Fix Pending
 
 ---
 
@@ -129,6 +130,7 @@ async def handle_group_command(self, group_id, command):
    - Get all member devices of the group
    - Query current state of each member
    - Publish updated state to MQTT for each switch
+
 4. **Run E2E test** to verify fix works
 5. **Test with real devices** to ensure no performance issues
 
@@ -189,7 +191,7 @@ Once the fix is implemented:
 
 ## Conclusion
 
-**Bug 4 Status**: ⚠️ **UNRESOLVED**
+### Bug 4 Status**: ⚠️**UNRESOLVED
 
 We created comprehensive E2E tests that document the expected behavior and provide a regression test for when the fix is implemented. However, the actual code changes to call `sync_group_switches()` after group commands were never applied.
 

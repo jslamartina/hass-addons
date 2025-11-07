@@ -1,0 +1,16 @@
+[build-system]
+requires = ["setuptools>=45", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "brave-ai-grounding-cli"
+version = "0.1.0"
+description = "CLI tool for Brave AI Grounding API"
+requires-python = ">=3.11"
+dependencies = [
+    "httpx",
+]
+
+[project.scripts]
+brave-ai-grounding-cli = "brave_ai_grounding_cli:main"
+

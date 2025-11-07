@@ -15,11 +15,11 @@ When HTTP API calls fail (non-200 status codes), the script often only logs the 
 - ❌ Inconsistent error logging across different functions
 - ❌ Some functions capture the body but don't log it
 
-**Example of insufficient logging:**
+### Example of insufficient logging
 
 ```bash
 log_warn "EMQX configuration returned HTTP $http_code"
-# Missing: What did the API say? Why did it fail?
+## Missing: What did the API say? Why did it fail?
 ```
 
 ---
@@ -46,7 +46,7 @@ log_warn "EMQX configuration returned HTTP $http_code"
 
 ### Approach 1: Add Consistent Body Logging (Recommended)
 
-**Pattern to implement:**
+#### Pattern to implement
 
 ```bash
 local response
@@ -73,7 +73,7 @@ else
 fi
 ```
 
-**Benefits:**
+### Benefits
 
 - ✅ Shows full API error message
 - ✅ Formatted JSON if possible, raw otherwise
@@ -84,8 +84,8 @@ fi
 Create a reusable function for API calls with built-in error logging:
 
 ```bash
-# Make HTTP API call with automatic error logging
-# Usage: api_call "Description" METHOD URL [DATA] [AUTH_TOKEN]
+## Make HTTP API call with automatic error logging
+## Usage: api_call "Description" METHOD URL [DATA] [AUTH_TOKEN]
 api_call() {
   local description="$1"
   local method="$2"
@@ -123,20 +123,20 @@ api_call() {
   fi
 }
 
-# Usage example:
+## Usage example:
 response=$(api_call "Configure EMQX" "POST" \
   "http://supervisor/addons/$EMQX_SLUG/options" \
   "$config" \
   "$SUPERVISOR_TOKEN")
 ```
 
-**Benefits:**
+### Benefits
 
 - ✅ DRY (Don't Repeat Yourself)
 - ✅ Consistent logging everywhere
 - ✅ Easier to maintain
 
-**Drawbacks:**
+### Drawbacks
 
 - More complex to implement
 - Harder to customize per-function
@@ -321,15 +321,19 @@ After implementing changes, test scenarios where HTTP errors occur:
 
 ### Before
 
-```
+```bash
+
 [setup-fresh-ha.sh] ⚠ EMQX configuration returned HTTP 400
+
 ```
 
 ### After
 
-```
+```bash
+
 [setup-fresh-ha.sh] ⚠ EMQX configuration returned HTTP 400
 [setup-fresh-ha.sh] ⚠ Response: {"result":"error","message":"Invalid option 'env_vars': expected list, got string"}
+
 ```
 
 **Much better!** Now we know exactly what's wrong.
@@ -361,8 +365,8 @@ echo "$body" | jq '.' 2> /dev/null || echo "$body"
 ### Option 3: Hybrid
 
 ```bash
-# For short responses (< 200 chars), use compact
-# For long responses, pretty-print
+## For short responses (< 200 chars), use compact
+## For long responses, pretty-print
 if [ ${#body} -lt 200 ]; then
   echo "$body" | jq -c '.' 2> /dev/null || echo "$body"
 else

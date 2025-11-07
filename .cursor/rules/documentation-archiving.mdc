@@ -8,54 +8,67 @@ description: Where and how to document completed work
 
 ## File Naming
 
-**Use actual timestamps with seconds-level accuracy:**
+### Use actual timestamps with seconds-level accuracy
+
 ```bash
-# Get file creation time
+## Get file creation time
 stat -c '%y' IMPLEMENTATION_SUMMARY.md
-# Output: 2025-10-27 02:15:34.123456789 +0000
+## Output: 2025-10-27 02:15:34.123456789 +0000
 
-# Use: 2025-10-27T02-15-34-implementation-summary.md
-```
+## Use: 2025-10-27T02-15-34-implementation-summary.md
+$()$(
+  markdown
 
-**Format:** `YYYY-MM-DDTHH-MM-SS-category-description.md`
+  **Format:**
+)YYYY-MM-DDTHH-MM-SS-category-description.md$(
 
-**Examples:**
-```
-2025-10-27T01-17-00-AGENTS.md                 ✓ Actual time
-2025-10-27T00-14-34-fix-ingress-and-group.md  ✓ Actual time
+  ## Examples:
 
-2025-10-27T00-00-00-my-summary.md             ✗ BAD - placeholder zeros
-```
+)$()sql
 
-## What to Archive
+2025-10-27T01-17-00-AGENTS.md ✓ Actual time
+2025-10-27T00-14-34-fix-ingress-and-group.md ✓ Actual time
 
-✅ Bug fixes - How we fixed X, why we chose approach Y
-✅ Feature implementations - What was built, architecture decisions
-✅ Investigations - What we learned, recommendations
-✅ Debugging findings - Protocol analysis, performance results
+2025-10-27T00-00-00-my-summary.md ✗ BAD - placeholder zeros
 
-## Workflow After Completing Task
+$()$(
+  markdown
 
-```bash
-# 1. Archive with proper timestamp
+  ## What to Archive
+
+  ✅ Bug fixes - How we fixed X, why we chose approach Y
+  ✅ Feature implementations - What was built, architecture decisions
+  ✅ Investigations - What we learned, recommendations
+  ✅ Debugging findings - Protocol analysis, performance results
+
+  ## Workflow After Completing Task
+
+)$()bash
+## 1. Archive with proper timestamp
 TIMESTAMP=$(stat -c '%y' IMPLEMENTATION_SUMMARY.md | cut -d' ' -f1,2 | tr ' ' 'T' | tr ':' '-' | cut -d'.' -f1)
 mv "$FILE_TO_ARCHIVE" "docs/archive/${TIMESTAMP}-implementation-summary.md"
 
-# 2. Document key findings (use template from CONTRIBUTING.md)
+## 2. Document key findings (use template from CONTRIBUTING.md)
 
-# 3. Clean up root directory
-```
+## 3. Clean up root directory
+$()$(
+  markdown
 
-**Template:**
-```markdown
-# [Title]
+  ## Template
+
+)$()markdown
+## [Title]
 
 **Status**: ✅ Completed
 **Date**: YYYY-MM-DD
 
 ## Problem
+
 ## Root Cause
+
 ## Solution
+
 ## Files Modified
+
 ## Testing
 ```

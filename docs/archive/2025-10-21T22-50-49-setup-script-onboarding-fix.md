@@ -16,8 +16,10 @@ The `setup-fresh-ha.sh` script was failing during the onboarding process with HT
 
 The error showed:
 
-```
+```yaml
+
 ConnectionRefusedError: [Errno 111] Connect call failed ('172.17.0.2', 19531)
+
 ```
 
 This indicates HA's internal components were still initializing.
@@ -42,13 +44,13 @@ Updated `scripts/setup-fresh-ha.sh` to handle the HTTP 400 error gracefully:
 ### Code Changes
 
 ```bash
-# In complete_onboarding():
+## In complete_onboarding():
 elif [ "$http_code" = "400" ]; then
   log_warn "Onboarding completion returned HTTP 400 - this may be a HA initialization issue"
   log_info "Restarting Home Assistant to complete setup..."
   return 2 # Special return code to trigger restart
 
-# In main():
+## In main():
 complete_onboarding "$auth_token"
 local onboarding_result=$?
 
@@ -72,7 +74,7 @@ After the fix:
 
 ## Manual Steps Required
 
-1. **Log in to Home Assistant**: http://localhost:8123
+1. **Log in to Home Assistant**: <http://localhost:8123>
    - Username: `dev`
    - Password: (from `hass-credentials.env`)
 

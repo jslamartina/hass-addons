@@ -4,7 +4,7 @@
 **Completed:** October 11, 2025
 **Objective:** Reverse engineer TCP-based smart bulb mode configuration for Cync wired switches
 
-## 🎉 SUCCESS: Full Mode Control Achieved!
+## 🎉 SUCCESS: Full Mode Control Achieved
 
 ✅ **We have successfully reverse engineered the complete mode switching protocol!**
 
@@ -14,15 +14,15 @@ Smart bulb mode can now be controlled programmatically via TCP/cloud protocol wh
 
 For device 160 (adapt device ID and counter for other devices):
 
-**Traditional Mode:**
+#### Traditional Mode
 
-```
+```text
 73 00 00 00 1e 1b dc da 3e 00 3a 00 7e 3d 01 00 00 f8 8e 0c 00 3e 01 00 00 00 a0 00 f7 11 02 01 01 85 7e
 ```
 
-**Smart (Dimmable) Mode:**
+### Smart (Dimmable) Mode
 
-```
+```text
 73 00 00 00 1e 1b dc da 3e 00 29 00 7e 30 01 00 00 f8 8e 0c 00 31 01 00 00 00 a0 00 f7 11 02 01 02 79 7e
 ```
 
@@ -38,7 +38,7 @@ See [mode_change_analysis.md](./mode_change_analysis.md) for complete details an
 
 **Location:** Byte 31 in the 0x73 packet payload (Device → Cloud confirmation packet)
 
-**Values:**
+### Values
 
 - `0x50` = **Traditional Mode** (power relay ENABLED, works with dumb bulbs)
 - `0xb0` = **Smart Mode (Dimmable)** (power relay DISABLED, smart bulb compatible)
@@ -48,7 +48,7 @@ See [mode_change_analysis.md](./mode_change_analysis.md) for complete details an
 
 ### Full 0x73 Configuration Packet (43 bytes total)
 
-```
+```text
 Position  Bytes                           Description
 --------  ------------------------------  ----------------------------------
 0-4       73 00 00 00 26                  Packet type (0x73) + length (38)
@@ -74,7 +74,7 @@ Position  Bytes                           Description
 
 ### Smart → Traditional Mode
 
-```
+```yaml
 File: smart_to_traditional.txt, Line 238-241
 Timestamp: 2025/10/07 20:24:27
 
@@ -86,7 +86,7 @@ Timestamp: 2025/10/07 20:24:27
 
 ### Traditional → Smart Mode
 
-```
+```yaml
 File: traditional_to_smart.txt, Line 2272-2275
 Timestamp: 2025/10/07 20:31:26
 

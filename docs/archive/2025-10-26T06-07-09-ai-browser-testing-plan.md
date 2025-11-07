@@ -33,7 +33,7 @@ Cursor provides built-in MCP tools for browser automation (no additional configu
 | `mcp_cursor-playwright_browser_console_messages` | Get console logs           | Debug JavaScript errors                        |
 | `mcp_cursor-playwright_browser_network_requests` | Get network activity       | API debugging, performance analysis            |
 
-**Key Advantages:**
+### Key Advantages
 
 - ✅ No setup required - tools work immediately
 - ✅ Headless by default (fast, non-intrusive)
@@ -46,7 +46,7 @@ Cursor provides built-in MCP tools for browser automation (no additional configu
 
 ### 1. Login to Home Assistant
 
-**Pattern:**
+#### Pattern
 
 ```typescript
 // 1. Navigate
@@ -85,7 +85,7 @@ mcp_cursor -
 mcp_cursor - playwright_browser_wait_for({ text: "Overview", time: 10 });
 ```
 
-**Credentials:**
+### Credentials
 
 - Location: `/mnt/supervisor/addons/local/hass-addons/hass-credentials.env`
 - Username: `dev`
@@ -93,7 +93,7 @@ mcp_cursor - playwright_browser_wait_for({ text: "Overview", time: 10 });
 
 ### 2. Navigate to Add-on Configuration
 
-**Pattern:**
+#### Pattern
 
 ```typescript
 // 1. Open Settings
@@ -126,7 +126,7 @@ iframe.getByRole("tab", { name: "Configuration" }).click();
 
 ### 3. Verify Entity States
 
-**Pattern:**
+#### Pattern
 
 ```typescript
 // 1. Navigate to Developer Tools → States
@@ -161,7 +161,7 @@ mcp_cursor -
 
 ### 4. Toggle Device Controls
 
-**Pattern:**
+#### Pattern
 
 ```typescript
 // 1. Navigate to dashboard
@@ -198,7 +198,7 @@ mcp_cursor -
 
 ### 5. Check Add-on Logs
 
-**Pattern:**
+#### Pattern
 
 ```typescript
 // 1. Navigate to add-on page
@@ -232,16 +232,17 @@ mcp_cursor - playwright_browser_take_screenshot({ filename: "addon-logs.png" });
 
 **Problem:** HA UI uses Web Components with Shadow DOM - standard selectors don't work.
 
-**Solutions:**
+#### Solutions
 
 1. **Use `browser_snapshot` first** - Shows accessibility tree which pierces Shadow DOM
 
    ```typescript
    mcp_cursor - playwright_browser_snapshot();
    // Examine output to find accessible names and roles
-   ```
 
-2. **Prefer role-based selectors** - Automatically work through Shadow DOM
+```
+
+1. **Prefer role-based selectors** - Automatically work through Shadow DOM
 
    ```typescript
    // ✅ GOOD: Works with Shadow DOM
@@ -251,7 +252,8 @@ mcp_cursor - playwright_browser_take_screenshot({ filename: "addon-logs.png" });
    ref: "button.mdc-button"
    ```
 
-3. **Use text-based selectors** - Also pierce Shadow DOM
+2. **Use text-based selectors** - Also pierce Shadow DOM
+
    ```typescript
    ref: "text=Configuration";
    ```
@@ -260,7 +262,7 @@ mcp_cursor - playwright_browser_take_screenshot({ filename: "addon-logs.png" });
 
 **Problem:** Buttons with nested SVG icons cause "element intercepts pointer events" errors.
 
-**Solutions:**
+#### Solutions
 
 1. **Click parent containers instead**
 
@@ -292,6 +294,7 @@ mcp_cursor - playwright_browser_take_screenshot({ filename: "addon-logs.png" });
    ```
 
 3. **Click interactive controls directly** (sliders, switches, textboxes)
+
    ```typescript
    // ✅ GOOD: No SVG interference
    mcp_cursor -
@@ -318,23 +321,25 @@ ref: "iframe >> button[name='Save']";
 
 **Problem:** HA uses dynamic loading - elements appear after network requests.
 
-**Solutions:**
+#### Solutions
 
 1. **Wait for specific text/elements**
 
    ```typescript
    mcp_cursor -
      playwright_browser_wait_for({ text: "Configuration saved", time: 5 });
-   ```
 
-2. **Wait for network idle** (use browser_network_requests to monitor)
+```
+
+1. **Wait for network idle** (use browser_network_requests to monitor)
 
    ```typescript
    mcp_cursor - playwright_browser_network_requests();
    // Check if requests are complete
    ```
 
-3. **Use fixed delays** (last resort)
+2. **Use fixed delays** (last resort)
+
    ```typescript
    mcp_cursor - playwright_browser_wait_for({ time: 3 });
    ```
@@ -347,7 +352,7 @@ ref: "iframe >> button[name='Save']";
 
 **When to use:** Exploring unfamiliar UI, finding elements, understanding state.
 
-**Pattern:**
+#### Pattern
 
 ```typescript
 // 1. Navigate to page
@@ -372,7 +377,7 @@ mcp_cursor -
   });
 ```
 
-**Advantages:**
+### Advantages
 
 - ✅ No guessing about element selectors
 - ✅ Works with Shadow DOM
@@ -383,7 +388,7 @@ mcp_cursor -
 
 **When to use:** Visual verification, understanding why something failed, documentation.
 
-**Pattern:**
+#### Pattern
 
 ```typescript
 // 1. Navigate to problematic page
@@ -405,7 +410,7 @@ mcp_cursor -
 // 5. Compare screenshots to verify behavior
 ```
 
-**Advantages:**
+### Advantages
 
 - ✅ Visual proof of state
 - ✅ Easier to communicate issues
@@ -416,7 +421,7 @@ mcp_cursor -
 
 **When to use:** JavaScript errors, API issues, performance problems.
 
-**Pattern:**
+#### Pattern
 
 ```typescript
 // 1. Navigate and perform action
@@ -433,7 +438,7 @@ const requests = mcp_cursor - playwright_browser_network_requests();
 // Look for failed requests, slow responses, or unexpected API calls
 ```
 
-**Advantages:**
+### Advantages
 
 - ✅ Catches JavaScript errors
 - ✅ Identifies failed API calls
@@ -444,7 +449,7 @@ const requests = mcp_cursor - playwright_browser_network_requests();
 
 **When to use:** Complex workflows, multi-step operations, configuration testing.
 
-**Pattern:**
+#### Pattern
 
 ```typescript
 // 1. Break task into small steps
@@ -489,7 +494,7 @@ mcp_cursor -
   playwright_browser_wait_for({ text: "Configuration saved", time: 5 }); // Wait for success
 ```
 
-**Advantages:**
+### Advantages
 
 - ✅ Easy to debug failures
 - ✅ Clear understanding of each step
@@ -582,7 +587,7 @@ mcp_cursor -
 
 **Goal:** Ensure new configuration options appear correctly.
 
-**Steps:**
+#### Steps
 
 1. Navigate to add-on configuration
 2. Take snapshot to verify options present
@@ -591,7 +596,7 @@ mcp_cursor -
 5. Restart add-on and verify settings applied
 6. Check add-on logs for configuration loading
 
-**Expected Results:**
+### Expected Results
 
 - All options visible in UI
 - Changes save without errors
@@ -602,7 +607,7 @@ mcp_cursor -
 
 **Goal:** Verify devices appear in Home Assistant after add-on starts.
 
-**Steps:**
+#### Steps
 
 1. Navigate to MQTT integration entities page
 2. Take snapshot to count existing entities
@@ -612,7 +617,7 @@ mcp_cursor -
 6. Take snapshot to count new entities
 7. Verify entity attributes (area, device class, etc.)
 
-**Expected Results:**
+### Expected Results
 
 - New entities appear after discovery
 - Entity names match expected format
@@ -623,7 +628,7 @@ mcp_cursor -
 
 **Goal:** Verify toggling devices works end-to-end.
 
-**Steps:**
+#### Steps
 
 1. Navigate to dashboard
 2. Take snapshot to find test device
@@ -633,7 +638,7 @@ mcp_cursor -
 6. Check add-on logs for command sent
 7. Verify device state updated in UI
 
-**Expected Results:**
+### Expected Results
 
 - Control dialog opens without errors
 - State changes reflected immediately
@@ -644,7 +649,7 @@ mcp_cursor -
 
 **Goal:** Verify graceful error handling in UI.
 
-**Steps:**
+#### Steps
 
 1. Stop MQTT broker (simulate failure)
 2. Navigate to entities page
@@ -654,7 +659,7 @@ mcp_cursor -
 6. Restart MQTT broker
 7. Verify recovery
 
-**Expected Results:**
+### Expected Results
 
 - Clear error message shown to user
 - No JavaScript errors in console
@@ -667,21 +672,21 @@ mcp_cursor -
 
 ### Complement to Playwright Scripts
 
-**MCP tools are for:**
+#### MCP tools are for
 
 - Interactive exploration
 - Quick verification
 - Ad-hoc testing
 - Debugging issues
 
-**TypeScript scripts are for:**
+### TypeScript scripts are for
 
 - Repeatable workflows
 - CI/CD integration
 - Bulk operations
 - Complex scenarios
 
-**When to use each:**
+### When to use each
 
 | Task                                 | MCP Tools   | TypeScript Script |
 | ------------------------------------ | ----------- | ----------------- |
@@ -692,7 +697,7 @@ mcp_cursor -
 
 ### Using MCP Tools to Build TypeScript Scripts
 
-**Pattern:**
+#### Pattern
 
 1. Use MCP tools to explore UI interactively
 2. Document successful element selectors and patterns
@@ -700,7 +705,7 @@ mcp_cursor -
 4. Add to `scripts/playwright/` directory
 5. Create shell wrapper if needed
 
-**Example:**
+### Example
 
 ```typescript
 // 1. Explored with MCP tools, found working selectors:
@@ -729,14 +734,14 @@ test("Toggle debug mode", async ({ page }) => {
 
 ### Issue: "Element not found"
 
-**Possible causes:**
+#### Possible causes
 
 - Shadow DOM hiding element
 - Element in iframe
 - Element not yet loaded
 - Incorrect selector
 
-**Debug steps:**
+### Debug steps
 
 1. Take `browser_snapshot` to see accessibility tree
 2. Check if element is in iframe (add-on pages)
@@ -746,7 +751,7 @@ test("Toggle debug mode", async ({ page }) => {
 
 ### Issue: "Element intercepts pointer events"
 
-**Possible causes:**
+#### Possible causes
 
 - SVG icon covering button (⚠️ **VERY COMMON** in HA UI)
 - Overlay/modal in the way
@@ -754,7 +759,7 @@ test("Toggle debug mode", async ({ page }) => {
 
 **Most common:** Small icon-only buttons (clear, filter, menu) have nested `<ha-svg-icon>` that intercept clicks.
 
-**Best Practice Solutions (in priority order):**
+### Best Practice Solutions (in priority order)
 
 1. **Click parent container** (PREFERRED - tests real user behavior)
 
@@ -764,13 +769,15 @@ test("Toggle debug mode", async ({ page }) => {
      element: "Filter card",
      ref: "div:has(button[aria-label='Filters'])",
    });
-   ```
 
-2. **Use `browser_snapshot()` to find the actual clickable element**
+```
+
+1. **Use `browser_snapshot()` to find the actual clickable element**
    - The snapshot shows what's REALLY clickable (often a wrapper div)
    - Look for parent elements that contain the button
 
-3. **Programmatic click** (LAST RESORT - bypasses Playwright safety checks)
+2. **Programmatic click** (LAST RESORT - bypasses Playwright safety checks)
+
    ```typescript
    // ⚠️ Only use when parent clicking isn't possible
    await browser_evaluate({
@@ -786,14 +793,14 @@ test("Toggle debug mode", async ({ page }) => {
 
 ### Issue: "Action succeeded but state didn't change"
 
-**Possible causes:**
+#### Possible causes
 
 - Command sent but not acknowledged
 - Add-on not receiving command
 - Device offline
 - Network issue
 
-**Debug steps:**
+### Debug steps
 
 1. Check add-on logs for command sent
 2. Check console for API errors
@@ -803,13 +810,13 @@ test("Toggle debug mode", async ({ page }) => {
 
 ### Issue: "Can't find configuration option"
 
-**Possible causes:**
+#### Possible causes
 
 - Add-on not rebuilt after schema change
 - Browser cache showing old version
 - Supervisor cache not cleared
 
-**Debug steps:**
+### Additional Debug Steps
 
 1. Verify add-on version with `ha addons info`
 2. Take screenshot of current config UI
@@ -915,7 +922,7 @@ async function debugWorkflow(workflowName: string) {
 
 ## Success Metrics
 
-**How to measure effective browser testing:**
+### How to measure effective browser testing
 
 1. **Coverage**
    - ✅ All configuration options tested
@@ -945,7 +952,7 @@ async function debugWorkflow(workflowName: string) {
 
 ## Future Enhancements
 
-**Potential improvements:**
+### Potential improvements
 
 1. **Helper Library**
    - Create `scripts/playwright/helpers/ha-helpers.ts`
@@ -986,7 +993,7 @@ async function debugWorkflow(workflowName: string) {
 
 ## Quick Reference Card
 
-```
+```text
 🏠 Home Assistant
    URL: http://localhost:8123
    User: dev / Pass: dev
@@ -995,6 +1002,7 @@ async function debugWorkflow(workflowName: string) {
    Settings → Add-ons → Cync Controller → Configuration tab (IN IFRAME!)
 
 🐛 Debugging
+
    1. snapshot() - See structure
    2. screenshot() - See visual state
    3. console_messages() - See errors
@@ -1014,13 +1022,13 @@ async function debugWorkflow(workflowName: string) {
 
 ## Real-World Testing Lessons
 
-**From actual Test Entity Discovery scenario execution (October 24, 2025)**
+### From actual Test Entity Discovery scenario execution (October 24, 2025)
 
 ### Gotcha 1: SVG Icon Interference is Pervasive
 
 **Problem:** Small buttons (especially icon-only buttons) consistently fail to click due to SVG icon interception.
 
-**Examples encountered:**
+#### Examples encountered
 
 - "Clear filter" button on Entities page
 - "Clear input" (X) button in search boxes
@@ -1028,7 +1036,7 @@ async function debugWorkflow(workflowName: string) {
 
 **What Playwright is telling you:** The error "element intercepts pointer events" is Playwright catching a real UX issue - something is blocking the natural click target.
 
-**Best Practice Solution:**
+### Best Practice Solution
 
 ```typescript
 // ✅ CORRECT: Click the parent container (tests real user behavior)
@@ -1054,14 +1062,14 @@ async function debugWorkflow(workflowName: string) {
 
 **Problem:** Navigating to entities page from MQTT integration carried over a filter (via URL parameter `config_entry=...`) showing "0 entities" with a badge indicator.
 
-**What happened:**
+#### What happened
 
 1. Clicked "65 entities" link from MQTT integration page
 2. Landed on entities page with URL parameter filter active
 3. Showed "Search 0 entities" with filter badge
 4. Confusing because entities exist, just filtered out
 
-**Solution:**
+### Solution
 
 - Always check for filter badges/indicators
 - Clear filters before taking entity counts
@@ -1073,7 +1081,7 @@ async function debugWorkflow(workflowName: string) {
 
 **Problem:** Typing "mqtt" in search box, then navigating away and back still showed "mqtt" in the input.
 
-**What happened:**
+#### What happened
 
 1. Filtered entities by typing "mqtt"
 2. Navigated to different page
@@ -1096,7 +1104,7 @@ async function debugWorkflow(workflowName: string) {
 
 **Problem:** Expected entity count to change after restart, but it stayed at 112.
 
-**What actually changed:**
+#### What actually changed
 
 - Entity **states** updated (Unavailable → actual values)
 - "Cync Devices Managed": Unavailable → "43"
@@ -1117,7 +1125,7 @@ async function debugWorkflow(workflowName: string) {
 
 **Problem:** The "X" (clear) button in search boxes has SVG interference.
 
-**Attempted solutions:**
+#### Attempted solutions
 
 1. Normal click → Failed (SVG intercepts)
 2. Programmatic click → Still failed

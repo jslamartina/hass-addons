@@ -1,15 +1,17 @@
 ---
 description: MCP development tools usage and reference
 ---
-!!CRITICAL RULE: Python MCP is available General Purpose Programming with full filesystem access!!
 
 # MCP Tool Basics
+
+!!CRITICAL RULE: Python MCP is available for General Purpose Programming with full filesystem access!!
 
 Devcontainer exposes MCP servers for specialized tasks (see `.cursor/mcp.json`):
 
 1. **python**: Native Python 3.13 with full filesystem access
 2. **web_fetch**: Pull external docs/web pages (markdown or raw HTML)
 3. **sequential-thinking**: Log multi-step reasoning, next actions, tool picks
+4. **brave-search**: Web search using Brave Search API
 
 ## CRITICAL RULE: Python MCP - General Purpose Programming
 
@@ -22,32 +24,36 @@ Devcontainer exposes MCP servers for specialized tasks (see `.cursor/mcp.json`):
 - ✅ **Code generation** - Template processing, code transforms
 - ✅ **Validation & testing** - Test snippets before committing
 
-**Features:**
+### Features
+
 - Native CPython 3.13 (not sandboxed)
 - Full filesystem access: `/workspaces/hass-addons` working directory
 - Standard library: `json`, `re`, `pathlib`, `datetime`, `asyncio`, etc.
 - Package installs: `mcp_python_install_package` (temporary per execution)
 
-**When to prefer over standard tools:**
+### When to prefer over standard tools
+
 - Multi-file operations or complex transformations
 - Data analysis requiring computation
 - Processing files too large to tokenize
 - Need Python-specific logic (regex, json, etc.)
 
-**Example: Data Processing**
+### Example: Data Processing
+
 ```python
 mcp_python_run_python_code("""
 from pathlib import Path
 import json
 
-# Process multiple files
+## Process multiple files
 for file in Path('cync-controller/src').rglob('*.py'):
     if 'TODO' in file.read_text():
         print(f'{file}: contains TODOs')
 """)
 ```
 
-**Example: Complex Calculation**
+### Example: Complex Calculation
+
 ```python
 mcp_python_run_python_code("""
 import statistics

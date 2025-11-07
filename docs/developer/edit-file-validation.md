@@ -20,7 +20,7 @@ This prevents common failures due to:
 Identify the exact text (including whitespace) that you'll pass to `edit_file`:
 
 ```python
-# Example: You want to replace this function
+## Example: You want to replace this function
 old_string = """def validate_input(data):
     if not data:
         return False
@@ -32,7 +32,7 @@ old_string = """def validate_input(data):
 ```bash
 cd /workspaces/hass-addons
 
-# Validate the context exists in the file
+## Validate the context exists in the file
 python3 scripts/validate-edit-context.py \
   cync-controller/src/app.py \
   "def validate_input(data):"
@@ -40,15 +40,15 @@ python3 scripts/validate-edit-context.py \
 
 ### 3. Interpret the Result
 
-**Success:**
+#### Success
 
-```
+```text
 ✓ Context matches at line 42
 ```
 
-**Failure with suggestions:**
+### Failure with suggestions
 
-```
+```python
 ✗ Context not found in file
   Searching for: "def validate_input(data):"...
 
@@ -68,20 +68,20 @@ python3 scripts/validate-edit-context.py \
 ### Basic Validation
 
 ```bash
-# Single-line context
+## Single-line context
 python3 scripts/validate-edit-context.py src/app.py "def foo():"
 
-# Multiline context (use quotes and \n)
+## Multiline context (use quotes and \n)
 python3 scripts/validate-edit-context.py src/app.py "def foo():\n    pass"
 ```
 
 ### Optional Arguments
 
 ```bash
-# Specify starting line (1-indexed)
+## Specify starting line (1-indexed)
 python3 scripts/validate-edit-context.py src/app.py "def foo():" --line 42
 
-# Verbose output
+## Verbose output
 python3 scripts/validate-edit-context.py src/app.py "def foo():" --verbose
 ```
 
@@ -92,10 +92,10 @@ python3 scripts/validate-edit-context.py src/app.py "def foo():" --verbose
 ```python
 from validate_edit_context import EditContextValidator
 
-# Create validator
+## Create validator
 validator = EditContextValidator("path/to/file.py")
 
-# Validate context
+## Validate context
 is_valid, message = validator.validate_context("def foo():")
 if is_valid:
     print(f"Valid! {message}")
@@ -106,7 +106,7 @@ else:
 ### Advanced: Get Context with Surrounding Lines
 
 ```python
-# Validate and show surrounding context
+## Validate and show surrounding context
 is_valid, message = validator.validate_with_context_lines(
     old_string="def foo():\n    pass",
     start_line=42,
@@ -118,7 +118,7 @@ is_valid, message = validator.validate_with_context_lines(
 ### Generate Detailed Diff Report
 
 ```python
-# Get byte-level diff report
+## Get byte-level diff report
 report = validator.byte_diff_report(
     old_string="def foo():",
     file_extraction="def foo():  "  # Extra spaces
@@ -130,16 +130,16 @@ print(report)
 
 ### Before Each edit_file Call
 
-**Step 1: Extract the exact context**
+#### Step 1: Extract the exact context
 
 ```python
-# What you'll pass to edit_file
+## What you'll pass to edit_file
 old_string = """def process_data(items):
     for item in items:
         handle(item)"""
 ```
 
-**Step 2: Validate it exists in the file**
+### Step 2: Validate it exists in the file
 
 ```bash
 python3 scripts/validate-edit-context.py \
@@ -147,10 +147,10 @@ python3 scripts/validate-edit-context.py \
   "def process_data(items):\n    for item in items:\n        handle(item)"
 ```
 
-**Step 3: Make the edit_file call only if validation passes**
+### Step 3: Make the edit_file call only if validation passes
 
 ```python
-# Now safe to call edit_file
+## Now safe to call edit_file
 edit_file(
     target_file="cync-controller/src/handler.py",
     instructions="I am adding error handling to the loop",
@@ -167,36 +167,38 @@ edit_file(
 
 ### Issue: Context Not Found
 
-**Symptom:**
+#### Symptom
 
-```
+```text
 ✗ Context not found in file
 ```
 
-**Diagnosis:**
+### Diagnosis
 
 1. Check for **whitespace differences**:
 
    ```bash
    # View the file with whitespace visible
    cat -A cync-controller/src/app.py | grep "def foo"
-   ```
 
-2. Check for **encoding issues**:
+```
+
+1. Check for **encoding issues**:
 
    ```bash
    # Verify file encoding
    file cync-controller/src/app.py
    ```
 
-3. Check for **line ending differences** (LF vs CRLF):
+1. Check for **line ending differences** (LF vs CRLF):
 
    ```bash
    # Check for CRLF
    grep -U $'\r' cync-controller/src/app.py && echo "Has CRLF" || echo "Has LF"
    ```
 
-4. **Verify the exact content** - Copy directly from the file:
+1. **Verify the exact content** - Copy directly from the file:
+
    ```bash
    # Extract lines 42-45
    sed -n '42,45p' cync-controller/src/app.py
@@ -210,9 +212,9 @@ edit_file(
 
 ### Issue: Tab vs Space Mismatch
 
-**Symptom:**
+#### Symptom
 
-```
+```python
 ✗ Context not found in file
 Similar lines found:
   Line 42: "def foo():        " (extra spaces)
@@ -221,7 +223,7 @@ Similar lines found:
 **Solution:** Use the exact indentation from the file. Extract with:
 
 ```bash
-# Copy exact lines from file
+## Copy exact lines from file
 sed -n '40,45p' cync-controller/src/app.py
 ```
 
@@ -248,7 +250,7 @@ Test coverage includes:
 
 When validation fails, the validator suggests similar lines:
 
-```
+```python
 ✗ Context not found in file
   Searching for: "def validate_input(data):"...
 
@@ -274,13 +276,17 @@ When validation fails, the validator suggests similar lines:
 
 1. **Always validate before edit_file calls** - Prevents silent failures
 2. **Use raw strings for multiline contexts** - Easier to get exact whitespace:
+
    ```python
    context = r"""def foo():
        pass"""
-   ```
-3. **Extract directly from file** - Copy-paste to ensure accuracy
-4. **Validate once, edit once** - Minimize file state changes
-5. **Log the validation result** - Help with debugging
+
+```
+
+1. **Extract directly from file** - Copy-paste to ensure accuracy
+2. **Validate once, edit once** - Minimize file state changes
+3. **Log the validation result** - Help with debugging
+
    ```python
    is_valid, msg = validator.validate_context(old_string)
    logger.info(f"Context validation: {msg}")
@@ -292,14 +298,14 @@ For automated workflows:
 
 ```bash
 #!/bin/bash
-# Validate before making edits
+## Validate before making edits
 python3 scripts/validate-edit-context.py "$FILE" "$CONTEXT" || {
   echo "Context validation failed"
   exit 1
 }
 
-# Safe to proceed with edit
-# ... call edit_file tool ...
+## Safe to proceed with edit
+## ... call edit_file tool ...
 ```
 
 ## See Also

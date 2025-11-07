@@ -41,7 +41,7 @@ When devices are first registered, the initial preset mode is published with `re
 
 ### 3. Brightness to Preset Mapping
 
-```
+```text
 0   → "off"
 25  → "low"
 50  → "medium"
@@ -75,7 +75,7 @@ When devices are first registered, the initial preset mode is published with `re
 
 ### Docker Logs Confirmation
 
-```
+```text
 10/26/25 00:45:46.854 INFO [mqtt_client:1647] > mqtt:hass: Registered fan: Master Bedroom Fan Switch (ID: 103)
 10/26/25 00:45:46.854 INFO [mqtt_client:1689] > mqtt:hass: >>> FAN INITIAL PRESET: Published 'max' (brightness=100) for 'Master Bedroom Fan Switch'
 ```
@@ -130,7 +130,7 @@ The `retain=True` flag ensures that:
 
 - [MQTT Discovery Schema - Home Assistant](https://www.home-assistant.io/integrations/mqtt/#mqtt-discovery)
 - [Fan Entity - Home Assistant](https://www.home-assistant.io/integrations/fan/)
-- MQTT Retained Messages: https://www.hivemq.com/blog/mqtt-essentials-part-8-retained-messages/
+- MQTT Retained Messages: <https://www.hivemq.com/blog/mqtt-essentials-part-8-retained-messages/>
 
 ---
 

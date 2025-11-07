@@ -1,0 +1,178 @@
+---
+alwaysApply: true
+description: Optimized rules prefix with 4-tier hierarchy
+---
+
+===============================================================================
+TIER 0: INSTANT RECOGNITION
+===============================================================================
+
+**Context**: hass-addons (parent) + python-rebuild-tcp-comm (child)
+**Inheritance**: See `inheritance-model.mdc` for parent-child precedence rules
+**Phase**: [editing/verifying/documenting - detect from activity]
+
+**Top Anti-Patterns - Quick Check**:
+
+- ❌ Using built-in web_search? → Wrong (Rule 11: use Brave Search MCP)
+- ❌ Tool returns error/500/timeout? → STOP (Rule 1: report to user, don't continue)
+- ❌ Creating/editing code without entry/exit logs? → Wrong (Rule 4: Logging-First)
+- ❌ Creating 2nd findings file? → STOP (Rule 8: max 1 per investigation)
+- ❌ Restarting Python instead of rebuilding? → Wrong (Python = rebuild required)
+- ❌ Saying "production-ready" when CI fails? → Wrong (Rule 10: CI must pass)
+- ❌ Marking "complete" without user approval? → Wrong (Rule 10: user confirms)
+- ❌ Creating files with "FINAL," "COMPLETE," "SUMMARY," etc.? → Ask user first (Rule 10)
+- ❌ Using /tmp for artifacts? → Wrong (Use working-files/ with timestamps)
+- ❌ Response >30 lines or verbose? → Too long (Rule 8: concise communication)
+- ❌ Creating todos for <3 step task? → Overkill (Rule 2: multi-step only)
+- ❌ Brave Search for "explain X"? → Wrong (Rule 12: use AI Grounding for answers)
+- ❌ AI Grounding to find docs? → Wrong (Rule 12: use Brave Search for pages)
+
+---
+
+TIER 1: ALWAYS APPLY - EXECUTIVE RULES
+
+**12 CRITICAL RULES (Must Follow)**:
+
+1. **Development Loop**: Edit → Rebuild → Verify. STOP if: env error, broken tooling, tool returns error/500/timeout, stale docs, misunderstood requirement. **DON'T WORK AROUND ISSUES** - raise to user immediately.
+
+2. **Todo Discipline**: WHEN task has 3+ steps → create todos, keep 1 in_progress, update after each step.
+
+3. **Lint-Format-First**: BEFORE committing/building → run linting and formatting. Treat warnings as errors. No code that fails linting or formatting..
+
+4. **Logging-First**: BEFORE editing code → add entry/exit logs for new functions; NEVER log secrets; set logger AND handler levels from config.
+
+5. **Clean Architecture**: Follow DRY & SOLID principles. Refactor duplication, maintain separation of concerns.
+
+6. **Test Strategy**: Prefer unit over E2E; WHEN running E2E → run sequentially, persist artifacts (text/HTML/JUnit).
+
+7. **Creativity**: Use Python MCP tools to increase efficiency (run code, analyze files, automate tasks).
+
+8. **Concise Communication**: Max 200 lines for AI-created docs (findings, summaries) and `alwaysApply: true` rules. Max 1 findings file per investigation. NO redundant summaries/READMEs. Short sentences, bullets, essential info only. NEVER use /tmp for artifacts - use working-files/ with proper timestamps (see working-files-convention.mdc).
+
+9. **Explain, Don't Assume Error**: WHEN user asks "why" or "how" about implementation → explain reasoning/calculation, THEN ask for confirmation. DON'T immediately assume criticism or error. Example: "why does that header include X files?" → "I calculated it based on A, B, and C. Does that look correct?" NOT "You're right! Let me remove that."
+
+10. **Completion Approval**: NEVER mark as "FINAL," "COMPLETE," "production-ready," "CI-ready," or similar without explicit user approval. NEVER create files with "FINAL," "COMPLETE," "SUMMARY," "RESOLUTION," "CONCLUSION" in the name without asking first. If CI is failing (exit code != 0), the system isn't ready. User confirms = done.
+
+11. **Web Search Only via Brave MCP**: NEVER use built-in `web_search` tool (broken). ALWAYS use `mcp_brave-search_brave_web_search` or specialized tools (`brave_news_search`, `brave_video_search`, `brave_image_search`). Autosearch when uncertain (per memory [[memory:9966253]]). See web-search-brave.mdc.
+
+12. **AI Grounding for Reliable Answers**: WHEN need synthesized, factual answers (not raw search results) → use Brave AI Grounding CLI tool via `run_terminal_cmd`. Responses are anchored in verifiable web sources, reducing hallucinations. Use `--research` flag for complex queries requiring multiple searches. Citations included by default with formatted footer. Prefer over raw search when need: authoritative answers, fact-checking, research with citations, or context about topics. Use regular Brave Search for: finding specific pages, current events, or raw result lists.
+
+---
+
+## Decision Tree - STOP or PROCEED?
+
+**STOP and ask user if**:
+
+- Environment/tooling error or unexpected behavior
+- Tool returns error, 500, timeout, or fails to execute
+- Documentation appears stale or contradicts reality
+- Requirements ambiguous or missing critical info
+- Task would take >4 hours or major architectural change
+- Multiple valid approaches with different tradeoffs
+- Destructive action (force push, delete prod data, etc.)
+
+**PROCEED without asking if**:
+
+- Requirements clear and complete
+- Tools working, obvious approach exists
+- Standard pattern from rules/docs applies
+- <2 hour straightforward implementation
+- Non-destructive, easily reversible change
+
+---
+
+**Before-You-Finish Checklists**:
+
+**Code Changes**: [ ] Linted [ ] Tested [ ] Logging [ ] Rebuilt/Restarted [ ] Verified in logs
+**Documentation**: [ ] <200 lines [ ] User approved [ ] No redundancy [ ] Single findings file [ ] No /tmp artifacts
+**Completion**: [ ] CI passes [ ] User confirmed [ ] Artifacts cleaned [ ] Todos closed [ ] No premature "ready" claims [ ] No "FINAL/COMPLETE" file names without approval
+
+---
+
+TIER 2: PROJECT-SPECIFIC CRITICAL RULES
+
+**HASS-ADDONS Project** (when in /workspaces/hass-addons):
+
+**Development Workflow**:
+
+- Python changes (.py) → **REBUILD**: `cd cync-controller && ./rebuild.sh`
+- Config/static (yaml, html, js, css) → **RESTART**: `ha addons restart local_cync-controller`
+- When unsure → **REBUILD** (safer choice)
+- Verify → `ha addons logs local_cync-controller --follow`
+- NEVER start Docker manually (Supervisor manages it)
+
+**Key Commands**:
+
+- Rebuild: `cd cync-controller && ./rebuild.sh` (includes lint, format, unit tests)
+- Restart: `ha addons restart local_cync-controller`
+- Logs: `ha addons logs local_cync-controller --follow`
+- MQTT cleanup: `sudo python3 scripts/delete-mqtt-safe.py [--dry-run]`
+
+**Critical Patterns**:
+
+- Command callbacks: See critical-commands.mdc for async patterns
+- State management: See critical-state-management.mdc for update patterns
+- MQTT discovery: Use suggested_area, clean up on changes
+- Credentials: Never hardcode, use options/secrets
+
+---
+
+TIER 3: AVAILABLE REFERENCES (On Demand)
+
+## Available via agent_requestable_workspace_rules - reference as needed
+
+**Critical Guardrails**:
+
+- critical-commands.mdc: Command callback patterns, async handling
+- critical-credentials.mdc: Security rules, credential management
+- critical-docker.mdc: Docker/devcontainer rules, build patterns
+- critical-state-management.mdc: State update patterns, consistency rules
+
+**Logging System**:
+
+- logging-mandatory.mdc: When and how to log (MUST READ before adding logs)
+- logging-patterns.mdc: Configuration patterns, anti-patterns
+- logging-examples.mdc: Code examples and templates
+
+**Documentation & Standards**:
+
+- inheritance-model.mdc: Parent-child rule precedence and context detection
+- documentation-standards.mdc: Concise docs, anti-verbosity rules, approval workflow
+- working-files-convention.mdc: Timestamp format, directory structure, cleanup
+- documentation-archiving.mdc: Where and how to document completed work
+
+**Development Patterns**:
+
+- development-workflow.mdc: Full 3-step process details
+- python-changes-require-rebuild.mdc: Why Python requires rebuild
+- testing-workflows.mdc: Testing procedures and patterns
+- architecture-concepts.mdc: Key architectural patterns
+
+**Helper Tools**:
+
+- helper-scripts.mdc: Automation scripts available
+- mqtt-entity-cleanup.mdc: Entity deletion workflows
+- ai-browser-testing.mdc: Playwright patterns for testing
+- mcp-tools-guide.mdc: MCP development tools usage
+- web-search-brave.mdc: Brave Search MCP usage (REQUIRED for all web searches)
+- brave-ai-grounding-cli.mdc: AI Grounding CLI tool usage, streaming responses, citations
+
+**Environment & Setup**:
+
+- devcontainer-quirks.mdc: Dev environment setup and quirks
+- dns-requirements.mdc: DNS redirection setup (REQUIRED)
+- token-creation-flow.mdc: Automated LLAT creation
+- supervisor-api-access.mdc: API patterns and auth
+
+**Reference Only**:
+
+- daily-dev-cheatsheet.mdc: Common commands quick reference
+- git-practices.mdc: Git workflow and commit guidelines (prepare changes, user commits)
+- performance-tuning.mdc: Optimization patterns
+- known-bugs-workarounds.mdc: Bug patterns and workarounds
+- cloud-relay-patterns.mdc: Relay mode usage and limitations
+- shell-scripting.mdc: Shell script standards
+- mqtt-integration.mdc: MQTT discovery patterns
+- debugging-with-logs.mdc: Debugging and log inspection techniques
+
+===============================================================================

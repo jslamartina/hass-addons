@@ -1,0 +1,189 @@
+---
+description: Python-specific development patterns for TCP rebuild
+---
+
+# Python Development Patterns
+
+## Poetry Workflow
+
+### Dependency Management
+
+```bash
+## Install all dependencies
+poetry install
+
+## Add new dependency
+poetry add <package>
+
+## Add dev dependency
+poetry add --group dev <package>
+
+## Update lock file
+poetry lock
+
+## Show installed packages
+poetry show
+```
+
+### Virtual Environment
+
+- Always use `.venv/bin/python`
+- Set in VS Code: `Ctrl+Shift+P` → "Python: Select Interpreter" → `.venv/bin/python`
+- Poetry creates venv automatically at project root
+
+## Async/Await Patterns
+
+### Always Use Async
+
+All I/O operations must use async/await:
+
+```python
+## TCP operations
+async with connection:
+    await connection.connect()
+    await connection.send(data)
+    response = await connection.recv()
+
+## Timeouts
+try:
+    result = await asyncio.wait_for(operation(), timeout=1.5)
+except asyncio.TimeoutError:
+    logger.error("Operation timed out")
+```
+
+### Context Managers
+
+Use `async with` for resource cleanup:
+
+```python
+async def send_command():
+    async with TCPConnection(host, port) as conn:
+        await conn.send(data)
+        return await conn.recv()
+    # Connection auto-closed
+```
+
+## Import Organization
+
+### Absolute Imports
+
+Use package-root imports:
+
+```python
+## Good
+from transport.socket_abstraction import TCPConnection
+from metrics.registry import get_metrics_registry
+from harness.toggler import Toggler
+
+## Bad - avoid relative imports
+from ..transport import TCPConnection
+```
+
+### Standard Order
+
+1. Standard library
+2. Third-party packages
+3. Local modules
+
+```python
+import asyncio
+import logging
+
+from prometheus_client import Counter
+
+from transport.socket_abstraction import TCPConnection
+from metrics.registry import get_metrics_registry
+```
+
+## Type Hints (Strict)
+
+### Full Mypy Compliance
+
+All functions require type hints:
+
+```python
+async def send_toggle(
+    connection: TCPConnection,
+    device_id: str,
+    state: bool,
+    timeout: float = 1.5
+) -> bool:
+    """Send toggle command."""
+    ...
+```
+
+### Return Types
+
+Always specify return types:
+
+```python
+def parse_response(data: bytes) -> dict[str, Any]:
+    ...
+
+async def connect() -> bool:
+    ...
+```
+
+### Optional and Union
+
+Use modern type syntax (Python 3.10+):
+
+```python
+## Good
+def process(value: str | None) -> dict[str, Any]:
+    ...
+
+## Old style (avoid)
+from typing import Optional, Union
+def process(value: Optional[str]) -> Dict[str, Any]:
+    ...
+```
+
+## Logging Patterns
+
+### Structured Logging
+
+Use JSON-structured logs:
+
+```python
+logger.info(
+    "TCP operation complete",
+    extra={
+        "operation": "toggle",
+        "device_id": device_id,
+        "duration_ms": duration,
+        "success": True
+    }
+)
+```
+
+### Never Log Secrets
+
+```python
+## Bad - logs sensitive data
+logger.debug(f"Auth token: {token}")
+
+## Good - redact or omit
+logger.debug("Authentication successful", extra={"user_id": user_id})
+```
+
+## Module Organization
+
+### Package Structure
+
+```text
+src/
+├── transport/          # TCP abstractions
+│   ├── socket_abstraction.py
+│   └── device_operations.py
+├── metrics/            # Prometheus metrics
+│   └── registry.py
+└── harness/            # Test harnesses
+    └── toggler.py
+```
+
+### Module Responsibilities
+
+- **transport/**: Low-level TCP, no business logic
+- **metrics/**: Instrumentation only
+- **harness/**: High-level operations, orchestration

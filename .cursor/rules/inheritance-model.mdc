@@ -1,0 +1,179 @@
+---
+description: Parent-child rule inheritance model and precedence
+---
+
+# Rule Inheritance Model
+
+## Overview
+
+This workspace contains two projects with their own rule sets:
+
+1. **Parent**: `/workspaces/hass-addons` (Home Assistant add-on)
+2. **Child**: `/workspaces/hass-addons/python-rebuild-tcp-comm` (TCP library)
+
+## How Inheritance Works
+
+### Child Inherits from Parent
+
+The child project **inherits all parent rules** unless explicitly overridden.
+
+```text
+Parent Rules (_00-rules-prefix.mdc)
+    ↓ inherited by
+Child Rules (python-rebuild-tcp-comm/.cursor/rules/_00-rules-prefix.mdc)
+    ↓ adds Python-specific rules
+```
+
+### Precedence Rules
+
+When working in the child project:
+
+1. **Child-specific rules take precedence** over parent general rules
+2. **Parent executive rules (1-9) always apply** unless child explicitly overrides
+3. **Parent critical rules** apply unless child has equivalent critical rule
+4. **Child can extend** parent rules with additional requirements
+
+### Context Detection
+
+**Current project context** is determined by:
+
+- Current working directory path
+- File paths being edited
+- Explicit project references in task description
+
+**In parent** (`/workspaces/hass-addons`):
+
+- All parent rules apply
+- Child rules don't apply
+
+**In child** (`/workspaces/hass-addons/python-rebuild-tcp-comm`):
+
+- All child rules apply
+- Parent rules apply as baseline
+- Child-specific overrides take precedence
+
+## Rule Override Examples
+
+### Example 1: Development Workflow
+
+**Parent**: Edit → Rebuild → Verify (3 steps)
+
+**Child**: Edit → Quality → Test → Verify (4 steps)
+
+**Resolution**: In child project, use 4-step workflow. Parent's 3-step is baseline, child adds explicit quality gate.
+
+### Example 2: Testing Strategy
+
+**Parent**: Prefer unit over E2E; sequential E2E execution
+
+**Child**: 90% coverage minimum; unit + integration tests
+
+**Resolution**: Both apply. Child adds coverage threshold, parent's E2E guidance still relevant.
+
+### Example 3: Package Manager
+
+**Parent**: No specific Python package manager requirement
+
+**Child**: Poetry 1.8.3 (mandatory)
+
+**Resolution**: Poetry requirement is child-specific and mandatory in child project.
+
+## Rule Categories and Inheritance
+
+### Always Inherited (No Override)
+
+These parent rules apply everywhere:
+
+- Executive Rules 1-9 (Development Loop, Todo Discipline, etc.)
+- Decision Tree (STOP or PROCEED)
+- Before-You-Finish Checklists
+- Concise Communication standards
+- Completion Approval workflow
+- Working Files Convention (timestamp format, directory structure)
+
+### Can Be Extended
+
+These parent rules can be extended by child:
+
+- Development Workflow (child adds quality step)
+- Testing Strategy (child adds coverage threshold)
+- Helper Scripts (child has own scripts)
+
+### Project-Specific (No Inheritance)
+
+These rules are project-specific:
+
+- Parent: Home Assistant integration patterns, MQTT, Supervisor API
+- Child: Poetry, async/await, type hints, Prometheus metrics
+
+## Conflict Resolution
+
+**If rules conflict**:
+
+1. Check if child rule is an extension (both apply)
+2. Check if child rule is an override (child wins)
+3. If unclear, ask user for clarification
+
+**Example conflict**:
+
+- Parent: "Max 200 lines per doc"
+- Child: (No equivalent rule stated)
+
+**Resolution**: Parent rule applies to child by inheritance.
+
+## File Organization
+
+### Parent Rules Location
+
+```text
+/workspaces/hass-addons/.cursor/rules/
+├── _00-rules-prefix.mdc (always applied)
+├── critical-*.mdc (critical patterns)
+├── development-workflow.mdc (always applied)
+└── ... (30 total files)
+```
+
+### Child Rules Location
+
+```text
+/workspaces/hass-addons/python-rebuild-tcp-comm/.cursor/rules/
+├── _00-rules-prefix.mdc (always applied, inherits parent)
+├── architecture-patterns.mdc
+├── quality-gates.mdc
+├── testing-strategy.mdc
+└── ... (7 total files)
+```
+
+### Cross-References
+
+Child rules can reference parent rules:
+
+```markdown
+See parent's `logging-mandatory.mdc` for entry/exit logging patterns
+```
+
+Parent rules shouldn't reference child rules (parent is unaware of child).
+
+## Quick Reference Card
+
+### Working in parent project?
+
+- Use parent rules only
+- 3-step workflow
+- Home Assistant patterns
+
+### Working in child project?
+
+- Use child rules + parent baseline
+- 4-step workflow with explicit quality gate
+- Python/Poetry patterns
+- 90% coverage requirement
+- Parent's executive rules still apply
+
+## Verification
+
+**Check current context**: Look at file paths in task description
+
+**Verify rule applicability**: Child-specific keywords (Poetry, mypy, ruff) → child context
+
+**When uncertain**: Default to parent rules, then add child-specific requirements

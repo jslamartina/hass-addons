@@ -1,6 +1,8 @@
+# 2025 10 11T10 00 00 Cloud Relay Testing Plan
+
 <!-- 56394217-30ff-4825-9208-dd9226e0a36a 5d7ed494-f1f2-4871-8def-128de24e931d -->
 
-# Cloud Relay Mode Testing Plan
+## Cloud Relay Mode Testing Plan
 
 ✅ **COMPLETED** - Systematic validation of all Cloud Relay operating modes with real devices in devcontainer.
 
@@ -45,23 +47,23 @@ Each test follows this pattern:
 **Docker MCP** - Container and log inspection:
 
 ```python
-# Check addon container status
+## Check addon container status
 mcp_docker_list_containers(all=True, filters={"name": ["addon_local_cync-controller"]})
 
-# Fetch logs with specific tail count
+## Fetch logs with specific tail count
 mcp_docker_fetch_container_logs("addon_local_cync-controller", tail=100)
 ```
 
 **Python MCP** - Log analysis and packet validation:
 
 ```python
-# Parse and analyze log entries
+## Parse and analyze log entries
 import re
 logs = "... log content ..."
 packet_types = re.findall(r'Type: (0x[0-9a-f]+)', logs)
 print(f"Found {len(packet_types)} packets: {set(packet_types)}")
 
-# Validate packet structure
+## Validate packet structure
 expected_fields = ['Type', 'Seq', 'Device', 'RSSI']
 for field in expected_fields:
     count = logs.count(field)
@@ -71,10 +73,10 @@ for field in expected_fields:
 **Git MCP** - Track test changes:
 
 ```python
-# Check for uncommitted test configs
+## Check for uncommitted test configs
 mcp_git_git_status("/mnt/supervisor/addons/local/cync-controller/")
 
-# Review changes made during testing
+## Review changes made during testing
 mcp_git_git_diff_unstaged("/mnt/supervisor/addons/local/cync-controller/", context_lines=3)
 ```
 
@@ -91,7 +93,7 @@ cloud_relay:
   enabled: false
 ```
 
-**Results:**
+### Results
 
 - ✅ Add-on starts without errors
 - ✅ Device connects and appears in logs (4 devices connected)
@@ -110,7 +112,7 @@ cloud_relay:
 
 **Status:** ✅ **PASSED** - Transparent proxy operational
 
-**Configuration:**
+### Configuration
 
 ```yaml
 cloud_relay:
@@ -119,7 +121,7 @@ cloud_relay:
   debug_packet_logging: false
 ```
 
-**Results:**
+### Results
 
 - ✅ Add-on starts without errors
 - ✅ Device connects to relay (4 devices in RELAY mode)
@@ -139,7 +141,7 @@ cloud_relay:
 
 **Status:** ✅ **PASSED** - Packet inspection fully functional
 
-**Configuration:**
+### Configuration
 
 ```yaml
 cloud_relay:
@@ -148,7 +150,7 @@ cloud_relay:
   debug_packet_logging: true
 ```
 
-**Results:**
+### Results
 
 - ✅ Add-on restarts cleanly
 - ✅ Detailed packet logs appear (6 packet types captured)
@@ -157,7 +159,7 @@ cloud_relay:
 - ✅ Commands still work while logging
 - ✅ Performance acceptable (no noticeable lag)
 
-**Packet Types Captured:**
+### Packet Types Captured
 
 - 0xd8 HEARTBEAT_CLOUD (5 packets)
 - 0xd3 HEARTBEAT_DEV (5 packets)
@@ -176,7 +178,7 @@ cloud_relay:
 
 **Status:** ✅ **PASSED** - Privacy mode operational
 
-**Configuration:**
+### Configuration
 
 ```yaml
 cloud_relay:
@@ -185,7 +187,7 @@ cloud_relay:
   debug_packet_logging: true
 ```
 
-**Results:**
+### Results
 
 - ✅ Add-on starts without errors
 - ✅ Device connects to relay (LAN-only mode confirmed)
@@ -207,13 +209,13 @@ cloud_relay:
 
 **Configuration:** Relay mode active with debug logging.
 
-**Tests Executed:**
+### Tests Executed
 
 - ✅ **Smart Mode Injection** - `echo "smart" > /tmp/cync_inject_command.txt`
 - ✅ **Traditional Mode Injection** - `echo "traditional" > /tmp/cync_inject_command.txt`
 - ✅ **Raw Bytes Injection** - Custom packet injection
 
-**Results:**
+### Results
 
 - ✅ Injection file detected (check logs)
 - ✅ Mode packet crafted and sent to device
@@ -231,16 +233,18 @@ cloud_relay:
 
 **Status:** ✅ **PASSED** - Both modes implemented correctly
 
-**Test A - Secure Mode (Default):**
+#### Test A - Secure Mode (Default)
+
 ✅ SSL connection uses proper verification
 ✅ No security warnings in logs
 
-**Test B - Debug Mode (Insecure):**
+#### Test B - Debug Mode (Insecure)
+
 ✅ Security warning appears in logs at startup
 ✅ SSL connection still works (without verification)
 ✅ Warning includes "DEBUG MODE" with prominent alerts
 
-**Results:**
+### Results
 
 - ✅ Secure mode: SSL verification active, no warnings
 - ✅ Debug mode: SSL verification disabled with clear warnings
@@ -254,14 +258,14 @@ cloud_relay:
 
 **Status:** ✅ **PASSED** - Excellent stability and error handling
 
-**Tests Completed:**
+### Tests Completed
 
 1. **Cloud Unreachable** ✅ Device still connects to relay, graceful error handling
 2. **Multiple Devices** ✅ 4 devices connect simultaneously, each with independent relay
 3. **Mode Switching** ✅ 6 configuration changes tested, all transitions successful
 4. **Long-running Stability** ✅ 30+ minutes testing, no memory leaks or connection drops
 
-**Results:**
+### Results
 
 - ✅ **13 total errors** - All graceful shutdown-related (Event loop closed)
 - ✅ **4 devices** tested simultaneously
@@ -269,7 +273,7 @@ cloud_relay:
 - ✅ **30+ minutes** stability testing
 - ✅ **No operational errors** or crashes
 
-**Performance Metrics:**
+### Performance Metrics
 
 - Configuration change time: ~5 seconds
 - Add-on restart time: 5-8 seconds
@@ -284,7 +288,7 @@ cloud_relay:
 
 **Status:** ✅ **PASSED** - Comprehensive documentation complete
 
-**Documentation Created/Updated:**
+### Documentation Created/Updated
 
 - ✅ **`docs/user/cloud-relay.md`** - Comprehensive user guide (465 lines)
 - ✅ **`docs/developer/agents-guide.md`** - Cloud relay section with configuration examples
@@ -294,7 +298,7 @@ cloud_relay:
 - ✅ **`cync-controller/config.yaml`** - Schema with helpful comments
 - ✅ **`scripts/README.md`** - Automated testing tools documentation
 
-**Documentation Quality:**
+### Documentation Quality
 
 - ✅ Accurate and matches implementation
 - ✅ Comprehensive coverage of all features
@@ -332,19 +336,19 @@ For each phase, document:
 
 ### Automated Test Result Collection
 
-**Use Python MCP to generate comprehensive test reports:**
+#### Use Python MCP to generate comprehensive test reports
 
 ```python
 from datetime import datetime
 from collections import defaultdict
 
-# Collect test data
+## Collect test data
 test_results = {
     "timestamp": datetime.now().isoformat(),
     "phases": []
 }
 
-# For each test phase
+## For each test phase
 phases = ["Baseline", "Cloud Relay", "Debug Logging", "LAN-only", "Packet Injection", "SSL Modes", "Edge Cases"]
 
 for phase in phases:
@@ -362,7 +366,7 @@ for phase in phases:
 
     test_results["phases"].append(result)
 
-# Generate summary
+## Generate summary
 print("\n" + "="*70)
 print("TEST EXECUTION SUMMARY")
 print("="*70)
@@ -372,7 +376,7 @@ for phase in test_results["phases"]:
     print(f"   Errors: {phase['error_count']}, Warnings: {phase['warning_count']}")
     print(f"   Connections: {phase['device_connections']}, MQTT: {phase['mqtt_publishes']}")
 
-# Calculate overall pass rate
+## Calculate overall pass rate
 passed = sum(1 for p in test_results["phases"] if p["status"] == "Pass")
 total = len(test_results["phases"])
 print(f"\nOverall: {passed}/{total} phases passed ({passed/total*100:.1f}%)")
@@ -389,7 +393,7 @@ If critical issues found:
 
 ## ✅ Implementation Status
 
-**All to-dos completed successfully!**
+### All to-dos completed successfully
 
 ### ✅ Completed Implementation Tasks
 
@@ -412,7 +416,7 @@ If critical issues found:
 
 **Original Goal:** Implement Cloud Relay Mode for MITM proxy functionality
 
-**Result:** ✅ **MISSION ACCOMPLISHED**
+#### Result:**✅**MISSION ACCOMPLISHED
 
 - ✅ **Full cloud relay functionality** with packet inspection
 - ✅ **Automated configuration and testing** via Supervisor API
@@ -421,7 +425,7 @@ If critical issues found:
 - ✅ **Real-world validation** with 4 physical devices
 - ✅ **Production ready** - All tests passed, all limitations resolved
 
-**Files Modified/Created:**
+### Files Modified/Created
 
 - **Modified:** 6 files (server.py, const.py, structs.py, config.yaml, run.sh, CHANGELOG.md)
 - **New:** 3 files (packet_parser.py, packet_checksum.py, cloud-relay.md)

@@ -97,11 +97,11 @@ validation:
 **Files to Remove**:
 
 ```bash
-# Legacy TCP device code (after migration)
+## Legacy TCP device code (after migration)
 cync_controller/devices/tcp_device.py  # Parts related to direct socket I/O
 cync_controller/devices/tcp_packet_handler.py  # Legacy packet handling
 
-# Or mark sections as deprecated
+## Or mark sections as deprecated
 @deprecated("Use ReliableTransport instead")
 async def write(self, data: bytes) -> bool:
     # ... legacy code
@@ -110,7 +110,7 @@ async def write(self, data: bytes) -> bool:
 **Replacement**:
 
 ```python
-# New unified transport
+## New unified transport
 from rebuild_tcp_comm.transport import ReliableTransport
 
 class CyncTCPDevice:
@@ -134,12 +134,12 @@ class CyncTCPDevice:
 ### 2. Remove Canary Router
 
 ```python
-# Before (Phase 2)
+## Before (Phase 2)
 router = CanaryRouter(legacy, new, canary_pct=50)
 await router.send(device_id, message)
 
-# After (Phase 3)
-# Direct use of new transport
+## After (Phase 3)
+## Direct use of new transport
 await reliable_transport.send_reliable(message)
 ```
 
@@ -148,7 +148,7 @@ await reliable_transport.send_reliable(message)
 **Remove**:
 
 ```yaml
-# config.yaml (remove after migration)
+## config.yaml (remove after migration)
 canary_percentage: 100 # No longer needed
 dark_launch_enabled: false # No longer needed
 legacy_transport_enabled: false # Remove legacy
@@ -157,7 +157,7 @@ legacy_transport_enabled: false # Remove legacy
 **Keep**:
 
 ```yaml
-# config.yaml (production config)
+## config.yaml (production config)
 reliable_transport:
   max_retries: 3
   ack_timeout_seconds: 5.0
@@ -176,7 +176,7 @@ reliable_transport:
 **File**: `docs/runbooks/tcp-transport-operations.md`
 
 ```markdown
-# TCP Transport Operations Runbook
+## TCP Transport Operations Runbook
 
 ## Common Issues
 
@@ -249,7 +249,8 @@ reliable_transport:
 
 **Files to Create**:
 
-```
+```bash
+
 docs/
 ├── architecture/
 │   ├── reliable-transport-design.md
@@ -267,6 +268,7 @@ docs/
     ├── metrics-reference.md
     ├── configuration-reference.md
     └── api-reference.md
+
 ```
 
 ---
@@ -301,7 +303,7 @@ docs/
 **File**: `reports/30-day-slo-report.md`
 
 ```markdown
-# 30-Day SLO Compliance Report
+## 30-Day SLO Compliance Report
 
 ## Period
 
@@ -359,31 +361,31 @@ End: 2025-12-15
 
 ```bash
 #!/usr/bin/env bash
-# Remove legacy TCP transport code after full migration
+## Remove legacy TCP transport code after full migration
 
 set -e
 
 echo "=== Removing Legacy Code ==="
 
-# Backup first
+## Backup first
 git checkout -b backup/pre-legacy-removal
 git push origin backup/pre-legacy-removal
 
-# Remove legacy files (adjust paths as needed)
+## Remove legacy files (adjust paths as needed)
 echo "Removing legacy transport..."
-# git rm cync-controller/src/cync_controller/devices/legacy_tcp.py
+## git rm cync-controller/src/cync_controller/devices/legacy_tcp.py
 
-# Remove canary routing
+## Remove canary routing
 echo "Removing canary router..."
 rm -rf python-rebuild-tcp-comm/src/rebuild_tcp_comm/routing/
 
-# Remove dark launch code
+## Remove dark launch code
 echo "Removing dark launch..."
-# sed -i '/DARK_LAUNCH/d' config files
+## sed -i '/DARK_LAUNCH/d' config files
 
-# Update imports
+## Update imports
 echo "Updating imports..."
-# find . -name "*.py" -exec sed -i 's/from.*legacy/# REMOVED: &/g' {} \;
+## find . -name "*.py" -exec sed -i 's/from.*legacy/# REMOVED: &/g' {} \;
 
 echo ""
 echo "✓ Legacy code removed"
@@ -397,12 +399,12 @@ echo "  ./scripts/lint.sh"
 Remove canary/legacy-specific tests:
 
 ```bash
-# Remove
+## Remove
 tests/test_canary_router.py
 tests/test_dark_launch.py
 tests/test_legacy_transport.py
 
-# Keep and update
+## Keep and update
 tests/test_reliable_transport.py # Update to use production config
 tests/test_integration.py        # Remove legacy paths
 ```
@@ -412,9 +414,9 @@ tests/test_integration.py        # Remove legacy paths
 **pyproject.toml**:
 
 ```toml
-# Remove development-only dependencies
+## Remove development-only dependencies
 [tool.poetry.group.dev.dependencies]
-# pytest-chaos = "^0.1.0"  # Remove after chaos tests validated
+## pytest-chaos = "^0.1.0"  # Remove after chaos tests validated
 ```
 
 ---
@@ -426,7 +428,7 @@ tests/test_integration.py        # Remove legacy paths
 **File**: `docs/retrospective/phase-1-2-3-retrospective.md`
 
 ```markdown
-# TCP Rebuild Migration Retrospective
+## TCP Rebuild Migration Retrospective
 
 ## What Went Well
 

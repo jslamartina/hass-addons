@@ -1,4 +1,4 @@
-# 🎉 AI Browser Testing - Complete & Ready!
+# 🎉 AI Browser Testing - Complete & Ready
 
 **Date:** October 24, 2025
 
@@ -19,7 +19,7 @@ A **comprehensive browser testing framework** that enables AI agents to autonomo
 **Location:** `docs/developer/ai-browser-testing-plan.md`
 **Size:** Comprehensive (500+ lines)
 
-**Contains:**
+#### Contains
 
 - ✅ All 17 MCP Playwright tools documented
 - ✅ Core workflows (login, navigation, entity verification, device control)
@@ -37,7 +37,7 @@ A **comprehensive browser testing framework** that enables AI agents to autonomo
 **Location:** `.cursor/rules/ai-browser-testing.mdc`
 **Purpose:** Fast-access cheat sheet
 
-**Contains:**
+#### Contains
 
 - ✅ Tool reference table
 - ✅ Quick start pattern (login → navigate → test)
@@ -51,7 +51,7 @@ A **comprehensive browser testing framework** that enables AI agents to autonomo
 
 **Location:** `docs/developer/mcp-tools.md`
 
-**Changes:**
+#### Changes
 
 - ✅ Added `cursor-playwright` to quick reference
 - ✅ New Browser Automation section (100+ lines)
@@ -63,7 +63,7 @@ A **comprehensive browser testing framework** that enables AI agents to autonomo
 
 **Location:** `AGENTS.md`
 
-**Changes:**
+#### Changes
 
 - ✅ Highlighted browser automation as NEW feature
 - ✅ Added direct link to AI Browser Testing Plan
@@ -85,7 +85,7 @@ A **comprehensive browser testing framework** that enables AI agents to autonomo
 
 ## ✅ Capabilities Enabled
 
-### AI Agents Can Now:
+### AI Agents Can Now
 
 1. **Navigate Home Assistant UI**
 
@@ -234,17 +234,23 @@ const network = mcp_cursor - playwright_browser_network_requests();
 
 1. **Read the quick reference:**
 
-   ```
-   .cursor/rules/ai-browser-testing.mdc
-   ```
+```
 
-2. **Follow a workflow:**
+.cursor/rules/ai-browser-testing.mdc
 
-   ```
-   docs/developer/ai-browser-testing-plan.md
-   ```
+```
 
-3. **Use the patterns:**
+```
+
+1. **Follow a workflow:**
+
+```
+
+docs/developer/ai-browser-testing-plan.md
+
+```
+
+1. **Use the patterns:**
    - Start with `browser_snapshot()` to understand structure
    - Use role-based selectors for Shadow DOM
    - Add `iframe >>` prefix for add-on pages
@@ -252,10 +258,11 @@ const network = mcp_cursor - playwright_browser_network_requests();
 
 ### Example Session
 
-```typescript
+```
+
 // 1. Login
 (await mcp_cursor) -
-  playwright_browser_navigate({ url: "http://localhost:8123" });
+  playwright_browser_navigate({ url: "<http://localhost:8123>" });
 (await mcp_cursor) -
   playwright_browser_fill_form({
     fields: [
@@ -285,7 +292,8 @@ const network = mcp_cursor - playwright_browser_network_requests();
 
 // 4. Debug
 (await mcp_cursor) - playwright_browser_console_messages(); // Check for errors
-```
+
+```text
 
 ---
 
@@ -336,6 +344,7 @@ const network = mcp_cursor - playwright_browser_network_requests();
 ## 📖 Documentation Structure
 
 ```
+
 docs/developer/
 ├── ai-browser-testing-plan.md       # 📘 Main guide (start here)
 ├── browser-automation.md            # Playwright patterns
@@ -348,13 +357,14 @@ docs/developer/
 
 AGENTS.md                            # Points to browser testing
 AI_BROWSER_TESTING_READY.md          # This file
+
 ```
 
 ---
 
-## 🎉 Success!
+## 🎉 Success
 
-**You now have fully autonomous browser testing capabilities!**
+### You now have fully autonomous browser testing capabilities
 
 AI agents can:
 
@@ -367,7 +377,7 @@ AI agents can:
 - ✅ Follow best practices (documented patterns)
 - ✅ Troubleshoot problems (solutions included)
 
-**All documentation is in place. Tools are verified working. Ready for production use!**
+### All documentation is in place. Tools are verified working. Ready for production use
 
 ---
 
@@ -381,7 +391,7 @@ AI agents can:
 
 ---
 
-**Status: COMPLETE ✅**
+### Status: COMPLETE ✅
 
 _Created: October 24, 2025_
 _Tested and verified working with Home Assistant_

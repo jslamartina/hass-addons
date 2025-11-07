@@ -20,7 +20,8 @@ logger = get_logger(__name__)
 
 ## When to Log
 
-**Always Log:**
+### Always Log
+
 - Function entry/exit (especially async)
 - State changes (with before/after values)
 - External operations (File I/O, network)
@@ -28,7 +29,8 @@ logger = get_logger(__name__)
 - Configuration loading
 - User actions
 
-**Don't Log:**
+### Don't Log
+
 - Sensitive data (tokens, passwords)
 - Excessive loop iterations (log summary instead)
 - Already-logged information
@@ -37,19 +39,19 @@ logger = get_logger(__name__)
 ## Log Format
 
 ```python
-# Simple messages
+## Simple messages
 logger.info("→ Starting operation")
 logger.info("✓ Operation completed")
 logger.error("✗ Operation failed")
 
-# Structured context
+## Structured context
 logger.info("Device state changed", extra={
     "device_id": device_id,
     "old_state": "OFF",
     "new_state": "ON",
 })
 
-# Performance timing
+## Performance timing
 @timed_async("mqtt_publish")
 async def publish_message(topic, payload):
     await client.publish(topic, payload)

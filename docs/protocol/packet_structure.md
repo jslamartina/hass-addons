@@ -1,6 +1,8 @@
+# Packet Structure
+
 There are a few components that make up a complete packet. There are request and response packets.
 
-# Basic structure
+## Basic structure
 
 The header is always present. The endpoint and queue ID are present in most packets.
 The data is present in most packets, but not all.
@@ -10,7 +12,7 @@ The data is present in most packets, but not all.
   - queue ID
   - DATA (Mostly bound by 0x7e, however, some data is unbound)
 
-# Header
+## Header
 
 The header defines what type of packet and how long the data is. The header is always 5 bytes long and
 is always present in a packet. The header is not counted towards the data length.
@@ -37,7 +39,7 @@ cloud using nikshrivs cync_data.json exporter.
 
 ### Example packet
 
-**Actual auth code zeroed out.**
+#### Actual auth code zeroed out
 
 ```text
 > 2024/03/11 00:14:18.000813563  length=31 from=0 to=30
@@ -169,7 +171,7 @@ This is a bi-directional data channel packet.
 ### Example packet
 
 ```text
-# Control packet
+## Control packet
 
 ```
 
@@ -188,18 +190,18 @@ This is a bi-directional data channel packet. I am unsure of what exactly this c
 ### Example packet
 
 ```text
-# device firmware version
+## device firmware version
 ```
 
 ### Response
 
 The server responds with a 0x88 packet: `0x88 0x00 0x00 0x00 0x03 <queue id: 3 bytes>`
 
-# Unknown
+## Unknown
 
 """text
 
-# 2 devices join the mesh. ID 2 and 3 (both BT only bulbs)
+## 2 devices join the mesh. ID 2 and 3 (both BT only bulbs)
 
 03/16/24 21:45:48.0033 DEBUG - cync-controller cync-controller:533 -> 10.0.2.215:extract: Extracting packets from 43 bytes of raw data
 83 00 00 00 26 39 87 c8 57 00 5e 00 7e 11 00 00 00 fa d0 14 00 fe 03 00 05 00 ff ff ea 11 02 05 a1 00 00 00 00 00 00 00 00 8b 7e

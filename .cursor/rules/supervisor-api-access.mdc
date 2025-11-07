@@ -2,6 +2,7 @@
 description: Supervisor API Auth
 alwaysApply: false
 ---
+
 # Supervisor API Access
 
 **Important:** Scripts that need to access the Home Assistant Supervisor API **MUST be run from within the `hassio_cli` container** because the `supervisor` hostname is only resolvable inside supervisor-managed containers.
@@ -9,22 +10,23 @@ alwaysApply: false
 ## Correct Approaches
 
 ```bash
-# ✅ BEST: Use ha CLI commands directly (automatically runs in hassio_cli)
+## ✅ BEST: Use ha CLI commands directly (automatically runs in hassio_cli)
 ha addons info local_cync-controller --raw-json | jq '.data.options'
 
-# ✅ ALTERNATIVE: Run curl inside hassio_cli container
+## ✅ ALTERNATIVE: Run curl inside hassio_cli container
 docker exec hassio_cli curl -sf \
   -H "Authorization: Bearer $SUPERVISOR_TOKEN" \
   http://supervisor/addons/local_cync-controller/options
-```
+$()$(
+  markdown
 
-## Incorrect Approaches
+  ## Incorrect Approaches
 
-```bash
-# ❌ WRONG - Will fail with "Could not resolve host: supervisor"
+)$()bash
+## ❌ WRONG - Will fail with "Could not resolve host: supervisor"
 ./scripts/configure-addon.sh get
 
-# ❌ WRONG - supervisor hostname not reachable from devcontainer
+## ❌ WRONG - supervisor hostname not reachable from devcontainer
 curl http://supervisor/addons/...
 ```
 
@@ -32,7 +34,7 @@ curl http://supervisor/addons/...
 
 - The devcontainer shell is **outside** the Home Assistant Supervisor network
 - The `supervisor` hostname only resolves inside supervisor-managed containers (hassio_cli, hassio_supervisor, add-on containers)
-- The `hassio_cli` container **does not** have access to the devcontainer filesystem
+- The `hassio_cli` container **doesn't** have access to the devcontainer filesystem
 
 ## Script Behavior Reference
 

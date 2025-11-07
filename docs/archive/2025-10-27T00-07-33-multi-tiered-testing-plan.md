@@ -2,7 +2,7 @@
 
 **Purpose:** Establish comprehensive automated testing strategy to support major refactoring work with confidence and prevent regressions.
 
-**Last Updated:** October 24, 2025
+\*Last Updated:\*\* October 24, 2025
 
 ---
 
@@ -26,7 +26,7 @@ This document outlines a three-tiered testing approach for the Cync Controller a
 2. **Integration Tests** - Component interaction testing (Docker-based)
 3. **End-to-End Tests** - Full workflow testing (Playwright/browser automation)
 
-**Goals:**
+### Goals
 
 - ✅ Enable confident refactoring of core components
 - ✅ Catch regressions early in development
@@ -34,7 +34,7 @@ This document outlines a three-tiered testing approach for the Cync Controller a
 - ✅ Document expected behavior through tests
 - ✅ Support CI/CD automation
 
-**Timeline:**
+### Timeline
 
 - Phase 1 (Foundation): ✅ **COMPLETE** (October 24, 2025) - Critical packet parsing modules
 - Phase 2 (Core Unit Tests): ✅ **COMPLETE** (October 24, 2025) - All core business logic modules
@@ -43,7 +43,7 @@ This document outlines a three-tiered testing approach for the Cync Controller a
 - **Completed:** 2 phases in 1 day (both phases done together)
 - **Remaining:** ~3-5 weeks for Phases 3-4
 
-**Current Status:**
+### Current Status
 
 - ✅ **Phase 1 Complete** - 69 unit tests, 96% coverage of critical modules (packet_parser, packet_checksum)
 - ✅ **Phase 2 Complete** - 123 additional unit tests, 35.33% overall coverage (devices, MQTT, server, cloud API)
@@ -70,7 +70,7 @@ This document outlines a three-tiered testing approach for the Cync Controller a
 
 ### Existing Testing Infrastructure
 
-**✅ Currently Available:**
+#### ✅ Currently Available
 
 - Playwright setup (`playwright.config.ts`, browser automation tools)
 - Automated add-on configuration scripts (`scripts/configure-addon.sh`)
@@ -82,7 +82,7 @@ This document outlines a three-tiered testing approach for the Cync Controller a
 - **✅ Coverage infrastructure** - pytest-cov with HTML/terminal reports
 - **✅ npm test scripts** - `test:unit`, `test:unit:cov`, `test:unit:fast`
 
-**📋 In Progress (Phase 2+):**
+### 📋 In Progress (Phase 2+)
 
 - Integration test suite
 - Comprehensive E2E test coverage
@@ -92,7 +92,7 @@ This document outlines a three-tiered testing approach for the Cync Controller a
 
 ### Key Components Requiring Tests
 
-**Core Python Modules:**
+#### Core Python Modules
 
 - `server.py` - NCyncServer, CloudRelayConnection, packet handling
 - `devices.py` - CyncDevice, CyncGroup, CyncTCPDevice, command handling
@@ -102,7 +102,7 @@ This document outlines a three-tiered testing approach for the Cync Controller a
 - `cloud_api.py` - Cloud API interactions
 - `metadata/model_info.py` - Device metadata and classification
 
-**Critical Workflows:**
+### Critical Workflows
 
 - Device discovery and registration
 - Command flow with ACK handling
@@ -117,7 +117,7 @@ This document outlines a three-tiered testing approach for the Cync Controller a
 
 ### Test Pyramid
 
-```
+```text
         /\
        /  \        E2E Tests (Playwright)
       / UI \       - Slow, expensive
@@ -166,10 +166,10 @@ Unit tests validate individual components in isolation with mocked dependencies.
 
 ### Setup Requirements
 
-**Install Dependencies:**
+#### Install Dependencies
 
 ```bash
-# Add to pyproject.toml [project.optional-dependencies]
+## Add to pyproject.toml [project.optional-dependencies]
 test = [
 "pytest>=8.3.0",
 "pytest-asyncio>=0.24.0",
@@ -178,13 +178,14 @@ test = [
 "pytest-timeout>=2.3.0",
 ]
 
-# Install
+## Install
 pip install -e ".[test]"
 ```
 
-**Directory Structure:**
+## Directory Structure
 
-```
+```python
+
 cync-controller/
 ├── src/cync_lan/
 │   ├── server.py
@@ -192,7 +193,7 @@ cync-controller/
 │   └── ...
 └── tests/
     ├── unit/
-    │   ├── __init__.py
+    │   ├── **init**.py
     │   ├── conftest.py          # Shared fixtures
     │   ├── test_packet_parser.py
     │   ├── test_packet_checksum.py
@@ -204,6 +205,7 @@ cync-controller/
     │   └── ... (covered in Tier 2)
     └── e2e/
         └── ... (covered in Tier 3)
+
 ```
 
 ### Test Categories
@@ -212,7 +214,7 @@ cync-controller/
 
 **Priority:** 🔴 Critical - Core protocol implementation
 
-**Test Cases:**
+#### Test Cases
 
 - Parse valid 0x73 control packets
 - Parse valid 0x83 mesh info packets
@@ -222,7 +224,7 @@ cync-controller/
 - Test checksum validation
 - Test packet formatting for logging
 
-**Example Test:**
+### Example Test
 
 ```python
 import pytest
@@ -271,14 +273,14 @@ class TestPacketParser:
 
 **Priority:** 🔴 Critical - Validates packet integrity
 
-**Test Cases:**
+#### Test Cases
 
 - Calculate checksum for valid packets
 - Verify checksum calculation matches expected values
 - Test edge cases (empty data, single byte, max length)
 - Performance tests for large packets
 
-**Example Test:**
+### Example Test
 
 ```python
 from cync_lan.packet_checksum import calculate_checksum_between_markers
@@ -307,7 +309,7 @@ class TestPacketChecksum:
 
 **Priority:** 🟡 High - Core business logic
 
-**Test Cases:**
+#### Test Cases
 
 - Device initialization and configuration
 - State management (on/off, brightness, color)
@@ -318,7 +320,7 @@ class TestPacketChecksum:
 - Group operations (sync states, control all devices)
 - Device metadata and model classification
 
-**Example Test:**
+### Example Test
 
 ```python
 import pytest
@@ -404,7 +406,7 @@ class TestCyncGroup:
 
 **Priority:** 🟡 High - Integration with Home Assistant
 
-**Test Cases:**
+#### Test Cases
 
 - MQTT connection handling
 - Discovery message generation
@@ -414,7 +416,7 @@ class TestCyncGroup:
 - Availability message handling
 - Configuration validation
 
-**Example Test:**
+### Example Test
 
 ```python
 import pytest
@@ -476,7 +478,7 @@ class TestMQTTClient:
 
 **Priority:** 🟡 High - Core networking logic
 
-**Test Cases:**
+#### Test Cases
 
 - NCyncServer initialization
 - TCP connection handling
@@ -486,7 +488,7 @@ class TestMQTTClient:
 - Packet injection mechanism
 - Connection cleanup and error handling
 
-**Example Test:**
+### Example Test
 
 ```python
 import pytest
@@ -557,7 +559,7 @@ class TestCloudRelayConnection:
 
 **Priority:** 🟢 Medium - Less frequently used
 
-**Test Cases:**
+#### Test Cases
 
 - Authentication flow
 - Device export functionality
@@ -566,32 +568,32 @@ class TestCloudRelayConnection:
 
 ### Running Unit Tests
 
-**Commands:**
+#### Commands
 
 ```bash
-# Run all unit tests
+## Run all unit tests
 pytest tests/unit/
 
-# Run with coverage
+## Run with coverage
 pytest tests/unit/ --cov=src/cync_lan --cov-report=html --cov-report=term
 
-# Run specific test file
+## Run specific test file
 pytest tests/unit/test_packet_parser.py
 
-# Run with verbose output
+## Run with verbose output
 pytest tests/unit/ -v
 
-# Run tests matching pattern
+## Run tests matching pattern
 pytest tests/unit/ -k "test_parse"
 
-# Run with timeout (prevent hanging)
+## Run with timeout (prevent hanging)
 pytest tests/unit/ --timeout=10
 
-# Fast fail on first error
+## Fast fail on first error
 pytest tests/unit/ -x
 ```
 
-**Add to `package.json`:**
+## Add to `package.json`
 
 ```json
 {
@@ -619,10 +621,10 @@ Integration tests validate component interactions with real dependencies (MQTT b
 
 ### Setup Requirements
 
-**Docker Compose Test Environment:**
+#### Docker Compose Test Environment
 
 ```yaml
-# tests/integration/docker-compose.test.yml
+## tests/integration/docker-compose.test.yml
 version: "3.8"
 
 services:
@@ -657,12 +659,13 @@ services:
       - cync-controller
 ```
 
-**Directory Structure:**
+### Directory Structure
 
-```
+```python
+
 tests/
 └── integration/
-    ├── __init__.py
+    ├── **init**.py
     ├── conftest.py
     ├── docker-compose.test.yml
     ├── fixtures/
@@ -677,13 +680,14 @@ tests/
     └── test_mqtt_integration.py
     └── test_device_control.py
     └── test_cloud_relay.py
+
 ```
 
 ### Test Categories
 
 #### 1. MQTT Integration Tests
 
-**Test Cases:**
+#### Test Cases
 
 - Add-on connects to MQTT broker
 - Discovery messages published correctly
@@ -692,7 +696,7 @@ tests/
 - Availability messages update correctly
 - Multiple entities published and managed
 
-**Example Test:**
+### Example Test
 
 ```python
 import pytest
@@ -759,7 +763,7 @@ class TestMQTTIntegration:
 
 #### 2. Device Control Integration Tests
 
-**Test Cases:**
+#### Test Cases
 
 - Send command through full stack (MQTT → Server → Device → ACK)
 - Verify ACK callbacks execute correctly
@@ -768,7 +772,7 @@ class TestMQTTIntegration:
 - Test device availability updates
 - Test state synchronization
 
-**Example Test:**
+### Example Test
 
 ```python
 class TestDeviceControl:
@@ -828,7 +832,7 @@ class TestDeviceControl:
 
 #### 3. Cloud Relay Integration Tests
 
-**Test Cases:**
+#### Test Cases
 
 - Relay mode proxy setup
 - Packet forwarding device → cloud
@@ -837,7 +841,7 @@ class TestDeviceControl:
 - LAN-only mode (no forwarding)
 - Packet injection mechanism
 
-**Example Test:**
+### Example Test
 
 ```python
 class TestCloudRelay:
@@ -874,23 +878,23 @@ class TestCloudRelay:
 
 ### Running Integration Tests
 
-**Commands:**
+#### Commands
 
 ```bash
-# Start test environment
+## Start test environment
 docker-compose -f tests/integration/docker-compose.test.yml up -d
 
-# Run integration tests
+## Run integration tests
 pytest tests/integration/ -m integration
 
-# Run with logs
+## Run with logs
 pytest tests/integration/ -m integration -s
 
-# Stop test environment
+## Stop test environment
 docker-compose -f tests/integration/docker-compose.test.yml down
 ```
 
-**Add to `package.json`:**
+## Add to `package.json`
 
 ```json
 {
@@ -919,15 +923,15 @@ End-to-end tests validate complete user workflows through the Home Assistant UI 
 
 ### Setup Requirements
 
-**Already configured:**
+#### Already configured
 
 - ✅ `playwright.config.ts` exists
 - ✅ MCP tools available in Cursor
 - ✅ Test scripts in `cync-controller/tests/e2e/`
 
-**Current Directory Structure:**
+### Current Directory Structure
 
-```
+```text
 cync-controller/tests/e2e/
 ├── helpers/
 │   ├── auth.ts                  # Authentication helpers
@@ -937,7 +941,7 @@ cync-controller/tests/e2e/
 └── test-fan-speed.spec.ts       # Fan speed control tests
 ```
 
-**Utility Scripts (in `scripts/playwright/`):**
+### Utility Scripts (in `scripts/playwright/`)
 
 - `delete-all-mqtt-entities-except-bridge.ts` - Entity cleanup utility
 - `delete-mqtt-entities.ts` - Specific entity deletion
@@ -947,7 +951,7 @@ cync-controller/tests/e2e/
 
 #### 1. Add-on Configuration Tests
 
-**Test Cases:**
+#### Test Cases
 
 - Navigate to add-on configuration page
 - Modify configuration options
@@ -956,7 +960,7 @@ cync-controller/tests/e2e/
 - Test validation errors
 - Restart add-on and verify logs
 
-**Example Test:**
+### Example Test
 
 ```typescript
 import { test, expect } from "@playwright/test";
@@ -1006,7 +1010,7 @@ test.describe("Add-on Configuration", () => {
 
 #### 2. Device Control Tests
 
-**Test Cases:**
+#### Test Cases
 
 - Turn device on/off via UI
 - Adjust brightness
@@ -1015,7 +1019,7 @@ test.describe("Add-on Configuration", () => {
 - Verify state updates in UI
 - Test entity availability indicators
 
-**Example Test:**
+### Example Test
 
 ```typescript
 test.describe("Device Control", () => {
@@ -1069,7 +1073,7 @@ test.describe("Device Control", () => {
 
 #### 3. MQTT Integration Tests
 
-**Test Cases:**
+#### Test Cases
 
 - Verify entities appear in UI after add-on start
 - Test entity attributes and metadata
@@ -1077,7 +1081,7 @@ test.describe("Device Control", () => {
 - Test entity search and filtering
 - Verify device registry entries
 
-**Example Test:**
+### Example Test
 
 ```typescript
 test.describe("MQTT Integration", () => {
@@ -1117,7 +1121,7 @@ test.describe("MQTT Integration", () => {
 
 #### 4. Error Handling Tests
 
-**Test Cases:**
+#### Test Cases
 
 - Add-on fails gracefully when MQTT unavailable
 - UI shows appropriate errors for failed commands
@@ -1126,29 +1130,29 @@ test.describe("MQTT Integration", () => {
 
 ### Running E2E Tests
 
-**Commands:**
+#### Commands
 
 ```bash
-# Install Playwright browsers (one-time)
+## Install Playwright browsers (one-time)
 npm run playwright:install
 
-# Run all E2E tests
+## Run all E2E tests
 npm run playwright:test
 
-# Run specific test file
+## Run specific test file
 npx playwright test tests/e2e/test_device_control.spec.ts
 
-# Run in headed mode (show browser)
+## Run in headed mode (show browser)
 npx playwright test --headed
 
-# Run with UI mode (interactive)
+## Run with UI mode (interactive)
 npx playwright test --ui
 
-# Debug specific test
+## Debug specific test
 npx playwright test --debug tests/e2e/test_device_control.spec.ts
 ```
 
-**Add to `package.json`:**
+## Add to `package.json`
 
 ```json
 {
@@ -1280,10 +1284,10 @@ class MockCyncDevice:
 
 ### Test Data Management
 
-**Packet Fixtures:**
+#### Packet Fixtures
 
 ```python
-# tests/fixtures/packets.py
+## tests/fixtures/packets.py
 
 CONTROL_ON_PACKET = bytes.fromhex("""
     73 00 00 00 1e 6e fc b9 57 0f 01 00 00 00 64 00
@@ -1304,10 +1308,10 @@ BROADCAST_STATE = bytes.fromhex("""
 """)
 ```
 
-**Device Configurations:**
+### Device Configurations
 
 ```yaml
-# tests/fixtures/devices.yaml
+## tests/fixtures/devices.yaml
 
 devices:
   - device_id: 0x1234
@@ -1337,11 +1341,11 @@ groups:
 
 ### Helper Scripts
 
-**Integration Test Runner:**
+#### Integration Test Runner
 
 ```bash
 #!/bin/bash
-# scripts/run-integration-tests.sh
+## scripts/run-integration-tests.sh
 
 set -e
 
@@ -1370,7 +1374,7 @@ echo "Integration tests complete!"
 ### GitHub Actions Workflow
 
 ```yaml
-# .github/workflows/test.yml
+## .github/workflows/test.yml
 
 name: Test Suite
 
@@ -1479,20 +1483,20 @@ jobs:
 ### Pre-commit Hooks
 
 ```bash
-# .git/hooks/pre-commit
+## .git/hooks/pre-commit
 
 #!/bin/bash
 
 echo "Running pre-commit checks..."
 
-# Linting
+## Linting
 npm run lint
 if [ $? -ne 0 ]; then
   echo "❌ Linting failed"
   exit 1
 fi
 
-# Unit tests
+## Unit tests
 cd cync-controller && pytest tests/unit/ --timeout=30
 if [ $? -ne 0 ]; then
   echo "❌ Unit tests failed"
@@ -1534,7 +1538,7 @@ exit 0
 
 ### Test Metrics Dashboard
 
-**Proposed Metrics:**
+#### Proposed Metrics
 
 - Test count by tier (unit/integration/e2e)
 - Test execution time by tier
@@ -1542,7 +1546,7 @@ exit 0
 - Flaky test rate
 - Test failure rate over time
 
-**Tools:**
+### Tools
 
 - pytest-html for HTML reports
 - pytest-cov for coverage
@@ -1559,7 +1563,7 @@ exit 0
 
 **Goals:** Establish test infrastructure and critical unit tests
 
-**Tasks:**
+### Tasks
 
 1. **Set up pytest framework and dependencies**
    - Add `pytest>=8.3.0` to `pyproject.toml` `[project.optional-dependencies]` test section
@@ -1623,7 +1627,7 @@ exit 0
    - ✅ Terminal coverage summary shows correct percentages
    - ✅ All npm test scripts work correctly
 
-**Deliverables:** ✅ **ALL ACHIEVED**
+### Deliverables:**✅**ALL ACHIEVED
 
 - ✅ Working pytest setup with all dependencies installed (pytest 8.4.2)
 - ✅ **69 unit tests** created and passing
@@ -1637,7 +1641,7 @@ exit 0
 
 **Test Execution Time:** < 1 second (0.12s for all 69 tests) ⚡
 
-**Files Created:**
+### Files Created
 
 - `cync-controller/.coveragerc` - Coverage configuration
 - `cync-controller/pytest.ini` - Pytest configuration
@@ -1651,7 +1655,7 @@ exit 0
 
 **Goals:** Test core business logic components
 
-**Tasks:**
+### Tasks (Unit Testing)
 
 - [x] **Task 1: Write device model tests (`test_devices.py`)** ✅
   - Test device initialization and configuration
@@ -1699,7 +1703,7 @@ exit 0
   - Establish conventions for future tests
   - Add troubleshooting tips for common test issues
 
-**Deliverables:** ✅ **ALL ACHIEVED**
+#### Deliverables (Tier 2): **✅** ALL ACHIEVED
 
 - ✅ Comprehensive unit test suite covering all core modules (218 total tests)
   - 48 tests for `devices.py` (initialization, properties, commands, groups)
@@ -1712,7 +1716,7 @@ exit 0
 
 **Test Execution Time:** < 0.8 seconds for all 218 tests ⚡
 
-**Files Created:**
+### Files Created (Unit Tests)
 
 - `cync-controller/tests/unit/test_devices.py` - 48 tests
 - `cync-controller/tests/unit/test_mqtt_client.py` - 36 tests
@@ -1731,7 +1735,7 @@ exit 0
 
 **Goals:** ~~Test component interactions with real dependencies~~
 
-**Tasks:**
+### Tasks (Integration Testing)
 
 - ❌ Create Docker Compose test environment
 - ❌ Build mock Cync device
@@ -1749,7 +1753,7 @@ exit 0
 
 **Goals:** Test complete workflows through UI
 
-**Tasks:**
+#### Tasks
 
 - ✅ Expand E2E test coverage
 - ✅ Write add-on configuration tests
@@ -1759,7 +1763,7 @@ exit 0
 - ✅ Create E2E test helpers and utilities
 - ✅ Add `npm run test:e2e` scripts
 
-**Deliverables:**
+### Deliverables
 
 - Comprehensive E2E test suite
 - Test helpers and utilities
@@ -1769,7 +1773,7 @@ exit 0
 
 **Goals:** Automate tests in CI/CD pipeline
 
-**Tasks:**
+#### Tasks - Phase 1
 
 - ✅ Create GitHub Actions workflow
 - ✅ Set up automated testing on PRs
@@ -1777,7 +1781,7 @@ exit 0
 - ✅ Set up pre-commit hooks
 - ✅ Create test summary dashboard
 
-**Deliverables:**
+### Deliverables (Automation)
 
 - Automated CI/CD pipeline
 - Pre-commit hooks
@@ -1787,7 +1791,7 @@ exit 0
 
 **Goals:** Document testing practices and establish maintenance processes
 
-**Tasks:**
+#### Tasks - Tier 2
 
 - ✅ Write comprehensive testing guide
 - ✅ Document test patterns and conventions
@@ -1795,7 +1799,7 @@ exit 0
 - ✅ Establish test maintenance schedule
 - ✅ Train team on testing practices
 
-**Deliverables:**
+### Deliverables (Documentation)
 
 - Testing documentation
 - Troubleshooting guide
@@ -1827,7 +1831,7 @@ exit 0
 
 ### A. Testing Best Practices
 
-**General:**
+#### General
 
 - Write tests before refactoring (document current behavior)
 - Test behavior, not implementation
@@ -1835,7 +1839,7 @@ exit 0
 - Keep tests independent and isolated
 - Avoid test interdependencies
 
-**Unit Tests:**
+### Unit Tests
 
 - Mock external dependencies
 - Test one thing at a time
@@ -1843,7 +1847,7 @@ exit 0
 - Test edge cases and error conditions
 - Keep tests fast (< 100ms per test)
 
-**Integration Tests:**
+### Integration Tests
 
 - Use real components where possible
 - Clean up resources after tests
@@ -1851,7 +1855,7 @@ exit 0
 - Test happy path + critical error cases
 - Accept slower execution (< 5s per test)
 
-**E2E Tests:**
+### E2E Tests
 
 - Test complete user workflows
 - Use page object pattern for maintainability
@@ -1861,7 +1865,7 @@ exit 0
 
 ### B. Common Testing Pitfalls
 
-**Avoid:**
+#### Avoid
 
 - ❌ Testing implementation details (e.g., internal variables)
 - ❌ Tests that depend on execution order
@@ -1871,7 +1875,7 @@ exit 0
 - ❌ Tests without assertions
 - ❌ Overly complex test setup
 
-**Do:**
+### Do
 
 - ✅ Test observable behavior
 - ✅ Use fixtures for common setup
@@ -1882,7 +1886,7 @@ exit 0
 
 ### C. Troubleshooting Test Failures
 
-**Unit Test Failures:**
+#### Unit Test Failures
 
 1. Check if code change broke expected behavior
 2. Verify mocks are configured correctly
@@ -1890,7 +1894,7 @@ exit 0
 4. Ensure fixtures are properly initialized
 5. Review test logs for assertion details
 
-**Integration Test Failures:**
+### Integration Test Failures
 
 1. Check Docker container logs
 2. Verify network connectivity between containers
@@ -1898,7 +1902,7 @@ exit 0
 4. Check for port conflicts
 5. Verify test data fixtures are loaded
 
-**E2E Test Failures:**
+### E2E Test Failures
 
 1. Check Playwright screenshots/videos
 2. Review browser console logs
@@ -1908,14 +1912,14 @@ exit 0
 
 ### D. References
 
-**External Resources:**
+#### External Resources
 
 - [pytest Documentation](https://docs.pytest.org/)
 - [Playwright Documentation](https://playwright.dev/)
 - [Home Assistant Testing Guide](https://developers.home-assistant.io/docs/development_testing)
 - [Docker Compose for Testing](https://docs.docker.com/compose/)
 
-**Project Documentation:**
+### Project Documentation
 
 - [AGENTS.md](../../AGENTS.md) - Development guidelines
 - [Architecture Guide](architecture.md) - System design
@@ -1925,4 +1929,4 @@ exit 0
 
 ---
 
-_Last updated: October 24, 2025_
+Last updated: October 24, 2025

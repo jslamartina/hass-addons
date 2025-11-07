@@ -9,6 +9,7 @@ Automated token creation using WebSocket API with existing token bootstrap. **No
 ## Three-Phase Flow
 
 ### Phase 1: Onboarding Token (Fresh HA Setup)
+
 ```bash
 create_first_user() {
   local auth_token=$(curl -X POST "$HA_URL/api/onboarding/users" \
@@ -21,6 +22,7 @@ echo "ONBOARDING_TOKEN=$ONBOARDING_TOKEN" >> hass-credentials.env
 ```
 
 ### Phase 2: Bootstrap LLAT Creation
+
 ```bash
 get_ha_auth_token() {
   if [ -n "$ONBOARDING_TOKEN" ]; then
@@ -42,9 +44,10 @@ get_ha_auth_token() {
 ```
 
 ### Phase 3: Persist LLAT
+
 ```bash
-# Token automatically saved to hass-credentials.env
-# Use for all subsequent API calls
+## Token automatically saved to hass-credentials.env
+## Use for all subsequent API calls
 HA_AUTH_TOKEN="$LONG_LIVED_ACCESS_TOKEN"
 ```
 
@@ -70,21 +73,23 @@ HA_AUTH_TOKEN="$LONG_LIVED_ACCESS_TOKEN"
 ## Usage
 
 ```bash
-# Automatic (recommended)
+## Automatic (recommended)
 ./scripts/setup-fresh-ha.sh
 
-# Direct token creation
+## Direct token creation
 EXISTING_TOKEN="$ONBOARDING_TOKEN" node scripts/create-token-from-existing.js
 ```
 
 ## Key Rules
 
-**Never:**
+### Never
+
 - ❌ Hardcode tokens in scripts or code
 - ❌ Commit tokens to version control
 - ❌ Create redundant LLATs
 
-**Always:**
+### Always
+
 - ✅ Pass tokens via environment variables
 - ✅ Save LLAT to `hass-credentials.env` immediately
 - ✅ Use LLAT for all subsequent API calls

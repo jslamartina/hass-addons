@@ -20,7 +20,7 @@
 
 **Problem:** 4 documents covering the same topic (automation tools and resolved limitations)
 
-**Files Removed:**
+#### Files Removed
 
 - ❌ `SUMMARY.md` (500 lines)
 - ❌ `EXECUTIVE_SUMMARY.md` (350 lines)
@@ -37,7 +37,7 @@
 
 **Problem:** One-time testing artifacts that are no longer relevant
 
-**Files Removed:**
+#### Files Removed
 
 - ❌ `CLOUD_RELAY_TEST_RESULTS.md` - Pre-automation test results
 - ❌ `CLOUD_RELAY_UI_TEST_SUCCESS.md` - Manual UI testing (superseded)
@@ -53,7 +53,7 @@
 
 **Problem:** Overlapping documentation for Playwright entity deletion
 
-**Files Removed:**
+#### Files Removed
 
 - ❌ `PLAYWRIGHT_ENTITY_DELETION_SUMMARY.md` - Redundant summary
 - ❌ `scripts/playwright/QUICKSTART.md` - Duplicated guide content
@@ -66,7 +66,7 @@
 
 ### 4. Updated References in Remaining Documentation
 
-**Files Updated:**
+#### Files Updated
 
 - ✅ `docs/developer/agents-guide.md` - Removed 2 references to deleted files
 - ✅ `docs/developer/limitations-lifted.md` - Updated documentation status section
@@ -76,7 +76,7 @@
 
 ### 5. Created Documentation Organization
 
-**New Files:**
+#### New Files
 
 - ✅ `DOCUMENTATION_INDEX.md` - Comprehensive navigation guide
   - Quick navigation by role (users, developers, AI agents)
@@ -92,7 +92,7 @@
 
 ### User Documentation
 
-```
+```text
 README.md                    # Repository overview
 cync-controller/
   ├── README.md              # Quick start
@@ -107,7 +107,7 @@ docs/cync-controller/
 
 ### Developer Documentation
 
-```
+```text
 docs/developer/agents-guide.md                    # **Primary reference** - comprehensive guide
 DOCUMENTATION_INDEX.md       # Navigation and organization
 docs/developer/limitations-lifted.md        # Resolved limitations and solutions
@@ -117,7 +117,7 @@ docs/developer/exploration-notes.md         # UI navigation findings
 
 ### Testing & Automation
 
-```
+```text
 scripts/
   ├── README.md              # Testing tools documentation
   ├── configure-addon.sh     # Configuration automation
@@ -130,7 +130,7 @@ CLOUD_RELAY_TEST_EXECUTION_RESULTS.md  # Test results
 
 ### Protocol Research
 
-```
+```text
 mitm/
   ├── FINDINGS_SUMMARY.md    # Protocol documentation
   ├── README.md              # MITM tools

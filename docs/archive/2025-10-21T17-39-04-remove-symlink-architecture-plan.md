@@ -1,6 +1,8 @@
+# 2025 10 21T17 39 04 Remove Symlink Architecture Plan
+
 <!-- 9703c891-e072-4b1d-9310-a11b8501b2ca 90ff178b-d20e-4715-875f-afa924d7b5fe -->
 
-# Plan: Remove Symlink to Fix Semantic Search
+## Plan: Remove Symlink to Fix Semantic Search
 
 ## Problem Analysis
 
@@ -69,7 +71,7 @@ Replace all symlink references with direct workspace folder references.
 
 ## Implementation Status - ✅ COMPLETED
 
-**All planned changes have been successfully implemented:**
+### All planned changes have been successfully implemented
 
 - ✅ **No symlink** in hass-addons directory (`cync-controller-source` removed)
 - ✅ **VSCode debugging** uses direct workspace folder references
@@ -80,7 +82,7 @@ Replace all symlink references with direct workspace folder references.
 
 ## Current Status
 
-**Ready for Testing:**
+### Ready for Testing
 
 1. **Trigger re-indexing:** Close and reopen the workspace, or restart Cursor
 2. **Test semantic search:** "How does CyncDevice set_power work?"

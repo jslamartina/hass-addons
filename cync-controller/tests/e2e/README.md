@@ -7,10 +7,10 @@ End-to-end tests for the Cync Controller using Playwright to automate browser in
 E2E tests require Playwright browser automation:
 
 ```bash
-# Install Playwright browsers (first time only)
+## Install Playwright browsers (first time only)
 python -m playwright install chromium
 
-# Run E2E tests
+## Run E2E tests
 cd cync-controller
 python -m pytest tests/e2e/ -v -s
 ```
@@ -49,7 +49,7 @@ Supervisor API and system operations:
 
 ### Comprehensive Test Status
 
-**Test Files and Execution Status:**
+#### Test Files and Execution Status
 
 | File                       | Total Tests | Passing | Failing | Skipped | Requires Devices | Category  |
 | -------------------------- | ----------- | ------- | ------- | ------- | ---------------- | --------- |
@@ -70,7 +70,7 @@ Supervisor API and system operations:
 
 ### Test Execution Categories
 
-**Automated Tests (No Device Required):**
+#### Automated Tests (No Device Required)
 
 - ✅ Config management (20 tests) - Log levels, config changes, cloud relay switching - All passing
 - ✅ State sync (8 tests) - MQTT updates, subgroup aggregation, simultaneous commands - All passing
@@ -78,7 +78,7 @@ Supervisor API and system operations:
 - ✅ Device discovery (6 tests) - All passing - No issues detected
 - **Total: 37 automated tests (all passing)**
 
-**Tests Requiring Devices:**
+### Tests Requiring Devices
 
 - ⚠️ Basic commands (7 tests) - 2 passing, 3 failing (missing entities: Floodlight 1 brightness/color, Counter Switch)
 - ⚠️ Group control (7 tests) - 4 passing, 1 failing (Hallway Lights timeout), 2 skipped (expected)
@@ -102,63 +102,63 @@ Expected: 37 automated tests passing (all passing if infrastructure is correct)
 ### Specific Test Categories
 
 ```bash
-# Config management tests
+## Config management tests
 python -m pytest tests/e2e/test_log_levels.py tests/e2e/test_config_changes.py tests/e2e/test_cloud_relay.py -v
 
-# Log verification tests
+## Log verification tests
 python -m pytest tests/e2e/test_state_sync.py::test_no_cascading_refresh_storms tests/e2e/test_state_sync.py::test_state_updates_logged_correctly -v
 python -m pytest tests/e2e/test_basic_commands.py::test_command_latency_acceptable -v
 python -m pytest tests/e2e/test_mqtt_recovery.py::test_addon_mqtt_retry_logic tests/e2e/test_mqtt_recovery.py::test_mqtt_connection_status_in_logs -v
 
-# Device discovery tests
+## Device discovery tests
 python -m pytest tests/e2e/test_device_discovery.py -v
 ```
 
 ### Manual Device Tests (Require Physical Cync Devices)
 
 ```bash
-# Group control tests (Bug 4 verification)
+## Group control tests (Bug 4 verification)
 python -m pytest tests/e2e/test_group_control.py -v -s
 
-# Note: Some tests may be flaky due to Home Assistant UI rendering delays
-# See "Known Issues" section below
+## Note: Some tests may be flaky due to Home Assistant UI rendering delays
+## See "Known Issues" section below
 ```
 
 ## Known Issues
 
 ### Skipped Tests (3 skipped - all expected)
 
-**Only these tests skip on fresh install:**
+#### Only these tests skip on fresh install
 
-**Failing Tests (Expected when infrastructure is missing):**
+#### Failing Tests (Expected when infrastructure is missing)
 
-**Basic Commands (3 failures):**
+### Basic Commands (3 failures)
 
 - `test_set_brightness` - Requires "Floodlight 1" entity with brightness support
 - `test_set_color_temperature` - Requires "Floodlight 1" entity with color temp support
 - `test_toggle_switch` - Requires "Counter Switch" entity
 - **Status**: ✅ Tests now FAIL properly when entities missing (removed skips)
 
-**Group Control (1 failure):**
+### Group Control (1 failure)
 
 - `test_group_turns_on_all_switches` - Timeout waiting for group to turn on
 - **Status**: ⚠️ May indicate intermittent issue with group command execution
 
-**MQTT Recovery (3 failures):**
+### MQTT Recovery (3 failures)
 
 - `test_addon_handles_mqtt_disconnect` - MQTT broker control not available
 - `test_addon_reconnects_after_mqtt_recovery` - MQTT broker control not available
 - `test_entities_unavailable_during_mqtt_disconnect` - MQTT broker control not available
 - **Status**: ✅ Tests now FAIL properly when MQTT broker control unavailable (removed skips)
 
-**Group Control (1 skipped):**
+### Group Control (1 skipped)
 
 - `test_comprehensive_flicker_detection` - Known Home Assistant UI rendering limitation
 - **Root Cause**: HA UI can show brief state transitions during rendering
 - **Impact**: Backend sync is correct; UI flicker is cosmetic
 - **Status**: ✅ Skipped by design - documented limitation, not a bug
 
-**MQTT Recovery (2 skipped):**
+### MQTT Recovery (2 skipped)
 
 - `test_addon_handles_mqtt_disconnect` - MQTT broker control
 - `test_addon_reconnects_after_mqtt_recovery` - MQTT broker control
@@ -167,7 +167,7 @@ python -m pytest tests/e2e/test_group_control.py -v -s
 - **Impact**: Tests skipped in environments without broker control capability
 - **Status**: ✅ Skipped by design - environment limitation, not a test failure
 
-**OTP Flow (1 skipped):**
+### OTP Flow (1 skipped)
 
 - Requires live Cync account with OTP capability
 - **Root Cause**: Cannot test without live account
@@ -229,7 +229,7 @@ import sys
 from pathlib import Path
 from playwright.sync_api import Page
 
-# Import helpers
+## Import helpers
 scripts_path = Path(__file__).parent.parent.parent.parent / "scripts" / "playwright"
 sys.path.insert(0, str(scripts_path))
 from addon_helpers import restart_addon_and_wait, read_json_logs
@@ -254,7 +254,7 @@ def test_my_feature(ha_login: Page, ha_base_url: str):
 ### Using Helper Functions
 
 ```python
-# Configuration management
+## Configuration management
 from addon_helpers import get_addon_config, update_addon_config, restart_addon_and_wait
 
 config = get_addon_config("local_cync-controller")
@@ -262,14 +262,14 @@ config["debug_log_level"] = True
 update_addon_config("local_cync-controller", config)
 restart_addon_and_wait("local_cync-controller", wait_seconds=5)
 
-# Log inspection
+## Log inspection
 from addon_helpers import read_json_logs, get_log_levels_from_json
 
 logs = read_json_logs("local_cync-controller", lines=100)
 levels = get_log_levels_from_json(logs)
 assert "DEBUG" in levels
 
-# Preset application
+## Preset application
 from addon_helpers import apply_addon_preset
 
 apply_addon_preset("preset-baseline")
@@ -283,7 +283,7 @@ Always wait 2 seconds after group toggle commands:
 group_switch = page.get_by_role("switch", name="Toggle Group off")
 group_switch.click()
 print("✓ Group turned OFF")
-# Wait for MQTT sync to propagate to all switches
+## Wait for MQTT sync to propagate to all switches
 page.wait_for_timeout(2000)
 ```
 

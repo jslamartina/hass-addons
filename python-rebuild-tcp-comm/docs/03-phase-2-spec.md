@@ -203,12 +203,12 @@ class ErrorBudget:
 **Success Rate (SLO)**:
 
 ```promql
-# 30-day success rate
+## 30-day success rate
 sum(rate(tcp_comm_packet_sent_total{outcome="success"}[30d]))
 /
 sum(rate(tcp_comm_packet_sent_total[30d]))
 
-# Per-transport comparison
+## Per-transport comparison
 sum(rate(tcp_comm_packet_sent_total{transport="new",outcome="success"}[5m]))
 /
 sum(rate(tcp_comm_packet_sent_total{transport="new"}[5m]))
@@ -217,12 +217,12 @@ sum(rate(tcp_comm_packet_sent_total{transport="new"}[5m]))
 **Latency (SLO)**:
 
 ```promql
-# p99 latency by transport
+## p99 latency by transport
 histogram_quantile(0.99,
   sum(rate(tcp_comm_packet_latency_seconds_bucket{transport="new"}[5m])) by (le)
 )
 
-# p99 latency comparison (new vs legacy)
+## p99 latency comparison (new vs legacy)
 histogram_quantile(0.99,
   sum(rate(tcp_comm_packet_latency_seconds_bucket[5m])) by (transport, le)
 )
@@ -231,7 +231,7 @@ histogram_quantile(0.99,
 **Error Budget**:
 
 ```promql
-# Error budget consumption (30d)
+## Error budget consumption (30d)
 1 - (
   (1 - sum(rate(tcp_comm_packet_sent_total{outcome="success"}[30d])) / sum(rate(tcp_comm_packet_sent_total[30d])))
   /
@@ -242,10 +242,10 @@ histogram_quantile(0.99,
 **Queue Health**:
 
 ```promql
-# Queue depth by transport
+## Queue depth by transport
 tcp_comm_send_queue_size{transport="new"}
 
-# Queue full events
+## Queue full events
 rate(tcp_comm_queue_full_total{transport="new"}[5m])
 ```
 
@@ -377,7 +377,7 @@ groups:
 ### Alert Routing
 
 ```yaml
-# alertmanager.yml
+## alertmanager.yml
 route:
   group_by: ["alertname", "transport"]
   group_wait: 30s
@@ -480,13 +480,13 @@ class AutoRollback:
 **Manual**:
 
 ```bash
-# Immediate rollback
+## Immediate rollback
 kubectl set env deployment/cync-controller CANARY_PERCENTAGE=0
 
-# Or via config
+## Or via config
 ./scripts/set-canary.sh 0
 
-# Verify
+## Verify
 curl http://cync-controller:9400/metrics | grep canary_percentage
 ```
 

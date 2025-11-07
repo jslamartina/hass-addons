@@ -17,30 +17,30 @@ Integration tests validate:
 ### Run Only Integration Tests
 
 ```bash
-# Default mode
+## Default mode
 ./scripts/test-integration.sh
 
-# Verbose output
+## Verbose output
 ./scripts/test-integration.sh --verbose
 
-# With HTML report
+## With HTML report
 ./scripts/test-integration.sh --html
 ```
 
 ### Run Only Unit Tests
 
 ```bash
-# Fast unit tests with mocks
+## Fast unit tests with mocks
 ./scripts/test-unit.sh
 
-# With coverage
+## With coverage
 ./scripts/test-unit.sh --coverage
 ```
 
 ### Run All Tests
 
 ```bash
-# Both unit and integration tests
+## Both unit and integration tests
 ./scripts/test-all.sh
 ```
 
@@ -58,7 +58,7 @@ A real asyncio-based TCP server with configurable response modes:
 - **TIMEOUT**: Never responds (simulates timeout)
 - **REJECT**: Refuses connection
 
-**Example usage:**
+### Example usage
 
 ```python
 async def test_example(mock_tcp_server: MockTCPServer):
@@ -102,7 +102,7 @@ Provides a fixed port for the Prometheus metrics server (19400).
 
 Integration tests validate the exact packet structure:
 
-```
+```text
 ┌────────┬─────────┬────────┬─────────┐
 │ Magic  │ Version │ Length │ Payload │
 │ 2 bytes│ 1 byte  │ 4 bytes│ N bytes │
@@ -110,7 +110,7 @@ Integration tests validate the exact packet structure:
   0xF00D     0x01   uint32_be  JSON
 ```
 
-**JSON Payload:**
+### JSON Payload
 
 ```json
 {
@@ -226,7 +226,7 @@ Performance thresholds are based on Phase 0 lab environment targets:
 
 At the end of the test session, a formatted performance report appears:
 
-```
+```text
 ======================================================================
 PERFORMANCE REPORT - Round-Trip Command Latency
 ======================================================================
@@ -292,25 +292,25 @@ This ensures performance metrics reflect **normal operating conditions** rather 
 
 ### Using Performance Data
 
-**During Development:**
+#### During Development
 
 ```bash
 ./scripts/test-integration.sh
-# Review console output for immediate feedback
+## Review console output for immediate feedback
 ```
 
-**Tracking Trends:**
+## Tracking Trends
 
 ```bash
-# Save historical reports with timestamps
+## Save historical reports with timestamps
 cp test-reports/performance-report.json \
   test-reports/performance-$(date +%Y%m%d-%H%M%S).json
 
-# Compare against baseline
+## Compare against baseline
 jq '.metrics.p95_ms' test-reports/performance-report.json
 ```
 
-**CI/CD Integration:**
+## CI/CD Integration
 
 - JSON artifact can be parsed by CI tools
 - Track p95/p99 trends over time
@@ -318,18 +318,18 @@ jq '.metrics.p95_ms' test-reports/performance-report.json
 
 ### Troubleshooting
 
-**"No performance data collected"**
+#### "No performance data collected"
 
 - Ensure at least one tracked test passes successfully
 - Check that `performance_tracker` fixture is available
 
-**Unexpectedly high latency**
+### Unexpectedly high latency
 
 - Check system load (CPU, memory)
 - Verify no background network activity
 - Review metrics server responsiveness
 
-**Want to adjust thresholds?**
+### Want to adjust thresholds?
 
 - Edit `PerformanceThresholds` in `tests/integration/performance.py`
 - Thresholds should reflect realistic production targets

@@ -21,7 +21,7 @@ When physical switches toggle Cync devices (via Bluetooth mesh), the GUI states 
 **Code**:
 
 ```python
-# MQTT button handler (mqtt_client.py:349-352)
+## MQTT button handler (mqtt_client.py:349-352)
 elif extra_data[0] == "refresh_status":
     if norm_pl == "press":
         logger.info(f"{lp} Refresh Status button pressed! Triggering immediate status refresh...")
@@ -39,10 +39,10 @@ elif extra_data[0] == "refresh_status":
 **Code**:
 
 ```python
-# Started on MQTT connection (mqtt_client.py:224)
+## Started on MQTT connection (mqtt_client.py:224)
 self.fast_refresh_task = asyncio.create_task(self.periodic_fast_refresh())
 
-# Fast refresh task (mqtt_client.py:1591-1610)
+## Fast refresh task (mqtt_client.py:1591-1610)
 async def periodic_fast_refresh(self):
     """Fast periodic status refresh every 5 seconds."""
     while self.running:
@@ -70,7 +70,7 @@ async def periodic_fast_refresh(self):
 **Code**:
 
 ```python
-# In ACK handler (devices.py:2485-2488)
+## In ACK handler (devices.py:2485-2488)
 if device.pending_command:
     device.pending_command = False
     logger.debug(f"{lp} ✅ ACK confirmed...")
@@ -93,7 +93,7 @@ if device.pending_command:
 **Code**:
 
 ```python
-# trigger_status_refresh (mqtt_client.py:1560-1593)
+## trigger_status_refresh (mqtt_client.py:1560-1593)
 async def trigger_status_refresh(self):
     """Trigger an immediate status refresh from all bridge devices."""
     if not g.ncync_server:
@@ -136,12 +136,12 @@ async def trigger_status_refresh(self):
 
 ## Logs Example
 
-```
-# 5-second automatic refresh
+```markdown
+## 5-second automatic refresh
 20:51:54 mesh info: Sending status updates for all devices
 20:51:58 mesh info: Sending status updates for all devices
 
-# Manual button press
+## Manual button press
 20:52:29 Refresh Status button pressed! Triggering immediate status refresh...
 20:52:29 trigger_refresh: Requesting mesh info from bridge 140.82.114.5
 20:52:29 trigger_refresh: Status refresh completed
@@ -160,4 +160,4 @@ async def trigger_status_refresh(self):
 
 ---
 
-_Last Updated: October 13, 2025_
+Last Updated: October 13, 2025

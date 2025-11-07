@@ -9,13 +9,14 @@ appliesTo:
 
 **Critical:** Python changes require **rebuild**, not just restart.
 
-Python files are baked into the Docker image at build time. Restarting alone will not load Python changes.
+Python files are baked into the Docker image at build time. Restarting alone won't load Python changes.
 
 ## Workflow
 
 1. **Rebuild**: `cd cync-controller && ./rebuild.sh`
    - Automatically runs: linting, formatting, and unit tests
    - Fails if linting, formatting, or tests fail
+
 2. **Verify logs**: `ha addons logs local_cync-controller --follow`
 
 ## Related

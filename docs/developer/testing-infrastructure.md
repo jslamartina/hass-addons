@@ -10,7 +10,7 @@ The Cync Controller add-on includes comprehensive test coverage across three tie
 
 ## Directory Structure
 
-```
+```text
 cync-controller/tests/
 ├── unit/               # Unit tests (pytest)
 │   ├── test_cloud_api.py
@@ -45,19 +45,19 @@ cync-controller/tests/
 ### Unit Tests
 
 ```bash
-# Run all unit tests (parallel - fastest, ~17s)
+## Run all unit tests (parallel - fastest, ~17s)
 npm run test:unit
 
-# Run specific test file
+## Run specific test file
 pytest cync-controller/tests/unit/test_devices.py
 
-# Run with coverage (sequential - required for coverage tools)
+## Run with coverage (sequential - required for coverage tools)
 npm run test:unit:cov
 
-# Run specific test
+## Run specific test
 pytest cync-controller/tests/unit/test_devices.py::test_set_power
 
-# Sequential execution (for debugging)
+## Sequential execution (for debugging)
 npm run test:unit:serial
 ```
 
@@ -78,23 +78,23 @@ The test suite uses **pytest-xdist** for parallel execution by default, configur
 ### E2E Tests
 
 ```bash
-# Run all E2E tests
+## Run all E2E tests
 npx playwright test tests/e2e/
 
-# Run specific test file
+## Run specific test file
 npx playwright test tests/e2e/test_group_control.py
 
-# Run with UI mode
+## Run with UI mode
 npx playwright test tests/e2e/ --ui
 
-# Run with debug mode
+## Run with debug mode
 npx playwright test tests/e2e/ --debug
 ```
 
 ### Integration Tests
 
 ```bash
-# Run integration tests
+## Run integration tests
 pytest cync-controller/tests/integration/
 ```
 
@@ -140,13 +140,13 @@ Current coverage includes:
 
 ### Remaining Gaps
 
-**server.py (49.48% coverage)**
+#### server.py (49.48% coverage)
 
 - Missing: Cloud relay mode (lines 105-195)
 - Missing: Connection management edge cases
 - Recommendation: Add integration tests for cloud relay scenarios
 
-**mqtt_client.py (48.35% coverage)**
+### mqtt_client.py (48.35% coverage)
 
 - Missing: Command processor queue management
 - Missing: Group state synchronization
@@ -159,7 +159,7 @@ Current coverage includes:
 Integration tests use mock devices that simulate real Cync protocol behavior:
 
 ```python
-# Example from conftest.py
+## Example from conftest.py
 @pytest.fixture
 def mock_tcp_device():
     device = MockTCPDevice(device_id="test-001")
@@ -196,7 +196,7 @@ async def test_error_logging(caplog):
         assert "Invalid command" in caplog.text
 ```
 
-**Why this matters:**
+### Why this matters
 
 - Ensures critical errors, warnings, and debug messages are logged correctly
 - Tests logging behavior at appropriate levels
@@ -210,7 +210,7 @@ async def test_error_logging(caplog):
 E2E tests use Playwright for Home Assistant UI testing:
 
 ```python
-# Example from test_group_control.py
+## Example from test_group_control.py
 async def test_group_toggle(page, addon):
     # Navigate to dashboard
     await page.goto("http://localhost:8123")
@@ -321,26 +321,26 @@ Tests run automatically:
 ### Unit Tests
 
 ```bash
-# Show print statements
+## Show print statements
 pytest -s tests/unit/
 
-# Run single test with output
+## Run single test with output
 pytest tests/unit/test_devices.py::test_set_power -v -s
 
-# Drop into debugger on failure
+## Drop into debugger on failure
 pytest --pdb tests/unit/
 ```
 
 ### E2E Tests
 
 ```bash
-# Run with UI mode to see browser
+## Run with UI mode to see browser
 npx playwright test tests/e2e/ --ui
 
-# Run with headed mode
+## Run with headed mode
 npx playwright test tests/e2e/ --headed
 
-# Pause execution for debugging
+## Pause execution for debugging
 npx playwright test tests/e2e/ --pause
 ```
 

@@ -1,6 +1,6 @@
 # Add MQTT Integration (EMQX) during setup-fresh-ha.sh
 
-### What we’ll change
+## What we'll change
 
 - Extend `scripts/setup-fresh-ha.sh` to create/configure the MQTT integration pointing to EMQX via REST config entries flow.
 - Use credentials from `hass-credentials.env` (`MQTT_USER`, `MQTT_PASS`).
@@ -23,11 +23,11 @@
   - `MQTT_USERNAME=$MQTT_USER`, `MQTT_PASSWORD=$MQTT_PASS`
   - `AUTH_TOKEN=$LONG_LIVED_ACCESS_TOKEN` (created earlier in the script)
 
-2. Wait for EMQX to be reachable ✅
+1. Wait for EMQX to be reachable ✅
 
 - Poll TCP `localhost:1883`; if not reachable within short timeout, try `a0d7b954-emqx:1883` (overall timeout + retries). Use whichever host succeeds for subsequent steps.
 
-3. Run MQTT config flow via REST (idempotent) ✅
+1. Run MQTT config flow via REST (idempotent) ✅
 
 - Start flow:
 
@@ -63,7 +63,7 @@ curl -sf -X POST "$HA_URL/api/services/mqtt/publish" \
 
 - On success (HTTP 200), print success message. If 404, the integration didn’t load; log and continue with guidance.
 
-5. Wire into main flow ✅
+1. Wire into main flow ✅
 
 - Call new steps after `start_emqx` and before installing/configuring Cync Controller.
 

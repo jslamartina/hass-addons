@@ -10,7 +10,7 @@ Successfully integrated MITM proxy functionality into the cync-controller Python
 
 ## Files Modified/Created in Git Repo
 
-### Modified Files (3):
+### Modified Files (3)
 
 1. **`src/cync_lan/const.py`**
    - Added 6 cloud relay constants
@@ -25,18 +25,18 @@ Successfully integrated MITM proxy functionality into the cync-controller Python
    - Added 6 fields to `GlobalObjEnv`
    - Updated `reload_env()` method
 
-### New Files (3):
+### New Files (3)
 
-4. **`src/cync_lan/packet_parser.py`**
+1. **`src/cync_lan/packet_parser.py`**
    - Copied from mitm/ tools
    - Parses 11 packet types
    - Extracts device statuses, commands, endpoints
 
-5. **`src/cync_lan/packet_checksum.py`**
+2. **`src/cync_lan/packet_checksum.py`**
    - Copied from mitm/ tools
    - Checksum calculation for crafted packets
 
-6. **`docs/CLOUD_RELAY.md`**
+3. **`docs/CLOUD_RELAY.md`**
    - Comprehensive 465-line user guide
    - Configuration examples, use cases, troubleshooting
 
@@ -83,13 +83,13 @@ cloud_relay:
 ## Build and Test
 
 ```bash
-# Navigate to add-on directory
+## Navigate to add-on directory
 cd /mnt/supervisor/addons/local/hass-addons/cync-controller
 
-# Rebuild (syncs from git repo + builds container)
+## Rebuild (syncs from git repo + builds container)
 ./rebuild.sh
 
-# View logs
+## View logs
 ha addons logs local_cync-controller --follow
 ```
 
@@ -148,17 +148,17 @@ cloud_relay:
 When relay mode is enabled:
 
 ```bash
-# Inject mode change
+## Inject mode change
 echo "smart" > /tmp/cync_inject_command.txt
 echo "traditional" > /tmp/cync_inject_command.txt
 
-# Inject raw packet bytes
+## Inject raw packet bytes
 echo "73 00 00 00 1e ..." > /tmp/cync_inject_raw_bytes.txt
 ```
 
 ## Architecture
 
-```
+```javascript
 Config (config.yaml)
     ↓
 run.sh (exports env vars)
@@ -220,6 +220,7 @@ _register_new_connection()
    - Test packet injection
 
 4. **Commit changes** (when satisfied)
+
    ```bash
    cd /mnt/supervisor/addons/local/hass-addons
    git add src/cync_lan/packet_*.py

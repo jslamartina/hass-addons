@@ -27,22 +27,22 @@
 ### Command Line
 
 ```bash
-# Run all linters (Python + Shell + Format check)
+## Run all linters (Python + Shell + Format check)
 npm run lint
-# or
+## or
 ./scripts/lint-all.sh
 
-# Python only
+## Python only
 npm run lint:python
-# or
+## or
 ruff check .
 
-# Auto-fix Python issues
+## Auto-fix Python issues
 npm run lint:python:fix
-# or
+## or
 ruff check . --fix
 
-# Shell scripts only
+## Shell scripts only
 npm run lint:shell
 ```
 
@@ -50,17 +50,17 @@ npm run lint:shell
 
 - **Ruff errors will now appear automatically** in the Problems tab
 - **No need to run commands** - errors show as you type
-- **Auto-fix on save** - `source.fixAll` and `source.organizeImports` enabled
+- **Autofix on save** - `source.fixAll` and `source.organizeImports` enabled
 
 ## Next Steps
 
 1. **Reload VS Code Window** - Press `Ctrl+Shift+P` → "Developer: Reload Window"
 2. **Verify**: Open `cync-controller/src/cync_lan/main.py` - you should see Ruff errors in Problems tab
-3. **Fix issues**: Run `npm run lint:python:fix` to auto-fix many issues
+3. **Fix issues**: Run `npm run lint:python:fix` to autofix many issues
 
 ## Current Status
 
-Running `./scripts/lint-all.sh` shows **61 Ruff errors** (42 auto-fixable):
+Running `./scripts/lint-all.sh` shows **61 Ruff errors** (42 autofixable):
 
 - Type annotation modernization (Optional[X] → X | None)
 - Import organization issues
@@ -70,7 +70,7 @@ Running `./scripts/lint-all.sh` shows **61 Ruff errors** (42 auto-fixable):
 ### Priority Fixes
 
 1. **Fix syntax errors** in `devices.py` first (lines 2566-3097)
-2. Run `ruff check . --fix` to auto-fix simple issues
+2. Run `ruff check . --fix` to autofix simple issues
 3. Manually fix remaining type annotations and logic errors
 
 ## Documentation Updates
@@ -101,7 +101,7 @@ Running `./scripts/lint-all.sh` shows **61 Ruff errors** (42 auto-fixable):
 The repository now uses **Ruff as the standard Python linter** (replacing Pylint), with:
 
 - Automatic error detection in VS Code Problems tab
-- Auto-fix on save enabled
+- Autofix on save enabled
 - Convenient npm scripts for all linting tasks
 - Comprehensive documentation in AGENTS.md
 

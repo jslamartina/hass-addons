@@ -6,24 +6,65 @@ description: Critical Docker and devcontainer rules
 
 ## Rule: Don't Start Docker Manually
 
-**Do not start Docker manually in devcontainer scripts** - supervisor already does it.
+**DON'T start Docker manually in devcontainer scripts** - supervisor already does it.
 
 - Docker is managed by `supervisor_run`
 - Manual Docker start causes conflicts
-- Read `.devcontainer/README.md` for quirks
+- Read `.devcontainer/README.md` for setup details
+- See `devcontainer-quirks.mdc` for common issues and workarounds
 
 ## Rule: Python Edits Require Rebuild
 
-**Python edits: restart ≠ rebuild.**
+### Python edits: Restart ≠ rebuild
 
 - Python files are baked into Docker image at build time
 - Always run `cd cync-controller && ./rebuild.sh` after Python changes
-- Restarting alone will not load Python changes
+- Restarting alone won't load Python changes
+
+### Correct Pattern
+
+```bash
+## ✅ CORRECT: After editing Python files
+cd cync-controller && ./rebuild.sh
+## Automatically runs: lint, format, test, build
+
+## Verify logs
+ha addons logs local_cync-controller --follow
+```
+
+### Anti-Pattern
+
+```bash
+## ❌ WRONG: Just restart after Python changes
+ha addons restart local_cync-controller
+## Python changes NOT loaded - still using old code from image!
+
+## ❌ WRONG: Starting Docker manually
+docker start some-container
+## Conflicts with Supervisor management
+```
 
 ## Rule: Backup Restore Logic
 
-**Don't change backup restore logic without testing per `.devcontainer/README.md`.**
+### Don't change backup restore logic without testing per `.devcontainer/README.md`
 
 - Backup restore in `post-start.sh` is disabled by default
 - Only re-enable after thorough testing
 - Commented lines: see `.devcontainer/post-start.sh` lines 131-216
+
+### Why This Matters
+
+- Backup restore can corrupt state if implemented incorrectly
+- Must be tested in isolated environment
+- Can interfere with development workflow
+
+### Anti-Pattern
+
+```bash
+## ❌ WRONG: Re-enabling without testing
+## In post-start.sh
+restore_backup()  # Uncommented without validation!
+
+## ❌ WRONG: Testing in production devcontainer
+## Test in separate throwaway container first
+```

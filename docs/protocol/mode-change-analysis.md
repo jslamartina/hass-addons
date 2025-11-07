@@ -10,13 +10,13 @@ We have successfully reverse engineered the Cync protocol commands to switch a s
 
 #### Switch to TRADITIONAL Mode
 
-```
+```text
 73 00 00 00 1e 1b dc da 3e 00 3a 00 7e 3d 01 00 00 f8 8e 0c 00 3e 01 00 00 00 a0 00 f7 11 02 01 01 85 7e
 ```
 
 #### Switch to SMART (Dimmable) Mode
 
-```
+```text
 73 00 00 00 1e 1b dc da 3e 00 29 00 7e 30 01 00 00 f8 8e 0c 00 31 01 00 00 00 a0 00 f7 11 02 01 02 79 7e
 ```
 
@@ -24,7 +24,7 @@ We have successfully reverse engineered the Cync protocol commands to switch a s
 
 **Packet Type:** 0x73 (DATA_CHANNEL - Cloud to Device)
 
-**Key Components:**
+#### Key Components
 
 - **Endpoint:** `1b dc da 3e` (User/Home ID)
 - **Counter:** Variable (0x3a, 0x29, etc.) - increments with each command
@@ -40,10 +40,10 @@ We have successfully reverse engineered the Cync protocol commands to switch a s
 Commands can be injected using the MITM proxy:
 
 ```bash
-# Switch to Traditional mode
+## Switch to Traditional mode
 ./inject_raw.sh '73 00 00 00 1e 1b dc da 3e 00 3a 00 7e 3d 01 00 00 f8 8e 0c 00 3e 01 00 00 00 a0 00 f7 11 02 01 01 85 7e'
 
-# Switch to Smart mode
+## Switch to Smart mode
 ./inject_raw.sh '73 00 00 00 1e 1b dc da 3e 00 29 00 7e 30 01 00 00 f8 8e 0c 00 31 01 00 00 00 a0 00 f7 11 02 01 02 79 7e'
 ```
 
@@ -59,14 +59,16 @@ The switch responds with a STATUS_BROADCAST (0x83) confirming the mode change.
 
 #### Packet 1: Cloud → Device (0x73)
 
-```
+```text
+
 < 2025/10/07 20:24:25.000986640  length=35
 73 00 00 00 1e 1b dc da 3e 00 1f 00 7e 23 01 00
 00 f8 8e 0c 00 24 01 00 00 00 a0 00 f7 11 02 01
 01 6b 7e
+
 ```
 
-**Decoded:**
+### Decoded
 
 - Packet type: 0x73 (bi-directional data channel)
 - Endpoint: `1b dc da 3e 00 1f 00` (device ID: 0x1bdcda3e)
@@ -77,22 +79,26 @@ Device ACKs with 0x7b packet
 
 #### Packet 2: Device → Cloud (0x73 response)
 
-```
+```sql
+
 > 2025/10/07 20:24:26.000070842  length=24
 73 00 00 00 13 1b dc da 3e 00 ff 00 7e 23 01 00
 00 f9 8e 01 00 00 8f 7e
+
 ```
 
 #### Packet 3: Device → Cloud (0x73 - THE KEY PACKET!)
 
-```
+```text
+
 > 2025/10/07 20:24:27.000217725  length=43
 73 00 00 00 26 1b dc da 3e 01 00 00 7e 23 01 00
 00 fa 8e 14 00 73 04 00 a0 00 4c 00 ea 11 02 a0
 81 50 00 00 00 00 00 00 14 87 7e
+
 ```
 
-**Decoded:**
+### Decoded
 
 - Packet type: 0x73
 - Endpoint: `1b dc da 3e 01 00 00` (device ID: 0x1bdcda3e)
@@ -111,18 +117,22 @@ Device ACKs with 0x7b packet
 
 #### Packet 4: Cloud → Device (0x73)
 
-```
+```sql
+
 < 2025/10/07 20:24:27.000625507  length=23
 73 00 00 00 12 1b dc da 3e 00 20 00 7e 25 01 00
 00 f8 ea 00 00 ea 7e
+
 ```
 
 #### Packet 5: Device → Cloud (0x73)
 
-```
+```sql
+
 > 2025/10/07 20:24:28.000067374  length=24
 73 00 00 00 13 1b dc da 3e 01 01 00 7e 25 01 00
 00 f9 ea 01 00 00 eb 7e
+
 ```
 
 ## Key Findings
@@ -147,18 +157,21 @@ The critical bytes appear to be in **Packet 3**:
 
 ### Smart → Traditional (from smart_to_traditional.txt, line 238-241)
 
-```
+```sql
+
 > 2025/10/07 20:24:27.000217725  length=43
 73 00 00 00 26 1b dc da 3e 01 00 00 7e 23 01 00
 00 fa 8e 14 00 73 04 00 a0 00 4c 00 ea 11 02 a0
 81 50 00 00 00 00 00 00 14 87 7e
             ^^                        ^^
          Byte 22                   Byte 30
+
 ```
 
 ### Traditional → Smart (from traditional_to_smart.txt, line 2272-2275)
 
-```
+```sql
+
 > 2025/10/07 20:31:26.000833930  length=43
 73 00 00 00 26 1b dc da 3e 01 3a 00 7e 36 01 00
 00 fa 8e 14 00 7e 04 00 a0 00 4c 00 ea 11 02 a0
@@ -168,16 +181,17 @@ Byte 22     Byte 30                  Byte 36
 
 ```
 
-## KEY FINDINGS - THE MODE CONTROL BYTE!
+## KEY FINDINGS - THE MODE CONTROL BYTE
 
 Byte 30 (counting from start of 0x73 packet data payload):
 
 - **`0x50`** = **Traditional Mode** (relay enabled, dumb bulb compatible)
 - **`0xb0`** = **Smart Mode** (relay disabled, smart bulb mode)
 
-### Packet Structure (0x73 configuration packet):
+### Packet Structure (0x73 configuration packet)
 
-```
+```text
+
 Position 0-4:   73 00 00 00 26           - Packet header (0x73, length 0x26=38)
 Position 5-11:  1b dc da 3e 01 XX 00    - Endpoint (device ID + counter)
 Position 12:    7e                       - Start marker
@@ -192,9 +206,10 @@ Position 31-33: a0 81 MODE              - **MODE BYTE HERE!**
 Position 34-39: 00 00 00 00 00 00       - Padding
 Position 40:    14                       - Unknown
 Position 41-42: XX 7e                    - Checksum + end marker
+
 ```
 
-### Mode Values:
+### Mode Values
 
 - **0x50** = Traditional (relay ON for dumb bulbs)
 - **0xb0** = Smart Dimmable (relay OFF, dimming enabled)

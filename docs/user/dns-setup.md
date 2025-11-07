@@ -15,7 +15,7 @@ Newer firmware:
 - `cm.gelighting.com`
 - `cm-sec.gelighting.com`
 
-# OPNsense
+## OPNsense
 
 There are a few different methods using OPNsense depending on your setup. Unbound allows for fine-tuned per
 requesting device IP, DNS redirection.
@@ -35,7 +35,7 @@ will be redirected to ip: 10.0.1.9)
 ### Selective DNS routing
 
 **Selective DNS routing means only certain configured requesting IP addresses will have their DNS redirected,
-the rest of your network will not have their DNS redirected for those specific domains**
+the rest of your network won't have their DNS redirected for those specific domains**
 
 You can use `views` to selectively route DNS requests based on the requesting device.
 
@@ -55,7 +55,7 @@ and `cm-ge.xlink.cn` to local IP `10.0.1.20` (this is where your Cync Controller
 >
 > `local-zone` is your DNS domain (.local, .lan, .whatever). Notice there is no leading `.` in `local-zone`!!.
 
-```
+```yaml
 server:
 access-control-view: 10.0.2.216/32 cync-override-hass
 access-control-view: 10.0.2.223/32 cync-override-hass
@@ -80,7 +80,7 @@ local-data: "cm-ge.xlink.cn. 90 IN A 10.0.1.20"
 > only DNS redirect Cync Wi-Fi devices that are mostly always on, like plugs, mains powered switches / always on bulbs.
 > I have 30+ Cync devices and only have 5 always on devices connected to my Cync Controller bridge.
 
-# DNSCryptProxy
+## DNSCryptProxy
 
 As far as I know, you can only override a domain network wide, not selectively by requesting device IP.
 
@@ -92,11 +92,11 @@ As far as I know, you can only override a domain network wide, not selectively b
 - Click Save.
 - Power cycle cync devices.
 
-# Pi-hole
+## Pi-hole
 
 _This example was pulled from [techaddressed](https://www.techaddressed.com/tutorials/using-pi-hole-local-dns/)_
 
-As far as I know, Pi-Hole does not support selective DNS routing, only network wide.
+As far as I know, Pi-Hole doesn't support selective DNS routing, only network wide.
 
 - Left side navigation menu, click **Local DNS** to expand **DNS Records** and **CNAME Records**.
 - Select `DNS Records`.
@@ -107,7 +107,7 @@ As far as I know, Pi-Hole does not support selective DNS routing, only network w
 - Click the _Add_ button.
   ![Pi-hole Local DNS Records Interface](./assets/pi-hole-local-dns-interface.webp)
 
-- Your local DNS records will appear under the **List of local DNS domains** – as shown below.
+- Your local DNS records will appear under the **List of local DNS domains** - as shown below.
   ![Pi-hole Local DNS Example Records](./assets/pi-hole-local-dns-examples.webp)
 
 - Test the DNS record by running `dig cm.gelighting.com`, `dig cm-sec.gelighting.com` or `dig cm-ge.xlink.cn` from a device on your network.
@@ -142,34 +142,34 @@ After the device receives the IP, it will connect to the local server running Cy
 > [!IMPORTANT]
 > **Don't forget to power cycle all your Wi-Fi Cync devices**
 
-# New devices can't be added while DNS override is in place
+## New devices can't be added while DNS override is in place
 
-You will not be able to add any new devices to the Cync app while a network wide DNS override is in place.
-You will need to disable the DNS override, add the device(s), then re-enable the DNS override.
+You won't be able to add any new devices to the Cync app while a network wide DNS override is in place.
+You will need to disable the DNS override, add the devices, then re-enable the DNS override.
 
 It will let you get all the way to the end of adding the device and fail on the last step of 'Adding to your home'.
 
 _If you are using `unbound` and `views:` to selectively route DNS for only a few Cync devices,
 you should be able to add new devices (as long as you didn't redirect your phone IP!)_
 
-# Testing DNS override
+## Testing DNS override
 
 > [!NOTE]
 > If you are using selective DNS override via `views` in
-> `unbound`, and you did not set up an override for the IP of the
+> `unbound`, and you didn't set up an override for the IP of the
 > machine running `dig` / `nslookup`, the command will return the Cync cloud IP, this is normal.
 
 you can use `dig`, `nslookup`, `dog`, etc. to test if the DNS override is working correctly.
 
 ```bash
-# Older firmware
+## Older firmware
 dig cm-ge.xlink.cn
 
-# Newer firmware
+## Newer firmware
 dig cm.gelighting.com
 dig cm-sec.gelighting.com
 
-# Example output with a local A record returned
+## Example output with a local A record returned
 ; <<>> DiG 9.18.24 <<>> cm.gelighting.com
 ;; global options: +cmd
 ;; Got answer:

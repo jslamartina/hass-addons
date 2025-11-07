@@ -21,6 +21,10 @@
     "lint:shell": "git ls-files '*.sh' | xargs -r shellcheck",
     "lint:typescript": "eslint . --ext .ts,.tsx",
     "lint:typescript:fix": "eslint . --ext .ts,.tsx --fix",
+    "lint:markdown": "markdownlint-cli2 '**/*.md' '**/*.mdc' '#node_modules' '#.venv' '#**/node_modules' '#**/.venv'",
+    "lint:markdown:fix": "markdownlint-cli2 --fix '**/*.md' '**/*.mdc' '#node_modules' '#.venv' '#**/node_modules' '#**/.venv'",
+    "lint:vale": "vale sync && vale .",
+    "lint:vale:check": "vale .",
     "format": "npx prettier --write .",
     "format:check": "npx prettier --check .",
     "format:python": "ruff format .",
@@ -51,6 +55,7 @@
     "@types/node": "^24.7.2",
     "eslint": "^9.0.0",
     "eslint-config-prettier": "^9.1.0",
+    "markdownlint-cli2": "^0.18.1",
     "playwright": "^1.56.0",
     "prettier": "^3.6.2",
     "prettier-plugin-sh": "^0.17.4",
@@ -59,6 +64,7 @@
     "typescript-eslint": "^8.0.0"
   },
   "dependencies": {
+    "@brave/brave-search-mcp-server": "^2.0.58",
     "@modelcontextprotocol/server-filesystem": "^2025.8.21",
     "node-fetch": "^3.3.2",
     "sh-syntax": "^0.5.8",

@@ -1,0 +1,169 @@
+---
+description: Brave AI Grounding API usage and patterns
+---
+
+# Brave AI Grounding API
+
+## What's AI Grounding?
+
+AI Grounding anchors LLM responses in high-quality, factual information from verifiable web sources, reducing hallucinations and improving trustworthiness. Responses include citations and can perform deep research with multiple searches, reasoning, and planning.
+
+## When to Use
+
+### Use AI Grounding for
+
+- ✅ **Synthesized answers** - Need consolidated information from multiple sources
+- ✅ **Fact-checking** - Verify claims or statements against web sources
+- ✅ **Research tasks** - Complex topics requiring analysis and citations
+- ✅ **Explanations** - Context and understanding about concepts/topics
+- ✅ **Authoritative responses** - Need trustworthy answers with sources
+- ✅ **Entity information** - Details about specific people, places, organizations
+
+### Use Brave Search instead for
+
+- ❌ Finding specific web pages or documentation URLs
+- ❌ Raw search results for manual review
+- ❌ Current events or news articles (use `brave_news_search`)
+- ❌ Images or videos (use specialized search tools)
+
+## CLI Usage
+
+### Basic Query
+
+```bash
+brave-ai-grounding-cli "What is quantum computing?"
+```
+
+### Research Mode (Deep Research)
+
+```bash
+brave-ai-grounding-cli "Explain the latest developments in quantum computing" --research
+```
+
+### Without Citations
+
+```bash
+brave-ai-grounding-cli "What is machine learning?" --no-citations
+```
+
+## CLI Options
+
+**query** (required): Question to ask
+
+**--research**: Enable deep research mode
+
+- Multiple searches with reasoning and planning
+- More comprehensive but slower
+- Best for complex research questions
+
+**--no-citations**: Disable citations
+
+- Faster responses
+- No source URLs in footer
+
+## Best Practices
+
+### Use Research Mode For
+
+- Complex topics requiring multiple perspectives
+- Academic or technical research
+- Comprehensive analysis across sources
+- Topics needing deep context
+
+### Use Standard Mode For
+
+- Quick factual questions
+- Simple lookups
+- Faster responses needed
+- Straightforward queries
+
+### Always Enable Citations When
+
+- User needs to verify information
+- Research documentation required
+- Academic or professional work
+- Presenting facts or statistics
+
+### Response Handling
+
+- ✅ **Streaming output** - Content streams in real-time to terminal
+- ✅ **Clean display** - Citations filtered from main content
+- ✅ **Formatted footer** - Sources and usage metrics at end
+- ✅ **No buffering** - See response build character-by-character
+
+## Output Format
+
+### Main Content
+
+Response text streams cleanly without markup interruptions.
+
+### Footer
+
+**Sources Section**:
+
+- Numbered list of citation URLs
+- Snippet/description for each source
+- Structured data when available
+
+**Usage Metrics**:
+
+- Request count
+- Query count
+- Tokens (input/output)
+- Total cost
+
+## Configuration
+
+**API Key**: Set via environment variable `BRAVE_AI_GROUNDING_API_KEY` or `.env` file in package directory
+
+**CLI Tool**: `brave-ai-grounding-cli` (installed via `pip install -e tools/brave-ai-grounding-cli/`)
+
+**Setup**: Copy `.env.example` to `.env` and add your API key (see package README)
+
+**Dependencies**: `httpx` (installed globally)
+
+## Comparison with Other Tools
+
+| Feature            | AI Grounding | Brave Search    | Built-in search |
+| ------------------ | ------------ | --------------- | --------------- |
+| Synthesized answer | ✅           | ❌              | ❌              |
+| Citations          | ✅           | Partial         | ❌              |
+| Research mode      | ✅           | ❌              | ❌              |
+| Raw results        | ❌           | ✅              | ✅              |
+| Specialized search | ❌           | ✅ (news/video) | ❌              |
+| Reliability        | ✅ High      | ✅ High         | ❌ Broken       |
+
+## Troubleshooting
+
+**API Key Issues**:
+
+- Verify `BRAVE_AI_GROUNDING_API_KEY` is set in `hass-credentials.env`
+- Check key has AI Grounding plan access
+- Ensure no extra whitespace in key
+
+**Slow Responses**:
+
+- Research mode takes longer (30s-2min)
+- Disable `enable_research` for faster responses
+- Use standard Brave Search for quick lookups
+
+**Rate Limits**:
+
+- Check API plan limits
+- Space out requests if hitting limits
+- Consider upgrading plan for higher throughput
+
+## How to Use from Chat
+
+When I need to use Brave AI Grounding, I'll run the CLI tool via `run_terminal_cmd`:
+
+```bash
+brave-ai-grounding-cli "Your question here"
+```
+
+The response will stream in real-time with citations formatted in the footer.
+
+## Related
+
+- [web-search-brave.mdc](mdc:.cursor/rules/web-search-brave.mdc) - When to use search vs. grounding
+- [\_00-rules-prefix.mdc](mdc:.cursor/rules/_00-rules-prefix.mdc) - Executive Rule 12

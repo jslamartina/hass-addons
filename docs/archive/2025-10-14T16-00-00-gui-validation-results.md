@@ -17,9 +17,9 @@
 
 **Objective:** Verify cloud relay configuration options are visible in Home Assistant UI
 
-**Result:** ✅ **SUCCESS**
+#### Result:**✅**SUCCESS
 
-**Evidence:**
+### Evidence
 
 - All 6 cloud relay options accessible via Settings → Add-ons → Cync Controller → Configuration
 - Options verified:
@@ -30,12 +30,12 @@
   5. `debug_packet_logging` (toggle switch)
   6. `disable_ssl_verification` (toggle switch)
 
-**Screenshots:**
+### Screenshots
 
 - `test5-cloud-relay-expanded.png`
 - `test5-cloud-relay-settings-visible.png`
 
-**Addon Management Verified:**
+### Addon Management Verified
 
 - Version: 0.0.4.0
 - State: Running
@@ -50,18 +50,18 @@
 
 **Result:** ⚠️ **FAIL** - Commands don't persist, devices revert to ON state
 
-**Root Cause:** **DNS redirection NOT configured in devcontainer environment**
+### Root Cause:\*\*\*\*DNS redirection NOT configured in devcontainer environment
 
 #### Evidence from Logs
 
-**Key Log Entries:**
+#### Key Log Entries
 
-```
+```text
 20:03:00.713 INFO > CyncDevice:Hallway Floodlight 1(147):set_power:
 Sent power state command to TCP devices: {} in 0.00000 seconds - waiting for ACK...
 ```
 
-**Analysis:**
+### Analysis
 
 - `TCP devices: {}` indicates ZERO active TCP connections
 - Commands sent to empty device set
@@ -81,13 +81,13 @@ From `docs/user/dns-setup.md`:
 
 > You need to override the cloud server domain to a local IP on your network. This server masquerades as the cloud TCP server.
 
-**Newer Firmware Requires:**
+### Newer Firmware Requires
 
 - DNS override: `cm.gelighting.com` → local addon IP
 - DNS override: `cm-sec.gelighting.com` → local addon IP
 - Power cycle all Cync devices after DNS setup
 
-**Without DNS Redirection:**
+### Without DNS Redirection
 
 1. Devices resolve `cm.gelighting.com` to **real Cync cloud** (not local addon)
 2. Devices maintain cloud connection only
@@ -116,7 +116,7 @@ Physical device control testing **cannot be completed** in the devcontainer envi
 
 ### Recommendations
 
-**For Production Deployment:**
+#### For Production Deployment
 
 1. Follow DNS.md setup instructions for your DNS server (Pi-hole, OPNsense, etc.)
 2. Configure DNS overrides for `cm.gelighting.com` and `cm-sec.gelighting.com`
@@ -124,7 +124,7 @@ Physical device control testing **cannot be completed** in the devcontainer envi
 4. Verify TCP device connections in addon status card (should show > 0)
 5. Test device control via GUI after TCP connections established
 
-**For Future Testing:**
+### For Future Testing
 
 1. Set up Pi-hole or DNS server in devcontainer network
 2. Configure selective DNS routing for test devices
@@ -162,7 +162,7 @@ Physical device control testing **cannot be completed** in the devcontainer envi
 
 ---
 
-**Validation Status:** ✅ **Configuration UI Complete** | ⚠️ **Device Control Requires DNS Setup**
+### Validation Status:**✅ **Configuration UI Complete** | ⚠️**Device Control Requires DNS Setup
 
 **Tested By:** AI Assistant (Cursor)
 **Test Environment:** Home Assistant Dev Container (Linux ARM64)

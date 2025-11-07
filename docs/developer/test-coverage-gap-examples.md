@@ -27,7 +27,7 @@ elif "-group-" in _topic[2]:
 **Required Test**:
 
 ```python
-# File: cync-controller/tests/unit/test_mqtt_group_commands.py
+## File: cync-controller/tests/unit/test_mqtt_group_commands.py
 
 @pytest.mark.asyncio
 async def test_group_set_power_command_routing():
@@ -191,7 +191,7 @@ async def start_relay(self):
 **Required Tests**:
 
 ```python
-# File: cync-controller/tests/integration/test_cloud_relay.py
+## File: cync-controller/tests/integration/test_cloud_relay.py
 
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -347,7 +347,7 @@ async def periodic_status_refresh(self):
 **Required Tests**:
 
 ```python
-# File: cync-controller/tests/unit/test_periodic_tasks.py
+## File: cync-controller/tests/unit/test_periodic_tasks.py
 
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch

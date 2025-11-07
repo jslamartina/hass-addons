@@ -13,6 +13,7 @@ All shell scripts in this project must follow strict conventions.
 ## Requirements
 
 ### Strict Mode (Always Required)
+
 ```bash
 #!/usr/bin/env bash
 set -Eeuo pipefail
@@ -39,18 +40,20 @@ on_error() {
 - `IFS=$'\n\t'` - Safer word splitting
 
 ### Idempotency
+
 - ✅ Scripts must be safe to run multiple times
 - ✅ Check before creating/modifying files
 - ❌ Don't assume fresh state
 
 ### Error Handling
+
 - ✅ Use traps for cleanup and error reporting
 - ✅ Check command exit codes with `|| { ... }`
 - ✅ Log errors with context (line numbers, function names)
 
 ### Console Output & Logging
 
-**REQUIRED: Use common output library in all scripts**
+#### REQUIRED: Use common output library in all scripts
 
 ```bash
 #!/usr/bin/env bash
@@ -59,11 +62,12 @@ set -Eeuo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/shell-common/common-output.sh"
 
-# shellcheck disable=SC2034  # LP used by common-output.sh log functions
+## shellcheck disable=SC2034  # LP used by common-output.sh log functions
 LP="[$(basename "$0")]"
 ```
 
 **Standard log functions** (from `common-output.sh`):
+
 - `log_info "message"` - Green prefix with [script-name]
 - `log_warn "message"` - Yellow prefix with [script-name]
 - `log_error "message"` - Red prefix with [script-name] to stderr
@@ -72,9 +76,11 @@ LP="[$(basename "$0")]"
 - `test_result "name" "true|false" "message"` - Test result with ✅/❌
 
 **Color variables** (available from common-output.sh):
+
 - `RED`, `GREEN`, `YELLOW`, `BLUE`, `NC` (No Color)
 
 Example:
+
 ```bash
 log_info "Starting task..."
 if ! command_that_might_fail; then
@@ -85,6 +91,7 @@ log_success "Task completed"
 ```
 
 **Status symbols** (standardized):
+
 - ✅ Success/completion
 - ❌ Error/failure
 - ⚠️ Warning/caution
@@ -96,18 +103,20 @@ log_success "Task completed"
 - ⏳ Waiting/progress
 
 **Box diagrams** (55 char total width):
+
 ```bash
-# Box: 53 equals (═) + 2 borders (║) = 55 total width
-# IMPORTANT: Emojis display as 2 character widths but count as 1 in source
-# Formula: source_chars = 53 - emoji_count
-# Examples: 0 emojis=53 chars, 1 emoji=52 chars, 2 emojis=51 chars
+## Box: 53 equals (═) + 2 borders (║) = 55 total width
+## IMPORTANT: Emojis display as 2 character widths but count as 1 in source
+## Formula: source_chars = 53 - emoji_count
+## Examples: 0 emojis=53 chars, 1 emoji=52 chars, 2 emojis=51 chars
 echo -e "${GREEN}╔═════════════════════════════════════════════════════╗${NC}"
-echo -e "${GREEN}║    ✅ Success Message!                       ║${NC}"  # 1 emoji: 52 source chars
-echo -e "${GREEN}║  ✅ Two emojis here ✅                      ║${NC}"  # 2 emojis: 51 source chars
+echo -e "${GREEN}║    ✅ Success Message!                       ║${NC}" # 1 emoji: 52 source chars
+echo -e "${GREEN}║  ✅ Two emojis here ✅                      ║${NC}"   # 2 emojis: 51 source chars
 echo -e "${GREEN}╚═════════════════════════════════════════════════════╝${NC}"
 ```
 
 ### Variables
+
 - ✅ Quote all variables: `"$VAR"`
 - ✅ Use `${VAR}` for complex expansion
 - ✅ Declare important variables at top
@@ -117,16 +126,18 @@ echo -e "${GREEN}╚════════════════════
 - ❌ Don't use backticks (`` ` ``)
 
 ### ShellCheck
+
 ```bash
-# Run ShellCheck on all scripts
+## Run ShellCheck on all scripts
 npm run lint:shell
 
-# Common suppressions (use sparingly with comments):
-# shellcheck disable=SC2034  # VAR appears unused (if intentional)
-# shellcheck disable=SC2154  # VAR referenced but not assigned (from source)
+## Common suppressions (use sparingly with comments):
+## shellcheck disable=SC2034  # VAR appears unused (if intentional)
+## shellcheck disable=SC2154  # VAR referenced but not assigned (from source)
 ```
 
 ### Supervisor API Access
+
 - ✅ Use `ha` CLI commands directly (best practice)
 - ✅ Use `docker exec hassio_cli curl ...` for API calls
 - ❌ Don't try direct curl from devcontainer shell

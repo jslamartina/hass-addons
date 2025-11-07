@@ -51,7 +51,7 @@ Phase 1a implements the real Cync device protocol encoder/decoder based on valid
 
 ### File Structure
 
-```
+```sql
 src/protocol/
 ├── __init__.py
 ├── cync_protocol.py      # Main encoder/decoder
@@ -150,7 +150,7 @@ def _extract_packets(self) -> List[bytes]:
 
 **Phase 1a Exceptions** (defined in this phase):
 
-```
+```text
 CyncProtocolError (base)
 ├── PacketDecodeError
 └── PacketFramingError
@@ -158,7 +158,7 @@ CyncProtocolError (base)
 
 **Complete Phase 1 Hierarchy** (includes Phase 1b and 1c):
 
-```
+```text
 CyncProtocolError (Phase 1a - base)
 ├── PacketDecodeError (Phase 1a)
 ├── PacketFramingError (Phase 1a)
@@ -246,6 +246,7 @@ class PacketFramer:
     buffer exhaustion from malicious/corrupted packets.
 
     Algorithm:
+
     1. Buffer all incoming bytes
     2. Check if buffer has at least 5 bytes (header)
     3. Parse header to get packet length (byte[3]*256 + byte[4])
@@ -386,14 +387,14 @@ Copy validated algorithm from legacy code into `src/protocol/checksum.py` (see i
 
 **Contingency Plan: Reverse-Engineer Checksum Algorithm** (Time-boxed: 4 hours maximum)
 
-**Step 1: Isolate Mismatch Pattern**
+### Step 1: Isolate Mismatch Pattern
 
 - Compare 10+ packets with mismatches
 - Question: Which packets have mismatches? All types or specific types only?
 - **Pattern A** (all packets mismatch): Algorithm fundamentally incorrect
 - **Pattern B** (specific types): Type-dependent algorithm or byte position variation
 
-**Step 2: Hypothesis Testing Framework**
+### Step 2: Hypothesis Testing Framework
 
 Create automated test script: `scripts/reverse-engineer-checksum.py`
 
@@ -451,19 +452,19 @@ if __name__ == "__main__":
         test_checksum_hypothesis(packet_bytes, expected)
 ```
 
-**Step 3: Validate Discovered Algorithm**
+### Step 3: Validate Discovered Algorithm
 
 - Test discovered algorithm against 20+ additional packets
 - If 100% match on all packets: Algorithm found
 - If < 100% match: Continue hypothesis testing or consider firmware-specific variations
 
-**Step 4: Document and Implement**
+### Step 4: Document and Implement
 
 - Document discovered algorithm in `docs/protocol/checksum-validation.md`
 - Implement in `src/protocol/checksum.py`
 - Update test fixtures with validation results
 
-**If 4 Hours Elapsed Without Solution (Technical Review Finding 3.5 - Escalation Procedure Added)**
+### If 4 Hours Elapsed Without Solution (Technical Review Finding 3.5 - Escalation Procedure Added)
 
 If reverse-engineering time-box (4 hours) expires without finding algorithm:
 
@@ -477,7 +478,7 @@ If reverse-engineering time-box (4 hours) expires without finding algorithm:
 - Document additional time spent
 - Risk: May not find algorithm even with more time
 
-**Option B: Contact Device Manufacturer**
+### Option B: Contact Device Manufacturer
 
 - Request protocol documentation from manufacturer
 - May require NDA or formal request process
@@ -489,7 +490,7 @@ If reverse-engineering time-box (4 hours) expires without finding algorithm:
 - Phase 1a paused until algorithm obtained
 - Consider: Use legacy cloud relay logs for reference (if available)
 
-**Step 3: User Decision Required**
+### Step 3: User Decision Required
 
 - Present options with pros/cons
 - User selects path forward
@@ -497,25 +498,25 @@ If reverse-engineering time-box (4 hours) expires without finding algorithm:
 
 **Success Criteria** (before escalation): 100% checksum match on 30+ packets with diverse types (0x23, 0x73, 0x83, 0xD3, etc.)
 
-**Important: NO LEGACY IMPORTS IN PRODUCTION CODE**
+### Important: NO LEGACY IMPORTS IN PRODUCTION CODE
 
 The Phase 0.5 validation script (`mitm/validate-checksum-REFERENCE-ONLY.py`) imports legacy code, but this is a **one-time exception for validation only**. Phase 1a production code MUST NOT import from legacy codebase.
 
 **❌ FORBIDDEN Pattern** (will be rejected in code review):
 
 ```python
-# WRONG - DO NOT DO THIS IN PHASE 1a!
+## WRONG - DO NOT DO THIS IN PHASE 1a!
 from cync_controller.packet_checksum import calculate_checksum_between_markers
 
-# Using legacy import directly
+## Using legacy import directly
 checksum = calculate_checksum_between_markers(packet)
 ```
 
 **✅ CORRECT Pattern** (copy and adapt):
 
 ```python
-# CORRECT - Copy implementation into new codebase
-# File: src/protocol/checksum.py
+## CORRECT - Copy implementation into new codebase
+## File: src/protocol/checksum.py
 
 def calculate_checksum_between_markers(packet: bytes) -> int:
     """Calculate checksum between 0x7E markers.
@@ -639,7 +640,7 @@ The 3-byte msg_id counter wraps at **16,777,216** (2^24) messages. This section 
 
 **Conclusion**: Sequential msg_id with wrap-around is safe for production use. Collision risk is mathematically zero under normal operating conditions.
 
-**⚠️ Edge Case: Device Reboot Scenario (Technical Review Finding 2.4 - Documented)**
+### ⚠️ Edge Case: Device Reboot Scenario (Technical Review Finding 2.4 - Documented)
 
 **Edge case identified**: Device reboots while controller connection survives.
 
@@ -789,7 +790,7 @@ Once Phase 1b `ReliableTransport` is implemented, `toggler_v2.py` will be refact
 **Example Progression**:
 
 ```python
-# Phase 1a version (direct codec):
+## Phase 1a version (direct codec):
 protocol = CyncProtocol()
 handshake_packet = protocol.encode_handshake(endpoint, auth_code)
 writer.write(handshake_packet)
@@ -798,7 +799,7 @@ response = await asyncio.wait_for(reader.read(4096), timeout=5.0)
 ack_packet = protocol.decode_packet(response)
 assert ack_packet.packet_type == 0x28
 
-# Phase 1b version (ReliableTransport wrapper):
+## Phase 1b version (ReliableTransport wrapper):
 transport = ReliableTransport(conn, protocol)
 await transport.connect()  # Handles handshake + retries
 result = await transport.send_reliable(toggle_payload)  # Handles ACK + retries
@@ -824,10 +825,10 @@ assert result.success
 **Example Usage**:
 
 ```bash
-# Test with simulator (Phase 1d)
+## Test with simulator (Phase 1d)
 python harness/toggler_v2.py --host localhost --port 9000
 
-# Test with real device
+## Test with real device
 python harness/toggler_v2.py --host 192.168.1.100 --port 23779
 ```
 
@@ -919,7 +920,7 @@ python harness/toggler_v2.py --host 192.168.1.100 --port 23779
 ### Unit Tests (pytest)
 
 ```python
-# test_encoder.py
+## test_encoder.py
 def test_encode_handshake():
     """Test 0x23 handshake encoding."""
     endpoint = bytes.fromhex("39 87 c8 57")
@@ -941,7 +942,7 @@ def test_encode_data_packet():
 ### Integration Tests (with Phase 0.5 fixtures)
 
 ```python
-# test_real_packets.py
+## test_real_packets.py
 from tests.fixtures.real_packets import HANDSHAKE_0x23_DEV_TO_CLOUD
 
 def test_decode_real_handshake():
@@ -955,7 +956,7 @@ def test_decode_real_handshake():
 ### Security Tests (Buffer Overflow Protection)
 
 ```python
-# test_framer_security.py
+## test_framer_security.py
 
 def test_framer_rejects_oversized_packet():
     """Test MAX_PACKET_SIZE validation."""

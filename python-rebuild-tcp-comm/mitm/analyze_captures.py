@@ -51,7 +51,7 @@ def main():
     print("-" * 30)
 
     # Sort by packet type
-    for (ptype, direction), count in sorted(analysis['packet_types'].items()):
+    for (ptype, direction), count in sorted(analysis["packet_types"].items()):
         print(f"0x{ptype:<4} {direction:<12} {count:<8}")
 
     # Check for key packet types
@@ -59,7 +59,7 @@ def main():
     print("Phase 0.5 Deliverable Status")
     print(f"{'=' * 60}\n")
 
-    types_found = set(t for t, _ in analysis['packet_types'].keys())
+    types_found = set(t for t, _ in analysis["packet_types"].keys())
 
     flows = {
         "Handshake (0x23→0x28)": ("23" in types_found and "28" in types_found),
@@ -79,7 +79,7 @@ def main():
     print(f"{'=' * 60}\n")
 
     for ptype in sorted(types_found):
-        examples = [p for p in analysis['packets'] if p['hex'].startswith(ptype)]
+        examples = [p for p in analysis["packets"] if p["hex"].startswith(ptype)]
         if examples:
             example = examples[0]
             print(f"\n0x{ptype.upper()} {example['direction']} ({example['length']} bytes)")
@@ -88,4 +88,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

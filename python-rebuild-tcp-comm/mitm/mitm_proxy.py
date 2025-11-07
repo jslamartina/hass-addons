@@ -3,10 +3,13 @@
 Minimal MITM proxy for Cync protocol packet capture.
 
 Usage:
-    python scripts/mitm-proxy.py --listen-port 23779 --upstream-host 35.196.85.236 --upstream-port 23779
+    python mitm/mitm-proxy.py --listen-port 23779 --upstream-host homeassistant.local --upstream-port 23779
+
+    # Or forward to real cloud for protocol research:
+    python mitm/mitm-proxy.py --listen-port 23779 --upstream-host 35.196.85.236 --upstream-port 23779
 
     # Or forward to localhost cloud relay for testing:
-    python scripts/mitm-proxy.py --listen-port 23779 --upstream-host localhost --upstream-port 23780 --no-ssl
+    python mitm/mitm-proxy.py --listen-port 23779 --upstream-host localhost --upstream-port 23780 --no-ssl
 """
 
 import argparse
@@ -31,21 +34,44 @@ class MITMProxy:
         upstream_host: str,
         upstream_port: int,
         use_ssl: bool = True,
+        backpressure_mode: str = "normal",
+        slow_consumer_delay: float = 0.0,
+        buffer_fill_packet_limit: int = 10,
+        ack_delay: float = 0.0,
     ):
         self.listen_port = listen_port
         self.upstream_host = upstream_host
         self.upstream_port = upstream_port
         self.ssl_context = self._create_ssl_context() if use_ssl else None
-        self.capture_dir = Path("captures")
+        # Always use mitm/captures/ regardless of where proxy is started
+        self.capture_dir = Path(__file__).parent / "captures"
         self.capture_dir.mkdir(exist_ok=True)
         self.capture_file = (
             self.capture_dir / f"capture_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt"
         )
         self.server: Optional[asyncio.Server] = None
-        self.active_connections: dict[int, tuple[asyncio.StreamWriter, asyncio.StreamWriter]] = (
-            {}
-        )  # connection_id -> (device_writer, cloud_writer)
+        self.active_connections: dict[
+            int, tuple[asyncio.StreamWriter, asyncio.StreamWriter]
+        ] = {}  # connection_id -> (device_writer, cloud_writer)
         self.connection_lock = asyncio.Lock()  # Thread-safe injection
+        self.current_annotation: Optional[str] = None  # For annotating capture sessions
+
+        # Backpressure testing configuration
+        self.backpressure_mode = backpressure_mode
+        self.slow_consumer_delay = slow_consumer_delay
+        self.buffer_fill_packet_limit = buffer_fill_packet_limit
+        self.ack_delay = ack_delay
+
+        # Metrics tracking
+        self.metrics = {
+            "dev_to_cloud_packets": 0,
+            "cloud_to_dev_packets": 0,
+            "dev_to_cloud_bytes": 0,
+            "cloud_to_dev_bytes": 0,
+            "buffer_fill_reached": False,
+            "disconnects": 0,
+            "ack_delays_applied": 0,
+        }
 
     def _create_ssl_context(self) -> Optional[ssl.SSLContext]:
         """Create SSL context for upstream connections."""
@@ -92,6 +118,13 @@ class MITMProxy:
         ssl_context.set_ciphers(":".join(ciphers))
         return ssl_context
 
+    def _is_ack_packet(self, data: bytes) -> bool:
+        """Detect if packet is an ACK (0x28, 0x7B, 0x88, 0xD8)."""
+        if len(data) < 1:
+            return False
+        packet_type = data[0]
+        return packet_type in (0x28, 0x7B, 0x88, 0xD8)
+
     async def start(self) -> None:
         """Start the proxy server."""
         # Create SSL context for accepting device TLS connections
@@ -111,6 +144,13 @@ class MITMProxy:
         )
         print(f"Upstream SSL: {'enabled' if self.ssl_context else 'disabled'}", file=sys.stderr)
         print(f"Captures will be saved to {self.capture_file}", file=sys.stderr)
+        print(f"Backpressure mode: {self.backpressure_mode}", file=sys.stderr)
+        if self.backpressure_mode == "slow_consumer":
+            print(f"  Slow consumer delay: {self.slow_consumer_delay}s", file=sys.stderr)
+        elif self.backpressure_mode == "buffer_fill":
+            print(f"  Buffer fill packet limit: {self.buffer_fill_packet_limit}", file=sys.stderr)
+        elif self.backpressure_mode == "ack_delay":
+            print(f"  ACK delay: {self.ack_delay}s", file=sys.stderr)
         print("=" * 60, file=sys.stderr)
 
         async with self.server:
@@ -154,10 +194,10 @@ class MITMProxy:
             async with self.connection_lock:
                 self.active_connections[connection_id] = (writer, cloud_writer)
 
-            # Bidirectional forwarding with logging
+            # Bidirectional forwarding with logging (include connection ID)
             await asyncio.gather(
-                self._forward_and_log(reader, cloud_writer, "DEV→CLOUD"),
-                self._forward_and_log(cloud_reader, writer, "CLOUD→DEV"),
+                self._forward_and_log(reader, cloud_writer, "DEV→CLOUD", connection_id),
+                self._forward_and_log(cloud_reader, writer, "CLOUD→DEV", connection_id),
                 return_exceptions=True,
             )
 
@@ -169,6 +209,7 @@ class MITMProxy:
                 async with self.connection_lock:
                     if connection_id in self.active_connections:
                         del self.active_connections[connection_id]
+                    self.metrics["disconnects"] += 1
 
             writer.close()
             await writer.wait_closed()
@@ -178,29 +219,81 @@ class MITMProxy:
                 await cloud_writer.wait_closed()
 
             print(f"Device disconnected: {device_addr}", file=sys.stderr)
+            print(f"Metrics: {json.dumps(self.metrics)}", file=sys.stderr)
 
     async def _forward_and_log(
         self,
         src: asyncio.StreamReader,
         dst: asyncio.StreamWriter,
         direction: str,
+        connection_id: int = None,
     ) -> None:
-        """Forward packets and log hex dumps."""
+        """Forward packets and log hex dumps with optional backpressure simulation."""
+        packet_count = 0
+
         while True:
             try:
+                # Scenario 2: Buffer Fill - Stop reading after limit
+                if (
+                    self.backpressure_mode == "buffer_fill"
+                    and direction == "DEV→CLOUD"
+                    and packet_count >= self.buffer_fill_packet_limit
+                ):
+                    if not self.metrics["buffer_fill_reached"]:
+                        self.metrics["buffer_fill_reached"] = True
+                        print(
+                            f"[BACKPRESSURE] Buffer fill limit reached ({self.buffer_fill_packet_limit} packets). "
+                            f"Stopping reads from device. TCP buffer will fill.",
+                            file=sys.stderr,
+                        )
+                    # Stop reading - this will cause TCP buffer to fill
+                    await asyncio.sleep(3600)  # Sleep for 1 hour (effectively forever)
+                    break
+
                 data = await src.read(4096)
                 if not data:
                     break
 
+                packet_count += 1
+
+                # Update metrics
+                if direction == "DEV→CLOUD":
+                    self.metrics["dev_to_cloud_packets"] += 1
+                    self.metrics["dev_to_cloud_bytes"] += len(data)
+                else:
+                    self.metrics["cloud_to_dev_packets"] += 1
+                    self.metrics["cloud_to_dev_bytes"] += len(data)
+
                 # Log to stdout (structured JSON)
                 self._log_packet(data, direction)
 
-                # Save to capture file
-                self._save_capture(data, direction)
+                # Save to capture file with connection tracking
+                self._save_capture(data, direction, connection_id)
+
+                # Scenario 3: ACK Delay - Delay forwarding of ACK packets
+                if (
+                    self.backpressure_mode == "ack_delay"
+                    and direction == "CLOUD→DEV"
+                    and self._is_ack_packet(data)
+                ):
+                    self.metrics["ack_delays_applied"] += 1
+                    print(
+                        f"[BACKPRESSURE] Delaying ACK packet (type 0x{data[0]:02x}) by {self.ack_delay}s",
+                        file=sys.stderr,
+                    )
+                    await asyncio.sleep(self.ack_delay)
 
                 # Forward to destination
                 dst.write(data)
                 await dst.drain()
+
+                # Scenario 1: Slow Consumer - Delay after forwarding DEV→CLOUD packets
+                if (
+                    self.backpressure_mode == "slow_consumer"
+                    and direction == "DEV→CLOUD"
+                    and self.slow_consumer_delay > 0
+                ):
+                    await asyncio.sleep(self.slow_consumer_delay)
 
             except asyncio.CancelledError:
                 break
@@ -215,24 +308,32 @@ class MITMProxy:
             "direction": direction,
             "length": len(data),
             "hex": data.hex(" "),
+            "annotation": self.current_annotation,
         }
         print(json.dumps(log_entry))
 
-    def _save_capture(self, data: bytes, direction: str) -> None:
-        """Save raw capture to file."""
+    def _save_capture(self, data: bytes, direction: str, connection_id: int = None) -> None:
+        """Save raw capture to file with connection tracking."""
         with open(self.capture_file, "a") as f:
-            f.write(f"{datetime.now().isoformat()} {direction} ({len(data)} bytes)\n")
+            annotation_str = f" [{self.current_annotation}]" if self.current_annotation else ""
+            conn_str = f" [conn:{connection_id}]" if connection_id else ""
+            f.write(
+                f"{datetime.now().isoformat()} {direction}{annotation_str}{conn_str} ({len(data)} bytes)\n"
+            )
             f.write(data.hex(" ") + "\n\n")
 
-    async def inject_packet(self, hex_string: str, direction: str) -> dict[str, Any]:
+    async def inject_packet(
+        self, hex_string: str, direction: str, broadcast: bool = False
+    ) -> dict[str, Any]:
         """Inject arbitrary packet into active connections.
 
         Args:
             hex_string: Hex-encoded packet (e.g., "73 00 00 00 1e ...")
             direction: "CLOUD→DEV" or "DEV→CLOUD"
+            broadcast: If True, inject to all connections; if False (default), inject to one random connection
 
         Returns:
-            dict with status, timestamp, direction, length, connections
+            dict with status, timestamp, direction, length, connections, target_connections
         """
         async with self.connection_lock:
             if not self.active_connections:
@@ -241,8 +342,19 @@ class MITMProxy:
             # Parse hex string to bytes
             packet = bytes.fromhex(hex_string.replace(" ", ""))
 
-            # Inject into all active connections
-            for device_writer, cloud_writer in self.active_connections.values():
+            # Select target connections
+            if broadcast:
+                target_connections = list(self.active_connections.items())
+            else:
+                # Pick ONE random connection
+                import random
+
+                conn_id = random.choice(list(self.active_connections.keys()))
+                target_connections = [(conn_id, self.active_connections[conn_id])]
+
+            # Inject into target connections
+            injected_count = 0
+            for conn_id, (device_writer, cloud_writer) in target_connections:
                 if direction == "CLOUD→DEV":
                     device_writer.write(packet)
                     await device_writer.drain()
@@ -252,31 +364,43 @@ class MITMProxy:
                 else:
                     raise ValueError(f"Invalid direction: {direction}")
 
-                # Log injection
-                self._log_packet(packet, f"{direction} [INJECTED]")
-                self._save_capture(packet, f"{direction} [INJECTED]")
+                # Log injection with connection ID
+                self._log_packet(packet, f"{direction} [INJECTED to conn:{conn_id}]")
+                self._save_capture(packet, f"{direction} [INJECTED to conn:{conn_id}]", conn_id)
+                injected_count += 1
 
             return {
                 "status": "success",
                 "timestamp": datetime.now().isoformat(),
                 "direction": direction,
                 "length": len(packet),
-                "connections": len(self.active_connections),
+                "total_connections": len(self.active_connections),
+                "target_connections": injected_count,
+                "broadcast": broadcast,
             }
 
     async def _handle_inject(self, request: web.Request) -> web.Response:
-        """Handle POST /inject - inject arbitrary packet."""
+        """Handle POST /inject - inject arbitrary packet.
+
+        Request body:
+            {
+                "hex": "73 00 00 ...",
+                "direction": "CLOUD→DEV" or "DEV→CLOUD",
+                "broadcast": true/false (optional, default: false - sends to one random connection)
+            }
+        """
         try:
             data = await request.json()
             hex_string = data.get("hex")
             direction = data.get("direction")
+            broadcast = data.get("broadcast", False)  # Default: single random connection
 
             if not hex_string or not direction:
                 return web.json_response(
                     {"error": "Missing 'hex' or 'direction' field"}, status=400
                 )
 
-            result = await self.inject_packet(hex_string, direction)
+            result = await self.inject_packet(hex_string, direction, broadcast)
             return web.json_response(result)
 
         except ValueError as e:
@@ -292,15 +416,57 @@ class MITMProxy:
                     "status": "running",
                     "active_connections": len(self.active_connections),
                     "capture_file": str(self.capture_file),
+                    "current_annotation": self.current_annotation,
                     "timestamp": datetime.now().isoformat(),
                 }
             )
+
+    async def _handle_metrics(self, request: web.Request) -> web.Response:
+        """Handle GET /metrics - retrieve backpressure test metrics."""
+        return web.json_response(
+            {
+                "metrics": self.metrics,
+                "backpressure_mode": self.backpressure_mode,
+                "timestamp": datetime.now().isoformat(),
+            }
+        )
+
+    async def _handle_annotate(self, request: web.Request) -> web.Response:
+        """Handle POST /annotate - set annotation label for subsequent packets."""
+        try:
+            data = await request.json()
+            label = data.get("label")
+
+            if label is None:
+                return web.json_response({"error": "Missing 'label' field"}, status=400)
+
+            self.current_annotation = label if label else None
+
+            # Log annotation change to capture file
+            with open(self.capture_file, "a") as f:
+                f.write(f"\n{'=' * 60}\n")
+                f.write(f"ANNOTATION SET: {label}\n")
+                f.write(f"Timestamp: {datetime.now().isoformat()}\n")
+                f.write(f"{'=' * 60}\n\n")
+
+            return web.json_response(
+                {
+                    "status": "ok",
+                    "label": self.current_annotation,
+                    "timestamp": datetime.now().isoformat(),
+                }
+            )
+
+        except Exception as e:
+            return web.json_response({"error": f"Annotation failed: {e}"}, status=500)
 
     async def start_api_server(self, api_port: int) -> None:
         """Start REST API server for packet injection."""
         app = web.Application()
         app.router.add_post("/inject", self._handle_inject)
+        app.router.add_post("/annotate", self._handle_annotate)
         app.router.add_get("/status", self._handle_status)
+        app.router.add_get("/metrics", self._handle_metrics)
 
         runner = web.AppRunner(app)
         await runner.setup()
@@ -309,7 +475,9 @@ class MITMProxy:
 
         print(f"REST API server listening on port {api_port}", file=sys.stderr)
         print("  POST /inject - Inject packet", file=sys.stderr)
+        print("  POST /annotate - Set annotation label", file=sys.stderr)
         print("  GET /status - Check status", file=sys.stderr)
+        print("  GET /metrics - Retrieve backpressure metrics", file=sys.stderr)
 
     async def shutdown(self) -> None:
         """Gracefully shutdown the proxy."""
@@ -356,6 +524,33 @@ async def main() -> None:
         help="REST API port for packet injection (default: 8080)",
     )
 
+    # Backpressure testing arguments
+    parser.add_argument(
+        "--backpressure-mode",
+        type=str,
+        choices=["normal", "slow_consumer", "buffer_fill", "ack_delay"],
+        default="normal",
+        help="Backpressure testing mode (default: normal)",
+    )
+    parser.add_argument(
+        "--slow-consumer-delay",
+        type=float,
+        default=1.0,
+        help="Delay in seconds between reads for slow_consumer mode (default: 1.0)",
+    )
+    parser.add_argument(
+        "--buffer-fill-packet-limit",
+        type=int,
+        default=10,
+        help="Number of packets to read before stopping for buffer_fill mode (default: 10)",
+    )
+    parser.add_argument(
+        "--ack-delay",
+        type=float,
+        default=2.0,
+        help="Delay in seconds for ACK forwarding in ack_delay mode (default: 2.0)",
+    )
+
     args = parser.parse_args()
 
     proxy = MITMProxy(
@@ -363,6 +558,10 @@ async def main() -> None:
         upstream_host=args.upstream_host,
         upstream_port=args.upstream_port,
         use_ssl=not args.no_ssl,
+        backpressure_mode=args.backpressure_mode,
+        slow_consumer_delay=args.slow_consumer_delay,
+        buffer_fill_packet_limit=args.buffer_fill_packet_limit,
+        ack_delay=args.ack_delay,
     )
 
     # Setup signal handlers for graceful shutdown
@@ -388,5 +587,10 @@ async def main() -> None:
         await proxy.shutdown()
 
 
-if __name__ == "__main__":
+def cli_main() -> None:
+    """CLI entry point for poetry scripts."""
     asyncio.run(main())
+
+
+if __name__ == "__main__":
+    cli_main()

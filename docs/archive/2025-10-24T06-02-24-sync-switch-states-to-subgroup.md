@@ -1,6 +1,8 @@
+# 2025 10 24T06 02 24 Sync Switch States To Subgroup
+
 <!-- 8491950f-d054-42c7-8d1b-4e673713adff 450a889c-7756-4931-916d-8e453a6aadea -->
 
-# Sync Switch On/Off States to Subgroup State
+## Sync Switch On/Off States to Subgroup State
 
 **Status**: ✅ Completed and Tested
 **Date**: 2025-10-24
@@ -47,8 +49,8 @@ Enhanced `NCyncServer.parse_status()` method to:
 - Only affects switches (lights unchanged)
 
 ```python
-# Sync individual switch states to match subgroup state
-# (only switches, individual commands take precedence)
+## Sync individual switch states to match subgroup state
+## (only switches, individual commands take precedence)
 for member_id in subgroup.member_ids:
     if member_id in g.ncync_server.devices:
         member_device = g.ncync_server.devices[member_id]

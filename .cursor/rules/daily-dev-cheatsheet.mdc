@@ -11,24 +11,25 @@ appliesTo:
 ## Todo Tracking (Multi-Step Tasks)
 
 **!!CRITICAL!!** Update todos before/after every task:
+
 ```python
-# Before starting: mark in_progress
+## Before starting: mark in_progress
 todo_write(merge=True, todos=[{"id": "task-x", "status": "in_progress"}])
 
-# After finishing: mark completed, explain to user
+## After finishing: mark completed, explain to user
 todo_write(merge=True, todos=[{"id": "task-x", "status": "completed"}])
 ```
 
 ## The 3-Step Workflow
 
 ```bash
-# 1. Edit code
-# 2. Rebuild (Python) or Restart (config/scripts)
-#    rebuild.sh automatically runs: lint, format, unit tests
-cd cync-controller && ./rebuild.sh  # Python changes
-ha addons restart local_cync-controller  # Config/scripts only
+## 1. Edit code
+## 2. Rebuild (Python) or Restart (config/scripts)
+##    rebuild.sh automatically runs: lint, format, unit tests
+cd cync-controller && ./rebuild.sh      # Python changes
+ha addons restart local_cync-controller # Config/scripts only
 
-# 3. Verify
+## 3. Verify
 ha addons logs local_cync-controller --follow
 ```
 
@@ -43,29 +44,29 @@ ha addons logs local_cync-controller --follow
 ## Quick Commands
 
 ```bash
-# Rebuild (includes lint, format, tests)
-cd cync-controller && ./rebuild.sh  # Python changes
-ha addons restart local_cync-controller  # Config changes
+## Rebuild (includes lint, format, tests)
+cd cync-controller && ./rebuild.sh      # Python changes
+ha addons restart local_cync-controller # Config changes
 
-# Manual linting (optional, for spot checks)
+## Manual linting (optional, for spot checks)
 npm run lint:python:fix && npm run format:python
 
-# Logs
+## Logs
 ha addons logs local_cync-controller --follow
 ```
 
 ## Testing
 
 ```bash
-npm run test:unit                    # Run unit tests
-npm run test:unit:cov               # With coverage
-./scripts/test-cloud-relay.sh      # Cloud relay test suite
+npm run test:unit             # Run unit tests
+npm run test:unit:cov         # With coverage
+./scripts/test-cloud-relay.sh # Cloud relay test suite
 ```
 
 ## Debugging
 
 ```bash
-tail -f /tmp/supervisor_run.log     # Supervisor logs
-docker exec addon_local_cync-controller env | grep CYNC_  # Check environment
-sudo python3 scripts/delete-mqtt-safe.py --dry-run  # Clean MQTT entities (preview)
+tail -f /tmp/supervisor_run.log                          # Supervisor logs
+docker exec addon_local_cync-controller env | grep CYNC_ # Check environment
+sudo python3 scripts/delete-mqtt-safe.py --dry-run       # Clean MQTT entities (preview)
 ```

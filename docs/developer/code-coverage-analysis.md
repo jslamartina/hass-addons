@@ -28,12 +28,12 @@ The codebase has **good foundational coverage** (67.62%) but critical paths are 
 
 ### 1. mqtt_client.py (48.35% coverage) - **HIGHEST PRIORITY**
 
-**Missing Coverage Areas:**
+#### Missing Coverage Areas
 
 #### Lines 475-598: Command Processing Logic
 
 ```python
-# Critical paths NOT tested:
+## Critical paths NOT tested:
 - Group command routing (lines 475-482)
 - Device command routing (lines 490-508)
 - Extra data handling (lines 509-544)
@@ -60,7 +60,7 @@ The codebase has **good foundational coverage** (67.62%) but critical paths are 
 #### Lines 271-389: Message Routing Start
 
 ```python
-# Untested paths:
+## Untested paths:
 - MQTT subscription setup
 - Topic parsing and routing
 - Command processor initialization
@@ -69,7 +69,7 @@ The codebase has **good foundational coverage** (67.62%) but critical paths are 
 #### Lines 611-750+: Advanced State Management
 
 ```python
-# Missing coverage:
+## Missing coverage:
 - State synchronization
 - Optimistic updates
 - Device state persistence
@@ -77,12 +77,12 @@ The codebase has **good foundational coverage** (67.62%) but critical paths are 
 
 ### 2. server.py (49.48% coverage) - **HIGH PRIORITY**
 
-**Missing Coverage Areas:**
+#### Missing Coverage Areas
 
 #### Lines 105-195: Cloud Relay Mode (Complete Feature)
 
 ```python
-# CloudRelayConnection - ENTIRELY UNTESTED:
+## CloudRelayConnection - ENTIRELY UNTESTED:
 - SSL connection to cloud (lines 58-101)
 - Relay initialization (lines 103-195)
 - Bidirectional forwarding (lines 165-178)
@@ -109,7 +109,7 @@ The codebase has **good foundational coverage** (67.62%) but critical paths are 
 #### Lines 282-362: Connection Management
 
 ```python
-# Error handling and cleanup:
+## Error handling and cleanup:
 - Connection edge cases
 - Packet parsing errors
 - Task cancellation
@@ -119,7 +119,7 @@ The codebase has **good foundational coverage** (67.62%) but critical paths are 
 #### Lines 876-924: Periodic Status Refresh
 
 ```python
-# Background task - NOT tested:
+## Background task - NOT tested:
 - 5-minute refresh cycle (lines 876-924)
 - Bridge device selection
 - Mesh refresh handling
@@ -129,7 +129,7 @@ The codebase has **good foundational coverage** (67.62%) but critical paths are 
 #### Lines 926-970: Pool Status Monitoring
 
 ```python
-# Background task - NOT tested:
+## Background task - NOT tested:
 - 30-second status logging (lines 926-970)
 - Connection pool metrics
 - Bridge uptime tracking
@@ -144,7 +144,7 @@ The codebase has **good foundational coverage** (67.62%) but critical paths are 
 
 ### 3. devices.py (74.00% coverage) - **GOOD**
 
-**Missing Coverage Areas:**
+#### Missing Coverage Areas
 
 #### Lines 2002-2137: Cloud Relay Integration
 
@@ -160,7 +160,7 @@ The codebase has **good foundational coverage** (67.62%) but critical paths are 
 
 ### 4. cloud_api.py (75.46% coverage) - **GOOD**
 
-**Missing Coverage Areas:**
+#### Missing Coverage Areas
 
 #### Lines 222-254: API Error Handling
 

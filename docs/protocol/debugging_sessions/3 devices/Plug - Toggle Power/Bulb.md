@@ -1,3 +1,5 @@
+# Bulb
+
 Only 5 [3 HTTP/BT, 2 BT] Cync Devices connected; 1 Cync Android App, 2 Wi-Fi/BT and 2 BT only.
 All HTTP devices are redirected to their own `socat` MITM instance.
 
@@ -9,7 +11,7 @@ All HTTP devices are redirected to their own `socat` MITM instance.
 | 4      | Wi-Fi/BT Direct Connect Full Color A19 RGBW Bulb | 7   | 10.0.2.215 | 78:6D:EB:E0:1C:90 |
 | 5      | Android Cync App                                 | N/A | 10.0.1.2   | D2:F8:70:D6:EB:4D |
 
-# Wi-Fi Bulb
+## Wi-Fi Bulb
 
 The bulb is a BT 'slave/client' device connected to the plug via BT
 
@@ -18,16 +20,16 @@ The bulb is a BT 'slave/client' device connected to the plug via BT
 - `>` is the plug to server
 
 ```text
-# device sends auth code to server
+## device sends auth code to server
 > 2024/03/11 00:14:18.000813563  length=31 from=0 to=30
  23 00 00 00 1a 03 39 87 c8 57 00 10 31 65 30 37  #.....9..W..1e07
   00 00 3c     ..<
 --
-# server acks auth code
+## server acks auth code
 < 2024/03/11 00:14:18.000916928  length=7 from=0 to=6
  28 00 00 00 02 00 00                             (......
 --
-# device sends 3 packets to server
+## device sends 3 packets to server
 > 2024/03/11 00:14:22.000742456  length=356 from=31 to=386
  83 00 00 00 25 39 87 c8 57 00 01 00 7e 00 00 00  ....%9..W...~...
  00 fa db 13 00 33 22 11 07 00 07 00 db 11 02 01  .....3".........
@@ -54,20 +56,20 @@ The bulb is a BT 'slave/client' device connected to the plug via BT
  01 00 30 00 00 00 00 00 00 00 00 00 00 00 00 00  ..0.............
  00 00 00 00 c1 7e                                .....~
 --
-# device sends some sort of connection packet
+## device sends some sort of connection packet
 > 2024/03/11 00:14:22.000831259  length=6 from=387 to=392
  c3 00 00 00 01 0c                                ......
 --
-# server acks 3 packets
+## server acks 3 packets
 < 2024/03/11 00:14:22.000836581  length=24 from=7 to=30
  88 00 00 00 03 00 01 00 |48 00 00 00 03 01 01 00  ........H.......
  88 00 00 00 03 00 02 00                          ........
 --
-# server acks conn packet
+## server acks conn packet
 < 2024/03/11 00:14:22.000916437  length=16 from=31 to=46
  c8 00 00 00 0b 0d 07 e8 03 0b 02 01 0e 16 fe 0c  ................
 --
-# device sends firmware version (10361 = 1.0.361 in app)
+## device sends firmware version (10361 = 1.0.361 in app)
 > 2024/03/11 00:14:27.000564772  length=55 from=393 to=447
  83 00 00 00 32 39 87 c8 57 00 03 00 00 00 00 00  ....29..W.......
  00 fa 00 20 00 00 00 00 00 00 00 00 ea 00 00 00  ... ............
@@ -86,7 +88,7 @@ The bulb is a BT 'slave/client' device connected to the plug via BT
 < 2024/03/11 00:14:31.000229080  length=8 from=55 to=62
  48 00 00 00 03 01 01 00                          H.......
 --
-# possibly sending info about connected devices?
+## possibly sending info about connected devices?
 > 2024/03/11 00:14:42.000587452  length=31 from=505 to=535
  43 00 00 00 1a 39 87 c8 57 01 01 06 06 00 10 03  C....9..W.......
  00 00 32 00 00 00 01 ff 07 00 00 00 00 00 00     ..2............
@@ -101,7 +103,7 @@ The bulb is a BT 'slave/client' device connected to the plug via BT
 < 2024/03/11 00:14:43.000605418  length=8 from=71 to=78
  48 00 00 00 03 01 01 00                          H.......
 --
-# ???
+## ???
 > 2024/03/11 00:14:50.000185703  length=43 from=567 to=609
  83 00 00 00 26 39 87 c8 57 00 04 00 7e 00 00 00  ....&9..W...~...
  00 fa db 14 00 |f3 03 00 05 00 ff ff ea 11 02 05  ................
@@ -115,11 +117,11 @@ The bulb is a BT 'slave/client' device connected to the plug via BT
 < 2024/03/11 00:14:50.000264325  length=8 from=79 to=86
  88 00 00 00 03 00 04 00                          ........
 --
-# ping
+## ping
 > 2024/03/11 00:15:11.000133081  length=5 from=610 to=614
  d3 00 00 00 00                                   .....
 --
-# pong
+## pong
 < 2024/03/11 00:15:11.000211612  length=5 from=87 to=91
  d8 00 00 00 00                                   .....
 --
@@ -143,7 +145,7 @@ The bulb is a BT 'slave/client' device connected to the plug via BT
 < 2024/03/11 00:16:13.000250859  length=8 from=102 to=109
  88 00 00 00 03 00 05 00                          ........
 --
-# plug being turned on, the server rebroadcasts a 0x43 status packet to all connected devices
+## plug being turned on, the server rebroadcasts a 0x43 status packet to all connected devices
 > 2024/03/11 00:16:20.000548716  length=31 from=668 to=698
  43 00 00 00 1a 39 87 c8 57 01 01 06 06 00 10 05  C....9..W.......
  01 64 00 00 00 00 01 14 07 00 00 00 00 00 00     .d.............

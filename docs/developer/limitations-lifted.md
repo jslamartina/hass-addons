@@ -1,7 +1,8 @@
 # Cloud Relay Mode - All Limitations Lifted! 🎉
 
 **Date:** October 11, 2025
-**Status:** ✅ **ALL BLOCKERS RESOLVED**
+
+## Status:**✅**ALL BLOCKERS RESOLVED
 
 ---
 
@@ -15,19 +16,21 @@ All limitations related to cloud relay mode testing have been successfully resol
 
 ### ❌ Previous Limitation #1: Configuration Persistence
 
-**Problem:**
-Manual editing of `/mnt/supervisor/addons/data/local_cync-controller/options.json` did not persist or reload correctly in the devcontainer environment. Environment variables remained unset even after file edits.
+#### Problem
 
-**✅ Solution:**
+Manual editing of `/mnt/supervisor/addons/data/local_cync-controller/options.json` didn't persist or reload correctly in the devcontainer environment. Environment variables remained unset even after file edits.
+
+#### ✅ Solution
+
 Created `scripts/configure-addon.sh` that uses the **Supervisor API** to programmatically configure add-ons. This bypasses file-based configuration entirely and uses the same API that the Home Assistant UI uses.
 
-**Implementation:**
+### Implementation
 
 - Extracts `SUPERVISOR_TOKEN` from `hassio_cli` container
 - Uses HTTP POST to `/addons/local_cync-controller/options` endpoint
 - Properly triggers add-on restart and configuration reload
 
-**Evidence:**
+### Evidence
 
 ```bash
 $ ./scripts/configure-addon.sh preset-relay-with-forward
@@ -35,7 +38,7 @@ $ ./scripts/configure-addon.sh preset-relay-with-forward
 [configure-addon.sh] ✅ Configuration updated successfully
 [configure-addon.sh] ✅ Add-on restart initiated
 
-# Logs confirm cloud relay mode activated:
+## Logs confirm cloud relay mode activated:
 10/11/25 17:03:16.343 INFO [server:748] New connection in RELAY mode > nCync:new_conn:172.67.135.131:
 10/11/25 17:03:16.474 INFO [server:77] Connected to cloud server 35.196.85.236:23779 > CloudRelay:172.67.135.131:connect_cloud:
 ```
@@ -44,13 +47,15 @@ $ ./scripts/configure-addon.sh preset-relay-with-forward
 
 ### ❌ Previous Limitation #2: Browser Automation
 
-**Problem:**
+#### Problem
+
 Home Assistant's UI uses nested iframes and Web Components (Shadow DOM), making it difficult or impossible for Playwright/browser automation tools to reliably click buttons.
 
-**✅ Solution:**
-**No longer needed!** Since configuration can now be done programmatically via the Supervisor API, browser automation is not required for testing. Manual UI testing is still documented for user validation, but automation tests no longer depend on it.
+#### ✅ Solution
 
-**Alternative Approach:**
+**No longer needed!** Since configuration can now be done programmatically via the Supervisor API, browser automation isn't required for testing. Manual UI testing is still documented for user validation, but automation tests no longer depend on it.
+
+### Alternative Approach
 
 - Use `scripts/configure-addon.sh` for automated testing
 - Document manual UI verification steps for human testers
@@ -60,10 +65,12 @@ Home Assistant's UI uses nested iframes and Web Components (Shadow DOM), making 
 
 ### ❌ Previous Limitation #3: Blocked Testing (Phases 2-7)
 
-**Problem:**
-Phases 2-7 of cloud relay testing were blocked because configuration could not be changed programmatically.
+#### Problem
 
-**✅ Solution:**
+Phases 2-7 of cloud relay testing were blocked because configuration couldn't be changed programmatically.
+
+#### ✅ Solution
+
 Created `scripts/test-cloud-relay.sh` - a comprehensive automated test suite that:
 
 - Tests all cloud relay operating modes
@@ -72,7 +79,7 @@ Created `scripts/test-cloud-relay.sh` - a comprehensive automated test suite tha
 - Tests packet injection features
 - Verifies backward compatibility
 
-**Test Coverage:**
+### Test Coverage
 
 - ✅ Phase 1: Baseline LAN-only Mode
 - ✅ Phase 2: Cloud Relay with Forwarding
@@ -89,27 +96,27 @@ Created `scripts/test-cloud-relay.sh` - a comprehensive automated test suite tha
 
 **Purpose:** Programmatic add-on configuration via Supervisor API
 
-**Commands:**
+#### Commands
 
 ```bash
-# View current configuration
+## View current configuration
 ./scripts/configure-addon.sh get
 
-# Manually set cloud relay options
+## Manually set cloud relay options
 ./scripts/configure-addon.sh set-cloud-relay true true false
 
-# Apply test presets
+## Apply test presets
 ./scripts/configure-addon.sh preset-baseline
 ./scripts/configure-addon.sh preset-relay-with-forward
 ./scripts/configure-addon.sh preset-relay-debug
 ./scripts/configure-addon.sh preset-lan-only
 
-# Utility commands
+## Utility commands
 ./scripts/configure-addon.sh restart
 ./scripts/configure-addon.sh logs
 ```
 
-**Key Features:**
+## Key Features
 
 - ✅ Reads `SUPERVISOR_TOKEN` automatically
 - ✅ Validates API responses
@@ -123,7 +130,7 @@ Created `scripts/test-cloud-relay.sh` - a comprehensive automated test suite tha
 
 **Purpose:** Comprehensive automated testing of all cloud relay modes
 
-**Features:**
+#### Features
 
 - ✅ Tests 6 phases of cloud relay functionality
 - ✅ Validates log patterns for expected behaviors
@@ -132,12 +139,12 @@ Created `scripts/test-cloud-relay.sh` - a comprehensive automated test suite tha
 - ✅ Automated configuration switching
 - ✅ Wait-for-log pattern matching with timeouts
 
-**Usage:**
+### Usage
 
 ```bash
 ./scripts/test-cloud-relay.sh
 
-# Output:
+## Output:
 ═══════════════════════════════════════════════════════════
 Cloud Relay Mode - Automated Testing
 ═══════════════════════════════════════════════════════════
@@ -184,11 +191,12 @@ Failed: 1
 
    ```bash
    SUPERVISOR_TOKEN=$(docker exec hassio_cli env | grep SUPERVISOR_TOKEN | cut -d= -f2)
-   ```
 
-2. **API Endpoint**
+```
 
-   ```
+1. **API Endpoint**
+
+   ```http
    POST http://supervisor/addons/local_cync-controller/options
    Authorization: Bearer ${SUPERVISOR_TOKEN}
    Content-Type: application/json
@@ -204,7 +212,7 @@ Failed: 1
    }
    ```
 
-3. **Configuration Reload**
+2. **Configuration Reload**
    - Supervisor API updates `/data/options.json` automatically
    - Add-on restart triggered via `POST /addons/local_cync-controller/restart`
    - Environment variables properly loaded via `bashio::config`
@@ -218,12 +226,12 @@ Failed: 1
 **Test:** Enable cloud relay with forwarding
 
 ```bash
-$ ./scripts/configure-addon.sh preset-relay-with-forward
+./scripts/configure-addon.sh preset-relay-with-forward
 ```
 
-**Logs Confirm:**
+### Logs Confirm
 
-```
+```text
 10/11/25 17:03:16.343 INFO [server:748] > nCync:new_conn:172.67.135.131: New connection in RELAY mode
 10/11/25 17:03:16.348 DEBUG [server:69] > CloudRelay:172.67.135.131:connect_cloud: Connecting to cloud with SSL
 10/11/25 17:03:16.474 INFO [server:77] > CloudRelay:172.67.135.131:connect_cloud: Connected to cloud server 35.196.85.236:23779
@@ -231,7 +239,7 @@ $ ./scripts/configure-addon.sh preset-relay-with-forward
 10/11/25 17:03:16.475 DEBUG [server:224] > CloudRelay:172.67.135.131:injection: Injection checker started
 ```
 
-**Key Observations:**
+### Key Observations
 
 - ✅ Devices connect in RELAY mode
 - ✅ SSL connection to cloud established (35.196.85.236:23779)
@@ -275,25 +283,25 @@ The cloud relay implementation is now fully documented in:
 ### For Developers Testing Cloud Relay
 
 ```bash
-# 1. Check current configuration
+## 1. Check current configuration
 ./scripts/configure-addon.sh get
 
-# 2. Enable cloud relay with forwarding
+## 2. Enable cloud relay with forwarding
 ./scripts/configure-addon.sh preset-relay-with-forward
 
-# 3. Watch logs for relay activity
+## 3. Watch logs for relay activity
 ha addons logs local_cync-controller --follow | grep -i "relay\|cloud"
 
-# 4. Run comprehensive test suite
+## 4. Run comprehensive test suite
 ./scripts/test-cloud-relay.sh
 
-# 5. Return to baseline
+## 5. Return to baseline
 ./scripts/configure-addon.sh preset-baseline
 ```
 
 ### For End Users (Manual UI Testing)
 
-1. Open Home Assistant Web UI: http://localhost:8123
+1. Open Home Assistant Web UI: <http://localhost:8123>
 2. Navigate: Settings → Add-ons → Cync Controller
 3. Click "Configuration" tab
 4. Hard refresh browser (`Ctrl + Shift + R`)
@@ -329,7 +337,7 @@ ha addons logs local_cync-controller --follow | grep -i "relay\|cloud"
 
 ## Conclusion
 
-**🎉 ALL LIMITATIONS RESOLVED!**
+### 🎉 ALL LIMITATIONS RESOLVED
 
 The cloud relay mode implementation is now **fully testable** in the devcontainer environment with:
 
@@ -339,7 +347,7 @@ The cloud relay mode implementation is now **fully testable** in the devcontaine
 - ✅ Full backward compatibility (baseline mode unchanged)
 - ✅ Real device validation (2 physical Cync devices tested)
 
-**Next Steps:**
+### Next Steps
 
 1. ~~Resolve configuration persistence~~ ✅ DONE
 2. ~~Create automated testing tools~~ ✅ DONE
@@ -348,7 +356,7 @@ The cloud relay mode implementation is now **fully testable** in the devcontaine
 
 ---
 
-**For detailed usage:**
+### For detailed usage
 
 - API tool: `./scripts/configure-addon.sh --help`
 - Test suite: `./scripts/test-cloud-relay.sh`

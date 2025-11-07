@@ -16,14 +16,14 @@ Automated MQTT integration configuration in the fresh Home Assistant setup scrip
 
 **Location:** `scripts/setup-fresh-ha.sh` lines 452-542
 
-**What it does:**
+#### What it does
 
 1. Checks if MQTT credentials are available in `hass-credentials.env`
 2. Checks if MQTT integration already exists (idempotent)
 3. Creates MQTT config entry via Home Assistant config flow API
 4. Configures connection to EMQX broker running on localhost:1883
 
-**Configuration:**
+### Configuration
 
 ```json
 {
@@ -36,19 +36,19 @@ Automated MQTT integration configuration in the fresh Home Assistant setup scrip
 
 ### Workflow Integration
 
-**Added to main() flow at Step 6.5:**
+#### Added to main() flow at Step 6.5
 
 ```bash
-# Step 6: Install and configure EMQX
+## Step 6: Install and configure EMQX
 install_emqx
 configure_emqx
 enable_emqx_sidebar
 start_emqx
 
-# Step 6.5: Configure MQTT integration  ← NEW
+## Step 6.5: Configure MQTT integration  ← NEW
 configure_mqtt_integration
 
-# Step 7: Install and configure Cync Controller
+## Step 7: Install and configure Cync Controller
 install_cync_lan
 configure_cync_lan
 ```
@@ -72,18 +72,19 @@ The function uses the Home Assistant config flow API to programmatically set up 
        "password": "dev"
      }
    }
-   ```
 
-2. **Extract flow_id from response**
+```
 
-3. **Complete the flow:**
+1. **Extract flow_id from response**
+
+2. **Complete the flow:**
 
    ```bash
    POST http://supervisor/core/api/config_entries/flow/{flow_id}
    {}
    ```
 
-4. **MQTT integration is now configured and active**
+3. **MQTT integration is now configured and active**
 
 ### Credentials Source
 
@@ -128,18 +129,18 @@ If found, it skips configuration and logs the existing entry_id.
 To test the MQTT integration after setup:
 
 ```bash
-# 1. Check MQTT integration exists
+## 1. Check MQTT integration exists
 curl -sf -H "Authorization: Bearer ${SUPERVISOR_TOKEN}" \
   http://supervisor/core/api/config_entries/entry \
   | jq '.data[] | select(.domain == "mqtt")'
 
-# 2. Publish test message via EMQX WebUI
-# Navigate to: Settings → Add-ons → EMQX → Open Web UI
-# Login with credentials from hass-credentials.env
-# Go to: WebSocket → Connect → Publish message to topic
+## 2. Publish test message via EMQX WebUI
+## Navigate to: Settings → Add-ons → EMQX → Open Web UI
+## Login with credentials from hass-credentials.env
+## Go to: WebSocket → Connect → Publish message to topic
 
-# 3. Subscribe to test in Home Assistant
-# Developer Tools → Events → Listen to "mqtt_event"
+## 3. Subscribe to test in Home Assistant
+## Developer Tools → Events → Listen to "mqtt_event"
 ```
 
 ## Error Handling
@@ -155,37 +156,45 @@ The function handles several scenarios gracefully:
 
 ## Logging Output
 
-**Success:**
+### Success
 
-```
+```text
+
 Configuring MQTT integration...
 MQTT integration configured successfully
 MQTT Broker: localhost:1883
 MQTT Username: dev
-```
-
-**Already configured:**
 
 ```
+
+### Already configured
+
+```sql
+
 Configuring MQTT integration...
 MQTT integration already configured (entry_id: abc123...)
-```
-
-**Missing credentials:**
 
 ```
+
+### Missing credentials
+
+```text
+
 Configuring MQTT integration...
 MQTT credentials not found in credentials file
 Skipping MQTT integration setup
+
 ```
 
 ## Updated User Instructions
 
 The post-setup message now reflects automatic MQTT configuration:
 
-```
+```sql
+
 Next steps:
-  1. Log in to Home Assistant at http://localhost:8123
+
+  1. Log in to Home Assistant at <http://localhost:8123>
      Username: dev
      Password: (from hass-credentials.env)
 
@@ -193,6 +202,7 @@ Next steps:
      - Access EMQX WebUI via Add-ons page to monitor MQTT traffic
 
   3. Update Cync Controller configuration with your real Cync credentials...
+
 ```
 
 ## Future Enhancements

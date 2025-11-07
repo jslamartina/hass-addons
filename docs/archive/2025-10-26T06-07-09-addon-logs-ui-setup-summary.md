@@ -15,14 +15,14 @@ Home Assistant Supervisor requires access to systemd journal to retrieve and dis
 
 ### 2. Created Automated Setup
 
-**Modified `.devcontainer/post-start.sh`:**
+#### Modified `.devcontainer/post-start.sh`
 
 - Added Step 0 (before Docker starts) to configure journald logging
 - Installs `systemd-journal-remote` if not present
 - Configures Docker daemon with `"log-driver": "journald"`
 - Updates shell aliases to use `journalctl` instead of `docker logs`
 
-**Created `.devcontainer/99-enable-journald-logs.sh`:**
+### Created `.devcontainer/99-enable-journald-logs.sh`
 
 - Manual setup script for troubleshooting
 - Can be run independently if automatic setup fails
@@ -30,7 +30,7 @@ Home Assistant Supervisor requires access to systemd journal to retrieve and dis
 
 ### 3. Updated Shell Aliases
 
-**New primary aliases (journald-based):**
+#### New primary aliases (journald-based)
 
 ```bash
 cync-logs        # View all logs via journalctl
@@ -38,7 +38,7 @@ cync-logs-follow # Follow logs in real-time
 cync-logs-tail   # View last 100 lines
 ```
 
-**Fallback aliases (Docker-based):**
+### Fallback aliases (Docker-based)
 
 ```bash
 cync-logs-docker        # Direct Docker logs access
@@ -47,7 +47,7 @@ cync-logs-docker-follow # Follow Docker logs
 
 ### 4. Created Documentation
 
-**New file: `docs/developer/addon-logs-ui.md`**
+#### New file: `docs/developer/addon-logs-ui.md`
 
 - Explains how add-on logs UI works
 - Documents requirements and configuration
@@ -59,11 +59,11 @@ cync-logs-docker-follow # Follow Docker logs
 ### ✅ Configuration Applied
 
 ```bash
-# Docker is using journald
+## Docker is using journald
 $ docker info | grep "Logging Driver"
  Logging Driver: journald
 
-# Logs are accessible via journalctl
+## Logs are accessible via journalctl
 $ sudo journalctl CONTAINER_NAME=addon_local_cync-controller --lines=10
 Oct 21 21:08:37 addon_local_cync-controller[4568]: 10/21/25 16:08:37.583 INFO (uvicorn.access) > 172.30.32.2:49984 - "GET / HTTP/1.1" 200
 ...
@@ -96,7 +96,8 @@ $ ha addons info local_cync-controller --raw-json | jq '.data.state'
 
 ### Log Flow
 
-```
+```text
+
 Add-on Python app (stdout/stderr)
   ↓
 Docker container logging
@@ -108,6 +109,7 @@ systemd journal
 Home Assistant Supervisor API
   ↓
 Web UI (Logs tab)
+
 ```
 
 ## Future Improvements
@@ -139,8 +141,10 @@ Web UI (Logs tab)
 
 1. **Open the add-on logs page** in your browser:
 
-   ```
-   http://localhost:8123/hassio/addon/local_cync-controller/logs
+   ```text
+
+   <http://localhost:8123/hassio/addon/local_cync-controller/logs>
+
    ```
 
 2. **Verify logs appear** - You should see real-time logs with auto-refresh
@@ -148,6 +152,7 @@ Web UI (Logs tab)
 3. **Test log streaming** - The logs should update automatically as the add-on runs
 
 4. **Try the new aliases** (in a new shell):
+
    ```bash
    cync-logs-tail   # View recent logs
    cync-logs-follow # Follow logs in real-time

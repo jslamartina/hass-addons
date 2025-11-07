@@ -5,13 +5,13 @@ Python script to automate Home Assistant onboarding using the reverse-engineered
 ## Usage
 
 ```bash
-# Basic usage (uses default credentials from hass-credentials.env)
+## Basic usage (uses default credentials from hass-credentials.env)
 python3 scripts/automate-onboarding.py
 
-# With custom URL
+## With custom URL
 HA_URL=http://localhost:8123 python3 scripts/automate-onboarding.py
 
-# With custom credentials
+## With custom credentials
 HA_URL=http://localhost:8123 \
   HASS_USERNAME=dev \
   HASS_PASSWORD=dev \

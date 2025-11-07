@@ -35,7 +35,7 @@ cloud_relay:
   disable_ssl_verification: false # Disable SSL verify (debug only)
 ```
 
-**Use Cases:**
+### Use Cases
 
 - **Protocol Analysis**: Enable `debug_packet_logging` to see all packet structures
 - **Debugging**: Test device behavior while observing cloud interactions
@@ -48,15 +48,16 @@ cloud_relay:
 
 ## Command Flow and ACK Handling
 
-**How device commands work:**
+### How device commands work
 
-1. **MQTT receives command** from Home Assistant (e.g., turn on light)
+1. **MQTT receives command** from Home Assistant (for example, turn on light)
 2. **`set_power()` called** on `CyncDevice` or `CyncGroup`
 3. **Callback registered** in `bridge_device.messages.control[msg_id]` with:
    - Message ID (unique per command)
    - Payload bytes
    - Callback coroutine to execute on ACK
    - Device ID
+
 4. **`pending_command` flag set** to prevent stale status updates
 5. **Command packet sent** via TCP to bridge device
 6. **Bridge forwards to mesh** network
@@ -67,7 +68,7 @@ cloud_relay:
 
 **Critical:** Steps 3 and 9 MUST happen for commands to physically work. Missing callback registration causes "silent failures" where logs show success but devices don't respond.
 
-**Packet types:**
+### Packet types
 
 - `0x73` - Control command packet (from server to device) and ACK response (device to server)
 - `0x83` - Mesh info / device status (device to server)
@@ -80,6 +81,7 @@ The Cync Controller add-on has three main components:
 1. **Exporter** - FastAPI web server for exporting device configuration from Cync cloud (2FA via emailed OTP)
 2. **nCync** - Async TCP server that masquerades as Cync cloud (requires DNS redirection)
    - **Optional Cloud Relay Mode** - Can act as MITM proxy to forward traffic to/from real cloud while inspecting packets
+
 3. **MQTT Client** - Bridges device states to Home Assistant using MQTT discovery
 
 ## Logging Infrastructure
@@ -119,20 +121,20 @@ async def my_function():
 Set in `config.yaml` via `debug_log_level` (0=INFO, 1=DEBUG):
 
 - `CYNC_DEBUG`: Enable debug logging
-- `CYNC_LOG_FORMAT`: "json", "human", or "both"
+- `CYNC_LOG_FORMAT`: "json," "human," or "both"
 - `CYNC_PERF_TRACKING`: Enable performance timing
 - `CYNC_PERF_THRESHOLD_MS`: Threshold for warnings (default: 100ms)
 
 ### Log Analysis
 
 ```bash
-# Filter by correlation ID
+## Filter by correlation ID
 ha addons logs local_cync-controller | grep "correlation-id"
 
-# View JSON logs
+## View JSON logs
 docker exec addon_local_cync-controller cat /var/log/cync_controller.json | jq '.'
 
-# Find slow operations
+## Find slow operations
 docker exec addon_local_cync-controller \
   sh -c "grep 'performance' /var/log/cync_controller.json | jq 'select(.duration_ms > 100)'"
 ```
@@ -145,23 +147,25 @@ For detailed logging documentation, see [Logging System Guide](./logging-system.
 
 ### Test Structure
 
-```
+```javascript
+
 tests/
 ├── unit/         # 24 test files (pytest)
 ├── e2e/          # 10 test files (Playwright)
 └── integration/  # Performance and mesh refresh tests
+
 ```
 
 ### Running Tests
 
 ```bash
-# Unit tests
+## Unit tests
 pytest cync-controller/tests/unit/
 
-# E2E tests
+## E2E tests
 npx playwright test tests/e2e/
 
-# With coverage
+## With coverage
 pytest cync-controller/tests/unit/ --cov=cync_controller --cov-report=html
 ```
 
@@ -210,14 +214,14 @@ For detailed testing documentation, see [Testing Infrastructure Guide](./testing
 - Counter resets to 0 immediately when device appears online
 - Prevents false positives from unreliable mesh info responses
 
-**Before the fix:**
+### Before the fix
 
 ```python
 if connected_to_mesh == 0:
     device.online = False  # Immediate offline marking
 ```
 
-**After the fix:**
+### After the fix
 
 ```python
 if connected_to_mesh == 0:
@@ -239,10 +243,10 @@ else:
 
 **The fix:** Removed automatic refresh. Users can manually click "Refresh Device Status" button when needed.
 
-**Code removed:**
+### Code removed
 
 ```python
-# Trigger immediate status refresh after ACK
+## Trigger immediate status refresh after ACK
 if g.mqtt_client:
     asyncio.create_task(g.mqtt_client.trigger_status_refresh())
 ```
@@ -258,7 +262,7 @@ When commands don't work, check in this order:
 5. **Did ACK arrive?** Look for "CONTROL packet ACK SUCCESS" logs
 6. **Is device ready?** Check `ready_to_control` and `pending_command` flags
 
-**Example diagnostic grep:**
+### Example diagnostic grep
 
 ```bash
 ha addons logs local_cync-controller | grep -E "set_power|WRITE CALLED|write_lock|ACK|drain"

@@ -12,7 +12,7 @@ You **must** configure DNS redirection to route these domains to your Home Assis
 - `cm.gelighting.com`
 - `cm-ge.xlink.cn`
 
-**[📖 Complete DNS Setup Guide →](https://github.com/jslamartina/hass-addons/blob/dev/docs/user/dns-setup.md)**
+### [📖 Complete DNS Setup Guide →](https://github.com/jslamartina/hass-addons/blob/dev/docs/user/dns-setup.md)
 
 Without DNS redirection, your devices will continue using the cloud and this add-on won't work.
 
@@ -29,7 +29,7 @@ Without DNS redirection, your devices will continue using the cloud and this add
 **Not Supported:** Battery-powered devices (motion sensors, wire-free devices)
 **Untested:** Cameras, thermostats
 
-**[📖 Full Device Compatibility List →](https://github.com/jslamartina/hass-addons/blob/dev/docs/user/known-devices.md)**
+### [📖 Full Device Compatibility List →](https://github.com/jslamartina/hass-addons/blob/dev/docs/user/known-devices.md)
 
 ## 🆕 New in v0.0.4.13
 
@@ -61,7 +61,7 @@ Optional MITM proxy functionality for packet inspection and debugging:
 - **Packet inspection** and real-time logging
 - **File-based packet injection** for testing
 
-**Configuration:**
+### Configuration
 
 ```yaml
 cloud_relay:
@@ -71,7 +71,7 @@ cloud_relay:
   disable_ssl_verification: false # Debug mode only
 ```
 
-**[📖 Complete Cloud Relay Documentation →](https://github.com/jslamartina/hass-addons/blob/dev/docs/user/cloud-relay.md)**
+### [📖 Complete Cloud Relay Documentation →](https://github.com/jslamartina/hass-addons/blob/dev/docs/user/cloud-relay.md)
 
 ### Enhanced MQTT Discovery
 

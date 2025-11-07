@@ -5,28 +5,28 @@ appliesTo:
   - "scripts/test-*.sh"
 ---
 
-See `docs/developer/testing-infrastructure.md` for comprehensive test coverage details.
-
 # Testing Workflows
+
+See `docs/developer/testing-infrastructure.md` for comprehensive test coverage details.
 
 ## Automated Configuration Testing
 
 **`scripts/configure-addon.sh`** - Programmatic configuration via Supervisor API:
 
 ```bash
-# View current configuration
+## View current configuration
 ./scripts/configure-addon.sh get
 
-# Set cloud relay options
+## Set cloud relay options
 ./scripts/configure-addon.sh set-cloud-relay true true false
 
-# Apply test presets
-./scripts/configure-addon.sh preset-baseline              # LAN-only mode
-./scripts/configure-addon.sh preset-relay-with-forward    # Cloud relay enabled
-./scripts/configure-addon.sh preset-relay-debug           # With packet logging
-./scripts/configure-addon.sh preset-lan-only              # Privacy mode
+## Apply test presets
+./scripts/configure-addon.sh preset-baseline           # LAN-only mode
+./scripts/configure-addon.sh preset-relay-with-forward # Cloud relay enabled
+./scripts/configure-addon.sh preset-relay-debug        # With packet logging
+./scripts/configure-addon.sh preset-lan-only           # Privacy mode
 
-# Utility commands
+## Utility commands
 ./scripts/configure-addon.sh restart
 ./scripts/configure-addon.sh logs
 ```
@@ -36,19 +36,20 @@ See `docs/developer/testing-infrastructure.md` for comprehensive test coverage d
 **`scripts/test-cloud-relay.sh`** - Full automated test suite:
 
 ```bash
-# Run full automated test suite (all phases)
+## Run full automated test suite (all phases)
 ./scripts/test-cloud-relay.sh
 
-# Tests:
-# - Phase 1: Baseline LAN-only Mode
-# - Phase 2: Cloud Relay with Forwarding
-# - Phase 3: Debug Packet Logging
-# - Phase 4: LAN-only Relay (Privacy Mode)
-# - Phase 5: Packet Injection
-# - Phase 6: Return to Baseline
+## Tests:
+## - Phase 1: Baseline LAN-only Mode
+## - Phase 2: Cloud Relay with Forwarding
+## - Phase 3: Debug Packet Logging
+## - Phase 4: LAN-only Relay (Privacy Mode)
+## - Phase 5: Packet Injection
+## - Phase 6: Return to Baseline
 ```
 
-**Advantages:**
+## Advantages
+
 - No manual UI interaction required
 - Repeatable and scriptable
 - Fast configuration switching (~15 seconds)
@@ -62,35 +63,35 @@ See `docs/developer/testing-infrastructure.md` for comprehensive test coverage d
 When schema changes aren't picked up:
 
 ```bash
-# 1. Stop the add-on
+## 1. Stop the add-on
 ha addons stop local_cync-controller
 
-# 2. Rebuild with --no-cache flag (PREFERRED)
+## 2. Rebuild with --no-cache flag (PREFERRED)
 ha addons rebuild --no-cache local_cync-controller
 
-# 3. Verify new version is detected
+## 3. Verify new version is detected
 ha addons info local_cync-controller | grep -E "^version"
 
-# 4. Update (if version changed)
+## 4. Update (if version changed)
 ha addons update local_cync-controller
 
-# 5. Test with automated tools
+## 5. Test with automated tools
 ./scripts/configure-addon.sh get
 ./scripts/test-cloud-relay.sh
 ```
 
-**If `--no-cache` insufficient (rare):**
+## If `--no-cache` insufficient (rare)
 
 ```bash
-# ⚠️ WARNING: Scoped Docker operations only
-# Remove ONLY add-on images (not system images)
+## ⚠️ WARNING: Scoped Docker operations only
+## Remove ONLY add-on images (not system images)
 docker images | grep cync-controller | awk '{print $3}' | xargs docker rmi -f
 
-# Restart Supervisor to clear metadata cache
+## Restart Supervisor to clear metadata cache
 ha supervisor restart
 sleep 10
 
-# Rebuild
+## Rebuild
 ha addons rebuild local_cync-controller
 ```
 
@@ -112,13 +113,13 @@ ha addons rebuild local_cync-controller
 **CRITICAL:** Use proper reporters and tracing
 
 ```bash
-# Always use --reporter=list for full output
+## Always use --reporter=list for full output
 npx playwright test --reporter=list
 
-# Add tracing on retries for debugging
+## Add tracing on retries for debugging
 npx playwright test --reporter=list --trace on-first-retry
 
-# Never use waitForTimeout in tests - prefer expect() assertions
+## Never use waitForTimeout in tests - prefer expect() assertions
 ```
 
 ## E2E Test Execution (Sequential Mode)
@@ -126,14 +127,14 @@ npx playwright test --reporter=list --trace on-first-retry
 **CRITICAL: E2E tests MUST run sequentially** - device state dependencies require serial execution.
 
 ```bash
-# ✅ CORRECT: Run tests sequentially (marked with @pytest.mark.serial)
+## ✅ CORRECT: Run tests sequentially (marked with @pytest.mark.serial)
 pytest cync-controller/tests/e2e/ -v --sequential
 
-# Or with Playwright runner
+## Or with Playwright runner
 npx playwright test cync-controller/tests/e2e/
 
-# ❌ WRONG: Parallel execution causes state conflicts
-pytest cync-controller/tests/e2e/ -n auto  # BROKEN - races and flaky failures
+## ❌ WRONG: Parallel execution causes state conflicts
+pytest cync-controller/tests/e2e/ -n auto # BROKEN - races and flaky failures
 ```
 
 ## Test Results Output (Save for Analysis)
@@ -141,7 +142,7 @@ pytest cync-controller/tests/e2e/ -n auto  # BROKEN - races and flaky failures
 **CRITICAL: Always save results to file** - avoid re-running test suite multiple times to filter/analyze.
 
 ```bash
-# Save full results (text + HTML + JSON)
+## Save full results (text + HTML + JSON)
 pytest cync-controller/tests/e2e/ -v --sequential \
   --capture=no \
   --tb=short \
@@ -150,31 +151,35 @@ pytest cync-controller/tests/e2e/ -v --sequential \
   --self-contained-html \
   > results/e2e-output.txt 2>&1
 
-# Later: Filter, grep, analyze without re-running
+## Later: Filter, grep, analyze without re-running
 grep "FAILED" results/e2e-output.txt
 grep -A 5 "test_turn_light_on" results/e2e-output.txt
 cat results/e2e-junit.xml | grep "failures\|errors"
 ```
 
-**Workflow:**
+### Workflow
+
 1. **Run once:** Save full results to files
 2. **Analyze:** grep, search, filter saved output (no re-run)
 3. **Debug:** Use HTML report for visual inspection
 4. **CI/CD:** Upload JUnit XML to test reporting systems
 
-**Benefits:**
+### Benefits
+
 - ✅ Fast analysis (grep is instant)
 - ✅ No device state pollution from re-runs
 - ✅ Full audit trail (can't lose results)
 - ✅ Supports multiple filter approaches without re-execution
 
-**❌ Anti-Pattern:**
+### ❌ Anti-Pattern
+
 ```bash
-# NEVER: Re-running suite just to grep output
-pytest cync-controller/tests/e2e/ | grep "FAILED"  # Re-runs entire suite
+## NEVER: Re-running suite just to grep output
+pytest cync-controller/tests/e2e/ | grep "FAILED" # Re-runs entire suite
 ```
 
-**Why sequential?**
+## Why sequential?
+
 - E2E tests interact with real devices (Home Assistant + Cync devices)
 - Device state persists between tests (ON/OFF, brightness)
 - Parallel execution causes race conditions:
@@ -186,7 +191,8 @@ pytest cync-controller/tests/e2e/ | grep "FAILED"  # Re-runs entire suite
 
 See `docs/developer/browser-automation.md` for detailed patterns and best practices.
 
-**Key points:**
+### Key points
+
 - Prefer API tools over browser automation (see `scripts/configure-addon.sh`)
 - Home Assistant UI uses Shadow DOM - use `getByRole` selectors that pierce through
 - Avoid `{force: true}` clicks - they bypass safety checks

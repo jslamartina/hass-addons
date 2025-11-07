@@ -7,13 +7,13 @@ This script automates the Home Assistant onboarding process while capturing all 
 ### Run the Trace Script
 
 ```bash
-# Run with headed browser (visible)
+## Run with headed browser (visible)
 npx playwright test scripts/playwright/trace-onboarding-websocket.ts --headed
 
-# Run headless (faster, no UI)
+## Run headless (faster, no UI)
 npx playwright test scripts/playwright/trace-onboarding-websocket.ts
 
-# Run with custom URL and credentials
+## Run with custom URL and credentials
 HA_BASE_URL=http://localhost:8123 \
   HA_USERNAME=dev \
   HA_PASSWORD=dev \

@@ -1,6 +1,8 @@
+# 2025 10 14T15 10 00 Remove Duplicate Source Files Plan
+
 <!-- 93dce99d-9102-42af-8688-5444d3cfde77 fdd06d6e-7a19-4c09-ae87-5fc0bedbd94c -->
 
-# Remove Duplicate Source Files After Repo Consolidation
+## Remove Duplicate Source Files After Repo Consolidation
 
 ## Problem
 

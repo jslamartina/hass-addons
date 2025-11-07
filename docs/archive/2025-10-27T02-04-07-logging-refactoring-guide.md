@@ -8,24 +8,24 @@ This guide documents the new logging system and refactoring patterns for upgradi
 
 ### 1. Logging Abstraction (`logging_abstraction.py`)
 
-**Features:**
+#### Features
 
 - Dual-format output (JSON + human-readable)
 - Structured context support via `extra` parameter
 - Automatic correlation ID injection
 - Configurable via environment variables
 
-**Usage:**
+### Usage
 
 ```python
 from cync_controller.logging_abstraction import get_logger
 
 logger = get_logger(__name__)
 
-# Simple log
+## Simple log
 logger.info("Server started")
 
-# Log with structured context
+## Log with structured context
 logger.info(
     "Device connected",
     extra={
@@ -35,7 +35,7 @@ logger.info(
     },
 )
 
-# Error with context
+## Error with context
 logger.exception(
     "✗ Command failed",
     extra={
@@ -48,23 +48,23 @@ logger.exception(
 
 ### 2. Correlation Tracking (`correlation.py`)
 
-**Features:**
+#### Features
 
 - Async-safe correlation ID storage
 - Auto-generation for new contexts
 - Manual override for testing
 
-**Usage:**
+### Usage
 
 ```python
 from cync_controller.correlation import correlation_context, ensure_correlation_id
 
-# Auto-generate correlation ID for async context
+## Auto-generate correlation ID for async context
 async def handle_connection():
     ensure_correlation_id()  # Ensures correlation ID exists
     logger.info("Connection started")  # Automatically includes correlation ID
 
-# Manual correlation ID for testing
+## Manual correlation ID for testing
 async def test_critical_path():
     with correlation_context("TEST-123"):
         await process_command()
@@ -72,13 +72,13 @@ async def test_critical_path():
 
 ### 3. Performance Instrumentation (`instrumentation.py`)
 
-**Features:**
+#### Features
 
 - Automatic timing for operations
 - Configurable threshold warnings
 - On/off toggle via environment variable
 
-**Usage:**
+### Usage
 
 ```python
 from cync_controller.instrumentation import timed_async
@@ -94,14 +94,14 @@ async def read_packet(reader):
 
 ### Pattern 1: Replace Old Logger with New Logger
 
-**Before:**
+#### Before
 
 ```python
 import logging
 logger = logging.getLogger(CYNC_LOG_NAME)
 ```
 
-**After:**
+### After
 
 ```python
 from cync_controller.logging_abstraction import get_logger
@@ -110,7 +110,7 @@ logger = get_logger(__name__)
 
 ### Pattern 2: Remove `lp` (Log Prefix) Pattern
 
-**Before:**
+#### Before
 
 ```python
 def some_method(self):
@@ -119,7 +119,7 @@ def some_method(self):
     logger.error("%s Operation failed: %s", lp, error)
 ```
 
-**After:**
+### After
 
 ```python
 def some_method(self):
@@ -132,13 +132,13 @@ def some_method(self):
 
 ### Pattern 3: Add Structured Context
 
-**Before:**
+#### Before
 
 ```python
 logger.info("Device %s connected at %s", device_id, ip_addr)
 ```
 
-**After:**
+### After
 
 ```python
 logger.info(
@@ -152,14 +152,14 @@ logger.info(
 
 ### Pattern 4: Improve Error Logging
 
-**Before:**
+#### Before
 
 ```python
 except Exception:
     logger.exception("Error in operation")
 ```
 
-**After:**
+### After
 
 ```python
 except Exception as e:
@@ -175,7 +175,7 @@ except Exception as e:
 
 ### Pattern 5: Add Entry/Exit Logging for Async Operations
 
-**Before:**
+#### Before
 
 ```python
 async def process_command(device_id, command):
@@ -184,7 +184,7 @@ async def process_command(device_id, command):
     return result
 ```
 
-**After:**
+### After
 
 ```python
 async def process_command(device_id, command):
@@ -213,14 +213,14 @@ async def process_command(device_id, command):
 
 ### Pattern 6: Add Performance Timing
 
-**Before:**
+#### Before
 
 ```python
 async def publish_message(topic, payload):
     await client.publish(topic, payload)
 ```
 
-**After:**
+### After
 
 ```python
 @timed_async("mqtt_publish")
@@ -297,22 +297,22 @@ async def publish_message(topic, payload):
 Add to your `.env` or environment configuration:
 
 ```bash
-# Logging format: "json", "human", or "both"
+## Logging format: "json", "human", or "both"
 CYNC_LOG_FORMAT=both
 
-# JSON log output file
+## JSON log output file
 CYNC_LOG_JSON_FILE=/var/log/cync_controller.json
 
-# Human-readable log output: "stdout", "stderr", or file path
+## Human-readable log output: "stdout", "stderr", or file path
 CYNC_LOG_HUMAN_OUTPUT=stdout
 
-# Enable/disable correlation tracking
+## Enable/disable correlation tracking
 CYNC_LOG_CORRELATION_ENABLED=true
 
-# Enable/disable performance tracking
+## Enable/disable performance tracking
 CYNC_PERF_TRACKING=true
 
-# Performance threshold in milliseconds
+## Performance threshold in milliseconds
 CYNC_PERF_THRESHOLD_MS=100
 ```
 

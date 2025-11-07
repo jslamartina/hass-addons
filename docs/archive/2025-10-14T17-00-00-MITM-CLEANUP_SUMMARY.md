@@ -31,7 +31,7 @@ Cleaned up the `mitm/` directory by archiving historical files and removing redu
 - `smart_mode_capture.txt`
 - `switch_config_test.txt`
 
-**Kept (referenced in docs):**
+### Kept (referenced in docs)
 
 - `smart_to_traditional.txt` - Referenced in mode_change_analysis.md
 - `traditional_to_smart.txt` - Referenced in mode_change_analysis.md
@@ -42,7 +42,7 @@ Cleaned up the `mitm/` directory by archiving historical files and removing redu
 - `mode_test_capture.log` (Oct 8)
 - `status_comparison_*.log` (Oct 7-8)
 
-**Kept (current):**
+### Kept (current)
 
 - `mitm.log` - Active MITM log
 - `mitm_proxy.log` - Active proxy log

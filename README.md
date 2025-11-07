@@ -28,7 +28,7 @@ Local control for Cync/C by GE smart devices without cloud dependency.
 
 ## 📚 Documentation
 
-**Quick Links:**
+### Quick Links
 
 - **[DNS Setup](docs/user/dns-setup.md)** - **Required setup** for local control
 - **[Troubleshooting](docs/user/troubleshooting.md)** - Common issues and solutions
@@ -53,7 +53,7 @@ Control Cync devices locally by intercepting their cloud communications:
 - ✅ Plugs
 - ❌ Battery-powered devices (motion sensors, wire-free switches)
 
-**[Full compatibility list →](docs/user/known-devices.md)**
+### [Full compatibility list →](docs/user/known-devices.md)
 
 ## 🆕 New in v0.0.4.13
 
@@ -84,7 +84,7 @@ Optional MITM proxy functionality for packet inspection and debugging:
 - **Packet inspection** and real-time logging
 - **File-based packet injection** for testing
 
-**Configuration:**
+### Configuration
 
 ```yaml
 cloud_relay:
@@ -94,7 +94,7 @@ cloud_relay:
   disable_ssl_verification: false # Debug mode only
 ```
 
-**[📖 Complete Cloud Relay Documentation →](docs/user/cloud-relay.md)**
+### [📖 Complete Cloud Relay Documentation →](docs/user/cloud-relay.md)
 
 ### Enhanced Development Environment
 
@@ -106,7 +106,7 @@ cloud_relay:
 ## 🛠️ Development
 
 ```bash
-# Quick commands for developers
+## Quick commands for developers
 ha addons logs local_cync-controller    # View logs
 ./scripts/configure-addon.sh            # Configure addon
 ha addons restart local_cync-controller # Restart addon
@@ -114,16 +114,16 @@ npm run lint                            # Run all linters
 npm run lint:python:fix                 # Auto-fix Python issues
 ```
 
-**Enhanced Development Tools:**
+### Enhanced Development Tools
 
 ```bash
-# Programmatic configuration
+## Programmatic configuration
 ./scripts/configure-addon.sh preset-relay-debug
 
-# Comprehensive testing
+## Comprehensive testing
 ./scripts/test-cloud-relay.sh
 
-# Fresh HA setup automation
+## Fresh HA setup automation
 ./scripts/setup-fresh-ha.sh
 ```
 
@@ -131,15 +131,17 @@ npm run lint:python:fix                 # Auto-fix Python issues
 
 ## 📖 Documentation Structure
 
-```
+```text
+
 docs/
 ├── user/              # User guides (DNS setup, troubleshooting, tips)
 ├── developer/         # Developer docs (testing, entity management, CLI)
 ├── protocol/          # Protocol research and reverse engineering
 └── archive/           # Historical documentation
+
 ```
 
-**[→ Complete Documentation Index](docs/README.md)**
+### [→ Complete Documentation Index](docs/README.md)
 
 ## 🤝 Contributing
 
@@ -156,9 +158,9 @@ See [LICENSE](LICENSE) for details.
 
 ## 🔗 Links
 
-- **Repository:** https://github.com/jslamartina/hass-addons
-- **Issues:** https://github.com/jslamartina/hass-addons/issues
-- **Home Assistant:** https://www.home-assistant.io/
+- **Repository:** <https://github.com/jslamartina/hass-addons>
+- **Issues:** <https://github.com/jslamartina/hass-addons/issues>
+- **Home Assistant:** <https://www.home-assistant.io/>
 
 ---
 

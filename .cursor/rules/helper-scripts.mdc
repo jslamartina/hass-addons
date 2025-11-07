@@ -6,47 +6,58 @@ description: Helper scripts and automation tools available in the project
 
 ## Setup and Configuration
 
-**Complete Factory Reset:**
+### Complete Factory Reset
+
 ```bash
-./scripts/reset-ha-to-fresh.sh            # Wipe to fresh state (= devcontainer rebuild)
-./scripts/reset-ha-to-fresh-onboarded.sh  # Wipe + auto onboarding (one command)
-```
+./scripts/reset-ha-to-fresh.sh           # Wipe to fresh state (= devcontainer rebuild)
+./scripts/reset-ha-to-fresh-onboarded.sh # Wipe + auto onboarding (one command)
+$()$(
+  markdown
 
-**Fresh Home Assistant Setup:**
-```bash
-./scripts/setup-fresh-ha.sh  # Automated user, EMQX, addon setup (idempotent)
-```
+  ### Fresh Home Assistant Setup:
 
-**Configure Add-on:**
-```bash
-./scripts/configure-addon.sh get                    # Show config
-./scripts/configure-addon.sh preset-baseline        # LAN-only mode
-./scripts/configure-addon.sh preset-relay-with-forward  # Cloud relay
-./scripts/configure-addon.sh restart                # Restart
-```
+)$()bash
+./scripts/setup-fresh-ha.sh # Automated user, EMQX, addon setup (idempotent)
+$()$(
+  markdown
 
-## Entity Management
+  ### Configure Add-on:
 
-**Delete MQTT Entities:**
-```bash
-sudo python3 scripts/delete-mqtt-safe.py --dry-run  # Preview
-sudo python3 scripts/delete-mqtt-safe.py            # Delete
-sudo python3 scripts/delete-mqtt-safe.py --restart  # Delete + restart
-```
+)$()bash
+./scripts/configure-addon.sh get                       # Show config
+./scripts/configure-addon.sh preset-baseline           # LAN-only mode
+./scripts/configure-addon.sh preset-relay-with-forward # Cloud relay
+./scripts/configure-addon.sh restart                   # Restart
+$()$(
+  markdown
 
-## Testing
+  ## Entity Management
 
-**Unit Tests:**
-```bash
+  ### Delete MQTT Entities:
+
+)$()bash
+sudo python3 scripts/delete-mqtt-safe.py --dry-run # Preview
+sudo python3 scripts/delete-mqtt-safe.py           # Delete
+sudo python3 scripts/delete-mqtt-safe.py --restart # Delete + restart
+$()$(
+  bash
+
+  ## Testing
+
+  ### Unit Tests
+
+)$()bash
 cd cync-controller
-pytest tests/unit/                    # All tests
-pytest tests/unit/test_devices.py     # Specific file
-pytest -k "test_set_power"            # Pattern match
-```
+pytest tests/unit/                # All tests
+pytest tests/unit/test_devices.py # Specific file
+pytest -k "test_set_power"        # Pattern match
+$()$(
+  markdown
 
-**Cloud Relay Test Suite:**
-```bash
-./scripts/test-cloud-relay.sh  # Full automated test
+  ### Cloud Relay Test Suite:
+
+)$()bash
+./scripts/test-cloud-relay.sh # Full automated test
 ```
 
 ## Script Features

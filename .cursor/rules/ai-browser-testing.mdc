@@ -10,10 +10,13 @@ appliesTo:
 **When to use:** Manual UI verification or when API tools are insufficient.
 
 ## Critical Patterns
-**!! IT IS CRITICAL TO UNDERSTAND THE ENTIRE UI IS SHADOW-DOM BASED YOU CANNOT USE CONVENTIONAL SELECTORS !!**
+
+### !! It's critical to understand the entire UI is shadow-DOM based you can't use conventional selectors
+
 ### 1. Stable Selectors - Prefer Accessibility Hierarchy
 
-**Priority order:**
+#### Priority order
+
 1. Role-based: `getByRole("button", { name: "Save" })`
 2. Label-based: `getByLabel("Username")`
 3. Test ID: `getByTestId("submit-btn")` (if added to HA)
@@ -36,6 +39,7 @@ await page.getByRole("button", { name: /save/i }).click();
 ```
 
 ### 2. SVG Click Interception - Click Parent Containers
+
 ```typescript
 // ❌ WRONG: Click button directly (fails with SVG)
 await page.getByRole("button", { name: "Toggle" }).click();
@@ -45,12 +49,14 @@ await page.locator("div").filter({ hasText: "Hallway Lights" }).nth(5).click();
 ```
 
 ### 3. Iframe Access - Use frameLocator
+
 ```typescript
 const frame = page.frameLocator("iframe");
 await frame.getByRole("link", { name: /Configuration/i }).click();
 ```
 
 ### 4. MQTT Entity Deletion - Stop Integration First
+
 ```typescript
 // 1. Stop add-on
 await stopAddon("local_cync-controller");
@@ -103,6 +109,7 @@ await page.locator("svg").click();
 ## Test Configuration
 
 ### Login State Reuse
+
 ```typescript
 // Save auth state once
 test.use({ storageState: "auth.json" });
@@ -117,22 +124,25 @@ async function login(page: Page) {
 ```
 
 ### Test Defaults
+
 ```typescript
 test.use({
   baseURL: "http://homeassistant.local:8123",
-  headless: true,  // CI-friendly
+  headless: true, // CI-friendly
   timezone: "UTC",
   locale: "en-US",
 });
 ```
 
 ### Retries and Tracing
+
 ```bash
-# Always use --reporter=list and tracing
+## Always use --reporter=list and tracing
 npx playwright test --reporter=list --trace on-first-retry --retries=2
 ```
 
 ### Assertions Over Waits
+
 ```typescript
 // ❌ WRONG: Arbitrary timeout
 await page.waitForTimeout(5000);

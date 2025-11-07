@@ -9,33 +9,33 @@ appliesTo:
 ## Basic Patterns
 
 ```python
-# Function entry with context
+## Function entry with context
 logger.info("Processing device %s (IP: %s)", device_id, device_ip)
 
-# State changes
+## State changes
 logger.info("Device %s state: %s → %s", device_id, old_state, new_state)
 
-# Success
+## Success
 logger.info("✓ Command sent successfully to %s", device_id)
 
-# Error with context
+## Error with context
 logger.error("✗ Failed to send command to %s: %s", device_id, error_msg)
 
-# Debug for protocol details
+## Debug for protocol details
 logger.debug("Received packet: %s", packet.hex())
 ```
 
 ## Anti-Patterns
 
 ```python
-# ❌ Don't log sensitive data
+## ❌ Don't log sensitive data
 logger.info("Password: %s", password)
 
-# ❌ Don't log in tight loops
+## ❌ Don't log in tight loops
 for device in devices:
     logger.debug(f"Processing {device}")  # Too verbose
 
-# ✅ Log summary instead
+## ✅ Log summary instead
 logger.debug(f"Processed {len(devices)} devices")
 ```
 

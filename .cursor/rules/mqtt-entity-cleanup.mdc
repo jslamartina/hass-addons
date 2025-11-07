@@ -4,27 +4,37 @@ description: MQTT entity cleanup workflows and best practices
 
 # MQTT Entity Cleanup
 
-**Critical:** MQTT entities CANNOT be deleted while the integration is actively providing them.
+**Critical:** MQTT entities CAN'T be deleted while the integration is actively providing them.
 
-**Quick cleanup workflow:**
+## Why This Matters
+
+- Stale entities confuse users and clutter the UI
+- Changed discovery configs (like `suggested_area`) create duplicates if old entities not removed
+- Entity registry bloat degrades Home Assistant performance
+- Old entities may retain incorrect state or configuration
+
+### Quick cleanup workflow
+
 ```bash
-sudo python3 scripts/delete-mqtt-safe.py --dry-run  # Preview
-sudo python3 scripts/delete-mqtt-safe.py             # Delete
+sudo python3 scripts/delete-mqtt-safe.py --dry-run # Preview
+sudo python3 scripts/delete-mqtt-safe.py           # Delete
 ha addons restart local_cync-controller
 ```
 
 **Pattern:** Stop integration → Delete entities → Restart integration
 
-**Automated (recommended):**
+### Automated (recommended)
+
 ```bash
 sudo python3 scripts/delete-mqtt-safe.py --restart
 ```
 
-**Manual:**
+### Manual
+
 ```bash
 ha addons stop local_cync-controller
-sleep 30  # Wait for entities to become unavailable
-# Then delete via UI: Settings → Devices & Services → Entities
+sleep 30 # Wait for entities to become unavailable
+## Then delete via UI: Settings → Devices & Services → Entities
 ha addons restart local_cync-controller
 ```
 
@@ -38,3 +48,48 @@ ha addons restart local_cync-controller
 ## What Gets Cleaned
 
 The script cleans: entity registry, device registry, restore state. Always preserves Cync Controller bridge device.
+
+## Anti-Patterns
+
+### ❌ WRONG: Delete while integration running
+
+```bash
+## Integration still running - entities immediately recreated!
+## Settings → Devices & Services → Entities → Delete
+ha addons restart local_cync-controller
+## Entities come right back - Home Assistant confused
+```
+
+**Problem**: MQTT discovery messages are still being sent, so deleted entities are immediately recreated.
+
+### ❌ WRONG: Manual UI deletion without stopping integration
+
+```bash
+## Stop addon first
+ha addons stop local_cync-controller
+
+## Then manually delete via UI (slow, error-prone)
+## Settings → Devices & Services → Entities
+## Click each entity → Delete (hundreds of clicks!)
+```
+
+**Problem**: Manual deletion is tedious, error-prone, and doesn't clean device registry or restore state.
+
+### ❌ WRONG: Restart without waiting
+
+```bash
+ha addons stop local_cync-controller
+## Delete entities immediately - too fast!
+ha addons restart local_cync-controller
+```
+
+**Problem**: Entities may not be fully unavailable yet, causing race conditions.
+
+### ✅ CORRECT: Use automated script
+
+```bash
+## Automated, safe, complete cleanup
+sudo python3 scripts/delete-mqtt-safe.py --restart
+```
+
+**Benefits**: Stops addon, cleans all registries, waits appropriately, restarts addon.

@@ -1,15 +1,17 @@
+# 2025 01 27T01 17 00 Python Refactor Plan Dc3B6E0F.Plan
+
 <!-- dc3b6e0f-8d6f-4295-9a30-3d88e6ccc090 10875788-e4bb-4f0c-8058-154778d65539 -->
 
-# Python Codebase Refactor for Agent Comprehension
+## Python Codebase Refactor for Agent Comprehension
 
 ## Current State Analysis
 
-**Large Files Requiring Split:**
+### Large Files Requiring Split
 
 - `devices.py` (2,934 lines) - Contains 3 classes: CyncDevice, CyncGroup, CyncTCPDevice
 - `mqtt_client.py` (2,544 lines) - Contains MQTTClient + command classes + discovery logic
 
-**Linting Issues (281 errors):**
+### Linting Issues (281 errors)
 
 - 15x PLR0912 (too many branches)
 - 12x PLR0915 (too many statements)
@@ -20,15 +22,15 @@
 
 ## Phase 1: Split `devices.py` into Focused Modules
 
-**Current structure (2,934 lines):**
+### Current structure (2,934 lines)
 
 - Lines 46-1138: `CyncDevice` (device state, properties, command methods)
 - Lines 1139-1559: `CyncGroup` (group management)
 - Lines 1561-2935: `CyncTCPDevice` (TCP connection, packet parsing, async tasks)
 
-**New module structure:**
+### New module structure
 
-```
+```python
 cync_controller/
 ├── devices/
 │   ├── __init__.py          # Export all classes
@@ -40,7 +42,7 @@ cync_controller/
 │   └── tcp_packet_handler.py # Packet parsing logic (~500 lines)
 ```
 
-**Benefits:**
+### Benefits
 
 - Each file under 600 lines
 - Clear separation: state management vs commands vs networking vs groups
@@ -48,16 +50,16 @@ cync_controller/
 
 ## Phase 3: Split `mqtt_client.py` into Focused Modules
 
-**Current structure (2,544 lines):**
+### Current structure (2,544 lines)
 
 - Lines 29-56: `DeviceCommand` base class
 - Lines 58-128: `CommandProcessor` singleton
 - Lines 130-216: Command subclasses (SetPowerCommand, SetBrightnessCommand, etc.)
 - Lines 218-2544: `MQTTClient` (connection, discovery, command routing, state updates)
 
-**New module structure:**
+### New module structure
 
-```
+```text
 cync_controller/
 ├── mqtt/
 │   ├── __init__.py           # Export MQTTClient
@@ -68,7 +70,7 @@ cync_controller/
 │   └── state_updates.py      # State publishing to MQTT (~400 lines)
 ```
 
-**Benefits:**
+### Benefits
 
 - Separates concerns: connection vs discovery vs commands vs routing
 - Each module has single responsibility
@@ -83,7 +85,7 @@ After splitting, update all imports in:
 - `main.py` (imports MQTTClient)
 - All test files (24 unit tests, 7 E2E tests)
 
-**Strategy:**
+### Strategy
 
 - Maintain backward compatibility by re-exporting from `__init__.py` files
 - Example: `from cync_controller.devices import CyncDevice` still works
@@ -91,14 +93,14 @@ After splitting, update all imports in:
 
 ## Phase 5: Verification & Testing
 
-**Test coverage verification:**
+### Test coverage verification
 
 - Run full test suite: `npm run test:unit:cov`
 - Ensure no coverage regression
 - All 24 unit test files must pass
 - Rebuild and restart addon: `cd cync-controller && ./rebuild.sh`
 
-**Integration testing:**
+### Integration testing
 
 - Deploy to devcontainer Home Assistant
 - Verify device discovery works
@@ -108,20 +110,20 @@ After splitting, update all imports in:
 
 ## Key Architectural Improvements
 
-**Before (monolithic):**
+### Before (monolithic)
 
 - 2 files containing all device + MQTT logic
 - Hard to navigate, find specific functionality
 - AI agents struggle with 2,500+ line files
 
-**After (modular):**
+### After (modular)
 
 - 11 focused files, each <600 lines
 - Clear separation of concerns
 - Each module has single responsibility
 - Easier for AI agents to reason about specific areas
 
-**Preserved:**
+### Preserved
 
 - All existing functionality intact
 - Test coverage maintained

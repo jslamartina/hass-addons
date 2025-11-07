@@ -21,7 +21,7 @@ Added comprehensive logging to trace command flow:
 
 The addon shows device 103 is actively connected:
 
-```
+```text
 10/25/25 23:20:05.960 Device connected: 172.67.68.90:26114[103]
 TCP Pool: 8/8 ready_to_control
 ```
@@ -60,7 +60,7 @@ In Home Assistant Developer Tools → States:
 
 If YES: Check entity attributes for:
 
-```
+```yaml
 percentage: <value>
 percentage_step: 1
 preset_mode: <off|low|medium|high>
@@ -73,7 +73,7 @@ If NO: Fan entity doesn't exist → Discovery failed
 
 Check addon logs at startup for:
 
-```
+```text
 Registering fan device: Master Bedroom Fan Switch
 Publishing percentage_command_topic: cync_controller_addon/set/{id}/percentage
 Publishing percentage_state_topic: cync_controller_addon/status/{id}/percentage
@@ -84,15 +84,15 @@ Publishing percentage_state_topic: cync_controller_addon/status/{id}/percentage
 Bypass Home Assistant and test addon directly:
 
 ```bash
-# Subscribe to see if addon receives messages
+## Subscribe to see if addon receives messages
 docker exec addon_emqx mosquitto_sub -h localhost -t "cync_controller_addon/set/#" -v
 
-# In another terminal, publish a test command
+## In another terminal, publish a test command
 docker exec addon_emqx mosquitto_pub -h localhost \
   -t "cync_controller_addon/set/12345-103/percentage" \
   -m "75"
 
-# Check addon logs for ">>> FAN PERCENTAGE COMMAND"
+## Check addon logs for ">>> FAN PERCENTAGE COMMAND"
 ha addons logs local_cync-controller | grep "FAN PERCENTAGE"
 ```
 

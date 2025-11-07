@@ -1,0 +1,295 @@
+---
+description: Helper script usage guide
+---
+
+# Helper Scripts
+
+All scripts located in `scripts/` directory.
+
+## Development Scripts
+
+### setup.sh
+
+**Purpose**: Set up development environment
+
+```bash
+./scripts/setup.sh
+```
+
+**What it does**:
+
+- Installs Poetry if missing
+- Runs `poetry install`
+- Sets up virtual environment
+
+**When to use**: First time setup, or after clean
+
+### run.sh
+
+**Purpose**: Run the toggler with options
+
+```bash
+## With defaults
+./scripts/run.sh
+
+## Custom device
+./scripts/run.sh --device-id DEVICE456 --host 192.168.1.200 --port 9001
+
+## Toggle off
+./scripts/run.sh --state off
+
+## Debug logging
+./scripts/run.sh --debug
+```
+
+**Environment variables**:
+
+```bash
+DEVICE_ID=MYDEVICE DEVICE_HOST=10.0.0.5 ./scripts/run.sh
+```
+
+### debug.sh
+
+**Purpose**: Run with debug logging enabled
+
+```bash
+./scripts/debug.sh
+```
+
+Equivalent to `./scripts/run.sh --debug`
+
+## Testing Scripts
+
+### test-unit.sh
+
+**Purpose**: Run unit tests (fast, mocked)
+
+```bash
+## Basic run
+./scripts/test-unit.sh
+
+## Verbose output
+./scripts/test-unit.sh -v
+
+## With coverage
+./scripts/test-unit.sh -c
+```
+
+**Characteristics**:
+
+- Fast (< 1 second)
+- Uses mocks (no real I/O)
+- Runs tests marked with `@pytest.mark.unit`
+
+### test-integration.sh
+
+**Purpose**: Run integration tests (real TCP server)
+
+```bash
+## Basic run
+./scripts/test-integration.sh
+
+## Verbose output
+./scripts/test-integration.sh -v
+
+## HTML report
+./scripts/test-integration.sh --html
+```
+
+**Requirements**:
+
+- Real TCP server must be available
+- Tests marked with `@pytest.mark.integration`
+
+### test-all.sh
+
+**Purpose**: Run all tests (unit + integration)
+
+```bash
+## Run all tests
+./scripts/test-all.sh
+
+## With coverage
+./scripts/test-all.sh -c
+
+## Verbose output
+./scripts/test-all.sh -v
+
+## Watch mode (requires pytest-watch)
+./scripts/test-all.sh -w
+```
+
+**Use cases**:
+
+- Pre-commit verification
+- CI pipeline equivalent
+- Full validation
+
+## Quality Scripts
+
+### build.sh
+
+**Purpose**: Full build and validation
+
+```bash
+./scripts/build.sh
+```
+
+**Steps**:
+
+1. Lint with ruff
+2. Type check with mypy
+3. Run all tests
+4. Verify coverage ≥ 90%
+
+**When to use**:
+
+- Before committing
+- Before pushing
+- CI validation locally
+
+### clean.sh
+
+**Purpose**: Remove build artifacts and caches
+
+```bash
+./scripts/clean.sh
+```
+
+**Removes**:
+
+- `__pycache__/` directories
+- `.pytest_cache/`
+- `.mypy_cache/`
+- `.ruff_cache/`
+- `.coverage` file
+- `htmlcov/` directory
+- `*.pyc` files
+
+## Utility Scripts
+
+### check-metrics.sh
+
+**Purpose**: Check metrics endpoint
+
+```bash
+./scripts/check-metrics.sh
+```
+
+**What it does**:
+
+- Checks if metrics endpoint is accessible (port 9400)
+- Displays current metrics
+- Useful for debugging metrics collection
+
+## Script Usage Patterns
+
+### Quick Development Loop
+
+```bash
+## 1. Make changes to code
+vim src/transport/socket_abstraction.py
+
+## 2. Run unit tests (fast feedback)
+./scripts/test-unit.sh
+
+## 3. If passing, run full validation
+./scripts/build.sh
+```
+
+### Pre-Commit Validation
+
+```bash
+## Run full build
+./scripts/build.sh
+
+## If passing, commit
+git add .
+git commit -m "Add feature"
+```
+
+### Debugging Test Failures
+
+```bash
+## Run with verbose output
+./scripts/test-all.sh -v
+
+## Run specific test
+poetry run pytest tests/unit/test_toggler.py::test_specific -v
+
+## Run with debug logging
+./scripts/debug.sh
+```
+
+## Script Options Summary
+
+### test-unit.sh
+
+- `-v, --verbose`: Verbose output
+- `-c, --coverage`: Generate coverage report
+
+### test-integration.sh
+
+- `-v, --verbose`: Verbose output
+- `--html`: Generate HTML report
+
+### test-all.sh
+
+- `-v, --verbose`: Verbose output
+- `-c, --coverage`: Generate coverage report
+- `-w, --watch`: Watch mode (requires pytest-watch)
+
+### run.sh
+
+- `--device-id`: Device ID (default: DEVICE123)
+- `--host`: Device host (default: 192.168.1.100)
+- `--port`: Device port (default: 9000)
+- `--state`: on|off (default: on)
+- `--debug`: Enable debug logging
+
+## Environment Variables
+
+Scripts respect these environment variables:
+
+```bash
+DEVICE_ID   # Device identifier
+DEVICE_HOST # Device IP address
+DEVICE_PORT # Device port number
+LOG_LEVEL   # Logging level (DEBUG, INFO, etc.)
+```
+
+## Script Dependencies
+
+All scripts use Poetry:
+
+```bash
+## Run commands through Poetry
+poetry run pytest
+poetry run ruff check .
+poetry run mypy src tests
+```
+
+**Do not use system Python or pip.** Always use Poetry.
+
+## Troubleshooting
+
+### Script Not Executable
+
+```bash
+chmod +x scripts/*.sh
+```
+
+### Virtual Environment Not Found
+
+```bash
+./scripts/setup.sh
+```
+
+### Tests Fail in CI but Pass Locally
+
+```bash
+## Run exact CI commands
+poetry run ruff check .
+poetry run mypy src tests
+poetry run pytest --cov --cov-fail-under=90
+```

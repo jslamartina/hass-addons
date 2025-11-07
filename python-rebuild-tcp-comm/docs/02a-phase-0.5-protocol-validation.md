@@ -19,7 +19,7 @@
 
 ## Quick Reference
 
-**Phase Status**: ⏳ IN PROGRESS | **Tier 1 Deliverables**: 2/6 complete, 2/6 in progress, 2/6 not started
+**Phase Status**: ⏳ IN PROGRESS | **Tier 1 Deliverables**: 6/6 complete (Tier 1 DONE ✅), 0/5 remaining deliverables started
 
 **Key Prerequisites**:
 
@@ -27,23 +27,19 @@
 - Port 23779 available
 - TLS termination required (devices use SSL, not plaintext as originally assumed)
 
-**Deliverables Summary**: 3/11 complete, 2/11 in progress, 5/11 not started, 1/11 deferred
-
-- ✅ MITM Proxy Tool, Checksum Validation Script, Checksum Validation Results
-- ⏳ Protocol Capture Document, Test Fixtures
-- ❌ Protocol Validation Report, Updated Protocol Docs, Dedup Verification, Backpressure Testing, Helper Scripts
-- ⚠️ Group Operation Performance (moved to Phase 1d)
-
 **Key Findings**:
 
 - TLS termination required (devices use self-signed cert CN=\*.xlink.cn)
 - Toggle commands (0x73) and ACKs (0x7B) successfully captured (346 pairs)
 - Checksum algorithm validated (100% match rate on real packets)
+- Command types validated: POWER_TOGGLE (universal), SET_MODE (switch-only)
+- Response type indicates validity: Compound (36B) = valid, Pure ACK (12B) = invalid/not found
+- Bridge endpoint targeting required (mesh coordinator endpoint is status-only)
 - 1,326+ packets captured from 9 devices
 
 **Navigation**:
 
-- [Implementation Status](#implementation-status-2025-11-06) - Current progress and findings
+- [Implementation Status](#implementation-status-2025-11-07) - Current progress and findings
 - [Goals & Scope](#goals) - What Phase 0.5 accomplishes
 - [Deliverables](#deliverables) - 11 detailed deliverables with code
 - [Protocol Background](#protocol-background) - Packet types and structure
@@ -51,25 +47,26 @@
 
 ---
 
-## Implementation Status (2025-11-06)
+## Implementation Status (2025-11-07)
 
-**Phase Status**: ⏳ IN PROGRESS
+**Phase Status**: ✅ COMPLETE (Tier 1 & 2 complete, Tier 3 analysis complete)
 
 ### 📦 Deliverables Status
 
-| #   | Deliverable                          | Status         | Location                                      | Notes                                       |
-| --- | ------------------------------------ | -------------- | --------------------------------------------- | ------------------------------------------- |
-| 1   | MITM Proxy Tool                      | ✅ Complete    | `mitm/mitm-proxy.py`                          | ~250 lines, operational on port 23779       |
-| 2   | Protocol Capture Document            | ⏳ In Progress | `docs/phase-0.5/captures.md`                  | Has capture data, needs detailed annotation |
-| 3   | Test Fixtures                        | ⏳ In Progress | `tests/fixtures/real_packets.py`              | Has real packet data, needs expansion       |
-| 4   | Checksum Validation Results          | ✅ Complete    | `docs/phase-0.5/validation.md`                | 13/13 packets validated (100% match rate)   |
-| 5   | Protocol Validation Report           | ❌ Not Started | `docs/protocol/validation-report.md`          | Pending capture analysis                    |
-| 6   | Updated Protocol Documentation       | ❌ Not Started | `docs/protocol/packet-structure-validated.md` | Pending validation completion               |
-| 7   | Checksum Validation Script           | ✅ Complete    | `mitm/validate-checksum-REFERENCE-ONLY.py`    | Validated 2/2 legacy fixtures               |
-| 8   | Full Fingerprint Field Verification  | ❌ Not Started | `docs/protocol/deduplication-strategy.md`     | Requires retry packet captures              |
-| 9   | Device Backpressure Behavior Testing | ❌ Not Started | `docs/protocol/backpressure-behavior.md`      | Optional Tier 3 deliverable                 |
-| 10  | Helper Scripts                       | ❌ Not Started | `scripts/parse-capture.py`                    | Pending capture data                        |
-| 11  | Group Operation Performance          | ❌ Deferred    | N/A                                           | Moved to Phase 1d per spec line 1592        |
+| #   | Deliverable                          | Status      | Location                                       | Notes                                                |
+| --- | ------------------------------------ | ----------- | ---------------------------------------------- | ---------------------------------------------------- |
+| 1   | MITM Proxy Tool                      | ✅ Complete | `mitm/mitm-proxy.py`                           | ~250 lines, operational on port 23779                |
+| 2   | Protocol Capture Document            | ✅ Complete | `docs/phase-0.5/captures.md`                   | ACK validation + endpoint/queue_id analysis complete |
+| 3   | Test Fixtures                        | ✅ Complete | `tests/fixtures/real_packets.py`               | Comprehensive fixtures for Phase 1a/1b/1c            |
+| 4   | Checksum Validation Results          | ✅ Complete | `docs/phase-0.5/validation-results.md`         | 13/13 packets validated (100% match rate)            |
+| 5   | Protocol Validation Report           | ✅ Complete | `docs/phase-0.5/validation-report.md`          | Comprehensive analysis complete (939 lines)          |
+| 6   | Updated Protocol Documentation       | ✅ Complete | `docs/phase-0.5/packet-structure-validated.md` | Implementation reference for Phase 1                 |
+| 7   | Checksum Validation Script           | ✅ Complete | `mitm/validate-checksum-REFERENCE-ONLY.py`     | Validated 2/2 legacy fixtures                        |
+| 8   | Full Fingerprint Field Verification  | ✅ Complete | `docs/phase-0.5/deduplication-strategy.md`     | msg_id is sequential counter; Payload Hash essential |
+| 9   | Device Backpressure Behavior Testing | ✅ Complete | `docs/phase-0.5/backpressure-behavior.md`      | Analysis from captures + manual test guide created   |
+| 10  | Helper Scripts                       | ✅ Complete | `mitm/parse-capture.py`                        | Packet filtering and analysis utility                |
+| 11A | ACK Latency Measurements             | ✅ Complete | `docs/phase-0.5/ack-latency-measurements.md`   | 24,960 pairs analyzed, all types meet 100+ samples   |
+| 11  | Group Operation Performance          | ❌ Deferred | N/A                                            | Moved to Phase 1d per spec line 1592                 |
 
 ### 🔍 Key Findings
 
@@ -81,7 +78,13 @@
 
 **Finding 4: Packet Structure Confirmed** - Header, endpoint extraction, queue ID structure validated against real packets.
 
-**Finding 5: Mesh Info Injection Not Feasible** - Packet injection cannot replicate session context; see `docs/protocol/mesh-info-investigation-results.md`.
+**Finding 5: Mesh Info Injection Not Feasible** - Packet injection cannot replicate session context; see `docs/phase-0.5/mesh-info-investigation-results.md`.
+
+**Finding 6: Command Type Determines Response** - Response type is command-type-dependent, not state-dependent. POWER_TOGGLE (`f8 d0 0d`) is universal (valid for bulbs, lights, switches, plugs) and always produces compound responses (36 bytes). SET_MODE (`f8 8e 0c`) is switch-specific and produces variable responses (12 or 36 bytes). See `docs/phase-0.5/packet-structure-validated.md`.
+
+**Finding 7: Bridge Endpoint Targeting Required** - Commands MUST target bridge endpoints (from 0x23 handshake), NOT mesh coordinator endpoint. Mesh coordinator endpoint (`1b:dc:da:3e`) is for status reporting only. Commands to mesh coordinator are rejected with pure ACKs. See `docs/phase-0.5/mesh-vs-device-level-packets.md`.
+
+**Finding 8: Device ID Format Validated** - Device IDs are 2 bytes, little-endian, range 10-255. Invalid device IDs produce pure ACK responses (12 bytes) instead of compound responses (36 bytes). See `docs/phase-0.5/packet-structure-validated.md`.
 
 ### 📊 Capture Results
 
@@ -112,7 +115,7 @@
 
 Phase 0.5 validates and documents the real Cync device protocol through packet capture and analysis. This phase bridges Phase 0 (which used a custom test protocol with 0xF00D magic bytes) and Phase 1a (which will implement the real Cync protocol encoder/decoder).
 
-**Why Phase 0.5?**
+### Why Phase 0.5?
 
 - Phase 0 used custom test framing (0xF00D + JSON) that won't work with real devices
 - Phase 1 spec assumes protocol knowledge, but we need real-world validation
@@ -133,7 +136,7 @@ Phase 0.5 validates and documents the real Cync device protocol through packet c
 
 ## Scope
 
-**In Scope:**
+### In Scope
 
 - Packet capture of real Cync devices via MITM proxy
 - Documentation of packet flows and structure
@@ -141,7 +144,7 @@ Phase 0.5 validates and documents the real Cync device protocol through packet c
 - Test fixture generation
 - Protocol validation against legacy documentation
 
-**Out of Scope:**
+### Out of Scope
 
 - Protocol implementation (Phase 1a)
 - Device simulator (Phase 1d)
@@ -173,11 +176,31 @@ Phase 0.5 validates and documents the real Cync device protocol through packet c
 | `0xD3` | HEARTBEAT_DEV    | DEV→CLOUD | Device heartbeat/ping                    |
 | `0xD8` | HEARTBEAT_CLOUD  | CLOUD→DEV | Cloud heartbeat response                 |
 
+### Command Types (0x73 Payload)
+
+#### Phase 0.5 validated command types for device control
+
+| Command Bytes | Name         | Valid For                      | Response Type       |
+| ------------- | ------------ | ------------------------------ | ------------------- |
+| `f8 d0 0d`    | POWER_TOGGLE | Bulbs, lights, switches, plugs | Compound (36 bytes) |
+| `f8 8e 0c`    | SET_MODE     | Switches only                  | Variable (12/36)    |
+| `f8 52 06`    | QUERY_STATUS | All devices                    | Variable            |
+
+### Response Type Indicators
+
+- **Compound (36 bytes)**: Command valid for device type, device exists
+  - 24 bytes: 0x73 DATA_CHANNEL (status update)
+  - 12 bytes: 0x7B DATA_ACK
+- **Pure ACK (12 bytes)**: Command invalid for device type OR device not found
+  - 12 bytes: 0x7B DATA_ACK only
+
+**Reference**: See Finding 6 and `docs/phase-0.5/packet-structure-validated.md` for details.
+
 ### Documented Packet Structure
 
 **Header (5 bytes)**:
 
-```
+```json
 [packet_type][0x00][0x00][length_multiplier][base_length]
 ```
 
@@ -213,19 +236,19 @@ Phase 0.5 validates and documents the real Cync device protocol through packet c
 **Test DNS Override Capability**:
 
 ```bash
-# Linux/Mac: Add to /etc/hosts
+## Linux/Mac: Add to /etc/hosts
 sudo sh -c 'echo "127.0.0.1  cm.gelighting.com" >> /etc/hosts'
 
-# Windows: Add to C:\Windows\System32\drivers\etc\hosts
-# (Open notepad as Administrator, add line: 127.0.0.1  cm.gelighting.com)
+## Windows: Add to C:\Windows\System32\drivers\etc\hosts
+## (Open notepad as Administrator, add line: 127.0.0.1  cm.gelighting.com)
 
-# Verify DNS resolution
+## Verify DNS resolution
 nslookup cm.gelighting.com
-# Expected output: Should resolve to 127.0.0.1
+## Expected output: Should resolve to 127.0.0.1
 
-# Alternative verification
+## Alternative verification
 ping cm.gelighting.com
-# Should ping 127.0.0.1
+## Should ping 127.0.0.1
 ```
 
 **Common DNS Override Issues & Solutions (Technical Review Finding 2.2 - Enhanced)**:
@@ -241,15 +264,15 @@ ping cm.gelighting.com
 **Verification Command**:
 
 ```bash
-# MUST return 127.0.0.1 (not real cloud IP)
+## MUST return 127.0.0.1 (not real cloud IP)
 nslookup cm.gelighting.com
 
-# Expected output:
-# Server:         127.0.0.1
-# Address:        127.0.0.1#53
+## Expected output:
+## Server:         127.0.0.1
+## Address:        127.0.0.1#53
 #
-# Name:   cm.gelighting.com
-# Address: 127.0.0.1
+## Name:   cm.gelighting.com
+## Address: 127.0.0.1
 ```
 
 **Port Availability Check (Required)**:
@@ -257,16 +280,16 @@ nslookup cm.gelighting.com
 The MITM proxy requires port 23779 to be available (same port as Cync cloud protocol).
 
 ```bash
-# Check if port 23779 is available
+## Check if port 23779 is available
 sudo lsof -i :23779 || echo "Port 23779 is available"
 
-# If port in use, identify the process
+## If port in use, identify the process
 ps -p $(sudo lsof -t -i:23779) -o pid,cmd
 
-# Common scenarios:
-# - Cloud relay mode running: Stop add-on or disable cloud_relay.enabled
-# - Old MITM proxy: Kill process with: kill $(sudo lsof -t -i:23779)
-# - Other service: Identify and stop the service before proceeding
+## Common scenarios:
+## - Cloud relay mode running: Stop add-on or disable cloud_relay.enabled
+## - Old MITM proxy: Kill process with: kill $(sudo lsof -t -i:23779)
+## - Other service: Identify and stop the service before proceeding
 ```
 
 **Prerequisite Summary**:
@@ -383,7 +406,7 @@ For each captured packet:
 
 **Goal**: Determine if ACK packets contain msg_id and document exact byte positions for reliable ACK matching.
 
-**ACK Confidence Thresholds**
+#### ACK Confidence Thresholds
 
 Confidence criteria determine which Phase 1b implementation approach to use:
 
@@ -422,10 +445,10 @@ For each ACK type (0x28, 0x7B, 0x88, 0xD8), the validation must meet these stand
 
 **Detailed Method** (for each ACK type):
 
-**Step 1: Capture Request→ACK Pairs**
+### Step 1: Capture Request→ACK Pairs
 
 ```bash
-# Example for 0x73 → 0x7B validation
+## Example for 0x73 → 0x7B validation
 for i in {1..10}; do
   # Send command with unique msg_id
   msg_id=$(printf "%02x%02x%02x" $((i * 10)) $((i * 20)) $((i * 30)))
@@ -436,22 +459,22 @@ for i in {1..10}; do
 done
 ```
 
-**Step 2: Extract Known msg_id from Request**
+### Step 2: Extract Known msg_id from Request
 
 ```python
-# For 0x73 data packet
+## For 0x73 data packet
 request_packet = captured_0x73
 msg_id = request_packet[10:13]  # Bytes 10-12 (known position)
 print(f"Request msg_id: {msg_id.hex()}")  # e.g., "0a 14 1e"
 ```
 
-**Step 3: Search ACK Packet for msg_id**
+### Step 3: Search ACK Packet for msg_id
 
 ```python
 ack_packet = captured_0x7B
 matches = []
 
-# Search all possible 3-byte positions
+## Search all possible 3-byte positions
 for pos in range(len(ack_packet) - 2):
     if ack_packet[pos:pos+3] == msg_id:
         matches.append(pos)
@@ -466,16 +489,16 @@ else:
     # Requires disambiguation via structural analysis
 ```
 
-**Step 4: Consistency Validation**
+### Step 4: Consistency Validation
 
 ```python
-# Across all 10+ captures
+## Across all 10+ captures
 position_counts = {}
 for capture in all_captures:
     position = find_msg_id_position(capture.ack_packet, capture.msg_id)
     position_counts[position] = position_counts.get(position, 0) + 1
 
-# Check for 100% consistency
+## Check for 100% consistency
 if len(position_counts) == 1:
     position, count = list(position_counts.items())[0]
     print(f"✅ Consistent position: bytes {position}-{position+2} (10/10 captures)")
@@ -484,10 +507,10 @@ else:
     # Example: {5: 8, 6: 2} means bytes 5-7 in 8 captures, bytes 6-8 in 2 captures
 ```
 
-**Step 5: False Positive Mitigation**
+### Step 5: False Positive Mitigation
 
 ```python
-# If multiple positions found, use structural analysis to disambiguate
+## If multiple positions found, use structural analysis to disambiguate
 def validate_position_structure(ack_packet, position):
     """Check if position makes structural sense."""
     # Check 1: Not in fixed header (bytes 0-4)
@@ -507,7 +530,7 @@ def validate_position_structure(ack_packet, position):
     return True, "Position structurally valid"
 ```
 
-**Step 6: Documentation**
+### Step 6: Documentation
 
 ```markdown
 | ACK Type | Request Type | msg_id Present? | Position  | Confidence | Sample Size      | Notes                       |
@@ -542,11 +565,11 @@ def validate_position_structure(ack_packet, position):
 - Firmware variance: Different positions across firmware versions
 - Result: Phase 1b implements FIFO queue (serialized requests)
 
-**⚠️ CRITICAL EXIT CRITERIA (Technical Review Finding 1.1 - Resolved)**
+### ⚠️ CRITICAL EXIT CRITERIA (Technical Review Finding 1.1 - Resolved)
 
 Phase 0.5 MUST produce definitive ACK structure findings before Phase 1b starts. Ambiguous results are NOT acceptable exit criteria.
 
-**If findings are ambiguous after initial 10+ samples per ACK type:**
+### If findings are ambiguous after initial 10+ samples per ACK type
 
 1. **DO NOT proceed to Phase 1b**
 2. **Capture 10+ ADDITIONAL samples** per ambiguous ACK type
@@ -699,10 +722,10 @@ class MITMProxy:
 **REST API Usage Example**:
 
 ```bash
-# Start MITM proxy
+## Start MITM proxy
 python mitm/mitm-proxy.py --listen-port 23779 --upstream-host 35.196.85.236 --api-port 8080
 
-# In another terminal, inject a Toggle command
+## In another terminal, inject a Toggle command
 curl -X POST http://localhost:8080/inject \
   -H "Content-Type: application/json" \
   -d '{
@@ -710,35 +733,35 @@ curl -X POST http://localhost:8080/inject \
     "hex": "73 00 00 00 1e 1b dc da 3e 00 13 00 7e 0d 01 00 00 f8 8e 0c 00 0e 01 00 00 00 a0 00 f7 11 02 01 01 55 7e"
   }'
 
-# Response:
-# {
-#   "status": "success",
-#   "timestamp": "2025-11-06T10:23:45.123Z",
-#   "direction": "CLOUD→DEV",
-#   "length": 35,
-#   "connections": 1
-# }
+## Response:
+## {
+##   "status": "success",
+##   "timestamp": "2025-11-06T10:23:45.123Z",
+##   "direction": "CLOUD→DEV",
+##   "length": 35,
+##   "connections": 1
+## }
 
-# Check proxy logs for injected packet and resulting ACK (0x7B)
+## Check proxy logs for injected packet and resulting ACK (0x7B)
 ```
 
 **Packet Injection Limitations**:
 
 While packet injection successfully replicates the **packet structure** from legacy code (e.g., `ask_for_mesh_info()`), it cannot replicate the **architectural context** required for certain operations:
 
-**What CAN be copied via injection:**
+### What CAN be copied via injection
 
 - Exact packet byte structure (header, queue_id, msg_id, payload, checksum)
 - Toggle commands (0x73) → Successfully trigger ACK responses (0x7B)
 
-**What CANNOT be replicated via injection:**
+### What CANNOT be replicated via injection
 
 - **Authenticated device sessions**: Injected packets bypass the 0x23/0x28 handshake
 - **Primary device architecture**: Only the first connected device processes mesh info responses
 - **Session state**: Devices validate sender credentials before sending 0x83 broadcasts
 - **Response processing infrastructure**: No packet handler exists to process responses
 
-**Specific Limitation: Mesh Info Requests**
+### Specific Limitation: Mesh Info Requests
 
 Mesh info requests (0x73 with inner_struct `f8 52 06`) cannot be tested via packet injection:
 
@@ -748,13 +771,13 @@ Mesh info requests (0x73 with inner_struct `f8 52 06`) cannot be tested via pack
 
 **For mesh info testing**: Use production code with real `CyncTCPDevice` instances, not packet injection.
 
-**Investigation Results**: Full analysis documented in `docs/protocol/mesh-info-investigation-results.md` (299 lines)
+**Investigation Results**: Full analysis documented in `docs/phase-0.5/mesh-info-investigation-results.md` (299 lines)
 
 **Reference**: Architecture based on `CloudRelayConnection._forward_with_inspection()` from existing cloud relay (reference only, not integrated)
 
 ### 2. Protocol Capture Document
 
-**File**: `docs/protocol/02-phase-0.5-captures.md`
+**File**: `docs/phase-0.5/02-phase-0.5-captures.md`
 
 **Contents**:
 
@@ -788,12 +811,18 @@ Mesh info requests (0x73 with inner_struct `f8 52 06`) cannot be tested via pack
 
 - Acknowledge byte 9 serves dual purpose in both queue_id and msg_id
 - Document extraction algorithm showing overlap:
-  ```
-  Packet bytes: [... 05 06 07 08 09 10 11 ...]
-  queue_id: packet[5:10] = [05 06 07 08 09]  # bytes 5-9 inclusive
-  msg_id: packet[9:12] = [09 10 11]          # bytes 9-11 inclusive
-  Overlap: byte 9 appears in BOTH identifiers
-  ```
+
+```
+
+Packet bytes: [... 05 06 07 08 09 10 11 ...]
+queue_id: packet[5:10] = [05 06 07 08 09] # bytes 5-9 inclusive
+msg_id: packet[9:12] = [09 10 11] # bytes 9-11 inclusive
+Overlap: byte 9 appears in BOTH identifiers
+
+```
+
+```
+
 - Phase 1a implementation: Extract both with overlapping ranges (simple, follows protocol)
 - Complexity: Low (straightforward array slicing)
 - Risk: None (protocol defines it this way)
@@ -817,6 +846,7 @@ Mesh info requests (0x73 with inner_struct `f8 52 06`) cannot be tested via pack
   - Validate: max packet size < 4096 bytes (MAX_PACKET_SIZE assumption)
   - If any packet > 4KB: Document in validation report and update Phase 1a PacketFramer.MAX_PACKET_SIZE
   - Provide size distribution table:
+
     ```
     | Packet Type | Min Size | Max Size  | Median | p99 |
     | ----------- | -------- | --------- | ------ | --- |
@@ -827,13 +857,15 @@ Mesh info requests (0x73 with inner_struct `f8 52 06`) cannot be tested via pack
 
 **Format Example**:
 
-```markdown
+```
+
 ### Flow 1: Device Handshake
 
 **Context**: Cync bulb (firmware 1.2.3) boots and connects
 
 **Packet 1: 0x23 Handshake (DEV→CLOUD)**
-```
+
+```yaml
 
 Timestamp: 2025-11-02T10:23:45.123Z
 Direction: DEV→CLOUD
@@ -853,28 +885,34 @@ Breakdown:
 
 **Packet 2: 0x28 Hello ACK (CLOUD→DEV)**
 ...
-```
+
+```python
 
 **Endpoint Extraction Validation**:
 
-```python
-# Extract endpoint from 0x23 handshake packet
+```
+
+## Extract endpoint from 0x23 handshake packet
+
 handshake_packet = captured_0x23
 endpoint = handshake_packet[6:10]  # Bytes 6-9 (4 bytes)
 print(f"Endpoint (hex): {endpoint.hex(' ')}")  # e.g., "39 87 c8 57"
 print(f"Endpoint (decimal): {int.from_bytes(endpoint, 'big')}")  # e.g., 967239767
 print(f"Endpoint (little-endian): {int.from_bytes(endpoint, 'little')}")  # For comparison
 
-# Verify byte 5 is NOT part of endpoint
+## Verify byte 5 is NOT part of endpoint
+
 byte_5 = handshake_packet[5]
 print(f"Byte 5 (padding/unknown): 0x{byte_5:02x}")  # e.g., 0x03 (varies, not endpoint)
-```
+
+```python
 
 ### 3. Test Fixtures
 
 **File**: `tests/fixtures/real_packets.py`
 
-```python
+```
+
 """Real packet captures for protocol validation testing.
 
 All packets captured during Phase 0.5 protocol validation.
@@ -894,7 +932,7 @@ class PacketMetadata:
     operation: str           # e.g., "handshake", "toggle_on", "status"
     notes: str = ""          # Additional context
 
-# Phase 0.5 - Captured 2025-11-02 from Cync bulb (firmware 1.2.3)
+## Phase 0.5 - Captured 2025-11-02 from Cync bulb (firmware 1.2.3)
 
 HANDSHAKE_0x23_DEV_TO_CLOUD = bytes.fromhex(
     "23 00 00 00 1a 03 39 87 c8 57 00 10 31 65 30 37 "
@@ -972,7 +1010,8 @@ STATUS_ACK_0x88_METADATA = PacketMetadata(
     notes="Cloud acknowledges status broadcast"
 )
 
-# Metadata registry for parameterized tests
+## Metadata registry for parameterized tests
+
 PACKET_METADATA: Dict[str, PacketMetadata] = {
     "HANDSHAKE_0x23": HANDSHAKE_0x23_METADATA,
     "HELLO_ACK_0x28": HELLO_ACK_0x28_METADATA,
@@ -982,12 +1021,13 @@ PACKET_METADATA: Dict[str, PacketMetadata] = {
     "STATUS_ACK_0x88": STATUS_ACK_0x88_METADATA,
 }
 
-# Additional fixtures for edge cases...
-```
+## Additional fixtures for edge cases
+
+```python
 
 ### 4. Checksum Validation Results
 
-**File**: `docs/protocol/checksum-validation.md`
+**File**: `docs/phase-0.5/checksum-validation.md`
 
 **Contents**:
 
@@ -996,23 +1036,34 @@ PACKET_METADATA: Dict[str, PacketMetadata] = {
   **Structure**: `[...][0x7E][skip 6 bytes][data to sum...][checksum byte][0x7E]`
 
   **Algorithm Steps**:
+
   1. Locate first 0x7E marker (start position)
   2. Locate last 0x7E marker (end position)
   3. Sum bytes from `packet[start+6 : end-1]`
      - Starts 6 bytes after first 0x7E
      - Ends before checksum byte (which is at position end-1)
      - Excludes both the checksum itself and trailing 0x7E
+
   4. Result = sum % 256
 
   **Visual Example**:
+```
 
-  ```
-  Position:  0  1  2  3  4  5  6  7  8  9  10 11 12 13 14
-  Bytes:    [header....][0x7E][6 skip bytes][AA][BB][CC][55][0x7E]
-                         ^                   ^sum these^ ^cs ^end
-                       start
-  Checksum = (AA + BB + CC) % 256 = 0x55
-  ```
+```
+
+```
+
+```text
+
+Position: 0 1 2 3 4 5 6 7 8 9 10 11 12 13 14
+Bytes: [header....][0x7E][6 skip bytes][AA][BB][CC][55][0x7E]
+^ ^sum these^ ^cs ^end
+start
+Checksum = (AA + BB + CC) % 256 = 0x55
+
+```
+
+```
 
 - Validation against 10+ real captured packets
 - Results table with columns:
@@ -1032,7 +1083,9 @@ PACKET_METADATA: Dict[str, PacketMetadata] = {
 
 ### 5. Protocol Validation Report
 
-**File**: `docs/protocol/validation-report.md`
+**File**: `docs/phase-0.5/validation-report.md`
+
+**Status**: ✅ Complete (939 lines)
 
 **Sections**:
 
@@ -1043,9 +1096,17 @@ PACKET_METADATA: Dict[str, PacketMetadata] = {
 5. **Checksum Validation**: Reference to checksum-validation.md
 6. **Recommendations**: Updates needed for Phase 1a implementation
 
+**Key Findings**:
+
+- 100% checksum validation (13/13 packets)
+- Hybrid ACK matching strategy required (only 0x7B has msg_id at byte 10)
+- Clean byte boundaries confirmed (no overlap between queue_id and msg_id)
+- Protocol stability excellent (zero malformed packets in 2,251 analyzed)
+- Performance well within acceptable ranges (median RTT 20-45ms)
+
 ### 6. Updated Protocol Documentation
 
-**File**: `docs/protocol/packet-structure-validated.md`
+**File**: `docs/phase-0.5/packet-structure-validated.md`
 
 - Corrected packet structure based on real captures
 - Confirmed positions for endpoint, queue_id, msg_id
@@ -1067,7 +1128,8 @@ PACKET_METADATA: Dict[str, PacketMetadata] = {
 
 **Implementation Pattern**:
 
-```python
+```
+
 """Validate Cync checksum algorithm against captured packets.
 
 This script tests the checksum algorithm from the legacy codebase
@@ -1084,10 +1146,12 @@ Phase 1a MUST copy the validated algorithm into new codebase (see Phase 1a Step 
 Importing legacy code in Phase 1a violates architecture principles and will be rejected.
 """
 
-# Import from legacy codebase (reference only - for validation)
+## Import from legacy codebase (reference only - for validation)
+
 from cync_controller.packet_checksum import calculate_checksum_between_markers
 
-# Test fixtures from Phase 0.5 captures
+## Test fixtures from Phase 0.5 captures
+
 FIXTURES = {
     "CONTROL_COMMAND_0x73": bytes.fromhex(
         "73 00 00 00 0a 01 20 03 15 29 7e 64 ff 01 55 7e"
@@ -1134,9 +1198,10 @@ def validate_fixtures():
     print(f"\n✅ All {len(results)} packets validated successfully")
     return results
 
-if __name__ == "__main__":
+if **name** == "**main**":
     validate_fixtures()
-```
+
+```python
 
 **Key Requirements**:
 
@@ -1144,12 +1209,12 @@ if __name__ == "__main__":
 - Imports from legacy codebase for validation purposes
 - Test against 10+ real captured packets from Phase 0.5
 - Assert failures on mismatch (algorithm must be correct before Phase 1a copies it)
-- Output results to `docs/protocol/checksum-validation.md`
+- Output results to `docs/phase-0.5/checksum-validation.md`
 - Phase 1a will copy and adapt this validated algorithm
 
 ### 8. Full Fingerprint Field Verification (Prerequisite for Phase 1b)
 
-**File**: `docs/protocol/deduplication-strategy.md`
+**File**: `docs/phase-0.5/deduplication-strategy.md`
 
 **Purpose**: Verify that Full Fingerprint required fields (packet_type, endpoint, msg_id, payload) are present and extractable in retry packets.
 
@@ -1166,20 +1231,23 @@ if __name__ == "__main__":
 
 **IMPORTANT**: Phase 0.5 runs BEFORE Phase 1b implements automatic retry logic. Therefore, retry packet capture requires **manual simulation** of retries.
 
-**Method: Manual Retry Simulation**
+### Method: Manual Retry Simulation
 
 1. **Setup MITM Proxy** (standard capture, no packet drop needed):
 
-   ```bash
-   # Start MITM proxy with standard logging
+   ```
+
+# Start MITM proxy with standard logging
+
    python mitm/mitm-proxy.py \
      --listen-port 23779 \
      --upstream-host 35.196.85.236 \
      --upstream-port 23779 \
      --capture-file mitm/captures/retry-analysis.txt
-   ```
 
-2. **Manual Retry Trigger Process**:
+```
+
+1. **Manual Retry Trigger Process**:
 
    For each retry capture iteration (repeat 20 times):
 
@@ -1204,12 +1272,14 @@ if __name__ == "__main__":
 
    e. **Repeat** for iterations 02-20 with different light/device
 
-3. **Packet Labeling in MITM Proxy**:
+2. **Packet Labeling in MITM Proxy**:
 
    Update `mitm/mitm-proxy.py` to support manual annotations:
 
-   ```python
-   # Add to MITM proxy
+   ```
+
+# Add to MITM proxy
+
    def _log_packet(self, data: bytes, direction: str):
        log_entry = {
            "timestamp": datetime.now().isoformat(),
@@ -1221,6 +1291,7 @@ if __name__ == "__main__":
        }
        print(json.dumps(log_entry))
        self.packet_counter += 1
+
    ```
 
    **Annotation Methods**:
@@ -1228,12 +1299,14 @@ if __name__ == "__main__":
    - Option B: Keyboard input - press key to advance iteration
    - Option C: REST API - call endpoint to set annotation
 
-4. **Correlation Method**:
+3. **Correlation Method**:
 
    After capture, correlate packets by analyzing capture log:
 
-   ```python
-   # Example correlation logic
+   ```
+
+# Example correlation logic
+
    for iteration in range(1, 21):
        attempt_1_packets = find_packets_with_annotation(f"ITERATION_{iteration:02d}_ATTEMPT_1")
        attempt_2_packets = find_packets_with_annotation(f"ITERATION_{iteration:02d}_ATTEMPT_2")
@@ -1246,14 +1319,18 @@ if __name__ == "__main__":
 
        # Compare bytes
        compare_packets(original_cmd, retry_1_cmd, retry_2_cmd)
+
    ```
 
-5. **Byte-by-Byte Comparison**:
+4. **Byte-by-Byte Comparison**:
 
-   ```bash
-   # Analyze captured retry packets
+   ```
+
+# Analyze captured retry packets
+
    python scripts/analyze-retry-packets.py captures/retry-analysis.txt \
-     --output docs/protocol/deduplication-strategy.md
+     --output docs/phase-0.5/deduplication-strategy.md
+
    ```
 
    Analysis script should:
@@ -1306,7 +1383,8 @@ if __name__ == "__main__":
 
 **Deliverable Format**:
 
-````markdown
+```
+
 ## Deduplication Strategy Field Verification Results
 
 **Strategy Pre-Selected**: Full Fingerprint (Option C)
@@ -1332,24 +1410,31 @@ if __name__ == "__main__":
 **Test Fixtures for Phase 1b**:
 
 ```python
-# Packet pair 1: Toggle light on (original + retry)
+## Packet pair 1: Toggle light on (original + retry)
 TOGGLE_ON_ORIGINAL = bytes.fromhex("...")
 TOGGLE_ON_RETRY = bytes.fromhex("...")
 
-# Expected dedup key using Full Fingerprint:
-# Format: "{packet_type:02x}:{endpoint.hex()}:{msg_id.hex()}:{payload_hash[:16]}"
+## Expected dedup key using Full Fingerprint:
+## Format: "{packet_type:02x}:{endpoint.hex()}:{msg_id.hex()}:{payload_hash[:16]}"
 EXPECTED_DEDUP_KEY_ORIGINAL = "73:3987c857:0a141e:a3f2b9c4d8e1f6a2"
 EXPECTED_DEDUP_KEY_RETRY = "73:3987c857:0a141e:a3f2b9c4d8e1f6a2"  # Should match!
 ```
-````
+
+```
 
 **Field Verification Conclusion for Phase 1b**:
+
+```
 
 - Required fields extractable: [YES/NO]
 - Fields stable across retries: [YES/NO]
 - Test fixtures ready for Phase 1b: [YES/NO]
 
-````
+```
+
+```
+
+```
 
 **Phase 1b Strategy Validation Note**:
 
@@ -1363,16 +1448,19 @@ Phase 1b Step 4 performs the **actual strategy validation** using real automatic
 3. **No unexpected edge cases** with automatic retry behavior
 
 **Phase 1b Step 4 Strategy Validation Method**:
+
 - Implement Full Fingerprint dedup_key generation in `_make_dedup_key()`
 - Run Phase 1d simulator with packet drop (20%) to trigger automatic retries
 - Verify strategy correctly identifies duplicate packets with zero false positives/negatives
 - Document: "Full Fingerprint strategy validated - correctly identifies all duplicates"
 
 **Terminology Clarity**:
+
 - **Phase 0.5 Field Verification**: Confirms required fields exist and are extractable (prerequisite)
 - **Phase 1b Step 4 Strategy Validation**: Tests dedup effectiveness with real retries (actual validation)
 
 **Acceptance Criteria for Phase 1b Step 4**:
+
 - [ ] Full Fingerprint strategy implemented in `_make_dedup_key()`
 - [ ] Strategy validated with automatic retries (zero false positives/negatives)
 - [ ] Test fixtures from Phase 0.5 field verification used in unit tests
@@ -1380,7 +1468,7 @@ Phase 1b Step 4 performs the **actual strategy validation** using real automatic
 
 ### 9. Device Backpressure Behavior Testing
 
-**File**: `docs/protocol/backpressure-behavior.md`
+**File**: `docs/phase-0.5/backpressure-behavior.md`
 
 **Purpose**: Validate how Cync devices react when receiver applies backpressure (TCP buffer fills, slow ACKs).
 
@@ -1405,6 +1493,7 @@ Phase 1b Step 4 performs the **actual strategy validation** using real automatic
    - Record: Retry behavior, timeout thresholds
 
 **Documentation Requirements**:
+
 - Observed behavior for each scenario (with packet captures if possible)
 - Timeout values (if device disconnects)
 - Whether device has internal buffering/retry logic
@@ -1412,6 +1501,7 @@ Phase 1b Step 4 performs the **actual strategy validation** using real automatic
 - **Recommendation for Phase 1c recv_queue policy** (BLOCK vs DROP_OLDEST)
 
 **Success Criteria**:
+
 - [ ] Device behavior documented for all 3 scenarios
 - [ ] Specific recommendation made for recv_queue policy
 - [ ] Specific recommendation made for recv_queue size
@@ -1419,9 +1509,10 @@ Phase 1b Step 4 performs the **actual strategy validation** using real automatic
 
 ### 10. Helper Scripts
 
-**File**: `scripts/parse-capture.py`
+**File**: `mitm/parse-capture.py`
 
-```python
+```
+
 """Parse captured packet logs and generate test fixtures."""
 
 import re
@@ -1436,12 +1527,13 @@ def generate_fixture(packets: list) -> str:
     """Generate Python test fixture from captured packets."""
     pass
 
-if __name__ == "__main__":
+if **name** == "**main**":
     # Read from stdin or file
     # Parse packets
     # Generate fixtures
     pass
-````
+
+```
 
 ### 11. Group Operation Performance Validation
 
@@ -1470,7 +1562,7 @@ if __name__ == "__main__":
 
 **Deliverables**:
 
-- Performance report: `docs/protocol/group-operation-performance.md`
+- Performance report: `docs/phase-0.5/group-operation-performance.md`
 - Results table with p50/p95/p99 for 10-device operations
 - State lock hold time measurements
 - Recommendation for Phase 1c (proceed with no send_queue vs add send_queue)
@@ -1499,7 +1591,7 @@ if __name__ == "__main__":
 - [ ] Checksum algorithm validated against legacy fixtures + 10+ real packets
 - [ ] ACK structure: 10+ samples per type (0x28, 0x7B, 0x88, 0xD8), msg_id presence/absence confirmed
 - [ ] Queue ID ↔ Endpoint derivation validated (5+ handshake→data sequences)
-- [ ] Updated protocol documentation (`docs/protocol/packet-structure-validated.md`)
+- [ ] Updated protocol documentation (`docs/phase-0.5/packet-structure-validated.md`)
 
 ### Tier 2: Quality Criteria (Non-blocking)
 

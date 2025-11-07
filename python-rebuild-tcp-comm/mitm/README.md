@@ -14,21 +14,67 @@ This directory contains the MITM (Man-in-the-Middle) proxy tool and captured pac
 
 ### Start MITM Proxy
 
+#### Mode 1: Cloud Intercept (Protocol Research)
+
+Forward to real Cync cloud for protocol validation:
+
 ```bash
-# Forward to real Cync cloud
+## Forward to real Cync cloud
 python mitm/mitm-proxy.py --listen-port 23779 --upstream-host 35.196.85.236 --upstream-port 23779
 
-# Forward to localhost cloud relay (testing)
-python mitm/mitm-proxy.py --listen-port 23779 --upstream-host localhost --upstream-port 23780 --no-ssl
-
-# With packet injection API
+## With packet injection API
 python mitm/mitm-proxy.py --listen-port 23779 --upstream-host 35.196.85.236 --api-port 8080
 ```
+
+**Use case**: Phase 0.5 protocol validation, capturing device behavior with real cloud.
+
+#### Mode 2: Local Intercept (Live Command Capture) 🆕
+
+Forward to local cync-controller for capturing live HA commands:
+
+```bash
+## Forward to cync-controller running at 192.168.50.32
+python mitm/mitm-proxy.py --listen-port 23779 --upstream-host homeassistant.local --upstream-port 23779 --api-port 8080
+```
+
+**Network flow**:
+
+```text
+Devices → DNS (cm.gelighting.com → devcontainer)
+        → MITM (devcontainer:23779, TLS)
+        → cync-controller (HA:23779, SSL)
+        → Captures bidirectional traffic
+```
+
+**Use case**: Capture commands issued from live Home Assistant UI to see exact command sequences and device responses.
+
+**Benefits**:
+
+- See what the production controller sends for any action
+- Capture bidirectional flow (HA→device AND device→HA)
+- Debug command sequences in real-time
+- Validate protocol implementation against live system
+
+**Setup requirements**:
+
+1. DNS already pointing `cm.gelighting.com` to devcontainer IP
+2. Devices connected to MITM (will auto-reconnect through DNS)
+3. Use actual HA IP address (not hostname if DNS unavailable in devcontainer)
+
+#### Mode 3: Localhost Testing
+
+Forward to localhost cloud relay simulator:
+
+```bash
+python mitm/mitm-proxy.py --listen-port 23779 --upstream-host localhost --upstream-port 23780 --no-ssl
+```
+
+**Use case**: Testing with local simulators.
 
 ### Analyze Captures
 
 ```bash
-# Analyze captured JSONL packets
+## Analyze captured JSONL packets
 python mitm/analyze-captures.py
 ```
 
@@ -37,7 +83,7 @@ Generates statistics and flow status for Phase 0.5 deliverables.
 ### Validate Checksum Algorithm
 
 ```bash
-# Validate checksum algorithm against test fixtures and real packets
+## Validate checksum algorithm against test fixtures and real packets
 python mitm/validate-checksum-REFERENCE-ONLY.py
 ```
 
@@ -45,9 +91,16 @@ python mitm/validate-checksum-REFERENCE-ONLY.py
 
 ### Prerequisites
 
-- DNS redirection: `cm.gelighting.com → 127.0.0.1`
-- Port 23779 available
+**General**:
+
+- Port 23779 available in devcontainer
 - TLS termination configured (devices use SSL with self-signed cert)
+- SSL certificates in `certs/cert.pem` and `certs/key.pem`
+
+**DNS Configuration**:
+
+- **Cloud mode**: `cm.gelighting.com → 127.0.0.1` (localhost)
+- **Local intercept mode**: `cm.gelighting.com → <devcontainer IP>` (already configured if using)
 
 ## Directory Structure
 
@@ -67,7 +120,12 @@ Analysis results and test output:
 
 ## Documentation
 
-See `docs/02a-phase-0.5-protocol-validation.md` for:
+**Quick Start Guides**:
+
+- **Local intercept mode**: `docs/living/mitm-local-intercept.md` - Capture live HA commands 🆕
+- **Phase 0.5 validation**: `docs/02a-phase-0.5-protocol-validation.md` - Cloud mode protocol research
+
+**Detailed Documentation**:
 
 - Full MITM proxy specification
 - Packet capture methodology

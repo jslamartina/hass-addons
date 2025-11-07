@@ -14,7 +14,7 @@ When users rapidly toggle Cync devices in Home Assistant GUI, race conditions ca
 - Use 0x83 status broadcasts to confirm command completion
 - Clear `pending_command` only when 0x83 received
 
-**Why it didn't work:**
+### Why it didn't work
 
 - Cync devices send 0x48 ACKs with embedded status data
 - Callbacks update MQTT state immediately from ACKs
@@ -24,7 +24,7 @@ When users rapidly toggle Cync devices in Home Assistant GUI, race conditions ca
 
 ### Architecture Understanding
 
-```
+```sql
 GUI Click
   ↓
 MQTT Command
@@ -95,14 +95,14 @@ if success:
 
 **Test Case:** Rapid toggle Hallway Floodlight 1 (10 clicks in 2 seconds)
 
-**Expected Behavior:**
+### Expected Behavior
 
 - First click: 🚀 Command sent, pending=True
 - Next 9 clicks: ⏸️ THROTTLED (rejected)
 - Device ACKs: ✅ Confirmed, pending=False
 - Next click: 🚀 Command sent (new cycle)
 
-**Current Status:**
+### Current Status
 
 - 🚀 Logging works
 - ⏸️ Throttling works (but permanently locked after first command)

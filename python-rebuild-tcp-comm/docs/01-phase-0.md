@@ -19,7 +19,7 @@ Build a minimal, non-invasive toggler harness that:
 
 ## Scope
 
-**In Scope:**
+### In Scope
 
 - CLI toggler tool
 - TCP socket abstraction with timeouts
@@ -28,7 +28,7 @@ Build a minimal, non-invasive toggler harness that:
 - Retry with jitter
 - Per-packet `msg_id` generation
 
-**Out of Scope:**
+### Out of Scope
 
 - Integration with existing add-on
 - Production deployment
@@ -39,7 +39,7 @@ Build a minimal, non-invasive toggler harness that:
 
 ## Architecture
 
-```
+```text
 ┌─────────────┐
 │   toggler   │ CLI entry point
 │  (harness)  │
@@ -63,7 +63,7 @@ Build a minimal, non-invasive toggler harness that:
 
 For lab testing, we use a simple framed format:
 
-```
+```text
 ┌────────┬─────────┬────────┬─────────┐
 │ Magic  │ Version │ Length │ Payload │
 │ 2 bytes│ 1 byte  │ 4 bytes│ N bytes │
@@ -71,7 +71,7 @@ For lab testing, we use a simple framed format:
   0xF00D     0x01   uint32_be  JSON
 ```
 
-**Payload (JSON):**
+### Payload (JSON)
 
 ```json
 {
@@ -133,74 +133,74 @@ Exposed at `http://localhost:9400/metrics`:
 ```bash
 cd python-rebuild-tcp-comm
 
-# Setup environment (first time)
+## Setup environment (first time)
 ./scripts/setup.sh
 
-# Or manually
+## Or manually
 poetry install
 ```
 
 ### Using Helper Scripts
 
 ```bash
-# Quick test
+## Quick test
 ./scripts/test-all.sh
 
-# Run linting
+## Run linting
 ./scripts/lint.sh
 
-# Run toggler with defaults
+## Run toggler with defaults
 ./scripts/run.sh
 
-# Run with debug logging
+## Run with debug logging
 ./scripts/debug.sh
 
-# See all available scripts
+## See all available scripts
 ls -la scripts/
 ```
 
 ### Run Toggler (Multiple Ways)
 
-**Option 1: Using helper script (recommended)**
+#### Option 1: Using helper script (recommended)
 
 ```bash
-# With defaults
+## With defaults
 ./scripts/run.sh
 
-# With custom parameters
+## With custom parameters
 ./scripts/run.sh --device-id DEVICE123 --host 192.168.1.100 --port 9000
 
-# With debug logging
+## With debug logging
 ./scripts/run.sh --debug
 
-# Toggle off
+## Toggle off
 ./scripts/run.sh --state off
 ```
 
-**Option 2: Direct Python invocation**
+## Option 2: Direct Python invocation
 
 ```bash
-# Basic usage
+## Basic usage
 python -m rebuild_tcp_comm.harness.toggler \
   --device-id=DEVICE123 \
   --device-host=192.168.1.100 \
   --device-port=9000
 
-# With debug logging
+## With debug logging
 python -m rebuild_tcp_comm.harness.toggler \
   --device-id=DEVICE123 \
   --device-host=192.168.1.100 \
   --device-port=9000 \
   --log-level=DEBUG
 
-# Toggle off
+## Toggle off
 python -m rebuild_tcp_comm.harness.toggler \
   --device-id=DEVICE123 \
   --device-host=192.168.1.100 \
   --device-port=9000 \
   --state=off
 
-# Custom retry attempts
+## Custom retry attempts
 python -m rebuild_tcp_comm.harness.toggler \
   --device-id=DEVICE123 \
   --device-host=192.168.1.100 \
@@ -208,94 +208,94 @@ python -m rebuild_tcp_comm.harness.toggler \
   --max-attempts=3
 ```
 
-**Option 3: Environment variables**
+### Option 3: Environment variables
 
 ```bash
-# Set once
+## Set once
 export DEVICE_ID=DEVICE123
 export DEVICE_HOST=192.168.1.100
 export DEVICE_PORT=9000
 
-# Then run
+## Then run
 ./scripts/run.sh
 ```
 
 ### View Metrics
 
-**Option 1: Using helper script**
+#### Option 1: Using helper script
 
 ```bash
 ./scripts/check-metrics.sh
 ```
 
-**Option 2: Direct curl**
+### Option 2: Direct curl
 
 ```bash
-# In another terminal (while toggler is running or has run)
+## In another terminal (while toggler is running or has run)
 curl http://localhost:9400/metrics
 
-# Example output:
-# HELP tcp_comm_packet_sent_total Total packets sent
-# TYPE tcp_comm_packet_sent_total counter
-# tcp_comm_packet_sent_total{device_id="DEVICE123",outcome="success"} 1.0
+## Example output:
+## HELP tcp_comm_packet_sent_total Total packets sent
+## TYPE tcp_comm_packet_sent_total counter
+## tcp_comm_packet_sent_total{device_id="DEVICE123",outcome="success"} 1.0
 #
-# HELP tcp_comm_packet_recv_total Total packets received
-# TYPE tcp_comm_packet_recv_total counter
-# tcp_comm_packet_recv_total{device_id="DEVICE123",outcome="success"} 1.0
+## HELP tcp_comm_packet_recv_total Total packets received
+## TYPE tcp_comm_packet_recv_total counter
+## tcp_comm_packet_recv_total{device_id="DEVICE123",outcome="success"} 1.0
 #
-# HELP tcp_comm_packet_latency_seconds Packet round-trip latency in seconds
-# TYPE tcp_comm_packet_latency_seconds histogram
-# tcp_comm_packet_latency_seconds_bucket{device_id="DEVICE123",le="0.1"} 1.0
-# tcp_comm_packet_latency_seconds_sum{device_id="DEVICE123"} 0.0124
-# tcp_comm_packet_latency_seconds_count{device_id="DEVICE123"} 1.0
+## HELP tcp_comm_packet_latency_seconds Packet round-trip latency in seconds
+## TYPE tcp_comm_packet_latency_seconds histogram
+## tcp_comm_packet_latency_seconds_bucket{device_id="DEVICE123",le="0.1"} 1.0
+## tcp_comm_packet_latency_seconds_sum{device_id="DEVICE123"} 0.0124
+## tcp_comm_packet_latency_seconds_count{device_id="DEVICE123"} 1.0
 ```
 
 ### Run Tests
 
 Phase 0 now includes both **unit tests** (11 tests with mocks) and **integration tests** (8 tests with real TCP server).
 
-**Option 1: Using helper scripts (recommended)**
+#### Option 1: Using helper scripts (recommended)
 
 ```bash
-# Run ALL tests (unit + integration) - ~10-12 seconds
+## Run ALL tests (unit + integration) - ~10-12 seconds
 ./scripts/test-all.sh
 
-# Run ONLY unit tests (fast) - ~1-2 seconds
+## Run ONLY unit tests (fast) - ~1-2 seconds
 ./scripts/test-unit.sh
 
-# Run ONLY integration tests (real TCP) - ~8-10 seconds
+## Run ONLY integration tests (real TCP) - ~8-10 seconds
 ./scripts/test-integration.sh
 
-# Verbose output
+## Verbose output
 ./scripts/test-all.sh -v
 ./scripts/test-unit.sh -v
 ./scripts/test-integration.sh -v
 
-# Unit tests with coverage report
+## Unit tests with coverage report
 ./scripts/test-unit.sh -c
-# Open htmlcov/index.html to view
+## Open htmlcov/index.html to view
 
-# Integration tests with HTML report
+## Integration tests with HTML report
 ./scripts/test-integration.sh --html
-# Open test-reports/integration-report.html
+## Open test-reports/integration-report.html
 ```
 
-**Option 2: Direct pytest**
+## Option 2: Direct pytest
 
 ```bash
-# All tests (unit + integration)
+## All tests (unit + integration)
 poetry run pytest -v
 
-# Only unit tests
+## Only unit tests
 poetry run pytest -v tests/unit/
 
-# Only integration tests
+## Only integration tests
 poetry run pytest -v tests/integration/
 
-# Specific test
+## Specific test
 poetry run pytest -v tests/unit/test_toggler.py -k "toggle"
 
-# With coverage
+## With coverage
 poetry run pytest --cov=rebuild_tcp_comm --cov-report=html
 ```
 
@@ -306,35 +306,35 @@ poetry run pytest --cov=rebuild_tcp_comm --cov-report=html
 
 ### Lint & Format
 
-**Option 1: Using helper scripts**
+#### Option 1: Using helper scripts
 
 ```bash
-# Check code quality
+## Check code quality
 ./scripts/lint.sh
 
-# Auto-format code
+## Auto-format code
 ./scripts/format.sh
 
-# Full build validation
+## Full build validation
 ./scripts/build.sh
 ```
 
-**Option 2: Direct commands**
+## Option 2: Direct commands
 
 ```bash
-# Check
+## Check
 poetry run ruff check .
 
-# Fix
+## Fix
 poetry run ruff check --fix .
 
-# Type check
+## Type check
 poetry run mypy src tests
 ```
 
 ## Acceptance Criteria
 
-**All criteria met ✅**
+### All criteria met ✅
 
 - [x] Toggler successfully connects to a device (tested with mocks)
 - [x] Packet sent with correct format (validated in tests)
@@ -383,12 +383,14 @@ poetry run mypy src tests
 
 **Integration Test Results** (Latest Run: 2025-11-02):
 
-```
+```yaml
+
 Tests:        8/8 passing (100%)
 Duration:     ~14.6 seconds
 p50 latency:  0.46ms
 p95 latency:  0.54ms ✅ (target: 300ms)
 p99 latency:  0.54ms ✅ (target: 800ms)
+
 ```
 
 **Documentation**:

@@ -42,22 +42,22 @@ Before using these scripts, you need to configure the credentials file.
    - ✅ Use test credentials for development (`dev`/`dev` for HA and MQTT)
    - ⚠️ Never commit this file with real credentials
 
-**Example file contents:**
+### Example file contents
 
 ```bash
-# Home Assistant credentials
+## Home Assistant credentials
 HASS_USERNAME=dev
 HASS_PASSWORD=dev
 
-# Cync account credentials
+## Cync account credentials
 CYNC_USERNAME=your-email@example.com
 CYNC_PASSWORD=your-cync-password
 
-# MQTT broker credentials
+## MQTT broker credentials
 MQTT_USER=dev
 MQTT_PASS=dev
 
-# Optional: Long-lived access token (leave blank for auto-extract)
+## Optional: Long-lived access token (leave blank for auto-extract)
 LONG_LIVED_ACCESS_TOKEN=
 ```
 
@@ -71,19 +71,19 @@ Complete factory reset + automated onboarding in one command.
 
 **Purpose:** Fast way to get from any state to "fresh but onboarded" state. Combines `reset-ha-to-fresh.sh` + `setup-fresh-ha.sh` into one command.
 
-**Usage:**
+### Usage
 
 ```bash
 ./scripts/reset-ha-to-fresh-onboarded.sh
 ```
 
-**What It Does:**
+### What It Does
 
 1. Resets HA to fresh state (calls `reset-ha-to-fresh.sh`)
 2. Runs automated onboarding (calls `setup-fresh-ha.sh`)
 3. Results in fully configured HA with EMQX and Cync Controller
 
-**When to Use:**
+### When to Use
 
 - Quick iteration: need fresh onboarded state repeatedly
 - Testing the complete setup flow
@@ -99,13 +99,13 @@ Complete factory reset of Home Assistant - **equivalent to rebuilding the devcon
 
 **Purpose:** Recreates the exact conditions of a fresh devcontainer build without the 10-minute rebuild time. Essential for testing fresh install scenarios and debugging initialization errors that only appear on first boot.
 
-**Usage:**
+### Usage
 
 ```bash
 ./scripts/reset-ha-to-fresh.sh
 ```
 
-**What It Does:**
+### What It Does
 
 1. **Stop and Remove Container**
    - Stops Home Assistant Core
@@ -130,7 +130,7 @@ Complete factory reset of Home Assistant - **equivalent to rebuilding the devcon
    - Ready for manual testing or running `setup-fresh-ha.sh`
    - Allows you to debug initialization issues that only occur on first boot
 
-**Safety Features:**
+### Safety Features
 
 - ✅ Confirmation required (must type "yes")
 - ✅ Preserves addon code in `addons/local/`
@@ -138,14 +138,14 @@ Complete factory reset of Home Assistant - **equivalent to rebuilding the devcon
 - ✅ Detailed error messages with debug steps
 - ✅ Proper container removal to avoid file lock issues
 
-**When to Use:**
+### When to Use
 
 - Testing fresh install scenarios repeatedly
 - Debugging initialization errors that only happen on brand new builds
 - Need to verify behavior on completely clean HA state
 - Want devcontainer rebuild equivalent without 10-minute wait
 
-**Technical Details:**
+### Technical Details
 
 **Why remove the container?**
 Linux filesystems allow deleted files to persist while processes have them open. The homeassistant container's Python process keeps database files (including SQLite WAL files) open. Simply deleting files from the host leaves them accessible in memory through file descriptors. Removing the container guarantees all file descriptors are closed and deleted data is truly gone.
@@ -153,17 +153,17 @@ Linux filesystems allow deleted files to persist while processes have them open.
 **What's a WAL file?**
 SQLite Write-Ahead Log - changes written to `.db-wal` before committing to main `.db` file. Can persist state even after deleting the main database.
 
-**Examples:**
+### Examples
 
 ```bash
-# Reset to fresh state
+## Reset to fresh state
 ./scripts/reset-ha-to-fresh.sh
 
-# Then manually test fresh install, OR run automated setup
+## Then manually test fresh install, OR run automated setup
 ./scripts/setup-fresh-ha.sh
 ```
 
-**Time Savings:**
+## Time Savings
 
 - Factory reset: ~2-3 minutes
 - Devcontainer rebuild: ~10 minutes
@@ -177,13 +177,13 @@ Automated setup script for fresh Home Assistant installations.
 
 **Purpose:** Automates the complete onboarding process, including user creation, EMQX MQTT broker installation, and Cync Controller add-on setup with test credentials.
 
-**Usage:**
+### Usage
 
 ```bash
 ./setup-fresh-ha.sh
 ```
 
-**What It Does:**
+### What It Does
 
 1. **User Onboarding**
    - Checks if Home Assistant needs onboarding
@@ -206,29 +206,29 @@ Automated setup script for fresh Home Assistant installations.
    - Checks all services are running
    - Provides next steps for manual configuration
 
-**Environment Variables:**
+### Environment Variables
 
 | Variable           | Description              | Default                           |
 | ------------------ | ------------------------ | --------------------------------- |
 | `HA_URL`           | Home Assistant URL       | `http://homeassistant.local:8123` |
 | `CREDENTIALS_FILE` | Path to credentials file | `../hass-credentials.env`         |
 
-**Examples:**
+### Examples
 
 ```bash
-# Run with defaults
+## Run with defaults
 ./setup-fresh-ha.sh
 
-# Custom HA URL
+## Custom HA URL
 HA_URL=http://192.168.1.100:8123 ./setup-fresh-ha.sh
 
-# Custom credentials file
+## Custom credentials file
 CREDENTIALS_FILE=/path/to/creds.env ./setup-fresh-ha.sh
 ```
 
-**Output Example:**
+## Output Example
 
-```
+```sql
 [setup-fresh-ha.sh] Loading credentials from /workspaces/hass-addons/hass-credentials.env...
 [setup-fresh-ha.sh] ✅ Credentials loaded (username: dev)
 [setup-fresh-ha.sh] Waiting for Home Assistant to be ready...
@@ -252,6 +252,7 @@ CREDENTIALS_FILE=/path/to/creds.env ./setup-fresh-ha.sh
 [setup-fresh-ha.sh] ✅ Setup completed successfully!
 
 Next steps:
+
   1. Log in to Home Assistant at http://homeassistant.local:8123
      Username: dev
      Password: (from /workspaces/hass-addons/hass-credentials.env)
@@ -265,14 +266,14 @@ Next steps:
   4. Restart Cync Controller add-on after updating credentials
 ```
 
-**When to Use:**
+### When to Use
 
 - ✅ First-time devcontainer setup
 - ✅ Resetting to fresh HA install
 - ✅ CI/CD test environment initialization
 - ✅ Automated demo setups
 
-**Idempotency:**
+### Idempotency
 
 The script is safe to re-run:
 
@@ -282,7 +283,7 @@ The script is safe to re-run:
 - Detects already-running addons and skips start
 - Always safe to run multiple times
 
-**Startup Behavior:**
+### Startup Behavior
 
 The script uses **async start + state polling** to handle add-on startup:
 
@@ -292,14 +293,14 @@ The script uses **async start + state polling** to handle add-on startup:
 - Timeout protection: 120s for EMQX, 60s for Cync Controller
 - Works reliably even when `ha` CLI has internal timeouts
 
-**Requirements:**
+### Requirements
 
 - Fresh Home Assistant instance (or onboarded)
 - `.hass-credentials.env` file with `HASS_USERNAME` and `HASS_PASSWORD`
 - `jq` and `curl` installed (included in devcontainer)
 - Docker access for Supervisor token extraction
 
-**Troubleshooting:**
+### Troubleshooting
 
 | Issue                                 | Solution                                                                   |
 | ------------------------------------- | -------------------------------------------------------------------------- |
@@ -316,13 +317,13 @@ The script uses **async start + state polling** to handle add-on startup:
 
 Programmatically configure the Cync Controller add-on via Supervisor API.
 
-**Usage:**
+#### Usage
 
 ```bash
 ./configure-addon.sh < command > [args...]
 ```
 
-**Commands:**
+### Commands
 
 | Command                                       | Description                              | Example                                                |
 | --------------------------------------------- | ---------------------------------------- | ------------------------------------------------------ |
@@ -335,30 +336,30 @@ Programmatically configure the Cync Controller add-on via Supervisor API.
 | `restart`                                     | Restart the add-on                       | `./configure-addon.sh restart`                         |
 | `logs`                                        | Show add-on logs                         | `./configure-addon.sh logs`                            |
 
-**Examples:**
+### Examples
 
 ```bash
-# Check current configuration
+## Check current configuration
 ./configure-addon.sh get
 
-# Enable cloud relay with forwarding
+## Enable cloud relay with forwarding
 ./configure-addon.sh preset-relay-with-forward
 
-# Watch logs for relay activity
+## Watch logs for relay activity
 ./configure-addon.sh logs | grep -i "relay\|cloud"
 
-# Return to baseline LAN-only mode
+## Return to baseline LAN-only mode
 ./configure-addon.sh preset-baseline
 ```
 
-**How It Works:**
+## How It Works
 
 1. Extracts `SUPERVISOR_TOKEN` from the `hassio_cli` container
 2. Sends HTTP POST requests to Supervisor API endpoints
 3. Automatically restarts the add-on after configuration changes
 4. Shows relevant logs after restart
 
-**API Endpoints Used:**
+### API Endpoints Used
 
 - `GET /addons/local_cync-controller/info` - Read current configuration
 - `POST /addons/local_cync-controller/options` - Update configuration
@@ -370,13 +371,13 @@ Programmatically configure the Cync Controller add-on via Supervisor API.
 
 Comprehensive automated test suite for all cloud relay operating modes.
 
-**Usage:**
+#### Usage
 
 ```bash
 ./test-cloud-relay.sh
 ```
 
-**Test Phases:**
+### Test Phases
 
 1. **Phase 1: Baseline LAN-only Mode**
    - Verifies cloud relay is disabled
@@ -408,7 +409,7 @@ Comprehensive automated test suite for all cloud relay operating modes.
    - Verifies return to normal operation
    - Confirms clean state transition
 
-**Exit Codes:**
+### Exit Codes
 
 - `0` - All tests passed
 - `1` - Some tests failed
@@ -419,7 +420,7 @@ Comprehensive automated test suite for all cloud relay operating modes.
 
 Environment variable loader for MCP (Model Context Protocol) servers in Cursor IDE.
 
-**Purpose:**
+#### Purpose
 
 Cursor's `mcp.json` doesn't support environment variable expansion (like `${ENV_VAR}`). This wrapper script loads secrets from `.mcp-secrets.env` before launching MCP servers, allowing you to:
 
@@ -427,7 +428,7 @@ Cursor's `mcp.json` doesn't support environment variable expansion (like `${ENV_
 - Share `mcp.json` configurations across machines
 - Manage API keys centrally in one gitignored file
 
-**Usage in `mcp.json`:**
+### Usage in `mcp.json`
 
 ```json
 {
@@ -440,19 +441,19 @@ Cursor's `mcp.json` doesn't support environment variable expansion (like `${ENV_
 }
 ```
 
-**Setup:**
+### Setup
 
 1. Copy `.mcp-secrets.env.example` to `.mcp-secrets.env`
 2. Fill in your API keys in `.mcp-secrets.env`
 3. Update `mcp.json` with the absolute path to this script
 
-**Security:**
+### Security
 
 - `.mcp-secrets.env` is gitignored (never committed)
 - Script validates secrets file exists before running
 - MCP servers inherit environment variables from loaded `.mcp-secrets.env`
 
-**See also:**
+### See also
 
 - `docs/developer/agents-guide.md` - Full MCP secrets management documentation
 - `.mcp-secrets.env.example` - Template with placeholder values
@@ -465,17 +466,17 @@ Safe MQTT entity deletion script for development and testing.
 
 **Purpose:** Cleanly removes MQTT entities while preserving the Cync Controller configuration.
 
-**Usage:**
+### Usage
 
 ```bash
-# Dry run (preview what will be deleted)
+## Dry run (preview what will be deleted)
 sudo python3 scripts/delete-mqtt-safe.py --dry-run
 
-# Actually delete (preserves bridge, cleans registries and restore state)
+## Actually delete (preserves bridge, cleans registries and restore state)
 sudo python3 scripts/delete-mqtt-safe.py
 ```
 
-**Features:**
+## Features
 
 - ✅ Preserves Cync Controller entities
 - ✅ Cleans entity and device registries
@@ -491,20 +492,20 @@ Memory usage monitor for test commands (particularly `npm run test:unit`).
 
 **Purpose:** Tracks RAM usage of test processes and their children to help identify memory-intensive operations.
 
-**Usage:**
+### Usage
 
 ```bash
-# Monitor default test:unit command
+## Monitor default test:unit command
 ./scripts/monitor-test-memory.sh
 
-# Or via npm script
+## Or via npm script
 npm run test:unit:mem
 
-# Monitor a custom command
+## Monitor a custom command
 ./scripts/monitor-test-memory.sh "cd cync-controller && pytest tests/unit/ -n 2"
 ```
 
-**What It Shows:**
+## What It Shows
 
 1. **Real-time monitoring** (every 2.5 seconds):
    - Current memory usage (sum of all test processes)
@@ -523,9 +524,9 @@ npm run test:unit:mem
    - System time
    - Elapsed time
 
-**Output Example:**
+### Output Example
 
-```
+```bash
 === Memory Monitor for: npm run test:unit ===
 
 Initial system memory in use: 2048 MB
@@ -546,7 +547,7 @@ System time (seconds): 2.45
 Elapsed (wall clock) time (h:mm:ss or m:ss): 0:17.23
 ```
 
-**How It Works:**
+### How It Works
 
 1. Starts the test command in background
 2. Monitors the process tree (parent + all children) using `ps` to get RSS (Resident Set Size)
@@ -554,14 +555,14 @@ Elapsed (wall clock) time (h:mm:ss or m:ss): 0:17.23
 4. Tracks peak memory across all processes
 5. Reports final statistics including system-wide memory changes
 
-**Use Cases:**
+### Use Cases
 
 - Identifying memory-intensive test configurations
 - Comparing RAM usage between different pytest worker counts (`-n auto` vs `-n 2`)
 - Debugging OOM (Out of Memory) errors
 - Optimizing test execution to reduce memory footprint
 
-**See also:**
+### See also
 
 - `package.json` - `test:unit:mem` npm script
 - `cync-controller/pytest.ini` - Pytest configuration (adjust `-n auto` to limit workers)
@@ -575,10 +576,10 @@ Elapsed (wall clock) time (h:mm:ss or m:ss): 0:17.23
 All scripts use the Supervisor API token for authentication:
 
 ```bash
-# Token is extracted from hassio_cli container
+## Token is extracted from hassio_cli container
 SUPERVISOR_TOKEN=$(docker exec hassio_cli env | grep SUPERVISOR_TOKEN | cut -d= -f2)
 
-# API requests use Bearer token authentication
+## API requests use Bearer token authentication
 curl -H "Authorization: Bearer ${SUPERVISOR_TOKEN}" \
   http://supervisor/addons/local_cync-controller/info
 ```
@@ -606,13 +607,13 @@ Unlike manual file edits, API-based configuration changes:
 
 **Cause:** The `hassio_cli` container is not running.
 
-**Solution:**
+#### Solution
 
 ```bash
-# Check if hassio_cli is running
+## Check if hassio_cli is running
 docker ps | grep hassio_cli
 
-# Restart supervisor if needed
+## Restart supervisor if needed
 ha supervisor restart
 ```
 
@@ -620,13 +621,13 @@ ha supervisor restart
 
 **Cause:** Invalid or expired Supervisor token.
 
-**Solution:**
+#### Solution
 
 ```bash
-# Verify token is set
+## Verify token is set
 docker exec hassio_cli env | grep SUPERVISOR_TOKEN
 
-# Restart supervisor to refresh
+## Restart supervisor to refresh
 ha supervisor restart
 ```
 
@@ -634,7 +635,7 @@ ha supervisor restart
 
 **Cause:** Add-on taking longer than expected to restart.
 
-**Solution:**
+#### Solution
 
 - Check add-on logs: `ha addons logs local_cync-controller`
 - Manually restart: `ha addons restart local_cync-controller`
@@ -668,7 +669,7 @@ preset-my-custom-config)
 Edit `test-cloud-relay.sh` and add a new test phase:
 
 ```bash
-# Phase 7: My Custom Test
+## Phase 7: My Custom Test
 section "Phase 7: My Custom Test"
 apply_config "preset-my-custom-config" "Testing my custom configuration"
 check_log "Expected log pattern" "Test description"

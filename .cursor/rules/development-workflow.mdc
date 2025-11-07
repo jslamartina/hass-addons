@@ -1,24 +1,22 @@
 ---
 description: 3-step development workflow (edit, rebuild, verify) with integrated quality gates
-appliesTo:
-  - "**/*.py"
-  - "**/*.sh"
-  - "cync-controller/**"
+alwaysApply: true
 ---
 
 # Development Workflow
 
-**CRITICAL:** Python edits require rebuild (not restart). See Executive Rule #1 in `_00-exec-rules.mdc`.
+**CRITICAL:** Python edits require rebuild (not restart). See Executive Rule 1 in `_00-rules-prefix.mdc`.
 
-**CRITICAL:** For multi-step (3+) tasks, initialize todos and update status at each phase. See Executive Rule #7.
+**CRITICAL:** For multi-step (3+) tasks, initialize todos and update status at each phase. See Executive Rule 2 (Todo Discipline) in `_00-rules-prefix.mdc`.
 
 **Step 0: Todo Tracking** (multi-step tasks only)
+
 - Initialize todos for all steps
 - Mark current task `in_progress` BEFORE starting
 - Update to `completed` AFTER finishing, communicate to user
 - Explicit progress updates: "✓ Completed X, starting Y..."
 
-**Standard 3-Step Process:**
+## Standard 3-Step Process
 
 1. **Edit** - Make your changes
 2. **Rebuild/Restart** - Automatically runs linting, formatting, and unit tests (see table below)
@@ -28,7 +26,7 @@ appliesTo:
 
 **Why?** Python files are baked into Docker image at build time. Restarting alone won't load Python changes.
 
-**NEVER start Docker manually** - Supervisor manages it. See `critical-docker.mdc` and Executive Rule #5.
+**NEVER start Docker manually** - Supervisor manages it. See `critical-docker.mdc`.
 
 **Note:** `rebuild.sh` now automatically runs linting, formatting, and unit tests before building the Docker image.
 
@@ -39,27 +37,44 @@ appliesTo:
 | `static/*` (HTML, JS, CSS) | Restart     | `ha addons restart local_cync-controller` |
 | When unsure                | **REBUILD** | `cd cync-controller && ./rebuild.sh`      |
 
+## Markdown Files
+
+**CRITICAL:** Markdown files (`.md`) must be formatted with Prettier and linted with markdownlint.
+
+When editing markdown:
+
+1. Format with Prettier: `npx prettier --write <file.md>`
+2. Lint with markdownlint: `npm run lint:markdown:fix`
+
+These checks run automatically in `lint-all.sh` and CI.
+
 ## Manual Linting (Optional)
 
 Run linting manually for spot checks without full rebuild:
 
 ```bash
-# Python
+## Python
 npm run lint:python:fix && npm run format:python
 
-# Shell scripts
+## Shell scripts
 npm run lint:shell
 
-# Everything
+## Markdown
+npm run lint:markdown:fix && npx prettier --write "**/*.md"
+
+## Everything
 npm run lint && npm run format
-```
+$()$(
+  markdown
 
-## MQTT Entity Management
+  ## MQTT Entity Management
 
-When changing `suggested_area` or other discovery fields:
+  When changing
+)suggested_area$(
+  or other discovery fields:
 
-```bash
-# Clean up stale entities
+)$()bash
+## Clean up stale entities
 sudo python3 scripts/delete-mqtt-safe.py [--dry-run]
 ha addons restart local_cync-controller
 ```

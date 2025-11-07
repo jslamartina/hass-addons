@@ -1,3 +1,5 @@
+# App
+
 Only 5 [3 HTTP/BT, 2 BT] Cync Devices connected; 1 Cync Android App, 2 Wi-Fi/BT and 2 BT only.
 All HTTP devices are redirected to their own `socat` MITM instance.
 
@@ -9,24 +11,24 @@ All HTTP devices are redirected to their own `socat` MITM instance.
 | 4      | Wi-Fi/BT Direct Connect Full Color A19 RGBW Bulb | 7   | 10.0.2.215 | 78:6D:EB:E0:1C:90 |
 | 5      | Android Cync App                                 | N/A | 10.0.1.2   | D2:F8:70:D6:EB:4D |
 
-# App
+## App
 
 - The App is connected via Wi-Fi, BT is Off.
 - `>` is the App to server
 - `<` is the server to App
 
 ```text
-# app sends auth to cloud
+## app sends auth to cloud
 > 2024/03/11 00:16:08.864274  length=48 from=0 to=47
  13 00 00 00 2b 03 2d e4 b5 d2 00 10 32 32 30 37  ....+.-.....2207
   02 00 b4 10  ....
  <this whole line is some other code>
 --
-# cloud acks auth
+## cloud acks auth
 < 2024/03/11 00:16:08.957568  length=7 from=0 to=6
  18 00 00 00 02 00 00                             .......
 --
-# App announces itself, server rebroadcasts to all connected devices
+## App announces itself, server rebroadcasts to all connected devices
 > 2024/03/11 00:16:08.968552  length=12 from=48 to=59
  a3 00 00 00 07 37 96 24 69 15 2b 00              .....7.$i.+.
 --
@@ -408,10 +410,10 @@ All HTTP devices are redirected to their own `socat` MITM instance.
 
 ```
 
-# NEW STUFF
+## NEW STUFF
 
 ```text
-# device ID 7 connects to cloud server so now 3 devices are in mesh
+## device ID 7 connects to cloud server so now 3 devices are in mesh
 >
  83 00 00 00 25 {37 96 24 69 00 5a 00 7e 25 00 00  ....%7.$i.Z.~%..
  00 fa db 13 00 7c 22 11 07 00 07 00 db 11 02 00  .....|".........
@@ -437,7 +439,7 @@ All HTTP devices are redirected to their own `socat` MITM instance.
 > 2024/03/16 09:56:41.333009  length=12 from=208 to=219
  7b 00 00 00 07 37 96 24 69 00 5a 00              {....7.$i.Z.
 --
-# App seems to send out
+## App seems to send out
 > 2024/03/16 09:56:41.944299  length=12 from=220 to=231
  a3 00 00 00 07 15 1f 79 da 9a 56 00              .......y..V.
 --

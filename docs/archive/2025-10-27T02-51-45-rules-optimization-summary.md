@@ -7,14 +7,14 @@
 
 ### Token Reduction
 
-**Before:**
+#### Before
 
 - 10 always-applied rules
 - ~2,500 tokens per turn
 - Duplicate content (logging-standards.mdc vs logging-mandatory.mdc)
 - Missing valuable shortcuts and patterns
 
-**After:**
+### After
 
 - 8 always-applied rules
 - ~1,800 tokens per turn
@@ -22,7 +22,7 @@
 - 4 new high-value reference rules created
 - Enhanced 2 existing reference rules
 
-**Impact:**
+### Impact
 
 - ~700 tokens saved per turn
 - Better cache efficiency
@@ -36,29 +36,29 @@
 
 #### Demoted to Agent-Requestable
 
-2. 📖 `quick-start.mdc` (navigation TOC, fetch on demand)
-3. 📖 `mcp-tools-guide.mdc` (reference material)
+1. 📖 `quick-start.mdc` (navigation TOC, fetch on demand)
+2. 📖 `mcp-tools-guide.mdc` (reference material)
 
 #### Slimmed Down
 
-4. ✂️ `critical-docker.mdc` (removed redundant linting/workflow references)
+1. ✂️ `critical-docker.mdc` (removed redundant linting/workflow references)
 
 #### New Rules Created
 
-5. ✅ `dns-requirements.mdc` - Critical DNS setup patterns
-6. ✅ `helper-scripts.mdc` - Automation tools and scripts
-7. ✅ `performance-tuning.mdc` - Performance optimization patterns
-8. ✅ `known-bugs-workarounds.mdc` - Bug patterns and lessons learned
-9. ✅ `documentation-archiving.mdc` - Documentation archiving guidelines
-10. ✅ `mqtt-entity-cleanup.mdc` - Entity deletion workflows
-11. ✅ `cloud-relay-patterns.mdc` - Cloud relay mode usage
-12. ✅ `daily-dev-cheatsheet.mdc` - Most common daily commands
+1. ✅ `dns-requirements.mdc` - Critical DNS setup patterns
+2. ✅ `helper-scripts.mdc` - Automation tools and scripts
+3. ✅ `performance-tuning.mdc` - Performance optimization patterns
+4. ✅ `known-bugs-workarounds.mdc` - Bug patterns and lessons learned
+5. ✅ `documentation-archiving.mdc` - Documentation archiving guidelines
+6. ✅ `mqtt-entity-cleanup.mdc` - Entity deletion workflows
+7. ✅ `cloud-relay-patterns.mdc` - Cloud relay mode usage
+8. ✅ `daily-dev-cheatsheet.mdc` - Most common daily commands
 
 #### Enhanced Existing Rules
 
-13. ✅ `token-creation-flow.mdc` - Added WebSocket LLAT creation patterns
-14. ✅ `ai-browser-testing.mdc` - Added Shadow DOM and SVG click patterns
-15. ✅ `quick-start.mdc` - Refactored to pure navigation index
+1. ✅ `token-creation-flow.mdc` - Added WebSocket LLAT creation patterns
+2. ✅ `ai-browser-testing.mdc` - Added Shadow DOM and SVG click patterns
+3. ✅ `quick-start.mdc` - Refactored to pure navigation index
 
 ### Final Rule Count
 

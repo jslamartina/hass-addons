@@ -1,14 +1,16 @@
+# 2025 10 14T15 02 00 Absorb Cync Lan Repo Plan
+
 <!-- 064fc85a-f42a-4957-a0fb-6fe899fde1ac 619cd7b8-2b1f-4fed-87d2-76d3b4b4e4b6 -->
 
-# Cleanup Duplicate Files After Consolidation
+## Cleanup Duplicate Files After Consolidation
 
 ## Current Situation
 
 After consolidating the cync-controller repo, we have duplicated files in two places:
 
-### Primary Source (Authoritative):
+### Primary Source (Authoritative)
 
-```
+```bash
 hass-addons/
 ├── pyproject.toml                  # Python package config
 └── src/cync_lan/                   # Python package source
@@ -18,9 +20,9 @@ hass-addons/
     └── ... (all Python files)
 ```
 
-### Build-Time Copies (Synced by rebuild.sh):
+### Build-Time Copies (Synced by rebuild.sh)
 
-```
+```sql
 hass-addons/cync-controller/
 ├── pyproject.toml                  # DUPLICATE - synced from ../
 └── src/cync_lan/                   # DUPLICATE - synced from ../src/
@@ -44,36 +46,36 @@ The `rebuild.sh` script syncs files to `cync-controller/` because Docker's build
 
 ### Option 1: Keep Current Architecture (Recommended)
 
-**Keep duplicates but clarify their purpose:**
+#### Keep duplicates but clarify their purpose
 
 - Primary source: `hass-addons/src/cync_lan/` and `hass-addons/pyproject.toml`
 - Build copies: `hass-addons/cync-controller/src/` and `hass-addons/cync-controller/pyproject.toml`
 - Add to `.gitignore`: `cync-controller/src/` and `cync-controller/pyproject.toml`
 - Update `rebuild.sh` to explain this
 
-**Pros:**
+### Pros
 
 - ✅ Works with Docker build context limitations
 - ✅ Simple rebuild process
 - ✅ No complex Docker workarounds needed
 
-**Cons:**
+### Cons
 
 - ⚠️ Duplicates exist (but gitignored)
 
 ### Option 2: Use Docker Build Context Tricks
 
-**Use .dockerignore and build args:**
+#### Use .dockerignore and build args
 
 - Keep only primary source
 - Modify build process to set context higher
 - Use build arguments to copy from parent directory
 
-**Pros:**
+### Pros
 
 - ✅ No duplicates
 
-**Cons:**
+### Cons
 
 - ⚠️ More complex build process
 - ⚠️ May break Home Assistant's add-on builder expectations
@@ -81,18 +83,18 @@ The `rebuild.sh` script syncs files to `cync-controller/` because Docker's build
 
 ### Option 3: Move Source Into cync-controller/
 
-**Make cync-controller/ the primary location:**
+#### Make cync-controller/ the primary location
 
 - Move `src/` → `cync-controller/src/`
 - Move `pyproject.toml` → `cync-controller/pyproject.toml`
 - Delete top-level copies
 
-**Pros:**
+### Pros
 
 - ✅ No duplicates
 - ✅ Docker build context works naturally
 
-**Cons:**
+### Cons
 
 - ⚠️ Less conventional structure
 - ⚠️ Couples package to add-on directory
@@ -100,7 +102,7 @@ The `rebuild.sh` script syncs files to `cync-controller/` because Docker's build
 
 ## Recommended Approach: Option 1 (Clarify + Gitignore)
 
-### Steps:
+### Steps
 
 1. **Add build-time copies to .gitignore:**
 
@@ -108,9 +110,10 @@ The `rebuild.sh` script syncs files to `cync-controller/` because Docker's build
    # Build-time copies (synced from ../src by rebuild.sh)
    cync-controller/src/
    cync-controller/pyproject.toml
-   ```
 
-2. **Update rebuild.sh with clear comments:**
+```
+
+1. **Update rebuild.sh with clear comments:**
 
    ```bash
    #!/bin/bash
@@ -127,12 +130,12 @@ The `rebuild.sh` script syncs files to `cync-controller/` because Docker's build
    # ... rest
    ```
 
-3. **Add README note in cync-controller/ directory:**
+1. **Add README note in cync-controller/ directory:**
 
 Create `cync-controller/README-DEV.md`:
 
 ```markdown
-# Developer Note
+## Developer Note
 
 The `src/` and `pyproject.toml` in this directory are **build-time copies**
 synced from `../src/` and `../pyproject.toml` by `rebuild.sh`.
@@ -142,7 +145,7 @@ synced from `../src/` and `../pyproject.toml` by `rebuild.sh`.
 These copies exist because Docker's build context is limited to this directory.
 ```
 
-4. **Update AGENTS.md to explain the structure:**
+1. **Update AGENTS.md to explain the structure:**
 
 Add note about primary vs build-time copies
 

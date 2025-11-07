@@ -19,7 +19,7 @@ When developing the Cync Controller Add-on, you often need to:
 
 **Script:** `scripts/delete-mqtt-entities-except-bridge.sh`
 
-**What it does:**
+#### What it does
 
 1. ✅ Discovers all MQTT entities
 2. ✅ Preserves Cync Controller (and its entities)
@@ -27,7 +27,7 @@ When developing the Cync Controller Add-on, you often need to:
 4. ✅ Cleans up device registry
 5. ✅ Optionally restarts addon
 
-**Safety:**
+### Safety
 
 - Bridge is **never deleted**
 - Dry run mode to preview first
@@ -39,17 +39,17 @@ When developing the Cync Controller Add-on, you often need to:
 ### Primary Method: Python Script (Recommended)
 
 ```bash
-# Preview what will be deleted (dry run)
+## Preview what will be deleted (dry run)
 sudo python3 scripts/delete-mqtt-safe.py --dry-run
 
-# Actually delete entities (preserves bridge, cleans registries)
+## Actually delete entities (preserves bridge, cleans registries)
 sudo python3 scripts/delete-mqtt-safe.py
 
-# Delete and automatically restart addon
+## Delete and automatically restart addon
 sudo python3 scripts/delete-mqtt-safe.py --restart
 ```
 
-**Features:**
+## Features
 
 - ✅ Preserves Cync Controller entities
 - ✅ Cleans entity and device registries
@@ -62,45 +62,45 @@ sudo python3 scripts/delete-mqtt-safe.py --restart
 ### Workflow: Test Entity Rediscovery
 
 ```bash
-# 1. Preview what will be deleted (dry run)
+## 1. Preview what will be deleted (dry run)
 sudo python3 scripts/delete-mqtt-safe.py --dry-run
 
-# 2. Delete all entities (keep bridge, clean registries)
+## 2. Delete all entities (keep bridge, clean registries)
 sudo python3 scripts/delete-mqtt-safe.py
 
-# 3. Restart addon to republish
+## 3. Restart addon to republish
 ha addons restart local_cync-controller
 
-# 4. Verify entities republished correctly
+## 4. Verify entities republished correctly
 ha addons logs local_cync-controller | grep "Publishing MQTT discovery"
 ```
 
 ### Workflow: Change suggested_area and Rediscover
 
 ```bash
-# Scenario: You edited mqtt_client.py to change suggested_area
+## Scenario: You edited mqtt_client.py to change suggested_area
 
-# 1. Rebuild addon (Python changes require rebuild)
+## 1. Rebuild addon (Python changes require rebuild)
 cd cync-controller && ./rebuild.sh
 
-# 2. Delete all entities except bridge (clean deletion)
+## 2. Delete all entities except bridge (clean deletion)
 sudo python3 scripts/delete-mqtt-safe.py
 
-# 3. Restart addon
+## 3. Restart addon
 ha addons restart local_cync-controller
 
-# 4. Entities republish with new suggested_area
-# Navigate to Settings → Devices & Services → Entities
-# Verify entities appear in correct areas
+## 4. Entities republish with new suggested_area
+## Navigate to Settings → Devices & Services → Entities
+## Verify entities appear in correct areas
 ```
 
 ### Workflow: Clean Slate Testing
 
 ```bash
-# Complete reset (except bridge)
+## Complete reset (except bridge)
 ./scripts/delete-mqtt-entities-except-bridge.sh --restart
 
-# Or combined:
+## Or combined:
 ./scripts/delete-mqtt-entities-except-bridge.sh --dry-run \
   && ./scripts/delete-mqtt-entities-except-bridge.sh --restart
 ```
@@ -109,7 +109,7 @@ ha addons restart local_cync-controller
 
 ### Discovery Summary
 
-```
+```sql
 ═════════════════ DISCOVERY SUMMARY ═════════════════
 Total entities found: 24
 ✅ To preserve (Cync Controller): 1
@@ -178,7 +178,7 @@ export HEADED="1"                          # Show browser
 
 ### "No entities found"
 
-**Check:**
+#### Check
 
 1. Is MQTT integration running?
 2. Is addon running and publishing entities?
@@ -190,33 +190,33 @@ export HEADED="1"                          # Show browser
 
 ### "Wrong entities selected"
 
-**Check bridge name:**
+#### Check bridge name
 
 ```bash
-# Verify bridge name matches exactly
+## Verify bridge name matches exactly
 ./scripts/delete-mqtt-entities-except-bridge.sh \
   --bridge "Exact Bridge Name" --dry-run
 ```
 
 ### "Deletion failed"
 
-**Debug with screenshots:**
+#### Debug with screenshots
 
 ```bash
-# Check what happened
+## Check what happened
 ls -la test-results/runs/delete-mqtt-*/screenshots/
 cat test-results/runs/delete-mqtt-*/run.log
 ```
 
 ### "Script is slow"
 
-**Normal execution times:**
+#### Normal execution times
 
 - Dry run: ~15-20 seconds
 - Actual deletion (20 entities): ~60-90 seconds
 - With addon restart: Add ~15-20 seconds
 
-**Optimization:**
+### Optimization
 
 - Headless mode (default) is faster
 - Headed mode (`--headed`) is slower but helps debugging
@@ -226,12 +226,12 @@ cat test-results/runs/delete-mqtt-*/run.log
 If you only need to delete specific entities:
 
 ```bash
-# Delete by name
+## Delete by name
 npx ts-node scripts/playwright/delete-mqtt-entities.ts \
   "Hallway Front Switch" \
   "Bedroom Light"
 
-# With restart
+## With restart
 RESTART_ADDON=true \
   npx ts-node scripts/playwright/delete-mqtt-entities.ts \
   "Entity 1" "Entity 2"

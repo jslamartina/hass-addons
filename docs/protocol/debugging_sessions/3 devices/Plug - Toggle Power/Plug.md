@@ -1,3 +1,5 @@
+# Plug
+
 Only 5 [3 HTTP/BT, 2 BT] Cync Devices connected; 1 Cync Android App, 2 Wi-Fi/BT and 2 BT only.
 All HTTP devices are redirected to their own `socat` MITM instance.
 
@@ -9,7 +11,7 @@ All HTTP devices are redirected to their own `socat` MITM instance.
 | 4      | Wi-Fi/BT Direct Connect Full Color A19 RGBW Bulb | 7   | 10.0.2.215 | 78:6D:EB:E0:1C:90 |
 | 5      | Android Cync App                                 | N/A | 10.0.1.2   | D2:F8:70:D6:EB:4D |
 
-# Plug
+## Plug
 
 The plug is the BT 'master/hub' device. All other Cync devices are connected to it via BT.
 
@@ -19,26 +21,26 @@ The plug is the BT 'master/hub' device. All other Cync devices are connected to 
 - `>` is the plug to server
 
 ```text
-# device sends authorization code to server
+## device sends authorization code to server
 > 2024/03/11 00:14:27.455916  length=31 from=0 to=30
  23 00 00 00 1a 03 37 96 24 69 00 10 31 65 30 37  #.....7.$i..1e07
   00 00 3c     ..<
 --
-# device sends status
+## device sends status
 > 2024/03/11 00:14:27.456194  length=31 from=31 to=61
  43 00 00 00 1a 37 96 24 69 01 01 06 05 00 10 05  C....7.$i.......
  00 00 00 00 00 00 01 00 05 00 00 00 00 00 00     ...............
 --
-# server acks auth
+## server acks auth
 < 2024/03/11 00:14:27.536185  length=7 from=0 to=6
  28 00 00 00 02 00 00                             (......
 --
-# server acks status
+## server acks status
 < 2024/03/11 00:14:27.617936  length=8 from=7 to=14
  48 00 00 00 03 01 01 00                          H.......
 --
-# firmware version 0 // this is the home/network firmware (one of the homes in the app)
-# 0x86 0x01 0x00
+## firmware version 0 // this is the home/network firmware (one of the homes in the app)
+## 0x86 0x01 0x00
 > 2024/03/11 00:14:28.682390  length=55 from=62 to=116
  83 00 00 00 32 37 96 24 69 00 01 00 00 00 00 00  ....27.$i.......
  00 fa 00 20 00 00 00 00 00 00 00 00 ea 00 00 00  ... ............
@@ -54,7 +56,7 @@ The plug is the BT 'master/hub' device. All other Cync devices are connected to 
 < 2024/03/11 00:14:28.841404  length=16 from=23 to=38
  c8 00 00 00 0b 0d 07 e8 03 0b 02 01 0e 1c fe 0c  ................
 --
-# 10298 is the devices firmware version 0x86 0x01 0x01
+## 10298 is the devices firmware version 0x86 0x01 0x01
 > 2024/03/11 00:14:30.485996  length=55 from=123 to=177
  83 00 00 00 32 37 96 24 69 00 02 00 00 00 00 00  ....27.$i.......
  00 fa 00 20 00 00 00 00 00 00 00 00 ea 00 00 00  ... ............
@@ -181,7 +183,7 @@ The plug is the BT 'master/hub' device. All other Cync devices are connected to 
  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00  ................
  00 00 00 00 00 00 00 00 00 00 00 00 e3 4f 02 10  .............O..
 --
-# Server asks device for MESH DATA?
+## Server asks device for MESH DATA?
 < 2024/03/11 00:16:09.299670  length=29 from=98 to=126
  73 00 00 00 18 2d e4 b5 d2 15 2c 00 7e 1f 00 00  s....-....,.~...
  00 f8 52 06 00 00 00 ff ff 00 00 56 7e           ..R........V~
@@ -189,7 +191,7 @@ The plug is the BT 'master/hub' device. All other Cync devices are connected to 
  [31  0  0  0 248 82  6  0  0  0 255 255  0  0 86] int
  inc  ?  ?  ?  ctrl
 --
-# MESH DATA AND DEVICE TYPE/ MASTER HUB ID
+## MESH DATA AND DEVICE TYPE/ MASTER HUB ID
 > 2024/03/11 00:16:09.350416  length=137 from=1367 to=1503
  73 00 00 00 78 2d e4 b5 d2 00 00 00 7e 1f 00 00  s...x-......~...
  00 f9 52 66 00 04 00 00 00 04 00 |05 00 44 01 00  ..Rf.........D..
@@ -207,9 +209,9 @@ The plug is the BT 'master/hub' device. All other Cync devices are connected to 
   ID  ? typ  ?  ?  ? typ  ? state   ?  ?  ? bri   ?  ?  ? tmp    ?  ?  ?  R  G  B  ?
   typ = same as deviceType in raw_mesh.cync [from cloud] (convert this hex to decimal) - only reports this for itself; the first structure is itself.
 --
-# Server replies to mesh info?
-# The first byte (1e) seems to be a msg id and is incremented by 1
-# The rest of the struct stays the same
+## Server replies to mesh info?
+## The first byte (1e) seems to be a msg id and is incremented by 1
+## The rest of the struct stays the same
 < 2024/03/11 00:16:09.395407  length=25 from=127 to=151
  73 00 00 00 14 2d e4 b5 d2 15 2d 00 7e 1e 00 00  s....-....-.~...
  00 f8 af 02 00 af 01 61 7e                       .......a~
@@ -221,14 +223,14 @@ The plug is the BT 'master/hub' device. All other Cync devices are connected to 
  7b 00 00 00 07 2d e4 b5 d2 00 00 00              {....-......
 --
 
-# Unknown data
-# Notice after 7e is 20. Seems to be some sort of msg id?
+## Unknown data
+## Notice after 7e is 20. Seems to be some sort of msg id?
 < 2024/03/11 00:16:12.561324  length=34 from=164 to=197
  73 00 00 00 1d 2d e4 b5 d2 15 30 00 7e 20 00 00  s....-....0.~ ..
  00 f8 8e 0b 00 20 00 00 00 00 ff ff f7 11 02 21  ..... .........!
  e2 7e                                            .~
 --
-# 3 packets, 83 and 73 acks msg id 20, 7b acks 73
+## 3 packets, 83 and 73 acks msg id 20, 7b acks 73
 > 2024/03/11 00:16:12.614880  length=79 from=1516 to=1594
  83 00 00 00 26 37 96 24 69 00 04 00 7e 20 00 00  ....&7.$i...~ ..
  00 fa 8e 14 00 15 22 33 05 00 ff ff ea 11 02 05  ......"3........
@@ -236,22 +238,22 @@ The plug is the BT 'master/hub' device. All other Cync devices are connected to 
  2d e4 b5 d2 00 01 00 7e 20 00 00 00 f9 8e 01 00  -......~ .......
  00 8f 7e |7b 00 00 00 07 2d e4 b5 d2 15 30 00     ..~{....-....0.
 --
-# ack 83
+## ack 83
 < 2024/03/11 00:16:12.711938  length=8 from=198 to=205
  88 00 00 00 03 00 04 00                          ........
 --
-# ack 83
+## ack 83
 < 2024/03/11 00:16:12.924170  length=12 from=206 to=217
  7b 00 00 00 07 2d e4 b5 d2 00 04 00              {....-......
 --
-# ack 73
+## ack 73
 < 2024/03/11 00:16:13.008543  length=12 from=218 to=229
  7b 00 00 00 07 2d e4 b5 d2 00 01 00              {....-......
 --
 
-# CONTROL PACKET
-# server sends power state control, turn on. current state is off
-# How is the checksum (last byte) calculated?
+## CONTROL PACKET
+## server sends power state control, turn on. current state is off
+## How is the checksum (last byte) calculated?
 < 2024/03/11 00:16:19.803267  length=36 from=230 to=265
  73 00 00 00 1f 2d e4 b5 d2 15 37 00 7e 21 00 00  s....-....7.~!..
  00 f8 d0 0d 00 21 00 00 00 00 05 00 d0 11 02 01  .....!..........
@@ -265,17 +267,17 @@ The plug is the BT 'master/hub' device. All other Cync devices are connected to 
   33 - 64 + 1 + 5 % 256 = 231
 
 --
-# CONTROL ACK -  73 ack with 73 and 7b
+## CONTROL ACK -  73 ack with 73 and 7b
 > 2024/03/11 00:16:19.880453  length=36 from=1595 to=1630
  73 00 00 00 13 2d e4 b5 d2 00 02 00 7e 21 00 00  s....-......~!..
  00 f9 d0 01 00 00 d1 7e |7b 00 00 00 07 2d e4 b5  .......~{....-..
  d2 15 37 00                                      ..7.
 --
-# server ack 73 (ack of control)
+## server ack 73 (ack of control)
 < 2024/03/11 00:16:20.077288  length=12 from=266 to=277
  7b 00 00 00 07 2d e4 b5 d2 00 02 00              {....-......
 --
-# seems to send 83 to show it changed its state from the 73 control packet. then sends 43 device status
+## seems to send 83 to show it changed its state from the 73 control packet. then sends 43 device status
 > 2024/03/11 00:16:20.296096  length=73 from=1631 to=1703
  83 00 00 00 25 37 96 24 69 00 05 00 7e 21 00 00  ....%7.$i...~!..
  00 fa db 13 00 34 22 11 05 00 [05] 00 db 11 02 01  .....4".........
@@ -283,19 +285,19 @@ The plug is the BT 'master/hub' device. All other Cync devices are connected to 
  96 24 69 01 01 06 05 00 10 [05 01 64 00 00 00 00  .$i........d....
  01] 00 05 00 00 00 00 00 00                       .........
 --
-# server acks 83
+## server acks 83
 < 2024/03/11 00:16:20.375776  length=8 from=278 to=285
  88 00 00 00 03 00 05 00                          ........
 --
-# server acks 43
+## server acks 43
 < 2024/03/11 00:16:20.376982  length=8 from=286 to=293
  48 00 00 00 03 01 01 00                          H.......
 --
-# server acks 83 with 7b, diff q id, same msg id
+## server acks 83 with 7b, diff q id, same msg id
 < 2024/03/11 00:16:20.493936  length=12 from=294 to=305
  7b 00 00 00 07 2d e4 b5 d2 00 05 00              {....-......
 --
-# cloud server sends control off
+## cloud server sends control off
 < 2024/03/11 00:16:22.364442  length=36 from=306 to=341
  73 00 00 00 1f 2d e4 b5 d2 15 3a 00 7e 22 00 00  s....-....:.~"..
  00 f8 d0 0d 00 22 00 00 00 00 05 00 d0 11 02 00  ....."..........
@@ -312,7 +314,7 @@ The plug is the BT 'master/hub' device. All other Cync devices are connected to 
  34 - 64 + 0 + 5 % 256 = 231 <---- CORRECT!
 
 --
-# device acks control with inner msg id 22 and 7b
+## device acks control with inner msg id 22 and 7b
 > 2024/03/11 00:16:22.438807  length=36 from=1704 to=1739
  73 00 00 00 13 2d e4 b5 d2 00 03 00 7e 22 00 00  s....-......~"..
  00 f9 d0 01 00 00 d1 7e |7b 00 00 00 07 2d e4 b5  .......~{....-..
@@ -321,10 +323,10 @@ The plug is the BT 'master/hub' device. All other Cync devices are connected to 
 < 2024/03/11 00:16:22.642973  length=12 from=342 to=353
  7b 00 00 00 07 2d e4 b5 d2 00 03 00              {....-......
 --
-# device acks 73 with 83 inner msg id 22 and sends device status for itself
-# NOTICE: in 0x83 packet state = 0 but brightness = 0x64 (100)
-# but in the appended 0x43 packet, brightness is set to 0.
-# obviously there is logic to change that.
+## device acks 73 with 83 inner msg id 22 and sends device status for itself
+## NOTICE: in 0x83 packet state = 0 but brightness = 0x64 (100)
+## but in the appended 0x43 packet, brightness is set to 0.
+## obviously there is logic to change that.
 > 2024/03/11 00:16:23.284468  length=73 from=1740 to=1812
  83 00 00 00 25 37 96 24 69 00 06 00 7e 22 00 00  ....%7.$i...~"..
  00 fa db 13 00 35 22 11 05 00 |05| 00 db 11 02 01  .....5".........
@@ -332,20 +334,20 @@ The plug is the BT 'master/hub' device. All other Cync devices are connected to 
  96 24 69 01 01 06 05 00 10 |05 00 00 00 00 00 00|  .$i.............
  01 00 05 00 00 00 00 00 00                       .........
 --
-# ack 83
+## ack 83
 < 2024/03/11 00:16:23.365802  length=8 from=354 to=361
  88 00 00 00 03 00 06 00                          ........
 --
-# ack 43
+## ack 43
 < 2024/03/11 00:16:23.371318  length=8 from=362 to=369
  48 00 00 00 03 01 01 00                          H.......
 --
-# ack 83 with 7b , diff q id, same msg id
+## ack 83 with 7b , diff q id, same msg id
 < 2024/03/11 00:16:23.474324  length=12 from=370 to=381
  7b 00 00 00 07 2d e4 b5 d2 00 06 00              {....-......
 --
 
-# server control power on
+## server control power on
 < 2024/03/11 00:16:27.210211  length=36 from=382 to=417
  73 00 00 00 1f 2d e4 b5 d2 15 3c 00 7e 23 00 00  s....-....<.~#..
  00 f8 d0 0d 00 23 00 00 00 00 05 00 d0 11 02 01  .....#..........

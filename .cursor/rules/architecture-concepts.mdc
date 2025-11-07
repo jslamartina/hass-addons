@@ -8,13 +8,21 @@ description: Key architectural concepts and patterns
 
 The add-on intercepts device communications and bridges them to Home Assistant via MQTT.
 
+## Why This Architecture
+
+- **Local Control**: Devices respond instantly without cloud latency (20-50ms vs 200-500ms)
+- **Privacy**: Device data never leaves your network
+- **Reliability**: Works during internet outages
+- **No Rate Limits**: Cloud APIs have rate limits; local control doesn't
+- **Open Integration**: Standard MQTT allows any automation platform
+
 ## DNS Redirection Required
 
 The add-on intercepts device traffic by redirecting DNS queries. Users **MUST** configure DNS redirection for the add-on to work. See `docs/user/dns-setup.md` for setup instructions.
 
 ## Command Flow
 
-**MQTT → Callback Registration → TCP Send → ACK → State Update**
+### MQTT → Callback Registration → TCP Send → ACK → State Update
 
 1. Command sent via MQTT
 2. Callback registered for response
@@ -29,6 +37,7 @@ See `docs/developer/architecture.md` for detailed protocol information.
 Optional MITM proxy for protocol analysis (read-only currently).
 
 Features:
+
 - Intercepts device communications
 - Logs packet structures
 - Packet injection capability
@@ -39,6 +48,47 @@ Features:
 - **Architecture Guide**: `docs/developer/architecture.md` - Detailed protocol and command flow
 - **Protocol Research**: `docs/protocol/findings.md` - Reverse engineering notes
 - **Troubleshooting**: `docs/user/troubleshooting.md` - Known issues and solutions
+
+## Anti-Patterns
+
+### ❌ WRONG: Bypass DNS redirection
+
+```python
+## Hardcoding cloud endpoint
+CLOUD_ENDPOINT = "cm.gelighting.com"
+socket.connect((CLOUD_ENDPOINT, 23779))
+```
+
+**Problem**: Defeats local control; devices communicate with cloud, defeating privacy and speed benefits.
+
+### ❌ WRONG: Skip MQTT, use direct API
+
+```python
+## Calling device API directly from automations
+requests.post("http://device-ip:9000/toggle")
+```
+
+**Problem**: Bypasses Home Assistant state tracking, breaks automations, no entity history.
+
+### ❌ WRONG: Hardcode device IPs
+
+```python
+## Static IP addresses in code
+DEVICES = {
+    "hallway": "192.168.1.100",
+    "kitchen": "192.168.1.101"
+}
+```
+
+**Problem**: DHCP changes break integration; use DNS or discovery instead.
+
+### ✅ CORRECT: Use DNS redirection + MQTT discovery
+
+```python
+## Devices resolve DNS → your HA instance
+## Add-on publishes MQTT discovery
+## Home Assistant creates entities automatically
+```
 
 ## External Resources
 

@@ -7,12 +7,13 @@ description: Performance tuning and optimization patterns
 ## Environment Variables
 
 ```bash
-CYNC_MAX_TCP_CONN=8  # Max TCP devices connected at once (default: 8)
-CYNC_CMD_BROADCASTS=3  # Number of command broadcasts (default varies)
-CYNC_TCP_WHITELIST='10.0.2.20, 10.0.2.24'  # Limit connections to specific devices
+CYNC_MAX_TCP_CONN=8                       # Max TCP devices connected at once (default: 8)
+CYNC_CMD_BROADCASTS=3                     # Number of command broadcasts (default varies)
+CYNC_TCP_WHITELIST='10.0.2.20, 10.0.2.24' # Limit connections to specific devices
 ```
 
-**Recommended:**
+### Recommended
+
 - **4-6 devices** connected for optimal performance
 - Prefer LED strips and bulbs as bridge devices
 - Start with 3-5 broadcasts, increase if commands missed
@@ -30,17 +31,19 @@ Some devices are better at bridging TCP ↔ Bluetooth LE:
 ## Performance Bottlenecks
 
 ### Cascading Refreshes (FIXED)
-**Issue:** Auto-refresh after ACK caused cascading refresh storms
+
+**Issue:** Autorefresh after ACK caused cascading refresh storms
 **Fix:** Removed automatic refresh - now manual only
 
 ### Command Throttling Pattern
+
 ```python
 if self.pending_command:
     return  # Throttle
 
 self.pending_command = True
-# ... send command ...
-# After ACK: self.pending_command = False
+## ... send command ...
+## After ACK: self.pending_command = False
 ```
 
 ## Related

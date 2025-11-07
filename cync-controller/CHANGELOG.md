@@ -1,6 +1,8 @@
+# Changelog
+
 ## 0.0.4.14
 
-**Refactoring and Test Infrastructure Improvements**
+### Refactoring and Test Infrastructure Improvements
 
 ### Fixed
 
@@ -36,7 +38,7 @@
 
 ## 0.0.4.13
 
-**Production-Grade Logging, Test Infrastructure, and Bug Fixes**
+### Production-Grade Logging, Test Infrastructure, and Bug Fixes
 
 ### Added
 
@@ -115,7 +117,7 @@
 
 ## 0.0.4.12
 
-**Enhancement: Fan Speed Control Improvements**
+### Enhancement: Fan Speed Control Improvements
 
 ### Fixed
 
@@ -139,7 +141,7 @@
 
 ## 0.0.4.6
 
-**Maintenance: Complete Rebranding to Cync Controller**
+### Maintenance: Complete Rebranding to Cync Controller
 
 ### Changed
 
@@ -151,7 +153,7 @@
 
 ## 0.0.4.4
 
-**Enhancement: MQTT Discovery Improvements**
+### Enhancement: MQTT Discovery Improvements
 
 ### Changed
 
@@ -182,7 +184,7 @@
 
 ## 0.0.4.3
 
-**Enhancement: Smart Area Grouping for Devices**
+### Enhancement: Smart Area Grouping for Devices
 
 ### Added
 

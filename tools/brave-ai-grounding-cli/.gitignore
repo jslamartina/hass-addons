@@ -1,0 +1,11 @@
+# Environment files with secrets
+.env
+
+# Python build artifacts
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+dist/
+build/
+

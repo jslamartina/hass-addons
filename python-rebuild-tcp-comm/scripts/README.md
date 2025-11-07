@@ -45,60 +45,60 @@ Common development tasks for the TCP communication rebuild project.
 ### Quick Start
 
 ```bash
-# Setup environment (first time only)
+## Setup environment (first time only)
 ./scripts/setup.sh
 
-# Run tests
+## Run tests
 ./scripts/test-all.sh
 
-# Run linting
+## Run linting
 ./scripts/lint.sh
 
-# Run the toggler (uses defaults or environment variables)
+## Run the toggler (uses defaults or environment variables)
 ./scripts/run.sh
 ```
 
 ### Running the Toggler
 
 ```bash
-# With defaults (DEVICE123 @ 192.168.1.100:9000)
+## With defaults (DEVICE123 @ 192.168.1.100:9000)
 ./scripts/run.sh
 
-# Custom device
+## Custom device
 ./scripts/run.sh --device-id DEVICE456 --host 192.168.1.200 --port 9001
 
-# Toggle off
+## Toggle off
 ./scripts/run.sh --state off
 
-# Debug logging
+## Debug logging
 ./scripts/run.sh --debug
 
-# Environment variables
+## Environment variables
 DEVICE_ID=MYDEVICE DEVICE_HOST=10.0.0.5 ./scripts/run.sh
 ```
 
 ### Testing
 
 ```bash
-# Run all tests (unit + integration)
+## Run all tests (unit + integration)
 ./scripts/test-all.sh
 
-# Run only unit tests (fast, ~1-2 seconds)
+## Run only unit tests (fast, ~1-2 seconds)
 ./scripts/test-unit.sh
 
-# Run only integration tests (slower, ~8-10 seconds)
+## Run only integration tests (slower, ~8-10 seconds)
 ./scripts/test-integration.sh
 
-# Verbose output
+## Verbose output
 ./scripts/test-all.sh -v
 ./scripts/test-unit.sh -v
 ./scripts/test-integration.sh -v
 
-# With coverage (unit tests only)
+## With coverage (unit tests only)
 ./scripts/test-unit.sh -c
 open htmlcov/index.html # View coverage report
 
-# Integration tests with HTML report
+## Integration tests with HTML report
 ./scripts/test-integration.sh --html
 open test-reports/integration-report.html
 ```
@@ -106,30 +106,30 @@ open test-reports/integration-report.html
 ### Code Quality
 
 ```bash
-# Check code
+## Check code
 ./scripts/lint.sh
 
-# Format code
+## Format code
 ./scripts/format.sh
 ```
 
 ### Building
 
 ```bash
-# Full build with validation
+## Full build with validation
 ./scripts/build.sh
 
-# Clean artifacts
+## Clean artifacts
 ./scripts/clean.sh
 ```
 
 ### Debugging
 
 ```bash
-# Run with debug logging
+## Run with debug logging
 ./scripts/debug.sh
 
-# Check metrics while running
+## Check metrics while running
 ./scripts/check-metrics.sh
 ```
 

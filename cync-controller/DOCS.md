@@ -43,7 +43,7 @@ Optional MITM proxy functionality for packet inspection and debugging:
 - **Packet inspection** and real-time logging
 - **File-based packet injection** for testing
 
-**Configuration:**
+### Configuration
 
 ```yaml
 cloud_relay:
@@ -53,7 +53,7 @@ cloud_relay:
   disable_ssl_verification: false # Debug mode only
 ```
 
-**[📖 Complete Cloud Relay Documentation →](https://github.com/jslamartina/hass-addons/blob/dev/docs/user/cloud-relay.md)**
+### [📖 Complete Cloud Relay Documentation →](https://github.com/jslamartina/hass-addons/blob/dev/docs/user/cloud-relay.md)
 
 ### Enhanced Features
 
@@ -92,13 +92,13 @@ To perform a seamless migration from the old monolithic, non add-on setup:
 
 Visit the Cync Controller 'ingress' webpage (from the sidebar, or from the add-on page `Open Web UI` button). You will be greeted with a simple form that has provisions for being sent an OTP and to enter and submit the OTP.
 
-**Using the Exporter:**
+### Using the Exporter
 
 - **Start Export** - Automatically checks for cached credentials and exports without needing a new OTP
 - **Submit OTP** - Enter the OTP code from your email and click to complete the export
 - **Request OTP** - Manually request a new OTP email (rarely needed)
 
-**After Export:**
+### After Export
 
 - The config file contents will appear in a highlighted text box
 - Click **Download Config File** to save it

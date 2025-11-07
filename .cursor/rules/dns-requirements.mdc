@@ -8,18 +8,21 @@ description: DNS redirection setup requirements and patterns
 
 ## Required Domain Redirects
 
-**Newer Firmware:**
-```
+### Newer Firmware
+
+```text
 cm.gelighting.com → Your Home Assistant IP
 cm-sec.gelighting.com → Your Home Assistant IP
 ```
 
-**Older Firmware:**
-```
+### Older Firmware
+
+```text
 cm-ge.xlink.cn → Your Home Assistant IP
 ```
 
-**Check which domains your devices use:**
+### Check which domains your devices use
+
 ```bash
 grep "xlink.cn" /var/log/dns.log
 grep "gelighting.com" /var/log/dns.log
@@ -27,8 +30,10 @@ grep "gelighting.com" /var/log/dns.log
 
 ## OPNsense with Unbound (Selective Routing)
 
-**Configuration:**
-```
+### Configuration
+
+```yaml
+
 server:
 access-control-view: 10.0.2.216/32 cync-override-hass
 access-control-view: 10.0.2.223/32 cync-override-hass
@@ -39,38 +44,43 @@ local-zone: "homelab" static
 local-data: "cm.gelighting.com. 90 IN A 10.0.1.20"
 local-data: "cm-sec.gelighting.com. 90 IN A 10.0.1.20"
 local-data: "cm-ge.xlink.cn. 90 IN A 10.0.1.20"
+
 ```
 
-**Setup:**
+### Setup
+
 1. Go to Services → Unbound DNS → Custom Options
 2. Paste configuration (adjust IPs)
 3. Restart Unbound
-3. Power cycle Cync devices
+4. Power cycle Cync devices
 
 **Note:** Trailing `.` after domain in `local-data:` required. No leading `.` in `local-zone:`.
 
 ## Pi-hole (Network-Wide)
 
-**Setup:**
+### Setup
+
 1. Navigate to Local DNS → DNS Records
 2. Add DNS record for each domain
 3. Click Add
 4. Power cycle Cync devices
 
-**Limitation:** Network-wide only (affects all devices, cannot add new devices without disabling).
+**Limitation:** Network-wide only (affects all devices, can't add new devices without disabling).
 
 ## Selective vs Network-Wide
 
-**Selective (OPNsense/Unbound with Views):**
+### Selective (OPNsense/Unbound with Views)
+
 - ✅ Only affects specific Cync devices (by IP)
 - ✅ Can still add new devices via app
 - ✅ Phone not affected (can manage devices)
 - ⚠️ More complex setup (requires view configuration)
 - **Recommended** for production use
 
-**Network-Wide (Pi-hole, DNSCryptProxy, Unbound without Views):**
+### Network-Wide (Pi-hole, DNSCryptProxy, Unbound without Views)
+
 - ✅ Simple setup (single redirect rule)
-- ❌ Cannot add new devices without disabling redirect
+- ❌ Can't add new devices without disabling redirect
 - ❌ Phone app affected if on same network
 - ❌ Must disable temporarily to add new devices
 - **Use only** for testing or isolated networks
@@ -80,51 +90,55 @@ local-data: "cm-ge.xlink.cn. 90 IN A 10.0.1.20"
 ## Testing and Verification
 
 ```bash
-# Test DNS redirect (should return HA IP)
+## Test DNS redirect (should return HA IP)
 dig +short cm.gelighting.com
-# Expected: 10.0.1.20 (your HA IP)
+## Expected: 10.0.1.20 (your HA IP)
 
-# Check TTL (Time To Live)
+## Check TTL (Time To Live)
 dig cm.gelighting.com | grep "^cm.gelighting.com"
-# Should show TTL (e.g., 90 seconds)
+## Should show TTL (e.g., 90 seconds)
 
-# Flush DNS cache on device (if needed)
-# iOS: Airplane mode on/off
-# Android: Clear DNS cache in settings
-# Windows: ipconfig /flushdns
-# Linux: sudo systemd-resolve --flush-caches
+## Flush DNS cache on device (if needed)
+## iOS: Airplane mode on/off
+## Android: Clear DNS cache in settings
+## Windows: ipconfig /flushdns
+## Linux: sudo systemd-resolve --flush-caches
 
-# Verify from device's perspective
+## Verify from device's perspective
 nslookup cm.gelighting.com
 
-# Check connection attempts
+## Check connection attempts
 ha addons logs local_cync-controller --follow
-# Should see: "New device connected from <device-ip>"
+## Should see: "New device connected from <device-ip>"
 ```
 
 ## Common Issues
 
-**Devices Not Connecting:**
+### Devices Not Connecting
+
 - Verify DNS redirect: `dig cm.gelighting.com`
 - Ensure devices power cycled (unplug 10+ seconds)
 - Check firewall allows TCP 23779
 
-**Cannot Add New Devices:**
+### Can't Add New Devices
+
 - Temporarily disable DNS overrides
 - Add device using Cync app
 - Re-enable DNS overrides
 - Export new config from add-on, restart, power cycle device
 
-**Mix of New and Old Firmware:**
+### Mix of New and Old Firmware
+
 - Redirect all three domains: cm.gelighting.com, cm-sec.gelighting.com, cm-ge.xlink.cn
 
 ## Best Practices
 
-**Prefer These Devices for Local Connection:**
+### Prefer These Devices for Local Connection
+
 1. LED strip controllers ⭐⭐⭐⭐⭐
 2. Always-on bulbs ⭐⭐⭐⭐
 3. Plugs ⭐⭐⭐
 
 **Target 4-6 always-on devices** for optimal performance.
 
-**Do NOT redirect your phone** - Keep phone using cloud for device management and adding new devices.
+**DON'T redirect your phone** - Keep phone using cloud for device management and adding new devices.

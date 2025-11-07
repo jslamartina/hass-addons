@@ -1,6 +1,8 @@
+# 2025 01 27T01 17 00 First Class Logging Implementation 9053Ce2B.Plan
+
 <!-- 9053ce2b-e509-4230-adcf-25596372ba59 91dc9654-cddb-4ee2-abfd-f85c17750ad5 -->
 
-# First-Class Logging Implementation
+## First-Class Logging Implementation
 
 ## Overview
 
@@ -42,12 +44,12 @@ Automatic correlation tracking for async operations:
 **Pattern**:
 
 ```python
-# Automatic in new async tasks
+## Automatic in new async tasks
 async def handle_connection():
     # correlation_id auto-generated and tracked
     logger.info("Connection started")  # includes correlation_id
 
-# Manual override for testing
+## Manual override for testing
 async def test_critical_path():
     with correlation_context("CRIT-PATH-001"):
         await process_command()
@@ -153,7 +155,7 @@ Add new logging configuration constants:
 
 ```python
 logger.info("→ Starting mesh refresh", extra={"device_count": len(devices)})
-# ... operation ...
+## ... operation ...
 logger.info("✓ Mesh refresh completed", extra={"duration_ms": elapsed})
 ```
 
@@ -195,7 +197,7 @@ async def publish(topic, payload):
 
 #### Pre-Deployment Testing
 
-**Step 1: Lint & Build Verification**
+#### Step 1: Lint & Build Verification
 
 ```bash
 npm run lint:python:fix            # Fix any linting issues
@@ -203,7 +205,7 @@ npm run format:python              # Format code
 cd cync-controller && ./rebuild.sh # Rebuild addon
 ```
 
-**Step 2: Dual-Format Output Verification**
+### Step 2: Dual-Format Output Verification
 
 - Start the addon with `CYNC_LOG_FORMAT=both`
 - Verify human-readable logs appear in stdout
@@ -211,7 +213,7 @@ cd cync-controller && ./rebuild.sh # Rebuild addon
 - Check that both formats contain the same information
 - Validate JSON is properly formatted and parseable
 
-**Step 3: Correlation ID Tracking**
+### Step 3: Correlation ID Tracking
 
 - Trigger a device command (e.g., turn on a light)
 - Follow the correlation ID through the logs:
@@ -222,7 +224,7 @@ cd cync-controller && ./rebuild.sh # Rebuild addon
 - Verify all related logs share the same correlation ID
 - Test manual correlation ID override with `correlation_context("TEST-ID")`
 
-**Step 4: Performance Instrumentation**
+### Step 4: Performance Instrumentation
 
 - Monitor logs for performance timing entries
 - Verify `@timed_async` decorators log execution times
@@ -230,7 +232,7 @@ cd cync-controller && ./rebuild.sh # Rebuild addon
 - Confirm operations exceeding threshold log warnings
 - Verify timing accuracy with known slow operations
 
-**Step 5: Structured Context Validation**
+### Step 5: Structured Context Validation
 
 - Inspect JSON logs to ensure `extra` fields are properly included
 - Verify no `name` field clashes (should use `device_name`, `group_name`)
@@ -239,7 +241,7 @@ cd cync-controller && ./rebuild.sh # Rebuild addon
 
 #### Integration Testing
 
-**Step 6: End-to-End Workflow Testing**
+#### Step 6: End-to-End Workflow Testing
 
 1. **Device Connection**:
    - Start addon
@@ -261,14 +263,14 @@ cd cync-controller && ./rebuild.sh # Rebuild addon
    - Verify offline detection logs with proper context
    - Check error logs include full context
 
-**Step 7: Configuration Testing**
+### Step 7: Configuration Testing
 
 - Test `CYNC_LOG_FORMAT=json` (JSON only)
 - Test `CYNC_LOG_FORMAT=human` (human-readable only)
 - Test `CYNC_PERF_TRACKING=false` (disable timing)
 - Verify environment variables work as expected
 
-**Step 8: Log Analysis**
+### Step 8: Log Analysis
 
 - Review logs for noise reduction (should see ~20-30% fewer logs)
 - Verify no extraneous debug logs in tight loops

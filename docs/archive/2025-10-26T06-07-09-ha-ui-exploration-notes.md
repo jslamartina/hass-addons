@@ -1,7 +1,7 @@
 # Home Assistant UI Exploration - Agent Findings
 
 **Date:** October 11, 2025
-**Access URL:** http://localhost:8123
+**Access URL:** <http://localhost:8123>
 **Credentials:** Stored in `hass-credentials.env` (dev/dev)
 
 ## Overview
@@ -44,14 +44,14 @@ The Home Assistant UI features a left sidebar with the following main sections:
 
 ### Add-on Configuration
 
-**Enabled Features:**
+#### Enabled Features
 
 - ✓ Start on boot
 - ✗ Watchdog (disabled)
 - ✓ Add to sidebar
 - ✓ Ingress (web UI enabled)
 
-**Badges:**
+### Badges
 
 - Rating: 7
 - Host access enabled
@@ -99,11 +99,11 @@ The following binary sensors/buttons are exposed (all currently showing "Unavail
 
 The system currently manages the following Cync devices:
 
-**Fan Devices (1):**
+#### Fan Devices (1)
 
 - Master Bedroom Fan Switch (on/off control)
 
-**Light Devices (18):**
+### Light Devices (18)
 
 #### Hallway (9 lights)
 
@@ -206,7 +206,7 @@ The Cync Controller is installed and the add-on container is running, but the in
 
 A prominent alert on the add-on info page states:
 
-> "DNS redirection is REQUIRED, please see [here](https://github.com/jslamartina/hass-addons/tree/dev/docs/user/dns-setup.md) for documentation and examples"
+> "DNS redirection is REQUIRED, please see [Home Assistant documentation](https://github.com/jslamartina/hass-addons/tree/dev/docs/user/dns-setup.md) for documentation and examples"
 
 This is critical for the nCync TCP server to intercept device communications.
 

@@ -14,7 +14,7 @@ A comprehensive browser testing framework for AI agents to autonomously test and
 
 **Purpose:** Complete guide for AI agents to use browser automation effectively.
 
-**Contents:**
+### Contents
 
 - 📖 Overview of all available MCP Playwright tools
 - 🔄 Core workflows (login, navigation, entity verification, device control)
@@ -33,7 +33,7 @@ A comprehensive browser testing framework for AI agents to autonomously test and
 
 **Purpose:** Fast-access cheat sheet for browser testing.
 
-**Contents:**
+### Browser Testing Contents
 
 - Quick tool reference table
 - Common patterns (login, add-on config, entity verification)
@@ -47,7 +47,7 @@ A comprehensive browser testing framework for AI agents to autonomously test and
 
 **Location:** `docs/developer/mcp-tools.md`
 
-**Changes:**
+#### Changes
 
 - Added `cursor-playwright` to quick reference table
 - Added comprehensive Browser Automation section with:
@@ -61,7 +61,7 @@ A comprehensive browser testing framework for AI agents to autonomously test and
 
 **Location:** `AGENTS.md`
 
-**Changes:**
+#### Changes
 
 - Added browser automation to MCP Development Tools section
 - Highlighted as NEW feature
@@ -175,7 +175,7 @@ mcp_cursor - playwright_browser_console_messages();
 
 ### MCP Browser Tools
 
-**Best for:**
+#### Best for
 
 - Interactive exploration
 - Quick verification
@@ -184,7 +184,7 @@ mcp_cursor - playwright_browser_console_messages();
 
 ### TypeScript Scripts (`scripts/playwright/`)
 
-**Best for:**
+#### Best for
 
 - Automated workflows
 - Bulk operations
@@ -193,13 +193,13 @@ mcp_cursor - playwright_browser_console_messages();
 
 ### API Tools (`scripts/configure-addon.sh`)
 
-**Best for:**
+#### Best for
 
 - Configuration changes
 - Add-on management
 - Programmatic operations
 
-**All three complement each other!**
+### All three complement each other
 
 ## Next Steps
 
@@ -235,7 +235,8 @@ mcp_cursor - playwright_browser_console_messages();
 
 ### Documentation Organization
 
-```
+```text
+
 docs/developer/
 ├── ai-browser-testing-plan.md  # Comprehensive guide (main reference)
 ├── browser-automation.md        # Playwright-specific patterns
@@ -246,6 +247,7 @@ docs/developer/
 └── ai-browser-testing.mdc      # Quick reference (fast access)
 
 AGENTS.md                        # Points to browser testing docs
+
 ```
 
 ## Success Criteria

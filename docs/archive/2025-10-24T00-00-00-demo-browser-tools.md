@@ -14,7 +14,7 @@ Successfully tested Cursor's MCP Playwright browser automation tools with Home A
 
 **Result:** Successfully navigated to `http://localhost:8123`
 
-**Outcome:**
+### Outcome
 
 - Loaded Home Assistant login page
 - Redirected to authorization endpoint (expected behavior)
@@ -26,7 +26,7 @@ Successfully tested Cursor's MCP Playwright browser automation tools with Home A
 
 **Result:** Captured complete accessibility tree
 
-**Discovered Elements:**
+### Discovered Elements
 
 ```yaml
 - heading "Welcome home!" [level=1]
@@ -40,7 +40,7 @@ Successfully tested Cursor's MCP Playwright browser automation tools with Home A
 - link "Help"
 ```
 
-**Key Findings:**
+### Key Findings
 
 - ✅ Shadow DOM elements accessible via role-based selectors
 - ✅ Form structure visible and understandable
@@ -53,7 +53,7 @@ Successfully tested Cursor's MCP Playwright browser automation tools with Home A
 
 **Result:** Captured visual state of login page
 
-**Outcome:**
+### Outcome
 
 - Screenshot saved successfully
 - Shows complete login form
@@ -115,7 +115,7 @@ mcp_cursor - playwright_browser_wait_for({ text: "Overview", time: 10 });
 
 ## Ready for Production Use
 
-### AI Agents Can Now:
+### AI Agents Can Now
 
 1. **Explore UI autonomously**
    - Navigate to any HA page
@@ -183,6 +183,7 @@ mcp_cursor - playwright_browser_wait_for({ text: "Overview", time: 10 });
    ```
 
 4. **Device Control Testing**
+
    ```typescript
    // Dashboard → Click entity → Adjust controls → Verify state
    ```

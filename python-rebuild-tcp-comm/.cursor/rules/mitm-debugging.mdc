@@ -1,0 +1,317 @@
+---
+description: MITM proxy usage and packet capture
+---
+
+# MITM Debugging
+
+## When to Use MITM Proxy
+
+Use MITM proxy for:
+
+- **Protocol validation** - Verify packet formats against real devices
+- **Packet capture** - Record device communication for analysis
+- **Debugging** - Inspect live traffic between device and cloud
+- **Testing** - Inject packets or simulate failures
+
+## Prerequisites
+
+### DNS Redirection
+
+**Required**: Redirect Cync cloud DNS to the devcontainer IP where MITM proxy runs
+
+```bash
+## In router/DNS server, redirect these domains to devcontainer IP:
+## cm.gelighting.com → <devcontainer-ip>
+##
+## Or add to local /etc/hosts for testing:
+## 127.0.0.1 cm.gelighting.com
+```
+
+**Note**: When using local intercept mode with homeassistant.local, the MITM proxy forwards to your Home Assistant instance.
+
+### SSL/TLS Certificates
+
+Located in `mitm/certs/` directory:
+
+- `cert.pem` - Server certificate
+- `key.pem` - Private key
+
+Devices don't validate certificates (self-signed certificates work fine).
+
+## Starting MITM Proxy
+
+### Default: Local Intercept (Recommended) 🎯
+
+**Primary mode for protocol development** - Capture commands from live Home Assistant:
+
+```bash
+## Using CLI command (recommended)
+cync-mitm \
+  --listen-port 23779 \
+  --upstream-host homeassistant.local \
+  --upstream-port 23779 \
+  --api-port 8080
+
+## Or using Python module directly
+python mitm/mitm_proxy.py \
+  --listen-port 23779 \
+  --upstream-host homeassistant.local \
+  --upstream-port 23779 \
+  --api-port 8080
+```
+
+**Network flow**: Devices → MITM (devcontainer) → cync-controller (HA) → bidirectional capture
+
+**Why this is the default**:
+
+- See exact commands HA sends for any action
+- Capture bidirectional traffic (HA↔devices)
+- Debug live command sequences
+- Validate protocol implementation against production
+- No external cloud dependencies
+- Includes backpressure testing features
+
+**Full guide**: See `docs/living/mitm-local-intercept.md`
+
+### Alternative: Cloud Intercept (Protocol Research)
+
+Capture real device traffic via cloud (rarely needed):
+
+```bash
+python mitm/mitm-proxy.py \
+  --listen-port 23779 \
+  --upstream-host 35.196.85.236 \
+  --upstream-port 23779 \
+  --api-port 8080
+```
+
+**Use case**: Phase 0.5 protocol validation, capturing device behavior with real cloud
+
+### Alternative: Localhost Testing
+
+For testing with cloud relay simulator:
+
+```bash
+python mitm/mitm-proxy.py \
+  --listen-port 23779 \
+  --upstream-host localhost \
+  --upstream-port 23780 \
+  --no-ssl \
+  --api-port 8080
+```
+
+**Use case**: Test with local simulators without network dependencies
+
+### Note on API Port
+
+The `--api-port 8080` flag is included in all examples above and enables the REST API for packet injection during testing (see `mitm/test-toggle-injection.py`).
+
+## Packet Captures
+
+### Capture Location
+
+All captures stored in `mitm/captures/` directory (auto-created):
+
+```text
+mitm/captures/
+├── capture_20251107_143052.txt
+├── capture_20251107_150823.txt
+└── ...
+```
+
+### Capture Format
+
+Timestamped JSONL with hex dumps:
+
+```bash
+
+2025-11-07T14:30:52.123456 → DEVICE_TO_CLOUD
+0df00d001a7b22636d64223a22746f67676c65222c227374617465223a747275657d
+
+2025-11-07T14:30:52.345678 ← CLOUD_TO_DEVICE
+0df00d00157b22737461747573223a226f6b222c22616371223a747275657d
+
+```
+
+### Capture Analysis
+
+Use structured JSON logs on stdout:
+
+```json
+{
+  "timestamp": "2025-11-07T14:30:52.123456",
+  "direction": "device_to_cloud",
+  "size": 42,
+  "hex": "0df00d001a...",
+  "connection_id": 1
+}
+```
+
+## Analyzing Captures
+
+### Manual Analysis
+
+Captures are stored as timestamped text files with hex-encoded packets. Use standard text tools:
+
+```bash
+## View live capture
+tail -f mitm/captures/capture_*.txt
+
+## Search for specific packet types
+grep "DEV→CLOUD" mitm/captures/capture_*.txt
+
+## Count packets by direction
+grep -c "CLOUD→DEV" mitm/captures/capture_*.txt
+```
+
+### Structured Logs
+
+The MITM proxy outputs structured JSON to stdout for programmatic analysis:
+
+```json
+{
+  "timestamp": "2025-11-07T14:30:52.123456",
+  "direction": "DEV→CLOUD",
+  "length": 42,
+  "hex": "0df00d001a...",
+  "annotation": null
+}
+```
+
+### Creating Test Fixtures
+
+Extract important packets to `tests/fixtures/` for unit tests:
+
+```python
+## tests/fixtures/real_packets.py
+TOGGLE_ON_COMMAND = bytes.fromhex("0df00d...")
+TOGGLE_ON_ACK = bytes.fromhex("0df00d...")
+```
+
+## Packet Injection
+
+### REST API (when --api-port enabled)
+
+```bash
+## Inject packet to device
+curl -X POST http://localhost:8080/inject \
+  -H "Content-Type: application/json" \
+  -d '{"direction": "to_device", "hex": "0df00d..."}'
+
+## Inject to cloud
+curl -X POST http://localhost:8080/inject \
+  -H "Content-Type: application/json" \
+  -d '{"direction": "to_cloud", "hex": "0df00d..."}'
+```
+
+### Test Script
+
+Use `mitm/test-toggle-injection.py`:
+
+```bash
+python mitm/test-toggle-injection.py \
+  --endpoint "45 88 0f 3a" \
+  --device-id 80 \
+  --iterations 10 \
+  --api-url http://localhost:8080/inject
+```
+
+## Troubleshooting
+
+### DNS Not Redirecting
+
+Verify DNS resolution:
+
+```bash
+nslookup cm.gelighting.com
+## Should return devcontainer IP (e.g., 172.17.0.2)
+```
+
+### Upstream Connection Failed
+
+If MITM can't connect to homeassistant.local:
+
+```bash
+## Test connectivity
+ping homeassistant.local
+
+## Verify HA is listening on 23779
+## (run on Home Assistant host)
+netstat -tlnp | grep 23779
+```
+
+### Certificate Errors
+
+Ensure certificates exist:
+
+```bash
+ls mitm/certs/cert.pem mitm/certs/key.pem
+```
+
+If missing, MITM proxy will auto-generate.
+
+### Port Already in Use
+
+```bash
+## Find process using port 23779
+lsof -i :23779
+
+## Kill if needed
+kill -9 <PID>
+```
+
+### No Packets Captured
+
+Check:
+
+1. Device DNS redirects to devcontainer (where MITM runs)
+2. MITM proxy is running (`lsof -i :23779`)
+3. Devices can reach port 23779
+4. Home Assistant is reachable (`ping homeassistant.local`)
+5. Home Assistant cync-controller is running
+
+## Capture Best Practices
+
+### Annotation
+
+Add annotations to capture sessions:
+
+```python
+## In MITM proxy code
+self.current_annotation = "Testing toggle retry behavior"
+```
+
+### Timestamping
+
+All captures are timestamped automatically:
+
+- Filename: `capture_YYYYMMdd_HHMMSS.txt`
+- Per-packet: ISO 8601 timestamps
+
+### Storage
+
+- Captures are ephemeral (not in version control)
+- Important packets → extract to `tests/fixtures/`
+- Keep captures for current phase only
+
+## Best Practices
+
+### Regular Capture Rotation
+
+Captures can grow large quickly. Clean up old captures periodically:
+
+```bash
+## Remove captures older than 7 days
+find mitm/captures/ -name "*.txt" -mtime +7 -delete
+```
+
+### Important Packets
+
+Extract important packet sequences to test fixtures for regression testing.
+
+## Security Notes
+
+- MITM proxy disables SSL verification (for debugging only)
+- Never use in production
+- Self-signed certificates acceptable (devices don't validate)
+- Captures may contain device identifiers (handle appropriately)

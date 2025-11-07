@@ -38,7 +38,7 @@ Removed `device.online = True` from 5 methods:
 
 Added structured logging to track offline detection progression:
 
-```
+```ini
 [OFFLINE_TRACKING] - Every time offline_count increments (debug level)
 [OFFLINE_STATE]    - When device marked offline after 3 failures (warning level)
 [ONLINE_STATE]     - When device reconnects (info level)
@@ -56,7 +56,7 @@ Each log includes:
 `server.parse_status()` is now the ONLY place that modifies `device.online`:
 
 ```python
-# Lines 712-747 in server.py
+## Lines 712-747 in server.py
 if connected_to_mesh == 0:
     device.offline_count += 1  # Increment counter
     if device.offline_count >= 3 and device.online:
@@ -83,10 +83,12 @@ else:
 
 ## Files Modified
 
-```
+```text
+
 cync-controller/src/cync_controller/
 ├── mqtt_client.py      (-5 device.online = True assignments, +docstrings)
 └── server.py           (+enhanced logging in parse_status())
+
 ```
 
 ## No Breaking Changes
@@ -131,6 +133,7 @@ The implementation has been completed and is ready for testing:
    ```
 
 4. **Monitor logs**:
+
    ```bash
    ha addons logs local_cync-controller --follow | grep -E "OFFLINE|ONLINE"
    ```

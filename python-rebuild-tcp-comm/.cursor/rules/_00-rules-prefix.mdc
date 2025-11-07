@@ -1,0 +1,35 @@
+---
+alwaysApply: true
+description: Python-rebuild-tcp-comm project-specific rules (child of hass-addons)
+---
+
+===============================================================================
+TIER 1: PROJECT-SPECIFIC CRITICAL RULES
+===============================================================================
+
+**PYTHON-REBUILD-TCP-COMM Project**:
+
+**Development Workflow**:
+
+1. Edit: Make changes in `src/` modules
+2. Quality: `poetry run ruff check .` && `poetry run mypy src tests`
+3. Test: `./scripts/test-all.sh` or `./scripts/test-unit.sh`
+4. Verify: Coverage ≥90% threshold
+
+**Python-Specific**:
+
+- Package manager: Poetry 1.8.3
+- Architecture: Async/await (asyncio) required for all I/O
+- Type hints: Full mypy strict compliance mandatory
+- Imports: Absolute from package root (`from transport import ...`)
+- Quality gates: Ruff + mypy + 90% coverage enforced in CI
+
+**Module Structure**:
+
+- `src/transport/`: TCP socket abstraction, device operations
+- `src/metrics/`: Prometheus metrics registry and counters
+- `src/harness/`: Toggler and test harnesses
+- `tests/unit/`: Fast tests with mocks
+- `tests/integration/`: Real TCP server tests
+
+===============================================================================

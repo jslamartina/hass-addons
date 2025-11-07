@@ -110,7 +110,7 @@ The table below specifies where each metric should be recorded in the codebase.
 **Example Recording**:
 
 ```python
-# In BoundedQueue.put() - DROP_OLDEST policy
+## In BoundedQueue.put() - DROP_OLDEST policy
 if self.queue.full():
     # Record full event
     QUEUE_FULL_COUNTER.labels(device_id=device_id, queue_type="recv").inc()
@@ -166,7 +166,8 @@ class QueueFullError(CyncProtocolError):
 
 **Complete Exception Hierarchy** (Phases 1a-1c):
 
-```
+```python
+
 CyncProtocolError (Phase 1a - base)
 ├── PacketDecodeError (Phase 1a)
 ├── PacketFramingError (Phase 1a)
@@ -176,6 +177,7 @@ CyncProtocolError (Phase 1a - base)
 ├── DuplicatePacketError (Phase 1b)
 ├── ACKTimeoutError (Phase 1b)
 └── QueueFullError (Phase 1c)
+
 ```
 
 **Note**: This hierarchy is referenced from Phase 1a and 1b specs. Update this section if new exception types are added in future phases.
@@ -222,7 +224,7 @@ This guide helps select the appropriate queue overflow policy based on traffic t
 
 #### The Three Queue Policies
 
-**BLOCK (Default - Recommended for Control Commands)**
+#### BLOCK (Default - Recommended for Control Commands)
 
 **Behavior**: Wait until queue has space
 **Best for**: Control commands where order and completeness matter
@@ -245,19 +247,19 @@ This guide helps select the appropriate queue overflow policy based on traffic t
 **Example**:
 
 ```python
-# Control command queue
+## Control command queue
 control_queue = BoundedQueue(
     maxsize=100,
     policy=QueuePolicy.BLOCK,
     name="control_commands"
 )
 
-# Application code
+## Application code
 await control_queue.put(toggle_command, timeout=10.0)
-# Will wait up to 10s for space (acceptable for user-triggered commands)
+## Will wait up to 10s for space (acceptable for user-triggered commands)
 ```
 
-**DROP_OLDEST (Best for Status Updates)**
+## DROP_OLDEST (Best for Status Updates)
 
 **Behavior**: Drop oldest item when queue full, add new one
 **Best for**: Status broadcasts where latest value is most important
@@ -279,19 +281,19 @@ await control_queue.put(toggle_command, timeout=10.0)
 **Example**:
 
 ```python
-# Status update queue
+## Status update queue
 status_queue = BoundedQueue(
     maxsize=50,
     policy=QueuePolicy.DROP_OLDEST,
     name="status_updates"
 )
 
-# Device sends status broadcast
+## Device sends status broadcast
 await status_queue.put(status_update)
-# If queue full, drops oldest status (no longer relevant)
+## If queue full, drops oldest status (no longer relevant)
 ```
 
-**REJECT (Advanced - Use for Circuit Breakers)**
+## REJECT (Advanced - Use for Circuit Breakers)
 
 **Behavior**: Return error immediately if queue full
 **Best for**: Explicit backpressure signaling, rate limiting
@@ -313,14 +315,14 @@ await status_queue.put(status_update)
 **Example**:
 
 ```python
-# Rate-limited queue with circuit breaker
+## Rate-limited queue with circuit breaker
 limited_queue = BoundedQueue(
     maxsize=20,
     policy=QueuePolicy.REJECT,
     name="rate_limited"
 )
 
-# Application code with error handling
+## Application code with error handling
 result = await limited_queue.put(item)
 if not result.success:
     logger.warning("Queue full - system overloaded")
@@ -390,6 +392,7 @@ if not result.success:
 - **Monitor**: `tcp_comm_queue_full_total` metric during Phase 1d
 - **Threshold**: If queue_full events > 5% of total messages → Requires action
 - **Actions if threshold exceeded**:
+
   1. Increase queue size (if memory allows)
   2. Split queues by traffic type (control: BLOCK, status: DROP_OLDEST)
   3. Optimize consumer speed (if bottleneck identified)
@@ -525,7 +528,7 @@ class ReliableTransport:
 
 **Technical Review Finding 2.1 - Resolved**: Approved proceeding without send_queue, accepting potential Phase 2 refactoring if validation shows need.
 
-**Rationale:**
+### Rationale
 
 - `send_reliable()` already provides retry logic and ACK waiting (Phase 1b)
 - Bulk operations (group commands to multiple devices) use `asyncio.gather()` for parallelism
@@ -533,13 +536,13 @@ class ReliableTransport:
 - Simplifies architecture - fewer moving parts
 - **Risk accepted**: If Phase 1d finds p99 >= 2s, send_queue deferred to Phase 2 (not Phase 1 blocker)
 
-**Bulk Operation Pattern:**
+### Bulk Operation Pattern
 
 ```python
-# User turns on "Living Room" group (10 devices)
+## User turns on "Living Room" group (10 devices)
 devices = get_devices_in_group("living_room")
 
-# Send commands in parallel using asyncio.gather
+## Send commands in parallel using asyncio.gather
 tasks = [
     device.transport.send_reliable(encode_turn_on_command(device))
     for device in devices
@@ -547,13 +550,13 @@ tasks = [
 
 results = await asyncio.gather(*tasks, return_exceptions=True)
 
-# Check results
+## Check results
 failures = [r for r in results if isinstance(r, Exception) or not r.success]
 if failures:
     logger.warning("Group command had %d failures", len(failures))
 ```
 
-**Performance Estimate:**
+### Performance Estimate
 
 - 10 devices × (1ms state lock + 5ms encoding) = ~60ms (serial lock acquisition)
 - ACK waits happen in parallel (with asyncio.gather) = ~100-200ms
@@ -561,7 +564,7 @@ if failures:
 - **Worst case: ~1000-1500ms** (if state lock contention or network jitter)
 - ✅ Acceptable for smart home UX (user expectation: commands complete within 1-2 seconds)
 
-**⚠️ RE-EVALUATION TRIGGER:**
+### ⚠️ RE-EVALUATION TRIGGER
 
 **Phase 1d Group Validation** provides measurements for validation:
 
@@ -572,7 +575,7 @@ if failures:
 
 See Phase 0.5 spec (Deliverable #11: Group Operation Performance Validation) for measurement methodology.
 
-**Re-evaluation criteria for adding send_queue in future phase:**
+### Re-evaluation criteria for adding send_queue in future phase
 
 - Measured p99 latency > **2 seconds** for group operations (updated from 1 second)
 - **State lock contention** observed (>10% of time waiting for lock)
@@ -597,14 +600,14 @@ recv_queue_policy=QueuePolicy.BLOCK  # Default for event-driven systems
 recv_queue_size=100  # Sufficient for typical smart home usage patterns
 ```
 
-**Rationale for BLOCK as Default:**
+### Rationale for BLOCK as Default
 
 1. **Event Ordering**: Smart home state synchronization requires ordered event processing
 2. **Data Loss Prevention**: Status updates must not be silently dropped (causes UI inconsistency)
 3. **Traffic Characteristics**: Low message rate (1-10 msgs/sec typical) makes blocking acceptable
 4. **Failure Mode**: If queue fills, system waits rather than loses data (fail-safe behavior)
 
-**When BLOCK is Appropriate:**
+### When BLOCK is Appropriate
 
 - Event-driven systems where order matters
 - Low-frequency updates (< 100 msgs/sec)
@@ -639,7 +642,7 @@ Phase 0.5 Deliverable #9 can optionally test device backpressure behavior:
 - Expected: Device may timeout/disconnect after 30-60s
 - Impact: Confirms BLOCK policy acceptable for normal operation
 
-**Policy Trade-offs:**
+### Policy Trade-offs
 
 | Policy                  | Use Case                         | Pros                          | Cons                               |
 | ----------------------- | -------------------------------- | ----------------------------- | ---------------------------------- |
@@ -649,31 +652,35 @@ Phase 0.5 Deliverable #9 can optionally test device backpressure behavior:
 
 **Recommendation**: Use BLOCK for event-driven smart home control, contingent on Phase 0.5 validation.
 
-````
+```
 
 ---
 
 ## Implementation Plan
 
 ### Step 1: BoundedQueue Implementation
+
 - Implement `BoundedQueue` class
 - Three overflow policies
 - Unit tests for each policy
 - Metrics integration
 
 ### Step 2: Integration with ReliableTransport
+
 - Add recv_queue to `ReliableTransport.__init__()`
 - Update `recv_reliable()` to enqueue received messages to recv_queue
 - Update application code to dequeue from recv_queue
 - Metrics for recv_queue depth only (no send_queue - use asyncio.gather for bulk operations)
 
 ### Step 3: Performance Testing
+
 - Load test with 1000+ messages/sec
 - Verify BLOCK policy doesn't deadlock
 - Verify DROP_OLDEST evicts correctly
 - Verify REJECT returns errors promptly
 
 ### Step 4: Documentation & Validation
+
 - Update API documentation
 - Performance benchmarks
 - Prepare for Phase 1d integration
@@ -683,6 +690,7 @@ Phase 0.5 Deliverable #9 can optionally test device backpressure behavior:
 ## Acceptance Criteria
 
 ### Functional
+
 - [ ] Bounded recv queue enforces max size
 - [ ] BLOCK policy blocks until space available
 - [ ] DROP_OLDEST policy evicts oldest item
@@ -692,6 +700,7 @@ Phase 0.5 Deliverable #9 can optionally test device backpressure behavior:
 - [ ] No send_queue implemented (bulk operations use asyncio.gather pattern)
 
 ### Testing
+
 - [ ] 10+ unit tests covering all policies
 - [ ] Load test: 1000 msgs/sec for 60 seconds
 - [ ] No deadlocks under BLOCK policy
@@ -701,12 +710,14 @@ Phase 0.5 Deliverable #9 can optionally test device backpressure behavior:
 - [ ] 90% code coverage
 
 ### Performance
+
 - [ ] `put()` completes in < 10ms (no overflow)
 - [ ] `get()` completes in < 5ms (queue not empty)
 - [ ] DROP_OLDEST eviction < 1ms
 - [ ] Queue size check < 0.1ms
 
 ### Quality
+
 - [ ] No ruff errors
 - [ ] No mypy errors (strict mode)
 - [ ] Full type annotations
@@ -718,8 +729,9 @@ Phase 0.5 Deliverable #9 can optionally test device backpressure behavior:
 
 ### Unit Tests
 
-```python
-# test_bounded_queue.py
+```
+
+## test_bounded_queue.py
 
 async def test_queue_block_policy():
     """BLOCK policy blocks when queue full."""
@@ -756,12 +768,14 @@ async def test_queue_reject_policy():
     result = await queue.put("item3")
     assert result.success is False
     assert result.reason == "queue_full"
-````
+
+```
 
 ### Load Tests
 
-```python
-# test_queue_performance.py
+```
+
+## test_queue_performance.py
 
 async def test_high_load_block_policy():
     """Test BLOCK policy under high load."""
@@ -781,7 +795,8 @@ async def test_high_load_block_policy():
 
     await asyncio.gather(producer(), consumer())
     assert queue.qsize() < 100  # Should never overflow
-```
+
+```sql
 
 ---
 
@@ -791,7 +806,8 @@ async def test_high_load_block_policy():
 
 ### Conservative (Low Memory, Reject Overload)
 
-```python
+```
+
 transport = ReliableTransport(
     connection=conn,
     protocol=protocol,
@@ -799,14 +815,17 @@ transport = ReliableTransport(
     recv_queue_policy=QueuePolicy.REJECT,
 )
 
-# Bulk operations: use asyncio.gather() for parallelism
+## Bulk operations: use asyncio.gather() for parallelism
+
 tasks = [transport.send_reliable(cmd) for cmd in commands]
 results = await asyncio.gather(*tasks, return_exceptions=True)
-```
+
+```markdown
 
 ### Aggressive (High Throughput, Drop Old Data)
 
-```python
+```
+
 transport = ReliableTransport(
     connection=conn,
     protocol=protocol,
@@ -814,17 +833,20 @@ transport = ReliableTransport(
     recv_queue_policy=QueuePolicy.DROP_OLDEST,
 )
 
-# Bulk operations: asyncio.gather() with timeout
+## Bulk operations: asyncio.gather() with timeout
+
 tasks = [transport.send_reliable(cmd, timeout=2.0) for cmd in commands]
 results = await asyncio.wait_for(
     asyncio.gather(*tasks, return_exceptions=True),
     timeout=10.0
 )
-```
+
+```python
 
 ### Balanced (Default, Block on Overload)
 
-```python
+```
+
 transport = ReliableTransport(
     connection=conn,
     protocol=protocol,
@@ -832,8 +854,10 @@ transport = ReliableTransport(
     recv_queue_policy=QueuePolicy.BLOCK,  # Default: preserve event ordering
 )
 
-# Bulk operations: asyncio.gather() for group commands
-# Example: Turn on "Living Room" group (10 devices)
+## Bulk operations: asyncio.gather() for group commands
+
+## Example: Turn on "Living Room" group (10 devices)
+
 devices = get_devices_in_group("living_room")
 tasks = [
     device.transport.send_reliable(encode_turn_on_command(device))
@@ -841,11 +865,13 @@ tasks = [
 ]
 results = await asyncio.gather(*tasks, return_exceptions=True)
 
-# Check for failures
+## Check for failures
+
 failures = [r for r in results if isinstance(r, Exception) or not r.success]
 if failures:
     logger.warning("Group command had %d failures", len(failures))
-```
+
+```text
 
 ---
 
@@ -864,26 +890,32 @@ if failures:
 
 **Layer 1: Timeout on put()** (Phase 1c implementation)
 
-```python
+```
+
 result = await queue.put(item, timeout=10.0)
 if not result.success:
     logger.error("Queue full timeout - consumer may be stuck")
-```
+
+```python
 
 **Layer 2: Queue Full Alerts** (Phase 1c implementation)
 
-```python
-# After 10 consecutive full events, escalate alert
+```
+
+## After 10 consecutive full events, escalate alert
+
 if queue.full_events > 10:
     logger.error("Queue persistently full - system degraded")
     record_metric("tcp_comm_queue_degraded_total")
-```
+
+```python
 
 **Layer 3: Automatic Policy Switch** (Phase 1c implementation - Technical Review Finding 5.1 - Resolved)
 
 **Approved enhancement**: Add simplified automatic recovery to Phase 1c (not deferred to Phase 2):
 
-```python
+```
+
 class BoundedQueue:
     """Async queue with automatic deadlock recovery."""
 
@@ -951,7 +983,8 @@ class BoundedQueue:
             return False  # Wait at least 60s
 
         return self.qsize() < (self.queue.maxsize * 0.5)
-```
+
+```python
 
 **Benefits of simplified Layer 3**:
 
@@ -964,7 +997,8 @@ class BoundedQueue:
 
 For production deployments, consider automatic policy switching:
 
-```python
+```
+
 class AdaptiveQueue(BoundedQueue):
     """Queue with circuit breaker for deadlock prevention."""
 
@@ -1014,6 +1048,7 @@ class AdaptiveQueue(BoundedQueue):
 
         # Check queue depth
         return self.qsize() < (self.queue.maxsize * 0.5)
+
 ```
 
 **Implementation Decision (Updated - Technical Review Finding 5.1)**:

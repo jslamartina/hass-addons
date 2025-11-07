@@ -303,11 +303,11 @@ class DeviceState:
 **CI Configuration** (required to prevent flaky builds):
 
 ```yaml
-# .github/workflows/ci.yml or pytest.ini
+## .github/workflows/ci.yml or pytest.ini
 [tool:pytest]
 addopts = --ignore=tests/integration/test_chaos_probabilistic.py  # Exclude from default runs
 
-# Nightly build config
+## Nightly build config
 [tool:pytest:nightly]
 addopts = tests/integration/test_chaos_probabilistic.py  # Run only probabilistic tests
 ```
@@ -319,7 +319,7 @@ addopts = tests/integration/test_chaos_probabilistic.py  # Run only probabilisti
 ## Integration Tests (10+ Tests)
 
 ```python
-# test_simulator.py
+## test_simulator.py
 
 async def test_handshake_flow():
     """Complete handshake with simulator."""
@@ -466,7 +466,7 @@ async def test_command_timeout():
 ## Chaos Tests (5+ Tests)
 
 ```python
-# test_chaos.py
+## test_chaos.py
 
 @pytest.mark.chaos
 async def test_deterministic_packet_loss():
@@ -635,7 +635,7 @@ async def test_network_partition():
 
 **Architectural Decision**: Balanced performance hierarchy (Option C from performance target review)
 
-**Targets based on smart home UX requirements:**
+#### Targets based on smart home UX requirements
 
 - User perceives < 200ms as "instant"
 - User accepts < 1s for commands
@@ -674,7 +674,7 @@ async def test_network_partition():
 
 **Acceptance Criteria Clarification**: Phase 1d acceptance criteria use **adjusted targets**, not aspirational targets.
 
-**Measurement Method:**
+### Measurement Method
 
 - Run Phase 1d simulator with no chaos
 - Send 1000 toggle commands
@@ -708,11 +708,11 @@ Phase 1d baseline tests measure ACK latency to validate timeout configuration (s
 
 Phase 1d baseline tests validate the "no send_queue" architectural decision (authoritative validation):
 
-1. **Test Setup**:
+5. **Test Setup**:
    - Create 10 simulated devices (or use real devices if available)
    - Prepare group command: Turn on all 10 devices simultaneously
 
-2. **Measurements Required**:
+6. **Measurements Required**:
    - **p50/p95/p99 latency** for 10-device parallel bulk operation
    - **Success rate** for group operations
    - **State lock hold time** during group operations (expected: <1ms per device)
@@ -721,22 +721,23 @@ Phase 1d baseline tests validate the "no send_queue" architectural decision (aut
    - Execution method: `results = await asyncio.gather([device.transport.send_reliable(cmd) for device in devices])`
    - Timing: Measure total time from first send_reliable() call to last ACK received
 
-3. **Purpose**: These measurements validate Phase 1c "no send_queue" architectural decision
+7. **Purpose**: These measurements validate Phase 1c "no send_queue" architectural decision
 
-4. **Re-evaluation Criteria**:
+8. **Re-evaluation Criteria**:
    - **If p99 < 2s**: No send_queue decision validated, proceed as specified
    - **If p99 ≥ 2s**: Document findings, proceed without send_queue (optimization deferred to Phase 2)
 
-5. **Diagnostic Measurements** (if p99 ≥ 2s):
+9. **Diagnostic Measurements** (if p99 ≥ 2s):
    - Measure state lock hold time during group operations
    - Check for lock contention (time spent waiting for lock)
    - Profile: Is delay from lock contention, network I/O, or device processing?
    - Document: Bottleneck analysis
 
-6. **Acceptable Outcome**:
-   - Phase 1 proceeds without send_queue regardless of findings
-   - If p99 ≥ 2s, document need for send_queue in Phase 2 backlog
-   - Phase 1 focuses on single-device reliability; group optimization deferred to Phase 2
+10. **Acceptable Outcome**:
+
+- Phase 1 proceeds without send_queue regardless of findings
+- If p99 ≥ 2s, document need for send_queue in Phase 2 backlog
+- Phase 1 focuses on single-device reliability; group optimization deferred to Phase 2
 
 **Note**: No baseline comparison against Phase 0 performance - Phase 0 used custom test protocol (0xF00D test framing) that is not directly comparable to real Cync protocol performance. Phase 1 is first implementation of real protocol.
 
@@ -815,7 +816,8 @@ Phase 1d baseline tests validate the "no send_queue" architectural decision (aut
       assert final_growth < 5.0, f"Memory leak detected: {final_growth:.2f}% growth"
 
       tracemalloc.stop()
-  ```
+
+```
 
 ### Quality
 
@@ -851,7 +853,7 @@ Phase 1d baseline tests validate the "no send_queue" architectural decision (aut
 **Implementation**:
 
 ```python
-# tests/simulator/port_allocator.py
+## tests/simulator/port_allocator.py
 
 import socket
 import fcntl
@@ -912,7 +914,7 @@ def find_free_port(start: int = 9000, end: int = 9100) -> int:
 **Usage in Tests**:
 
 ```python
-# tests/integration/test_simulator.py
+## tests/integration/test_simulator.py
 
 import pytest
 from tests.simulator.port_allocator import find_free_port
@@ -945,9 +947,9 @@ async def test_handshake_flow(simulator, simulator_port):
     assert success is True
 ```
 
-**Test Execution Strategy (Technical Review Finding 4.4 - Added)**
+### Test Execution Strategy (Technical Review Finding 4.4 - Added)
 
-**Which tests run in parallel vs serial:**
+### Which tests run in parallel vs serial
 
 | Test Category                   | Execution Mode                | Rationale                                           | Example Command                                       |
 | ------------------------------- | ----------------------------- | --------------------------------------------------- | ----------------------------------------------------- |
@@ -961,16 +963,16 @@ async def test_handshake_flow(simulator, simulator_port):
 **Parallel Test Execution**:
 
 ```bash
-# Run tests in parallel (4 workers) - excludes probabilistic chaos
+## Run tests in parallel (4 workers) - excludes probabilistic chaos
 pytest -n 4 tests/integration/ -m "not chaos_probabilistic"
 
-# Each worker allocates unique ports via file-based locking
-# Worker 1 gets first available port (e.g., 9000)
-# Worker 2 gets next available port (e.g., 9001)
-# Worker 3 gets next available port (e.g., 9002)
-# Worker 4 gets next available port (e.g., 9003)
+## Each worker allocates unique ports via file-based locking
+## Worker 1 gets first available port (e.g., 9000)
+## Worker 2 gets next available port (e.g., 9001)
+## Worker 3 gets next available port (e.g., 9002)
+## Worker 4 gets next available port (e.g., 9003)
 
-# Run probabilistic chaos tests separately (nightly builds only, serial execution)
+## Run probabilistic chaos tests separately (nightly builds only, serial execution)
 pytest tests/integration/test_chaos_probabilistic.py -m chaos_probabilistic
 ```
 

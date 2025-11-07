@@ -22,7 +22,7 @@ Read `.devcontainer/README.md` first; supervisor + Docker already managed.
 
 Scripts needing Supervisor API must run via `ha` CLI or `docker exec hassio_cli ...`.
 
-**Why:** `supervisor` hostname is not reachable from devcontainer shell. See `supervisor-api-access.mdc` for details.
+**Why:** `supervisor` hostname isn't reachable from devcontainer shell. See `supervisor-api-access.mdc` for details.
 
 ## Credentials
 
@@ -36,7 +36,7 @@ For fresh HA setup with EMQX and Cync Controller:
 
 ```bash
 cd scripts
-./setup-fresh-ha.sh  # Automated onboarding, EMQX install, addon config
+./setup-fresh-ha.sh # Automated onboarding, EMQX install, addon config
 ```
 
 ## Related

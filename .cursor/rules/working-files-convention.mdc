@@ -1,0 +1,54 @@
+---
+alwaysApply: true
+---
+
+# Working Files Convention
+
+## ⚠️ CRITICAL: Files without timestamps will be deleted immediately
+
+## Directory Structure
+
+**REQUIRED**: All files must be in a timestamped subfolder, never directly in `/working-files/`.
+
+```text
+/working-files/<YYYYMMDDhhmm>_<thread_topic>/<YYYYMMDDhhmm>_<file_name>
+```
+
+## Timestamp Format (YYYYMMDDhhmm)
+
+ISO 8601 down to the minute (YYYY-MM-DD-hh-mm):
+
+- Use actual current time, not placeholder or rounded times
+- Natural progression: `202511060930` → `202511060945` → `202511061015`
+
+**Bad**: `202511060000` (midnight placeholder), `202511061800` (suspiciously round)
+**Good**: `202511061823` (actual time), `202511141337` (actual time)
+
+## When to Use
+
+✅ **DO use**:
+
+- Analysis outputs, temporary scripts, session notes
+- Draft documentation, debugging artifacts
+- Exploratory data or findings
+
+❌ **DON'T use**:
+
+- Production code, config files, permanent docs
+- Test fixtures, reusable scripts
+
+## Example
+
+```text
+/working-files/202511060930_protocol_analysis/
+  ├── 202511060930_tcp_packet_summary.md
+  ├── 202511060945_state_machine_notes.txt
+  └── 202511061015_findings.json
+```
+
+## Lifecycle
+
+1. Create thread directory with current timestamp + topic
+2. Store all session artifacts in that directory
+3. Clean up when no longer needed
+4. Move permanent findings to `/docs`

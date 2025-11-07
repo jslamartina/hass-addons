@@ -65,7 +65,8 @@
         "shd101wyy.markdown-preview-enhanced",
         "ms-playwright.playwright",
         "MermaidChart.vscode-mermaid-chart",
-        "github.vscode-github-actions"
+        "github.vscode-github-actions",
+        "DavidAnson.vscode-markdownlint"
       ],
       "settings": {
         "terminal.integrated.scrollback": 10000,

@@ -1,0 +1,234 @@
+---
+description: Testing patterns and strategies for TCP rebuild
+---
+
+# Testing Strategy
+
+## Test Organization
+
+### Unit Tests (`tests/unit/`)
+
+Fast tests with mocks, no I/O:
+
+```python
+@pytest.mark.unit
+async def test_toggle_command():
+    mock_connection = AsyncMock()
+    result = await send_toggle(mock_connection, "DEVICE123", True)
+    assert result is True
+    mock_connection.send.assert_called_once()
+```
+
+### Integration Tests (`tests/integration/`)
+
+Real TCP server tests:
+
+```python
+@pytest.mark.integration
+async def test_toggle_real_server():
+    async with TCPConnection("localhost", 9000) as conn:
+        result = await send_toggle(conn, "DEVICE123", True)
+        assert result is True
+```
+
+## pytest-asyncio Patterns
+
+### Async Test Functions
+
+```python
+import pytest
+
+@pytest.mark.asyncio
+async def test_async_operation():
+    result = await some_async_function()
+    assert result == expected
+```
+
+### Async Fixtures
+
+```python
+@pytest.fixture
+async def tcp_server():
+    server = await start_test_server()
+    yield server
+    await server.stop()
+```
+
+## Fixture Organization
+
+### Real Packet Fixtures
+
+Located in `tests/fixtures/`:
+
+```python
+## tests/fixtures/real_packets.py
+TOGGLE_ON_COMMAND = bytes.fromhex("0df00d...")
+TOGGLE_ON_ACK = bytes.fromhex("0df00d...")
+```
+
+Usage in tests:
+
+```python
+from tests.fixtures.real_packets import TOGGLE_ON_COMMAND
+
+def test_parse_toggle():
+    parsed = parse_command(TOGGLE_ON_COMMAND)
+    assert parsed["command"] == "toggle"
+```
+
+### Retry Fixtures
+
+```python
+## tests/fixtures/retry_packets.py
+RETRY_SCENARIOS = [
+    {"attempts": 1, "ack": TOGGLE_ON_ACK},
+    {"attempts": 3, "ack": None},  # Timeout
+]
+```
+
+## Mock Patterns
+
+### AsyncMock for Connections
+
+```python
+from unittest.mock import AsyncMock
+
+@pytest.fixture
+def mock_connection():
+    conn = AsyncMock(spec=TCPConnection)
+    conn.send.return_value = None
+    conn.recv.return_value = TOGGLE_ON_ACK
+    return conn
+```
+
+### Patching TCP Operations
+
+```python
+@patch('transport.socket_abstraction.asyncio.open_connection')
+async def test_connection_failure(mock_open):
+    mock_open.side_effect = ConnectionRefusedError()
+    result = await connect_device()
+    assert result is False
+```
+
+## Coverage Requirements
+
+### 90% Minimum
+
+Enforced in `pyproject.toml`:
+
+```toml
+[tool.coverage.report]
+fail_under = 90
+```
+
+### Check Coverage
+
+```bash
+## Unit tests with coverage
+./scripts/test-unit.sh -c
+
+## All tests with coverage
+./scripts/test-all.sh -c
+
+## View HTML report
+poetry run pytest --cov --cov-report=html
+open htmlcov/index.html
+```
+
+### Coverage Gaps
+
+Acceptable gaps:
+
+- Error handling for rare edge cases
+- Debug logging statements
+- Type checking branches
+
+## Running Tests
+
+### Quick Unit Tests
+
+```bash
+## Fast, mocked tests
+./scripts/test-unit.sh
+
+## Verbose output
+./scripts/test-unit.sh -v
+```
+
+### Integration Tests
+
+```bash
+## Real TCP server required
+./scripts/test-integration.sh
+
+## With HTML report
+./scripts/test-integration.sh --html
+```
+
+### All Tests
+
+```bash
+## Unit + Integration
+./scripts/test-all.sh
+
+## With coverage
+./scripts/test-all.sh -c
+```
+
+## Test Markers
+
+### Available Markers
+
+```python
+@pytest.mark.unit          # Fast unit test
+@pytest.mark.integration   # Integration test
+@pytest.mark.asyncio       # Async test (auto-applied)
+```
+
+### Running Specific Markers
+
+```bash
+## Only unit tests
+pytest -m unit
+
+## Only integration tests
+pytest -m integration
+```
+
+## Test Timeouts
+
+Set in `pyproject.toml`:
+
+```toml
+[tool.pytest.ini_options]
+timeout = 30
+```
+
+Override per test:
+
+```python
+@pytest.mark.timeout(5)
+async def test_fast_operation():
+    ...
+```
+
+## Assertions
+
+### Async Assertions
+
+```python
+## Wait for condition
+result = await operation()
+assert result == expected
+
+## Check mock calls
+mock_conn.send.assert_called_once_with(expected_data)
+```
+
+### Error Assertions
+
+```python
+with pytest.raises(ConnectionError):
+    await connect_invalid_host()
+```

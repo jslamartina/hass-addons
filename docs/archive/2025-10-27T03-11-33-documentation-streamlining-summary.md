@@ -18,42 +18,42 @@ Moved temporary/completed implementation documentation from repository root to `
 
 Moved completed plan files to archive with accurate timestamps:
 
-5. ✅ `docs/developer/automated-token-creation-plan.md` → `docs/archive/2025-10-26T06-07-09-automated-token-creation-plan.md`
-6. ✅ `docs/developer/ai-browser-testing-plan.md` → `docs/archive/2025-10-26T06-07-09-ai-browser-testing-plan.md`
-7. ✅ `docs/developer/addon-logs-ui-setup-summary.md` → `docs/archive/2025-10-26T06-07-09-addon-logs-ui-setup-summary.md`
-8. ✅ `docs/developer/addon-logs-ui.md` → `docs/archive/2025-10-26T06-07-09-addon-logs-ui.md`
-9. ✅ `docs/developer/multi-tiered-testing-plan.md` → `docs/archive/2025-10-27T00-07-33-multi-tiered-testing-plan.md`
-10. ✅ `docs/developer/exploration-notes.md` → `docs/archive/2025-10-26T06-07-09-ha-ui-exploration-notes.md`
+1. ✅ `docs/developer/automated-token-creation-plan.md` → `docs/archive/2025-10-26T06-07-09-automated-token-creation-plan.md`
+2. ✅ `docs/developer/ai-browser-testing-plan.md` → `docs/archive/2025-10-26T06-07-09-ai-browser-testing-plan.md`
+3. ✅ `docs/developer/addon-logs-ui-setup-summary.md` → `docs/archive/2025-10-26T06-07-09-addon-logs-ui-setup-summary.md`
+4. ✅ `docs/developer/addon-logs-ui.md` → `docs/archive/2025-10-26T06-07-09-addon-logs-ui.md`
+5. ✅ `docs/developer/multi-tiered-testing-plan.md` → `docs/archive/2025-10-27T00-07-33-multi-tiered-testing-plan.md`
+6. ✅ `docs/developer/exploration-notes.md` → `docs/archive/2025-10-26T06-07-09-ha-ui-exploration-notes.md`
 
 ### Files Deleted
 
 Removed temporary files:
 
-11. ❌ `test-sync.txt` - Temporary test file
+1. ❌ `test-sync.txt` - Temporary test file
 
 ### Documentation Updated
 
 Updated cross-references to archived files:
 
-12. ✅ `docs/README.md` - Updated developer docs table, removed archived files
-13. ✅ `docs/developer/testing-guide.md` - Updated multi-tiered-testing-plan link to archive
-14. ✅ `.cursor/rules/logging-mandatory.mdc` - Updated LOGGING_REFACTORING_GUIDE.md reference
+1. ✅ `docs/README.md` - Updated developer docs table, removed archived files
+2. ✅ `docs/developer/testing-guide.md` - Updated multi-tiered-testing-plan link to archive
+3. ✅ `.cursor/rules/logging-mandatory.mdc` - Updated LOGGING_REFACTORING_GUIDE.md reference
 
 ### Timestamp Standardization Applied
 
 Applied seconds-level accuracy to all newly archived files:
 
-15. ✅ Renamed 10 archived files to use actual creation timestamps (HH-MM-SS)
-16. ✅ Used `stat -c '%y'` to extract file creation time with seconds precision
-17. ✅ Updated all cross-references to match new filenames
-18. ✅ Enhanced `.cursor/rules/documentation-archiving.mdc` with timestamp extraction examples
-19. ✅ Added critical warning about using actual timestamps, not placeholder zeros
+1. ✅ Renamed 10 archived files to use actual creation timestamps (HH-MM-SS)
+2. ✅ Used `stat -c '%y'` to extract file creation time with seconds precision
+3. ✅ Updated all cross-references to match new filenames
+4. ✅ Enhanced `.cursor/rules/documentation-archiving.mdc` with timestamp extraction examples
+5. ✅ Added critical warning about using actual timestamps, not placeholder zeros
 
 ## Current Documentation Structure
 
 ### Root Directory (Active Docs Only)
 
-```
+```text
 /workspaces/hass-addons/
 ├── README.md           # Main repository readme
 ├── CONTRIBUTING.md     # Contribution guidelines
@@ -62,7 +62,7 @@ Applied seconds-level accuracy to all newly archived files:
 
 ### docs/user/ (User-Facing Documentation)
 
-```
+```text
 docs/user/
 ├── dns-setup.md          # DNS redirection setup (REQUIRED)
 ├── troubleshooting.md    # Common issues and solutions
@@ -74,7 +74,7 @@ docs/user/
 
 ### docs/developer/ (Developer Documentation)
 
-```
+```text
 docs/developer/
 ├── architecture.md                  # Architecture and protocol details
 ├── automated-token-creation.md      # Automated LLAT creation
@@ -91,7 +91,7 @@ docs/developer/
 
 ### docs/archive/ (Historical Documentation)
 
-```
+```text
 docs/archive/
 ├── 2025-10-27T03-11-33-documentation-streamlining-summary.md
 ├── 2025-10-27T02-51-45-rules-optimization-summary.md

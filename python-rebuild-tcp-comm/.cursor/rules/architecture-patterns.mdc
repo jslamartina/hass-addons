@@ -1,0 +1,310 @@
+---
+description: Architecture patterns and module responsibilities
+---
+
+# Architecture Patterns
+
+## Module Responsibilities
+
+### transport/ - TCP Abstraction Layer
+
+**Purpose**: Low-level TCP operations, no business logic
+
+**Files**:
+
+- `socket_abstraction.py` - TCPConnection class
+- `device_operations.py` - Device-specific operations
+- `device_info.py` - Device information dataclass
+
+**Responsibilities**:
+
+- Establish/close TCP connections
+- Send/receive bytes with timeouts
+- Connection state management
+- No protocol knowledge (pass-through)
+
+**Example**:
+
+```python
+class TCPConnection:
+    async def connect(self) -> bool:
+        """Establish connection with timeout."""
+        ...
+
+    async def send(self, data: bytes) -> None:
+        """Send data with timeout."""
+        ...
+
+    async def recv(self, size: int = 65536) -> bytes:
+        """Receive data with timeout."""
+        ...
+```
+
+### metrics/ - Prometheus Instrumentation
+
+**Purpose**: Metrics collection and export
+
+**Files**:
+
+- `registry.py` - Metrics registry and counters
+
+**Responsibilities**:
+
+- Define metrics (counters, gauges, histograms)
+- Provide metrics endpoint (HTTP on port 9400)
+- Track operation counts, errors, latency
+
+**Example**:
+
+```python
+from metrics.registry import get_metrics_registry
+
+registry = get_metrics_registry()
+registry.commands_sent.inc()
+registry.command_errors.labels(error_type="timeout").inc()
+```
+
+### harness/ - High-Level Operations
+
+**Purpose**: Orchestration, business logic, test harnesses
+
+**Files**:
+
+- `toggler.py` - Device toggle operations
+
+**Responsibilities**:
+
+- Compose transport operations
+- Implement retry logic
+- Handle protocol encoding/decoding
+- Entry point for operations
+
+**Example**:
+
+```python
+class Toggler:
+    async def toggle(self, state: bool) -> bool:
+        """Toggle device with retry."""
+        for attempt in range(max_retries):
+            if await self._try_toggle(state):
+                return True
+        return False
+```
+
+## Layer Communication
+
+### Unidirectional Dependencies
+
+```python
+
+harness/
+  ↓ uses
+transport/
+  ↓ uses
+asyncio (stdlib)
+
+metrics/ (standalone, used by all)
+
+```
+
+**Rules**:
+
+- `harness/` may import from `transport/` and `metrics/`
+- `transport/` may import from `metrics/` only
+- `transport/` must NOT import from `harness/`
+- `metrics/` imports nothing from project modules
+
+## Transport Layer Patterns
+
+### TCPConnection Abstraction
+
+**Context Manager Pattern**:
+
+```python
+async def send_command(host: str, port: int, data: bytes) -> bytes:
+    async with TCPConnection(host, port) as conn:
+        await conn.send(data)
+        return await conn.recv()
+    # Auto-cleanup on exit
+```
+
+**Manual Connection Management**:
+
+```python
+conn = TCPConnection(host, port)
+try:
+    if await conn.connect():
+        await conn.send(data)
+        response = await conn.recv()
+finally:
+    await conn.close()
+```
+
+### Timeout Patterns
+
+All I/O has timeouts:
+
+```python
+async def connect(self) -> bool:
+    try:
+        reader, writer = await asyncio.wait_for(
+            asyncio.open_connection(self.host, self.port),
+            timeout=self.connect_timeout
+        )
+        return True
+    except asyncio.TimeoutError:
+        logger.error("Connection timeout")
+        return False
+```
+
+## Metrics Integration
+
+### Registry Pattern
+
+Single global registry:
+
+```python
+## metrics/registry.py
+_registry: Optional[MetricsRegistry] = None
+
+def get_metrics_registry() -> MetricsRegistry:
+    global _registry
+    if _registry is None:
+        _registry = MetricsRegistry()
+    return _registry
+```
+
+### Counter Pattern
+
+```python
+from prometheus_client import Counter
+
+commands_sent = Counter(
+    'tcp_commands_sent_total',
+    'Total commands sent',
+    ['command_type']
+)
+
+commands_sent.labels(command_type='toggle').inc()
+```
+
+## Logging Patterns
+
+### JSON Structured Logs
+
+```python
+logger.info(
+    "Device operation",
+    extra={
+        "operation": "toggle",
+        "device_id": device_id,
+        "state": "on",
+        "duration_ms": 150,
+        "success": True
+    }
+)
+```
+
+### Entry/Exit Logging
+
+```python
+async def toggle(self, state: bool) -> bool:
+    logger.info(f"Starting toggle: state={state}")
+    try:
+        result = await self._execute_toggle(state)
+        logger.info(f"Toggle complete: success={result}")
+        return result
+    except Exception as e:
+        logger.error(f"Toggle failed: {e}")
+        raise
+```
+
+### Never Log Secrets
+
+```python
+## Bad
+logger.debug(f"Token: {auth_token}")
+
+## Good
+logger.debug("Authentication successful")
+```
+
+## Phase-Agnostic Development
+
+### Avoid Phase References
+
+```python
+## Bad
+class Phase1bTransport:
+    ...
+
+## Good
+class ReliableTransport:
+    ...
+```
+
+### No Phase Conditionals
+
+```python
+## Bad
+if phase == "1b":
+    use_retries = True
+
+## Good
+use_retries = config.enable_retries
+```
+
+## Error Handling
+
+### Specific Exceptions
+
+```python
+class ConnectionError(Exception):
+    """TCP connection failed."""
+    pass
+
+class TimeoutError(Exception):
+    """Operation timed out."""
+    pass
+```
+
+### Error Context
+
+```python
+try:
+    await conn.send(data)
+except Exception as e:
+    logger.error(
+        "Send failed",
+        extra={
+            "error": str(e),
+            "error_type": type(e).__name__,
+            "device_id": device_id
+        }
+    )
+    raise
+```
+
+## Async Resource Management
+
+### Proper Cleanup
+
+```python
+class TCPConnection:
+    async def __aenter__(self):
+        await self.connect()
+        return self
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        await self.close()
+```
+
+### Task Cancellation
+
+```python
+try:
+    result = await asyncio.wait_for(operation(), timeout=5.0)
+except asyncio.CancelledError:
+    logger.info("Operation cancelled")
+    raise
+```

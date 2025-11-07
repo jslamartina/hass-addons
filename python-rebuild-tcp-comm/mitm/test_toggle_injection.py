@@ -6,8 +6,8 @@ This script crafts toggle (0x73) and mesh info request packets, injects them
 via the MITM proxy REST API, and analyzes the responses for ACK validation.
 
 Usage:
-    python scripts/test-toggle-injection.py --endpoint "45 88 0f 3a" --device-id 80 --iterations 10
-    python scripts/test-toggle-injection.py --test mesh-info --endpoint "45 88 0f 3a"
+    python mitm/test-toggle-injection.py --endpoint "45 88 0f 3a" --device-id 80 --iterations 10
+    python mitm/test-toggle-injection.py --test mesh-info --endpoint "45 88 0f 3a"
 """
 
 import argparse
@@ -79,25 +79,33 @@ def craft_toggle_packet(endpoint: bytes, msg_id: int, device_id: int, state: boo
     state_byte = 0x01 if state else 0x00
 
     # Inner structure (without checksum yet)
-    inner_struct = bytearray([
-        0x7E,              # Start marker
-        msg_id,            # Control byte
-        0x01, 0x00, 0x00,
-        0xF8,
-        0x8E,
-        0x0C,
-        0x00,
-        msg_id,            # Control byte (repeated)
-        0x01, 0x00, 0x00, 0x00,
-        device_id_bytes[0], device_id_bytes[1],  # Device ID (little-endian)
-        0xF7,
-        0x11,
-        0x02,
-        state_byte,        # State
-        0x01,
-        0x00,              # Checksum placeholder
-        0x7E               # End marker
-    ])
+    inner_struct = bytearray(
+        [
+            0x7E,  # Start marker
+            msg_id,  # Control byte
+            0x01,
+            0x00,
+            0x00,
+            0xF8,
+            0x8E,
+            0x0C,
+            0x00,
+            msg_id,  # Control byte (repeated)
+            0x01,
+            0x00,
+            0x00,
+            0x00,
+            device_id_bytes[0],
+            device_id_bytes[1],  # Device ID (little-endian)
+            0xF7,
+            0x11,
+            0x02,
+            state_byte,  # State
+            0x01,
+            0x00,  # Checksum placeholder
+            0x7E,  # End marker
+        ]
+    )
 
     # Calculate and insert checksum
     checksum = calculate_checksum_between_markers(bytes(inner_struct))
@@ -129,19 +137,27 @@ def craft_mesh_info_request(endpoint: bytes) -> bytes:
     msg_id_bytes = bytes([0x00, 0x00, 0x00])
 
     # Inner structure (without checksum yet)
-    inner_struct = bytearray([
-        0x7E,              # Start marker
-        0x1F,              # Control byte 1
-        0x00, 0x00, 0x00,
-        0xF8,              # Fixed
-        0x52,              # Control byte 2 (identifies mesh info)
-        0x06,              # Command type
-        0x00, 0x00, 0x00,
-        0xFF, 0xFF,        # Broadcast to all devices
-        0x00, 0x00,
-        0x00,              # Checksum placeholder
-        0x7E               # End marker
-    ])
+    inner_struct = bytearray(
+        [
+            0x7E,  # Start marker
+            0x1F,  # Control byte 1
+            0x00,
+            0x00,
+            0x00,
+            0xF8,  # Fixed
+            0x52,  # Control byte 2 (identifies mesh info)
+            0x06,  # Command type
+            0x00,
+            0x00,
+            0x00,
+            0xFF,
+            0xFF,  # Broadcast to all devices
+            0x00,
+            0x00,
+            0x00,  # Checksum placeholder
+            0x7E,  # End marker
+        ]
+    )
 
     # Calculate and insert checksum
     checksum = calculate_checksum_between_markers(bytes(inner_struct))
@@ -167,17 +183,15 @@ def inject_packet(api_url: str, packet: bytes, direction: str = "CLOUD→DEV") -
     """
     hex_string = packet.hex(" ")
 
-    response = requests.post(
-        api_url,
-        json={"direction": direction, "hex": hex_string},
-        timeout=5
-    )
+    response = requests.post(api_url, json={"direction": direction, "hex": hex_string}, timeout=5)
 
     response.raise_for_status()
     return response.json()
 
 
-def parse_capture_logs(capture_file: Path, since_time: Optional[float] = None) -> List[Dict[str, Any]]:
+def parse_capture_logs(
+    capture_file: Path, since_time: Optional[float] = None
+) -> List[Dict[str, Any]]:
     """
     Parse JSONL capture logs.
 
@@ -215,7 +229,9 @@ def parse_capture_logs(capture_file: Path, since_time: Optional[float] = None) -
     return packets
 
 
-def find_ack_for_msg_id(packets: List[Dict[str, Any]], msg_id: int, ack_type: str = "7b") -> Optional[Dict[str, Any]]:
+def find_ack_for_msg_id(
+    packets: List[Dict[str, Any]], msg_id: int, ack_type: str = "7b"
+) -> Optional[Dict[str, Any]]:
     """
     Find ACK packet matching msg_id.
 
@@ -265,7 +281,7 @@ def parse_mesh_info_response(hex_string: str) -> List[Dict[str, Any]]:
     end = len(packet) - 1  # trailing 0x7E
 
     # Extract inner struct
-    inner_struct = packet[start+1:end]
+    inner_struct = packet[start + 1 : end]
 
     # Find start of device data (14 or 15 bytes into inner struct)
     device_data_start = 14
@@ -275,19 +291,21 @@ def parse_mesh_info_response(hex_string: str) -> List[Dict[str, Any]]:
     # Parse 24-byte device structures
     devices = []
     for i in range(device_data_start, len(inner_struct) - 1, 24):
-        dev_struct = inner_struct[i:i+24]
+        dev_struct = inner_struct[i : i + 24]
         if len(dev_struct) < 24:
             break
 
-        devices.append({
-            "device_id": dev_struct[0],
-            "type": dev_struct[2],
-            "state": dev_struct[8],
-            "brightness": dev_struct[12],
-            "temperature": dev_struct[16],
-            "rgb": (dev_struct[20], dev_struct[21], dev_struct[22]),
-            "valid": dev_struct[23],
-        })
+        devices.append(
+            {
+                "device_id": dev_struct[0],
+                "type": dev_struct[2],
+                "state": dev_struct[8],
+                "brightness": dev_struct[12],
+                "temperature": dev_struct[16],
+                "rgb": (dev_struct[20], dev_struct[21], dev_struct[22]),
+                "valid": dev_struct[23],
+            }
+        )
 
     return devices
 
@@ -332,7 +350,9 @@ async def run_toggle_test(
         msg_id = 0x10 + i
         state = (i % 2) == 0  # Alternate ON/OFF
 
-        print(f"[{i+1}/{iterations}] Injecting {'ON' if state else 'OFF'} command (msg_id=0x{msg_id:02x})...")
+        print(
+            f"[{i + 1}/{iterations}] Injecting {'ON' if state else 'OFF'} command (msg_id=0x{msg_id:02x})..."
+        )
 
         # Craft packet
         packet = craft_toggle_packet(endpoint, msg_id, device_id, state)
@@ -394,7 +414,9 @@ async def run_toggle_test(
             "max": max(latencies),
             "p50": latencies[len(latencies) // 2],
             "p95": latencies[int(len(latencies) * 0.95)] if len(latencies) >= 20 else latencies[-1],
-            "p99": latencies[int(len(latencies) * 0.99)] if len(latencies) >= 100 else latencies[-1],
+            "p99": latencies[int(len(latencies) * 0.99)]
+            if len(latencies) >= 100
+            else latencies[-1],
         }
 
     return results
@@ -468,7 +490,11 @@ async def run_mesh_info_test(
                 hex_data = packet_data["hex"]
 
                 # Mesh info data packets are 0x73 from DEV→CLOUD with large payloads
-                if packet_data["direction"] == "DEV→CLOUD" and hex_data.startswith("73") and packet_data["length"] > 50:
+                if (
+                    packet_data["direction"] == "DEV→CLOUD"
+                    and hex_data.startswith("73")
+                    and packet_data["length"] > 50
+                ):
                     # Try to parse devices
                     devices = parse_mesh_info_response(hex_data)
                     if devices:
@@ -477,7 +503,9 @@ async def run_mesh_info_test(
 
                         print(f"✓ Mesh info data received ({len(devices)} devices in this packet)")
                         for dev in devices:
-                            print(f"  Device {dev['device_id']:3d}: state={dev['state']}, brightness={dev['brightness']}")
+                            print(
+                                f"  Device {dev['device_id']:3d}: state={dev['state']}, brightness={dev['brightness']}"
+                            )
 
             if results["devices_found"] > 0:
                 print(f"\nTotal devices found: {results['devices_found']}")
@@ -568,4 +596,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

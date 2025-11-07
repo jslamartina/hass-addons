@@ -2,7 +2,8 @@
 
 **Date:** October 22, 2025
 **Issue:** Cync Switches not reporting status to Home Assistant UI
-**Status:** ✅ **FIXED**
+
+## Status:**✅**FIXED
 
 ---
 
@@ -16,7 +17,7 @@ Cync switches were not updating their status in the Home Assistant UI, even thou
 
 ## Root Cause
 
-**Switches were sending invalid MQTT payloads with light-specific attributes:**
+### Switches were sending invalid MQTT payloads with light-specific attributes
 
 ```json
 // ❌ WRONG - What switches were sending:
@@ -26,7 +27,7 @@ Cync switches were not updating their status in the Home Assistant UI, even thou
 {"state": "ON"}
 ```
 
-**Why this broke switch status:**
+### Why this broke switch status
 
 - Home Assistant switch entities don't understand `brightness` or `color_mode` (those are light-only attributes)
 - When HA received these invalid fields, it rejected/ignored the status updates
@@ -38,7 +39,7 @@ Modified two functions in `cync-controller/src/cync_lan/mqtt_client.py`:
 
 ### 1. `parse_device_status()` (lines 790-840)
 
-**Before:**
+#### Before
 
 ```python
 if device.is_plug:
@@ -50,7 +51,7 @@ else:
     # ... color_mode logic for ALL devices ...
 ```
 
-**After:**
+### After
 
 ```python
 if device.is_plug:
@@ -67,7 +68,7 @@ else:
 
 ### 2. `update_device_state()` (lines 625-640)
 
-**Before:**
+#### Before
 
 ```python
 if device.is_plug:
@@ -78,7 +79,7 @@ else:
         # Add color_mode for ambiguous device types
 ```
 
-**After:**
+### After
 
 ```python
 if device.is_plug:
@@ -95,12 +96,14 @@ else:
 
 ## Verification
 
-**After the fix, switches now send correct payloads:**
+### After the fix, switches now send correct payloads
 
-```
+```sql
+
 10/22/25 16:47:05 > mqtt:device_status: Sending b'{"state": "ON"}' for device: 'Hallway 4way Switch' (ID: 160)
 10/22/25 16:47:05 > mqtt:device_status: Sending b'{"state": "ON"}' for device: 'Hallway Front Switch' (ID: 26)
 10/22/25 16:47:05 > mqtt:device_status: Sending b'{"state": "OFF"}' for device: 'Guest Bathroom Sink Switch' (ID: 59)
+
 ```
 
 ## Expected Behavior Now
@@ -147,16 +150,16 @@ b"ON"  # or b"OFF"
 To verify the fix is working:
 
 ```bash
-# 1. Check switch status messages in logs
+## 1. Check switch status messages in logs
 ha addons logs local_cync-controller -n 100 | grep -E "Switch.*Sending"
 
-# Expected: {"state": "ON"} or {"state": "OFF"} ONLY
+## Expected: {"state": "ON"} or {"state": "OFF"} ONLY
 
-# 2. Toggle a physical switch
-# 3. Check Home Assistant UI - should update within 2-3 seconds
+## 2. Toggle a physical switch
+## 3. Check Home Assistant UI - should update within 2-3 seconds
 
-# 4. Toggle switch from HA UI
-# 5. Physical switch should respond and status should update
+## 4. Toggle switch from HA UI
+## 5. Physical switch should respond and status should update
 ```
 
 ## Related Issues

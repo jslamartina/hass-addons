@@ -1,7 +1,7 @@
 # Developer Guide
 
 > **Note:** This project is forked from [@baudneo/hass-addons](https://github.com/baudneo/hass-addons)
-
+>
 > **This file is for developers working on the add-on code, not for end users.**
 
 ## Source Code Location
@@ -61,42 +61,49 @@ Advanced AI agent development tools:
 ### Testing Workflow
 
 ```bash
-# Programmatic configuration
+## Programmatic configuration
 ./scripts/configure-addon.sh preset-relay-debug
 
-# Comprehensive testing
+## Comprehensive testing
 ./scripts/test-cloud-relay.sh
 
-# Check logs
+## Check logs
 ha addons logs local_cync-controller --follow | grep -i "relay\|cloud"
-```
+$()$(
+  bash
 
-## Important Notes
+  ## Important Notes
 
-- **Always rebuild after Python changes**: The Docker image must be rebuilt for code changes to take effect
-- **Restart is not enough**: `ha addons restart` will not pick up Python code changes
-- **Use `./rebuild.sh`** which handles rebuild + restart automatically
-- **Enhanced linting**: Run `npm run lint` to check all code quality standards
-- **MCP tools**: Available via Cursor IDE for enhanced development capabilities
+  - **Always rebuild after Python changes**: The Docker image must be rebuilt for code changes to take effect
+  - **Restart is not enough**:
+)ha addons restart$(
+  will not pick up Python code changes
+  - **Use
+)./rebuild.sh$(
+  ** which handles rebuild + restart automatically
+  - **Enhanced linting**: Run
+)npm run lint$(
+  to check all code quality standards
+  - **MCP tools**: Available via Cursor IDE for enhanced development capabilities
 
-## Development Tools
+  ## Development Tools
 
-### Quick Commands
+  ### Quick Commands
 
-```bash
-# Lint and format all code
+)$()bash
+## Lint and format all code
 npm run lint && npm run format
 
-# Configure add-on programmatically
+## Configure add-on programmatically
 ./scripts/configure-addon.sh preset-relay-with-forward
 
-# Test cloud relay functionality
+## Test cloud relay functionality
 ./scripts/test-cloud-relay.sh
 
-# View add-on logs
+## View add-on logs
 ha addons logs local_cync-controller --follow
 
-# Rebuild after Python changes
+## Rebuild after Python changes
 ha addons rebuild local_cync-controller
 ```
 

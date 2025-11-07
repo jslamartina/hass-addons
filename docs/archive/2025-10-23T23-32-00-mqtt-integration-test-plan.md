@@ -1,6 +1,8 @@
+# 2025 10 23T23 32 00 Mqtt Integration Test Plan
+
 <!-- 5875b85a-3bcf-46fc-b051-832811e8b255 c5810a28-1fca-48db-a60f-958c1e0f07b5 -->
 
-# Test Plan: MQTT Integration Automation in `scripts/setup-fresh-ha.sh`
+## Test Plan: MQTT Integration Automation in `scripts/setup-fresh-ha.sh`
 
 ### Scope
 
@@ -65,7 +67,7 @@ curl -s -o /dev/null -w "%{http_code}\n" -X POST \
 ### Host selection fallback
 
 1. With EMQX running, the script checks `localhost` then falls back to `a0d7b954-emqx` if unreachable from `hassio_cli`.
-2. Verify the active host decision from logs: "MQTT broker reachable at <host>:1883"; accept either `localhost` or `a0d7b954-emqx`.
+2. Verify the active host decision from logs: "MQTT broker reachable at `host`:1883"; accept either `localhost` or `a0d7b954-emqx`.
 3. Optional (deep check): use WS API (`config_entries/list`) to inspect the MQTT entry data `broker` field.
 
 ### Error handling: missing credentials

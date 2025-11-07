@@ -4,14 +4,6 @@
       "name": "hass-addons",
       "path": ".",
     },
-    {
-      "name": "cync-controller",
-      "path": "./cync-controller",
-    },
-    {
-      "name": "python-rebuild-tcp-comm",
-      "path": "./python-rebuild-tcp-comm",
-    },
   ],
   "settings": {
     "editor.formatOnSave": false,

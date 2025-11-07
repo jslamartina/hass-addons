@@ -1,6 +1,8 @@
+# 2025 01 27T01 17 00 Fix Brightness Callback 9Bb59A7C.Plan
+
 <!-- 9bb59a7c-e8ad-4651-971b-b2f46ef4b32e f64516b7-f6b9-4853-adfe-b8bb0e39e37a -->
 
-# Fix Brightness Callback Registration Bug
+## Fix Brightness Callback Registration Bug
 
 ## Problem
 
@@ -26,7 +28,7 @@ Change the callback registration to pass the coroutine object without calling it
 
 **File:** `cync-controller/src/cync_controller/devices.py` (lines 550-559)
 
-**Change from:**
+### Change from
 
 ```python
 async def brightness_callback_coro():
@@ -41,7 +43,7 @@ m_cb = ControlMessageCallback(
 )
 ```
 
-**Change to:**
+### Change to
 
 ```python
 m_cb = ControlMessageCallback(

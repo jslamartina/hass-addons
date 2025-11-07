@@ -56,6 +56,31 @@ else
   FAILED=1
 fi
 
+# Markdown linting with markdownlint
+echo -e "\n${YELLOW}=== Running markdownlint (Markdown linter) ===${NC}"
+if npm run lint:markdown --silent; then
+  echo -e "${GREEN}✅ markdownlint check passed${NC}"
+else
+  echo -e "${RED}❌ markdownlint found issues (run 'npm run lint:markdown:fix' to fix)${NC}"
+  FAILED=1
+fi
+
+# Vale prose linting
+echo -e "\n${YELLOW}=== Running Vale (Prose linter) ===${NC}"
+# Sync styles first to ensure latest rules
+if vale sync > /dev/null 2>&1; then
+  echo -e "${GREEN}Vale styles synced${NC}"
+else
+  echo -e "${YELLOW}⚠️  Vale sync skipped (may not be configured)${NC}"
+fi
+
+if vale README.md CONTRIBUTING.md docs/user/ docs/developer/ .cursor/rules/; then
+  echo -e "${GREEN}✅ Vale check passed${NC}"
+else
+  echo -e "${RED}❌ Vale found prose issues${NC}"
+  FAILED=1
+fi
+
 # Format checking with Prettier
 echo -e "\n${YELLOW}=== Running Prettier (Format checker) ===${NC}"
 if npm run format:check --silent; then

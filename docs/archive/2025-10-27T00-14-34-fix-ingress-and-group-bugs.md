@@ -1,6 +1,8 @@
+# 2025 10 27T00 14 34 Fix Ingress And Group Bugs
+
 <!-- d210b30b-8680-4f8b-b456-68c59cbee35c 37d57559-d856-4f42-ba67-9db20822fa81 -->
 
-# Fix Cync Controller Ingress and Group Control Bugs
+## Fix Cync Controller Ingress and Group Control Bugs
 
 **Status**: ✅ Completed
 **Date**: 2025-10-27
@@ -27,12 +29,12 @@ Fixed four critical bugs affecting the ingress page and group control functional
 **Code Changes**:
 
 ```python
-# CRITICAL: Set token in memory FIRST before attempting file write
-# This ensures subsequent calls can use the token even if file write fails
+## CRITICAL: Set token in memory FIRST before attempting file write
+## This ensures subsequent calls can use the token even if file write fails
 self.token_cache = computed_token
 logger.info("%s ✓ Token set in memory cache (user_id: %s)", lp, computed_token.user_id)
 
-# Then attempt to write to persistent cache file
+## Then attempt to write to persistent cache file
 write_success = await self.write_token_cache(computed_token)
 if not write_success:
     logger.warning("%s Token set in memory but file write failed - token will be lost on restart", lp)
@@ -121,7 +123,7 @@ The sync respects the `pending_command` flag, so individual switch commands take
 **Code Changes**:
 
 ```python
-# In mqtt_client.py
+## In mqtt_client.py
 async def sync_group_switches(self, group_id: int, group_state: int, group_name: str) -> int:
     """Sync all switch devices in a group to match the group's state."""
     # ... implementation ...
@@ -131,8 +133,8 @@ async def sync_group_switches(self, group_id: int, group_state: int, group_name:
             if await self.update_switch_from_subgroup(device, group_state, group_name):
                 synced_count += 1
 
-# In devices.py - CyncGroup.set_power()
-# BUG FIX: Sync switch states after group command
+## In devices.py - CyncGroup.set_power()
+## BUG FIX: Sync switch states after group command
 if g.mqtt_client:
     await g.mqtt_client.sync_group_switches(self.id, state, self.name)
 ```

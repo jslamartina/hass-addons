@@ -1,6 +1,8 @@
+# 2025 10 24T12 42 00 Fix Fan Switch Support
+
 <!-- de4bd349-f4b6-4dbf-a131-4b9945bbadc8 1e24d00e-3ed1-45e9-9719-98cf6f9b13a7 -->
 
-# Fix Fan Switch Support
+## Fix Fan Switch Support
 
 **Note:** Update this plan as you implement changes - mark completed sections and adjust based on findings.
 
@@ -18,13 +20,13 @@ Fan controllers currently create multiple entities (Switch + Light) instead of a
 
 ### 1. ✅ COMPLETED - Strengthen Fan Detection (`mqtt_client.py`)
 
-**`register_single_device()` (lines 1137-1171)**
+#### `register_single_device()` (lines 1137-1171)
 
 - ✅ Added `device.is_fan_controller` check as highest priority (lines 1141-1149)
 - ✅ Added safe `getattr()` for capability access (line 1152)
 - ✅ Enhanced debug logging with device ID and type info (lines 1143-1161)
 
-**`homeassistant_discovery()` (lines 1422-1456)**
+### `homeassistant_discovery()` (lines 1422-1456)
 
 - ✅ Added `device.is_fan_controller` check as highest priority (lines 1426-1434)
 - ✅ Matched safe capability checking with `getattr()` (line 1437)
@@ -32,14 +34,14 @@ Fan controllers currently create multiple entities (Switch + Light) instead of a
 
 ### 2. ✅ COMPLETED - Add Fan State Publishing (`mqtt_client.py`)
 
-**Helper Methods (lines 585-627)**
+#### Helper Methods (lines 585-627)
 
 - ✅ `_brightness_to_percentage()` - Converts 0-255 brightness to 0-100 percentage
   - Mappings: 0→0%, ≤50→20%, ≤128→50%, ≤191→75%, else→100%
 - ✅ `_brightness_to_preset()` - Converts brightness to preset names
   - Mappings: 0→off, ≤50→low, ≤128→medium, ≤191→high, else→max
 
-**`parse_device_status()` (lines 910-948)**
+### `parse_device_status()` (lines 910-948)
 
 - ✅ Added fan-specific handling (lines 910-948)
 - ✅ Publishes simple ON/OFF payload (like switches, not JSON)
@@ -49,16 +51,16 @@ Fan controllers currently create multiple entities (Switch + Light) instead of a
 
 ### 3. ✅ COMPLETED - Fix Discovery Inconsistencies
 
-**Preset modes alignment:**
+#### Preset modes alignment
 
 - ✅ Both methods now use ["off", "low", "medium", "high", "max"] (lines 1274-1280, 1549-1555)
 
-**Schema handling:**
+### Schema handling
 
 - ✅ Fan entities pop JSON schema (lines 1267, 1538)
 - ✅ Fans use simple payloads like switches
 
-**MQTT Topics:**
+### MQTT Topics
 
 - ✅ Added `preset_mode_command_topic` and `preset_mode_state_topic` to both methods
 - ✅ All fan-specific topics properly configured
@@ -93,7 +95,7 @@ After changes:
 
 **Key Insight:** Fan-only subgroups don't actually control fans - individual fan controller devices handle commands. This is different from lights where subgroups are useful for controlling multiple lights together.
 
-**`homeassistant_discovery()` (lines 1642-1670)**
+#### `homeassistant_discovery()` (lines 1642-1670)
 
 - ✅ Detect fan-only subgroups by checking if all members are fan controllers
 - ✅ Skip registration of fan-only subgroups (lines 1661-1670)
@@ -106,7 +108,7 @@ After changes:
 
 ✅ **COMPLETED AND VERIFIED** - All implementation and testing complete!
 
-### Final Verification:
+### Final Verification
 
 1. ✅ Deleted all old MQTT entities using `scripts/delete-mqtt-safe.py`
 2. ✅ Restarted Home Assistant Core

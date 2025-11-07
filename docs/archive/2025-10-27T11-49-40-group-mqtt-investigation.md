@@ -46,7 +46,7 @@ Groups no longer being reported to MQTT after offline detection fix implementati
 **server.py lines 804-823** - Subgroup state publishing is intact:
 
 ```python
-# Update subgroups from aggregated member states
+## Update subgroups from aggregated member states
 await g.mqtt_client.publish_group_state(
     subgroup,
     state=subgroup.state,

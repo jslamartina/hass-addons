@@ -1,9 +1,28 @@
 # Toggle Packet Injection Test Results
 
 **Date**: 2025-11-06
-**Test Tool**: `scripts/test-toggle-injection.py`
+**Test Tool**: `mitm/test-toggle-injection.py`
 **MITM Proxy**: Running on port 8080 with 25 active device connections
 **Target Device**: Endpoint `45 88 0f 3a`, Device ID 80 (0x50)
+
+---
+
+## ⚠️ CRITICAL UPDATE (2025-11-07)
+
+**Command Type Correction:** The packets in this test use `f8 8e 0c` (SET_MODE), which is a **switch configuration command**, NOT a power toggle command.
+
+### Correct commands
+
+- `f8 d0 0d` = **POWER_TOGGLE** (power control - correct for bulbs/lights)
+- `f8 8e 0c` = **SET_MODE** (switch mode configuration - only valid for switches)
+
+### Impact
+
+- Device ID 80 (0x50) appears to be a **switch**, which is why SET_MODE commands produced ACK responses
+- For **bulbs/lights**, use POWER_TOGGLE (`f8 d0 0d`) command instead
+- Using wrong command type produces pure ACKs (12 bytes) instead of compound responses (36 bytes)
+
+**Reference:** See `docs/phase-0.5/packet-structure-validated.md` for command type details.
 
 ---
 
@@ -37,7 +56,7 @@ Successfully validated toggle packet injection via MITM proxy REST API. All togg
 
 **Crafted Packet**:
 
-```
+```text
 73 00 00 00 1f 45 88 0f 3a 00 10 00 00 7e 10 01 00 00 f8 8e 0c 00 10 01 00 00 00 50 00 f7 11 02 01 01 07 7e
 ```
 
@@ -64,8 +83,10 @@ Successfully validated toggle packet injection via MITM proxy REST API. All togg
 
 **ACK Response**:
 
-```
+```sql
+
 7b 00 00 00 07 45 88 0f 3a 00 10 00
+
 ```
 
 **ACK Breakdown**:
@@ -94,8 +115,10 @@ Successfully validated toggle packet injection via MITM proxy REST API. All togg
 
 **Crafted Packet**:
 
-```
+```sql
+
 73 00 00 00 1f 45 88 0f 3a 00 11 00 00 7e 11 01 00 00 f8 8e 0c 00 11 01 00 00 00 50 00 f7 11 02 00 01 07 7e
+
 ```
 
 **Changes from Test 1**:
@@ -106,11 +129,13 @@ Successfully validated toggle packet injection via MITM proxy REST API. All togg
 
 **ACK Response**:
 
-```
+```sql
+
 7b 00 00 00 07 45 88 0f 3a 00 11 00
+
 ```
 
-**ACK msg_id**: `11` at byte 10 ✅ **CONFIRMED MATCH**
+### ACK msg_id**: `11` at byte 10 ✅**CONFIRMED MATCH
 
 **Latency**: 21.0ms
 
@@ -156,7 +181,7 @@ Successfully validated toggle packet injection via MITM proxy REST API. All togg
 
 **Sample ACK Packets** (msg_id progression):
 
-```
+```text
 msg_id 0x10: 7b 00 00 00 07 45 88 0f 3a 00 10 00  (latency: 13.2ms)
 msg_id 0x11: 7b 00 00 00 07 45 88 0f 3a 00 11 00  (latency: 21.0ms)
 msg_id 0x12: 7b 00 00 00 07 45 88 0f 3a 00 12 00  (latency: 20.8ms)
@@ -181,7 +206,7 @@ msg_id 0x19: [NO ACK]
 
 **Crafted Packet**:
 
-```
+```text
 73 00 00 00 18 45 88 0f 3a 00 00 00 00 7e 1f 00 00 00 f8 52 06 00 00 00 ff ff 00 00 56 7e
 ```
 
@@ -217,6 +242,7 @@ msg_id 0x19: [NO ACK]
 
 - ⚠️ Injection successful but no mesh info responses captured in test window (2 second wait)
 - Possible causes:
+
   1. Response pattern matching didn't detect mesh info packets
   2. Devices may not respond to mesh info from injected cloud commands (security/auth)
   3. Longer wait time needed (mesh queries can take 5-10 seconds for large meshes)
@@ -238,7 +264,8 @@ msg_id 0x19: [NO ACK]
 
 Based on 9 successful ACK captures:
 
-```
+```sql
+
 Byte 0: 0x7B (packet type: DATA_ACK)
 Byte 1-2: 0x00 0x00 (padding)
 Byte 3: 0x00 (length multiplier)
@@ -247,6 +274,7 @@ Bytes 5-8: Queue ID first 4 bytes (endpoint)
 Byte 9: Queue ID last byte (0x00)
 Byte 10: msg_id (CONFIRMED POSITION) ✅
 Byte 11: 0x00 (msg_id padding)
+
 ```
 
 **Total packet length**: 12 bytes (5-byte header + 7-byte payload)
@@ -291,29 +319,35 @@ Checksum algorithm from legacy `packet_checksum.py` validated against crafted pa
 
 **Test Case 1 (Toggle ON)**:
 
-```
+```text
+
 Inner struct: 7e 10 01 00 00 f8 8e 0c 00 10 01 00 00 00 50 00 f7 11 02 01 01 [CS] 7e
 Bytes to sum: f8 8e 0c 00 10 01 00 00 00 50 00 f7 11 02 01 01
 Sum: 248 + 142 + 12 + 16 + 1 + 80 + 247 + 17 + 2 + 1 + 1 = 767
 Checksum: 767 % 256 = 7 (0x07) ✅
+
 ```
 
 **Test Case 2 (Toggle OFF)**:
 
-```
+```text
+
 Inner struct: 7e 11 01 00 00 f8 8e 0c 00 11 01 00 00 00 50 00 f7 11 02 00 01 [CS] 7e
 Bytes to sum: f8 8e 0c 00 11 01 00 00 00 50 00 f7 11 02 00 01
 Sum: 248 + 142 + 12 + 17 + 1 + 80 + 247 + 17 + 2 + 1 = 767
 Checksum: 767 % 256 = 7 (0x07) ✅
+
 ```
 
 **Mesh Info Request**:
 
-```
+```text
+
 Inner struct: 7e 1f 00 00 00 f8 52 06 00 00 00 ff ff 00 00 [CS] 7e
 Bytes to sum: 52 06 00 00 00 ff ff 00 00
 Sum: 82 + 6 + 255 + 255 = 598
 Checksum: 598 % 256 = 86 (0x56) ✅
+
 ```
 
 **Result**: ✅ Checksum algorithm validated for all packet types
@@ -371,15 +405,15 @@ Checksum: 598 % 256 = 86 (0x56) ✅
 **Usage Examples**:
 
 ```bash
-# Toggle test
-python scripts/test-toggle-injection.py \
+## Toggle test
+python mitm/test-toggle-injection.py \
   --endpoint "45 88 0f 3a" \
   --device-id 80 \
   --iterations 10 \
   --capture-file /tmp/mitm-stdout.log
 
-# Mesh info test
-python scripts/test-toggle-injection.py \
+## Mesh info test
+python mitm/test-toggle-injection.py \
   --test mesh-info \
   --endpoint "45 88 0f 3a" \
   --capture-file /tmp/mitm-stdout.log
@@ -405,6 +439,7 @@ python scripts/test-toggle-injection.py \
    - Recommended: 128ms (p99 × 2.5)
    - Conservative: 200ms (p99 × 4)
    - Maximum: 500ms (safety margin for slow devices)
+
 3. **Retry Strategy**: Implement automatic retry for missed ACKs (observed 10% miss rate)
 4. **Queue Management**: Consider rate limiting to avoid overwhelming devices
 
@@ -461,6 +496,47 @@ MESH_INFO_REQUEST_0x73_CLOUD_TO_DEV = bytes.fromhex(
     "f8 52 06 00 00 00 ff ff 00 00 56 7e"
 )
 ```
+
+---
+
+## Appendix: Command Type Reference
+
+### Command Types
+
+**POWER_TOGGLE** (`f8 d0 0d`):
+
+- Purpose: Power control (ON/OFF)
+- Valid for: Bulbs, lights, switches, plugs
+- Response: **Always compound** (36 bytes: 24-byte 0x73 status + 12-byte 0x7B ACK)
+- Example byte positions 18-20 in 0x73 packet
+
+**SET_MODE** (`f8 8e 0c`):
+
+- Purpose: Switch configuration (Traditional/Smart mode)
+- Valid for: **Switches only**
+- Invalid for: Bulbs, lights, plugs
+- Response: **Variable** (12 or 36 bytes, context-dependent)
+- Example: Used in this test (device 80 is a switch)
+
+### Response Type Behavior
+
+#### Compound Response (36 bytes)
+
+- Format: 24-byte 0x73 (status) + 12-byte 0x7B (ACK)
+- Meaning: Command valid for device type AND device exists
+- Example: POWER_TOGGLE to any device, SET_MODE to switch
+
+### Pure ACK (12 bytes)
+
+- Format: 12-byte 0x7B only
+- Meaning: Command invalid for device type OR device doesn't exist
+- Example: SET_MODE to bulb, command to non-existent device
+
+#### Implementation Note
+
+Code MUST handle both response types flexibly. Don't assume fixed response size based on command sent.
+
+**Reference:** `working-files/202511070432_FINAL_RESOLUTION.md`
 
 ---
 

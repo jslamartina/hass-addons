@@ -120,7 +120,7 @@ If an AI review flags any of the above as "risks", "blockers", "needs contingenc
 
 ### Core Architecture Principles
 
-**Principle 1: No Legacy Imports**
+#### Principle 1: No Legacy Imports
 
 Legacy code must **NEVER be imported or used as a dependency** in production code. Copy and adapt algorithms from `cync-controller/` as needed, treating it strictly as reference documentation. This ensures:
 
@@ -134,7 +134,7 @@ Legacy code must **NEVER be imported or used as a dependency** in production cod
 **ALLOWED** (Phase 0.5 validation scripts ONLY):
 
 - `mitm/validate-checksum-REFERENCE-ONLY.py`: Can import `cync_controller.packet_checksum`
-- `scripts/parse-capture.py`: Can import packet type constants for reference
+- `mitm/parse-capture.py`: Can import packet type constants for reference
 - Test fixture comparison: Can use legacy packet examples for validation
 
 **NEVER ALLOWED** (All phases, all production code):
@@ -148,7 +148,7 @@ Legacy code must **NEVER be imported or used as a dependency** in production cod
 **Enforcement**:
 
 ```bash
-# Pre-commit hook to reject legacy imports in production code
+## Pre-commit hook to reject legacy imports in production code
 grep -r "from cync_controller" src/ harness/ tests/ && exit 1
 ```
 
@@ -168,7 +168,7 @@ grep -r "from cync_controller" src/ harness/ tests/ && exit 1
 - ❌ "We'll remove it later" - NO, never add legacy imports
 - ✅ "I'll copy the algorithm and adapt it" - YES, this is correct
 
-**Principle 2: No Nullability**
+### Principle 2: No Nullability
 
 Methods must **NEVER return `None` or `Optional[T]`** to indicate errors or absence. Fields must **NEVER initialize as `None`**. Instead:
 
@@ -177,27 +177,27 @@ Methods must **NEVER return `None` or `Optional[T]`** to indicate errors or abse
 
 This eliminates an entire class of null pointer bugs and forces explicit error handling.
 
-**Example transformations:**
+### Example transformations
 
 ```python
-# ❌ Before (with Optional)
+## ❌ Before (with Optional)
 def decode_packet(data: bytes) -> Optional[CyncPacket]:
     if len(data) < 5:
         return None  # Implicit error
     return packet
 
-# ✅ After (with Exception)
+## ✅ After (with Exception)
 def decode_packet(data: bytes) -> CyncPacket:
     if len(data) < 5:
         raise PacketDecodeError("too_short", data)  # Explicit error
     return packet
 
-# ❌ Before (nullable field)
+## ❌ Before (nullable field)
 class ConnectionManager:
     def __init__(self):
         self.endpoint: Optional[bytes] = None  # Can be null
 
-# ✅ After (non-nullable field)
+## ✅ After (non-nullable field)
 class ConnectionManager:
     def __init__(self):
         self.endpoint: bytes = b""  # Never null, empty until set
@@ -207,43 +207,43 @@ class ConnectionManager:
 
 The "No Nullability" principle applies to ALL return values and fields, including edge cases that commonly use `None` in Python. Here are the correct patterns:
 
-**Pattern 1: Optional Configuration Parameters**
+#### Pattern 1: Optional Configuration Parameters
 
 Optional config parameters are **allowed** but must have non-None defaults:
 
 ```python
-# ✅ CORRECT: Optional with non-None default
+## ✅ CORRECT: Optional with non-None default
 def __init__(self, timeout: Optional[float] = None):
     # Convert to non-nullable immediately
     self.timeout: float = timeout if timeout is not None else 5.0
     # After init, self.timeout is NEVER None
 
-# ✅ ALTERNATIVE: Use Union with sentinel
+## ✅ ALTERNATIVE: Use Union with sentinel
 def __init__(self, timeout: float = 5.0):
     self.timeout: float = timeout  # Always has value, default or provided
 
-# ❌ WRONG: Optional field that stays None
+## ❌ WRONG: Optional field that stays None
 def __init__(self, timeout: Optional[float] = None):
     self.timeout: Optional[float] = timeout  # BAD - can be None after init!
 ```
 
 **Rule**: Constructor parameters MAY be `Optional[T]` for convenience, but instance fields MUST be non-nullable after `__init__` completes.
 
-**Pattern 2: Cache/Dict Lookups**
+### Pattern 2: Cache/Dict Lookups
 
 Cache and dictionary lookups must NOT return `None` - use defaults or raise exceptions:
 
 ```python
-# ✅ CORRECT: Use .get() with non-None default
+## ✅ CORRECT: Use .get() with non-None default
 value: str = cache.get(key, "")  # Returns empty string if missing
 value: int = cache.get(key, 0)   # Returns 0 if missing
 
-# ✅ CORRECT: Raise specific exception if key must exist
+## ✅ CORRECT: Raise specific exception if key must exist
 if key not in cache:
     raise CacheKeyNotFoundError(key)
 value: str = cache[key]  # Guaranteed to exist
 
-# ✅ CORRECT: Check existence explicitly
+## ✅ CORRECT: Check existence explicitly
 if key in cache:
     value: str = cache[key]
     process(value)
@@ -252,7 +252,7 @@ else:
     logger.warning("Cache miss for key: %s", key)
     value = compute_default()
 
-# ❌ WRONG: Implicit None on missing key
+## ❌ WRONG: Implicit None on missing key
 value: Optional[str] = cache.get(key)  # Can be None
 if value is not None:  # Forces null checks everywhere!
     process(value)
@@ -260,26 +260,26 @@ if value is not None:  # Forces null checks everywhere!
 
 **Rule**: Dict/cache lookups MUST use `.get(key, default)` with non-None default OR raise exception if key must exist.
 
-**Pattern 3: Empty Network Responses**
+### Pattern 3: Empty Network Responses
 
 Network responses must raise exceptions for empty/invalid data, never return `None`:
 
 ```python
-# ✅ CORRECT: Raise exception for empty response
+## ✅ CORRECT: Raise exception for empty response
 async def recv(self) -> bytes:
     data = await self.reader.read(4096)
     if not data:
         raise PacketReceiveError("connection_closed")
     return data  # Always returns bytes, never None
 
-# ✅ CORRECT: Distinguish empty vs closed
+## ✅ CORRECT: Distinguish empty vs closed
 async def recv(self) -> bytes:
     data = await self.reader.read(4096)
     if data == b"":  # Connection closed
         raise ConnectionClosedError()
     return data
 
-# ❌ WRONG: Return None for empty
+## ❌ WRONG: Return None for empty
 async def recv(self) -> Optional[bytes]:
     data = await self.reader.read(4096)
     if not data:
@@ -289,24 +289,24 @@ async def recv(self) -> Optional[bytes]:
 
 **Rule**: Network I/O MUST raise exceptions for errors/empty responses. Use specific exception types to distinguish conditions.
 
-**Pattern 4: Search/Query Results**
+### Pattern 4: Search/Query Results
 
 Search operations must return empty collections or raise exceptions, not `None`:
 
 ```python
-# ✅ CORRECT: Return empty list for no results
+## ✅ CORRECT: Return empty list for no results
 def find_devices(self, filter: str) -> List[Device]:
     results = [d for d in self.devices if filter in d.name]
     return results  # Returns [] if no matches - not None
 
-# ✅ CORRECT: Raise exception if result required
+## ✅ CORRECT: Raise exception if result required
 def find_device_by_id(self, device_id: int) -> Device:
     for device in self.devices:
         if device.id == device_id:
             return device
     raise DeviceNotFoundError(device_id)
 
-# ❌ WRONG: Return None for no results
+## ❌ WRONG: Return None for no results
 def find_device(self, device_id: int) -> Optional[Device]:
     for device in self.devices:
         if device.id == device_id:
@@ -321,7 +321,7 @@ def find_device(self, device_id: int) -> Optional[Device]:
 To enforce "No Nullability", configure mypy strict mode:
 
 ```ini
-# pyproject.toml or mypy.ini
+## pyproject.toml or mypy.ini
 [tool.mypy]
 strict = true
 disallow_untyped_defs = true
@@ -332,7 +332,7 @@ warn_return_any = true
 With `no_implicit_optional`, this code **fails type check**:
 
 ```python
-# Type checker error: "Incompatible return value type (got None, expected str)"
+## Type checker error: "Incompatible return value type (got None, expected str)"
 def process(self, data: bytes) -> str:
     if len(data) < 5:
         return None  # ❌ Caught by type checker!
@@ -356,7 +356,7 @@ def process(self, data: bytes) -> str:
 
 Phase 1 adds reliability primitives (ACK/NACK, idempotency, backpressure) and implements the real Cync device protocol. This program is **split into 5 focused sub-phases** to manage complexity and enable incremental validation.
 
-**Why Split into Sub-Phases?**
+### Why Split into Sub-Phases?
 
 - Phase 0 used custom test protocol (0xF00D magic bytes) - need real protocol validation first
 - Original Phase 1 bundled 3-4 weeks of work - too broad for effective tracking

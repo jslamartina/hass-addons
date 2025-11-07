@@ -46,7 +46,7 @@ Established `server.parse_status()` as the single source of truth for device ava
 
 ## Key Logic Flow
 
-```
+```text
 Device Status Packet Received
 ↓
 parse_status() called with connected_to_mesh byte

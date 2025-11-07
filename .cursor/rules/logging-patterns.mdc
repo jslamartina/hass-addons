@@ -6,7 +6,7 @@ appliesTo:
 
 # Logging Configuration Patterns
 
-**CRITICAL: Both logger AND handler levels must be set correctly for DEBUG logs to appear.**
+## CRITICAL: Both logger AND handler levels must be set correctly for DEBUG logs to appear
 
 ## Python Logging Hierarchy
 
@@ -42,15 +42,15 @@ def __init__(self, name: str, ...):
 ### Anti-Patterns
 
 ```python
-# WRONG: Hardcoded INFO level (will drop DEBUG messages)
+## WRONG: Hardcoded INFO level (will drop DEBUG messages)
 self.logger.setLevel(logging.INFO)
 handler.setLevel(logging.INFO)
 
-# WRONG: Only setting logger level (handlers still filter)
+## WRONG: Only setting logger level (handlers still filter)
 self.logger.setLevel(logging.DEBUG)
 handler.setLevel(logging.INFO)  # DEBUG messages dropped here
 
-# WRONG: Only setting handler level (logger still filters)
+## WRONG: Only setting handler level (logger still filters)
 self.logger.setLevel(logging.INFO)  # DEBUG messages dropped here
 handler.setLevel(logging.DEBUG)
 ```
@@ -86,9 +86,10 @@ def configure_logger(name: str, level: int):
     return logger
 ```
 
-**Anti-Pattern:**
+### Anti-Pattern
+
 ```python
-# ❌ WRONG: Adds handler every call (duplicates logs)
+## ❌ WRONG: Adds handler every call (duplicates logs)
 logger.addHandler(handler)
 logger.addHandler(handler)  # Now every log appears twice
 ```
@@ -115,7 +116,8 @@ handler = logging.StreamHandler()
 handler.setFormatter(JSONFormatter())
 ```
 
-**Field Invariants (always log when available):**
+### Field Invariants (always log when available)
+
 - `correlation_id` - Request/command trace ID
 - `device_id` - Device identifier
 - `timestamp` - ISO 8601 format

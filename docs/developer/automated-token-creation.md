@@ -70,18 +70,18 @@ ws.send(
 ### Integration: `scripts/setup-fresh-ha.sh`
 
 ```bash
-# During fresh onboarding
+## During fresh onboarding
 create_first_user() {
   # Create user via onboarding API, get short-lived token
   local auth_token=$(curl -X POST "$HA_URL/api/onboarding/users" ...)
   echo "$auth_token"
 }
 
-# Save onboarding token
+## Save onboarding token
 ONBOARDING_TOKEN="$(create_first_user)"
 echo "ONBOARDING_TOKEN=$ONBOARDING_TOKEN" >> hass-credentials.env
 
-# Later, when needing long-lived token
+## Later, when needing long-lived token
 get_ha_auth_token() {
   # Use onboarding token to bootstrap LLAT creation
   if [ -n "$ONBOARDING_TOKEN" ]; then
@@ -105,14 +105,14 @@ get_ha_auth_token() {
 ### Automatic (Recommended)
 
 ```bash
-# Setup script automatically creates tokens when needed
+## Setup script automatically creates tokens when needed
 ./scripts/setup-fresh-ha.sh
 ```
 
 ### Direct Token Creation
 
 ```bash
-# Create token directly from existing token
+## Create token directly from existing token
 node scripts/create-token-from-existing.js
 ```
 
@@ -128,27 +128,27 @@ node scripts/create-token-from-existing.js
 
 - ✅ **Valid `LONG_LIVED_ACCESS_TOKEN` in `hass-credentials.env`**
 - ✅ **Token must authenticate successfully**
-- ⚠️ **Cannot create new LLAT if existing one is expired**
+- ⚠️ **Can't create new LLAT if existing one is expired**
 
 ## Error Handling
 
 ### Missing Environment Variable
 
-```
+```text
 ❌ No existing token found in environment (EXISTING_TOKEN)
 💡 This script requires an existing token to bootstrap LLAT creation
 ```
 
 ### Invalid Token
 
-```
+```text
 ❌ Existing token is invalid (HTTP 401)
 💡 Please ensure token passed via EXISTING_TOKEN environment variable is valid
 ```
 
 ### WebSocket Failure
 
-```
+```sql
 ❌ Failed to create token: {"type":"result","success":false,"error":"..."}
 ```
 
@@ -189,20 +189,20 @@ node scripts/create-token-from-existing.js
 
 ```bash
 ./scripts/setup-fresh-ha.sh
-# Automatically handles onboarding and token creation
+## Automatically handles onboarding and token creation
 ```
 
 ### With Existing LLAT
 
 ```bash
-# Fallback mode - uses existing token if available
+## Fallback mode - uses existing token if available
 HA_AUTH_TOKEN="$LONG_LIVED_ACCESS_TOKEN" node scripts/create-token-from-existing.js
 ```
 
 ### Direct Bootstrap
 
 ```bash
-# Pass any valid token via environment variable
+## Pass any valid token via environment variable
 EXISTING_TOKEN="$ONBOARDING_TOKEN" node scripts/create-token-from-existing.js
 ```
 

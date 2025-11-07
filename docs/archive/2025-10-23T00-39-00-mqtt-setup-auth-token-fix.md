@@ -8,7 +8,7 @@
 
 The `setup-fresh-ha.sh` script was failing when trying to configure the MQTT integration via the Home Assistant API, displaying:
 
-```
+```ini
 [setup-fresh-ha.sh] Configuring MQTT integration...
 [setup-fresh-ha.sh] Failed to start MQTT integration config flow (curl error)
 [setup-fresh-ha.sh] Full response (with headers):
@@ -25,11 +25,14 @@ The real issue was **authentication failure**:
 
 1. The `LONG_LIVED_ACCESS_TOKEN` in `hass-credentials.env` was stale/invalid
 2. Testing the token showed `HTTP 401 Unauthorized`:
+
    ```bash
    curl -H "Authorization: Bearer $TOKEN" http://localhost:8123/api/
    # Returns: 401: Unauthorized
-   ```
-3. The HTTP 404 error was a secondary symptom - the API likely returns 404 for authenticated endpoints when auth fails in certain contexts
+
+```
+
+1. The HTTP 404 error was a secondary symptom - the API likely returns 404 for authenticated endpoints when auth fails in certain contexts
 
 ### Why Token Was Invalid
 
@@ -38,7 +41,7 @@ Home Assistant no longer supports the `grant_type=password` authentication flow 
 ```bash
 curl -X POST http://localhost:8123/auth/token \
   -d "grant_type=password&username=...&password=..."
-# Returns: {"error":"unsupported_grant_type"}
+## Returns: {"error":"unsupported_grant_type"}
 ```
 
 This means:
@@ -71,7 +74,7 @@ Created `/workspaces/hass-addons/scripts/update-token.sh` to guide users through
 ./scripts/update-token.sh
 ```
 
-**What it does:**
+### What it does
 
 - Provides step-by-step instructions to create a token via UI
 - Accepts the token via secure input (hidden)
@@ -82,7 +85,7 @@ Created `/workspaces/hass-addons/scripts/update-token.sh` to guide users through
 
 Modified `setup-fresh-ha.sh` to validate tokens before use:
 
-**Added function (lines 596-620):**
+#### Added function (lines 596-620)
 
 ```bash
 validate_ha_auth_token() {
@@ -111,7 +114,7 @@ validate_ha_auth_token() {
 }
 ```
 
-**Updated `configure_mqtt_integration()` to call validation before attempting API calls.**
+### Updated `configure_mqtt_integration()` to call validation before attempting API calls
 
 ## Benefits
 
@@ -131,14 +134,15 @@ To test the fix:
    # Should show clear "token is invalid" message and skip MQTT setup
    ```
 
-2. **Update token:**
+1. **Update token:**
 
    ```bash
    ./scripts/update-token.sh
    # Follow prompts to create and save new token
    ```
 
-3. **With valid token:**
+1. **With valid token:**
+
    ```bash
    ./scripts/setup-fresh-ha.sh
    # Should successfully configure MQTT integration
@@ -153,7 +157,7 @@ To test the fix:
 - `scripts/update-token.sh` - New token update helper (manual UI-based token creation)
 - `hass-credentials.env` - Contains `LONG_LIVED_ACCESS_TOKEN`
 
-**Deleted files:**
+### Deleted files
 
 - `scripts/create-token-auto.js` - Failed Playwright automation (Shadow DOM issues)
 - `scripts/create-token-manual.sh` - Duplicate of update-token.sh

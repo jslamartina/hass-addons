@@ -319,12 +319,12 @@ Modify `scripts/setup-fresh-ha.sh` to use the automated token creation.
 ### Step 3: Test End-to-End
 
 ```bash
-# Test the automated token creation
+## Test the automated token creation
 cd /workspaces/hass-addons
 source hass-credentials.env
 node scripts/create-token-automated.js
 
-# Test the full setup script
+## Test the full setup script
 ./scripts/setup-fresh-ha.sh
 ```
 

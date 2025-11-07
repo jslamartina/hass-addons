@@ -1,0 +1,203 @@
+#!/usr/bin/env python3
+"""
+Parse and analyze MITM capture files.
+
+Usage:
+    # Show all packet types
+    python mitm/parse-capture.py mitm/captures/capture_*.txt
+
+    # Filter by packet type
+    python mitm/parse-capture.py --filter 0x73 mitm/captures/capture_*.txt
+
+    # Show statistics
+    python mitm/parse-capture.py --stats mitm/captures/capture_*.txt
+
+    # Extract ACK pairs
+    python mitm/parse-capture.py --ack-pairs mitm/captures/capture_*.txt
+"""
+
+import argparse
+import re
+from collections import Counter, defaultdict
+from datetime import datetime
+from typing import Dict, List, Tuple
+
+
+def parse_capture_file(filepath: str) -> List[dict]:
+    """Parse MITM capture file and extract packets."""
+    packets = []
+
+    with open(filepath, "r") as f:
+        lines = f.readlines()
+
+    i = 0
+    while i < len(lines):
+        line = lines[i].strip()
+
+        # Parse header line
+        if re.match(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}", line):
+            parts = line.split()
+            timestamp_str = parts[0]
+            direction = parts[1] if len(parts) > 1 else ""
+
+            # Parse hex bytes on next line
+            i += 1
+            if i < len(lines):
+                hex_bytes = lines[i].strip()
+                packet_type = hex_bytes.split()[0] if hex_bytes else ""
+
+                packets.append(
+                    {
+                        "timestamp": datetime.fromisoformat(timestamp_str),
+                        "direction": direction,
+                        "packet_type": packet_type.lower(),
+                        "hex_bytes": hex_bytes,
+                        "length": len(hex_bytes.split()) if hex_bytes else 0,
+                    }
+                )
+
+        i += 1
+
+    return packets
+
+
+def filter_packets(packets: List[dict], packet_type: str) -> List[dict]:
+    """Filter packets by type."""
+    return [p for p in packets if p["packet_type"] == packet_type.lower().replace("0x", "")]
+
+
+def show_statistics(packets: List[dict]):
+    """Show packet statistics."""
+    total = len(packets)
+    type_counts = Counter(p["packet_type"] for p in packets)
+    direction_counts = Counter(p["direction"] for p in packets)
+
+    print("=== Capture Statistics ===")
+    print(f"Total packets: {total:,}")
+    print()
+
+    print("Packet Types:")
+    for ptype, count in sorted(type_counts.items()):
+        pct = (count / total * 100) if total > 0 else 0
+        print(f"  0x{ptype.upper():2}: {count:6,} ({pct:5.1f}%)")
+    print()
+
+    print("Directions:")
+    for direction, count in direction_counts.items():
+        pct = (count / total * 100) if total > 0 else 0
+        print(f"  {direction:10}: {count:6,} ({pct:5.1f}%)")
+
+
+def extract_ack_pairs(packets: List[dict]) -> Dict[str, List[Tuple]]:
+    """Extract request → ACK pairs."""
+    pairs = defaultdict(list)
+
+    pending = {
+        "23": [],  # Handshake → 28
+        "73": [],  # Data → 7b
+        "83": [],  # Status → 88
+        "d3": [],  # Heartbeat → d8
+    }
+
+    for packet in packets:
+        ptype = packet["packet_type"]
+
+        # Track requests
+        if ptype in pending:
+            pending[ptype].append(packet)
+
+        # Match ACKs
+        elif ptype == "28" and pending["23"]:
+            req = pending["23"].pop(0)
+            latency = (packet["timestamp"] - req["timestamp"]).total_seconds() * 1000
+            pairs["0x28"].append((req, packet, latency))
+
+        elif ptype == "7b" and pending["73"]:
+            req = pending["73"].pop(0)
+            latency = (packet["timestamp"] - req["timestamp"]).total_seconds() * 1000
+            pairs["0x7B"].append((req, packet, latency))
+
+        elif ptype == "88" and pending["83"]:
+            req = pending["83"].pop(0)
+            latency = (packet["timestamp"] - req["timestamp"]).total_seconds() * 1000
+            pairs["0x88"].append((req, packet, latency))
+
+        elif ptype == "d8" and pending["d3"]:
+            req = pending["d3"].pop(0)
+            latency = (packet["timestamp"] - req["timestamp"]).total_seconds() * 1000
+            pairs["0xD8"].append((req, packet, latency))
+
+    return pairs
+
+
+def show_ack_pairs(pairs: Dict[str, List[Tuple]]):
+    """Display ACK pair statistics."""
+    print("=== ACK Pair Statistics ===")
+
+    for ack_type in ["0x28", "0x7B", "0x88", "0xD8"]:
+        pair_list = pairs[ack_type]
+        if pair_list:
+            latencies = [lat for _, _, lat in pair_list]
+            sorted_lats = sorted(latencies)
+            n = len(sorted_lats)
+
+            print(f"\n{ack_type} ACK:")
+            print(f"  Pairs: {n:,}")
+            print(f"  Min latency: {min(latencies):.1f}ms")
+            print(f"  p50 latency: {sorted_lats[n // 2]:.1f}ms")
+            print(f"  p95 latency: {sorted_lats[int(n * 0.95)]:.1f}ms")
+            print(f"  p99 latency: {sorted_lats[int(n * 0.99)]:.1f}ms")
+            print(f"  Max latency: {max(latencies):.1f}ms")
+
+
+def main():
+    parser = argparse.ArgumentParser(description="Parse and analyze MITM capture files")
+    parser.add_argument("files", nargs="+", help="Capture files to analyze")
+    parser.add_argument("--filter", metavar="TYPE", help="Filter by packet type (e.g., 0x73)")
+    parser.add_argument("--stats", action="store_true", help="Show statistics")
+    parser.add_argument("--ack-pairs", action="store_true", help="Extract and show ACK pairs")
+    parser.add_argument("--limit", type=int, help="Limit output to N packets")
+
+    args = parser.parse_args()
+
+    # Parse all files
+    all_packets = []
+    for filepath in args.files:
+        packets = parse_capture_file(filepath)
+        all_packets.extend(packets)
+
+    print(f"Loaded {len(all_packets):,} packets from {len(args.files)} file(s)")
+    print()
+
+    # Apply filter
+    if args.filter:
+        all_packets = filter_packets(all_packets, args.filter)
+        print(f"Filtered to {len(all_packets):,} packets of type {args.filter}")
+        print()
+
+    # Show statistics
+    if args.stats:
+        show_statistics(all_packets)
+        return
+
+    # Show ACK pairs
+    if args.ack_pairs:
+        pairs = extract_ack_pairs(all_packets)
+        show_ack_pairs(pairs)
+        return
+
+    # Default: show packets
+    limit = args.limit if args.limit else len(all_packets)
+    for i, packet in enumerate(all_packets[:limit]):
+        ts = packet["timestamp"].strftime("%H:%M:%S.%f")[:-3]
+        print(
+            f"{ts} {packet['direction']:10} 0x{packet['packet_type'].upper():2} ({packet['length']:3} bytes)"
+        )
+        if i < 10 or i >= limit - 5:  # Show first 10 and last 5
+            print(f"  {packet['hex_bytes']}")
+        elif i == 10:
+            print("  ...")
+
+
+if __name__ == "__main__":
+    main()

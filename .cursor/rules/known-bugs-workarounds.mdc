@@ -7,11 +7,12 @@ description: Known issues, bugs, and their workarounds
 ## Pattern Recognition: Common Issues
 
 ### Commands Don't Work / Lights Don't Turn On
+
 **Root Cause:** Missing `ControlMessageCallback` registration before sending command
 **Fix:** Always register callback in `bridge_device.messages.control[msg_id]` before calling `bridge_device.write()`
 
 ```python
-# ✅ CORRECT: Register callback BEFORE sending
+## ✅ CORRECT: Register callback BEFORE sending
 m_cb = ControlMessageCallback(
     msg_id=cmsg_id,
     message=payload_bytes,
@@ -24,16 +25,18 @@ await bridge_device.write(payload_bytes)
 ```
 
 ### Commands Work Once, Then Fail / Need to Click Twice
-**Root Cause:** Auto-refresh after ACK caused cascading refreshes
+
+**Root Cause:** Autorefresh after ACK caused cascading refreshes
 **Fix:** Removed automatic refresh from ACK handler (fixed in Oct 14, 2025)
-**Pattern to avoid:** Never auto-refresh after ACKs
+**Pattern to avoid:** Never autorefresh after ACKs
 
 ### Devices Flicker Between Available/Unavailable
+
 **Root Cause:** Unreliable `connected_to_mesh` byte causing immediate offline marking
 **Fix:** Use `offline_count` threshold - devices only marked offline after 3 consecutive failures
 
 ```python
-# ✅ CORRECT: Use offline count threshold
+## ✅ CORRECT: Use offline count threshold
 if consecutive_failures >= OFFLINE_THRESHOLD:
     mark_device_offline(device_id)
 else:
@@ -41,26 +44,28 @@ else:
 ```
 
 ### Group Commands: Switches Don't Update When Group Turns Off
+
 **Root Cause:** Group commands don't trigger individual 0x83 status packets from switches
 **Fix:** Call `sync_group_switches()` immediately after sending group command
 
 ### OTP Submission Fails First Time
+
 **Root Cause:** Token written to file before `self.token_cache` set in memory
 **Fix:** Set `self.token_cache` in memory FIRST, then attempt file write
 
 ## Anti-Patterns to Avoid
 
 ```python
-# ❌ DON'T: Auto-refresh after ACKs (creates refresh storms)
+## ❌ DON'T: Auto-refresh after ACKs (creates refresh storms)
 async def handle_ack():
     update_state()
     await trigger_status_refresh()  # BAD!
 
-# ❌ DON'T: Immediate offline marking (causes flickering)
+## ❌ DON'T: Immediate offline marking (causes flickering)
 if ping_fails:
     device.online = False  # BAD!
 
-# ❌ DON'T: Missing callback registration (silent failure)
+## ❌ DON'T: Missing callback registration (silent failure)
 await bridge_device.write(payload_bytes)  # BAD! No callback registered
 ```
 

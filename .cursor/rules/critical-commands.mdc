@@ -23,12 +23,12 @@ Commands that send TCP packets must register callbacks to receive responses:
 ## Pattern
 
 ```python
-# ✅ CORRECT: Register callback before sending
+## ✅ CORRECT: Register callback before sending
 device.register_command_callback(command_id, callback)
 await device.send_command(packet)
-# ACK received → callback fires → state update
+## ACK received → callback fires → state update
 
-# ❌ WRONG: Send without callback
+## ❌ WRONG: Send without callback
 await device.send_command(packet)  # Device ignores this
 ```
 

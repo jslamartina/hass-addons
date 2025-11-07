@@ -66,7 +66,7 @@ This document tracks the progress of implementing first-class logging throughout
 
 **File:** `src/cync_controller/server.py` (945 lines, 82 log calls)
 
-**Completed:**
+#### Completed
 
 - ✅ Migrated imports to new logging system
 - ✅ CloudRelayConnection class fully refactored:
@@ -78,7 +78,7 @@ This document tracks the progress of implementing first-class logging throughout
 - ✅ `add_tcp_device()` - Improved logging with context
 - ✅ `remove_tcp_device()` - Improved logging with context
 
-**Remaining:**
+### Remaining
 
 - 🔲 `parse_status()` - Large method (200+ lines) needs refactoring
 - 🔲 `periodic_status_refresh()` - Background task logging
@@ -96,7 +96,7 @@ This document tracks the progress of implementing first-class logging throughout
 
 **File:** `src/cync_controller/devices.py` (3154 lines, 199 log calls)
 
-**Priority Areas:**
+#### Priority Areas
 
 - CyncDevice class methods
 - CyncTCPDevice class methods
@@ -112,7 +112,7 @@ This document tracks the progress of implementing first-class logging throughout
 
 **File:** `src/cync_controller/mqtt_client.py` (2211 lines, 155 log calls)
 
-**Priority Areas:**
+#### Priority Areas
 
 - Connection/reconnection lifecycle
 - Message publish/receive operations
@@ -127,7 +127,7 @@ This document tracks the progress of implementing first-class logging throughout
 
 **File:** `src/cync_controller/cloud_api.py` (484 lines, 46 log calls)
 
-**Priority Areas:**
+#### Priority Areas
 
 - Authentication flow (OTP request/send)
 - Token lifecycle management
@@ -141,7 +141,7 @@ This document tracks the progress of implementing first-class logging throughout
 
 **File:** `src/cync_controller/utils.py` (352 lines, 25 log calls)
 
-**Priority Areas:**
+#### Priority Areas
 
 - Configuration parsing (`parse_config`)
 - UUID management
@@ -154,7 +154,7 @@ This document tracks the progress of implementing first-class logging throughout
 
 **File:** `src/cync_controller/exporter.py` (lines TBD, 18 log calls)
 
-**Priority Areas:**
+#### Priority Areas
 
 - Export server lifecycle
 - HTTP endpoint handling
@@ -235,18 +235,18 @@ This document tracks the progress of implementing first-class logging throughout
 After modifying Python files:
 
 ```bash
-# 1. Lint and fix
+## 1. Lint and fix
 npm run lint:python:fix && npm run format:python
 
-# 2. Rebuild Docker image
+## 2. Rebuild Docker image
 cd cync-controller && ./rebuild.sh
 
-# 3. Check logs
+## 3. Check logs
 ha addons logs local_cync-controller --follow
 
-# 4. Verify dual output
-# - Check stdout for human-readable logs
-# - Check /var/log/cync_controller.json for JSON logs
+## 4. Verify dual output
+## - Check stdout for human-readable logs
+## - Check /var/log/cync_controller.json for JSON logs
 ```
 
 ## 📖 Reference

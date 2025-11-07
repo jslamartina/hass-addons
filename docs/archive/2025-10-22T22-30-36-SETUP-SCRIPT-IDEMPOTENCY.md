@@ -2,7 +2,8 @@
 
 **Date:** October 22, 2025
 **File:** `scripts/setup-fresh-ha.sh`
-**Status:** ✅ **IMPROVED - Now idempotent**
+
+## Status:**✅**IMPROVED - Now idempotent
 
 ---
 
@@ -10,7 +11,7 @@
 
 The `setup-fresh-ha.sh` script was designed only for fresh Home Assistant installations and would **timeout when run on an already-onboarded HA instance**.
 
-### What Was Happening:
+### What Was Happening
 
 1. Script tries to check if HA API is ready by testing `/api/onboarding`
 2. On fresh HA: ✅ Endpoint exists and responds without auth
@@ -26,7 +27,7 @@ Made the script **idempotent** so it can run on both fresh AND already-configure
 
 #### 1. `wait_for_ha()` Function (Lines 84-106)
 
-**Before:**
+#### Before
 
 ```bash
 while [ $retry_count -lt $max_retries ]; do
@@ -40,7 +41,7 @@ while [ $retry_count -lt $max_retries ]; do
 done
 ```
 
-**After:**
+### After
 
 ```bash
 while [ $retry_count -lt $max_retries ]; do
@@ -62,7 +63,7 @@ while [ $retry_count -lt $max_retries ]; do
 done
 ```
 
-**Key Addition:**
+### Key Addition
 
 - Tests `/api/` endpoint which exists on both fresh AND onboarded HA
 - HTTP 401 (Unauthorized) = HA is running but requires auth (onboarded)
@@ -93,11 +94,11 @@ The script is now idempotent for all major steps:
 ### Test 1: Fresh Home Assistant
 
 ```bash
-# Start with completely reset HA
+## Start with completely reset HA
 ./scripts/setup-fresh-ha.sh
 ```
 
-**Expected:**
+## Expected
 
 - ✅ Waits for `/api/onboarding` to respond
 - ✅ Creates first user
@@ -107,11 +108,11 @@ The script is now idempotent for all major steps:
 ### Test 2: Already-Onboarded Home Assistant
 
 ```bash
-# Run on existing configured HA
+## Run on existing configured HA
 ./scripts/setup-fresh-ha.sh
 ```
 
-**Expected:**
+## Expected
 
 - ✅ Detects HA is responsive via `/api/` (HTTP 401)
 - ✅ Skips onboarding ("already completed")
@@ -123,11 +124,11 @@ The script is now idempotent for all major steps:
 ### Test 3: Partial Setup
 
 ```bash
-# Run after some components already installed
+## Run after some components already installed
 ./scripts/setup-fresh-ha.sh
 ```
 
-**Expected:**
+## Expected
 
 - ✅ Skips already-completed steps
 - ✅ Completes missing steps
@@ -136,14 +137,14 @@ The script is now idempotent for all major steps:
 
 ## Benefits
 
-### Before (Non-Idempotent):
+### Before (Non-Idempotent)
 
 - ❌ Only worked on fresh HA
 - ❌ Timed out on existing HA (150 second wait)
 - ❌ Couldn't resume from failures
 - ❌ Couldn't re-run for updates
 
-### After (Idempotent):
+### After (Idempotent)
 
 - ✅ Works on both fresh AND existing HA
 - ✅ No timeouts (detects HA state quickly)
@@ -153,20 +154,21 @@ The script is now idempotent for all major steps:
 
 ## Script Behavior Summary
 
-### On Fresh Home Assistant:
+### On Fresh Home Assistant
 
 1. Waits for `/api/onboarding` endpoint
 2. Creates first user and completes onboarding
 3. Installs EMQX, MQTT integration, Cync Controller
 4. **Result:** Fully configured HA
 
-### On Already-Onboarded HA:
+### On Already-Onboarded HA
 
 1. Detects HA is running via `/api/` (HTTP 401)
 2. Skips onboarding (already done)
 3. Checks each component:
    - **Exists?** → Skip or update config
    - **Missing?** → Install and configure
+
 4. **Result:** Missing components added, existing ones preserved
 
 ## Error Handling
@@ -174,7 +176,7 @@ The script is now idempotent for all major steps:
 The script remains robust with graceful fallbacks:
 
 ```bash
-# Example: MQTT integration fails to configure
+## Example: MQTT integration fails to configure
 configure_mqtt_integration || {
   log_warn "MQTT integration setup failed"
   log_info "You may need to configure manually"
@@ -194,39 +196,39 @@ Most functions:
 **1. Fresh Setup** (original use case)
 
 ```bash
-# Clean HA → Full setup
+## Clean HA → Full setup
 ./scripts/setup-fresh-ha.sh
 ```
 
-**2. Repair Incomplete Setup**
+## 2. Repair Incomplete Setup
 
 ```bash
-# EMQX failed to install? Re-run the script
+## EMQX failed to install? Re-run the script
 ./scripts/setup-fresh-ha.sh
-# Will skip completed steps, finish EMQX setup
+## Will skip completed steps, finish EMQX setup
 ```
 
-**3. Update Configurations**
+## 3. Update Configurations
 
 ```bash
-# Changed MQTT credentials in hass-credentials.env
+## Changed MQTT credentials in hass-credentials.env
 ./scripts/setup-fresh-ha.sh
-# Updates addon configs with new credentials
+## Updates addon configs with new credentials
 ```
 
-**4. Add Missing Components**
+## 4. Add Missing Components
 
 ```bash
-# Manually deleted MQTT integration? Re-run:
+## Manually deleted MQTT integration? Re-run:
 ./scripts/setup-fresh-ha.sh
-# Will reinstall just the MQTT integration
+## Will reinstall just the MQTT integration
 ```
 
-**5. DevContainer Startup**
+## 5. DevContainer Startup
 
 ```bash
-# Run automatically in post-start.sh
-# Safe to run every time container starts
+## Run automatically in post-start.sh
+## Safe to run every time container starts
 ./scripts/setup-fresh-ha.sh
 ```
 

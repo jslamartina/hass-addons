@@ -1,0 +1,80 @@
+---
+description: Web search using Brave Search MCP server
+alwaysApply: true
+---
+
+# Web Search - Use Brave Search MCP
+
+## Critical: Built-in web_search is Broken
+
+**DON'T use the built-in `web_search` tool** - it doesn't work properly in this environment.
+
+**ALWAYS use Brave Search MCP tools instead** for any web searches.
+
+## Available Brave Search Tools
+
+### General Web Search (Primary Tool)
+
+```bash
+mcp_brave-search_brave_web_search
+```
+
+Use for: Most web searches, research, current information, documentation lookup
+
+Example:
+
+```python
+query="Python asyncio best practices"
+count=10  # Number of results (default: 10, max: 20)
+```
+
+### Specialized Search Tools
+
+**News Search** - Recent news and articles:
+
+```bash
+mcp_brave-search_brave_news_search
+```
+
+**Video Search** - Find video content:
+
+```bash
+mcp_brave-search_brave_video_search
+```
+
+**Image Search** - Find images and visual content:
+
+```bash
+mcp_brave-search_brave_image_search
+```
+
+**Local Search** (Pro plan only) - Businesses, restaurants, locations:
+
+```bash
+mcp_brave-search_brave_local_search
+```
+
+## When to Search
+
+Per user memory [[memory:9966253]]: **Automatically search** whenever you don't know something. Don't ask for permission.
+
+Examples:
+
+- Information beyond training data cutoff
+- Current package versions or API changes
+- Documentation for unfamiliar libraries
+- Recent news or events
+- Technical specifications
+
+## Search Strategy
+
+1. **Start broad** - Use `brave_web_search` for general queries
+2. **Specialize** - Use news/video/image search for specific content types
+3. **Multiple queries** - Break complex questions into smaller searches
+4. **Cite sources** - Always include URLs in responses
+
+## Setup
+
+The Brave Search MCP server is configured in `.cursor/mcp.json` and uses `BRAVE_SEARCH_FREE_API_KEY` from `hass-credentials.env`.
+
+Startup script: `scripts/start-brave-search-mcp.sh`

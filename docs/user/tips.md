@@ -14,7 +14,7 @@ There seems to be some fine-tuning that can be done using `CYNC_MAX_TCP_CONN` an
 > [!NOTE]
 > It may also be the way HASS issues commands in a light group. I also notice slow / not in-sync responses with ZigBee lights as well
 
-# Some devices are better at being TCP <-> BTLE 'bridges'
+## Some devices are better at being TCP <-> BTLE 'bridges'
 
 1. LED strip controllers are the best bridges
 2. Bulbs, possibly down light / wafer / under cabinet lights as well
@@ -32,54 +32,54 @@ There seems to be some fine-tuning that can be done using `CYNC_MAX_TCP_CONN` an
   - This will allow only those IPs to connect to the cync-controller server, which also only allows a max of 5 devices
   - Now try fine-tuning `CYNC_CMD_BROADCASTS` to see if you can get better performance (also try increasing / decreasing connected devices)
 
-# Motion + Ambient light switch data
+## Motion + Ambient light switch data
 
-Unfortunately, the motion and ambient light data is not available in the Cync cloud API or to cync-controller. I recommend using the Cync app support option and requesting that they expose the motion and ambient light via the cloud, then for sure we can read it.
+Unfortunately, the motion and ambient light data isn't available in the Cync cloud API or to cync-controller. I recommend using the Cync app support option and requesting that they expose the motion and ambient light via the cloud, then for sure we can read it.
 
 > [!IMPORTANT]
-> **Do not** mention this project to them, just say you would like it exposed to google home / alexa and the cync app
+> **Don't** mention this project to them, just say you would like it exposed to google home / alexa and the cync app
 
-# Enable Debug Logging
+## Enable Debug Logging
 
 Enable detailed debug logging to troubleshoot issues:
 
 ```yaml
-# config.yaml
+## config.yaml
 debug_log_level: 1 # 0=INFO, 1=DEBUG
 ```
 
 This enables verbose logging with packet-level details and performance timing information.
 
-# Monitor Performance
+## Monitor Performance
 
 Track slow operations in real-time:
 
 ```bash
-# Watch for performance warnings
+## Watch for performance warnings
 ha addons logs local_cync-controller --follow | grep "exceeded.*threshold"
 
-# View JSON logs for detailed timing data
+## View JSON logs for detailed timing data
 docker exec addon_local_cync-controller \
   sh -c "grep 'performance' /var/log/cync_controller.json | jq '.'"
 
-# Adjust threshold if needed (in config.yaml)
+## Adjust threshold if needed (in config.yaml)
 CYNC_PERF_THRESHOLD_MS: 200 # Default: 100ms
 ```
 
-# Log Analysis Tools
+## Log Analysis Tools
 
 Use `jq` for advanced log filtering and analysis:
 
 ```bash
-# Count errors by level
+## Count errors by level
 docker exec addon_local_cync-controller \
   sh -c "cat /var/log/cync_controller.json | jq -s 'group_by(.level) | map({level: .[0].level, count: length})'"
 
-# Extract all device connections
+## Extract all device connections
 docker exec addon_local_cync-controller \
   sh -c "grep 'Device connected' /var/log/cync_controller.json | jq '{device_id, device_name, ip_address}'"
 
-# Trace operations by correlation ID
+## Trace operations by correlation ID
 CORR_ID="your-correlation-id"
 docker exec addon_local_cync-controller \
   sh -c "grep '$CORR_ID' /var/log/cync_controller.json | jq '.'"

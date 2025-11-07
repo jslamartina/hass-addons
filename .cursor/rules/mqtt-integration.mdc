@@ -19,8 +19,8 @@ Use Home Assistant MQTT Discovery with exact schema:
 After schema updates, remove stale entities:
 
 ```bash
-sudo python3 scripts/delete-mqtt-safe.py --dry-run  # Preview
-sudo python3 scripts/delete-mqtt-safe.py             # Delete
+sudo python3 scripts/delete-mqtt-safe.py --dry-run # Preview
+sudo python3 scripts/delete-mqtt-safe.py           # Delete
 ha addons restart local_cync-controller
 ```
 

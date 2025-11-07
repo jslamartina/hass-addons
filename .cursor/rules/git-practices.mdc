@@ -6,7 +6,7 @@ description: Git and commit guidelines
 
 **Default:** prepare changes only; user owns commits and pushes.
 
-- Lint *before* staging.
+- Lint _before_ staging.
 - Stage files intentionally (`git add <file>`, `git add -p`) and show `git status` / `git diff`.
 - Never run `git commit`, `push`, `reset`, `checkout`, `rebase`, `merge`, or other history-altering commands unless the user explicitly instructs and confirms the message/branch.
 - If asked to commit/push, summarize staged files, confirm branch + message, warn before destructive actions (`--force`, `reset --hard`, etc.).

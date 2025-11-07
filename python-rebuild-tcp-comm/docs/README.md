@@ -25,7 +25,7 @@ This directory contains comprehensive documentation for the TCP communication la
 
 ### Implementation Phases
 
-**[01-phase-0.md](01-phase-0.md)** - Phase 0: Toggle + Log Harness ✓ **COMPLETE**
+#### [01-phase-0.md](01-phase-0.md)**- Phase 0: Toggle + Log Harness ✓**COMPLETE
 
 - Minimal toggler with JSON logging
 - Prometheus metrics endpoint
@@ -129,7 +129,7 @@ This directory contains comprehensive documentation for the TCP communication la
 
 ### Phase 0 (Current)
 
-```
+```json
 [Toggler CLI] → [TCPConnection] → [Device]
                       ↓
                 [Prometheus Metrics]
@@ -138,7 +138,7 @@ This directory contains comprehensive documentation for the TCP communication la
 
 ### Phase 1 (Target)
 
-```
+```json
 [Application] → [ReliableTransport] → [TCPConnection] → [Device]
                      ↓                      ↑
                 [ACK/NACK Handler]          |
@@ -151,7 +151,7 @@ This directory contains comprehensive documentation for the TCP communication la
 
 ### Phase 2 (Canary)
 
-```
+```json
 [Application] → [CanaryRouter] ─→ [ReliableTransport (new)] → [Device]
                      ├──────────→ [LegacyTransport] → [Device]
                      ↓
@@ -162,7 +162,7 @@ This directory contains comprehensive documentation for the TCP communication la
 
 ### Phase 3 (Final)
 
-```
+```json
 [Application] → [ReliableTransport] → [Device]
                      ↓
                 [Full Production]
@@ -176,7 +176,7 @@ This directory contains comprehensive documentation for the TCP communication la
 
 ### Phase 0 Metrics (Implemented)
 
-```
+```text
 tcp_comm_packet_sent_total{device_id, outcome}
 tcp_comm_packet_recv_total{device_id, outcome}
 tcp_comm_packet_latency_seconds_bucket{device_id}
@@ -186,7 +186,7 @@ tcp_comm_decode_errors_total{device_id, reason}
 
 ### Phase 1 Additional Metrics (Planned)
 
-```
+```text
 tcp_comm_ack_received_total{device_id, outcome}
 tcp_comm_ack_timeout_total{device_id}
 tcp_comm_idempotent_drop_total{device_id}
@@ -197,7 +197,7 @@ tcp_comm_queue_full_total{device_id, queue_type}
 
 ### Phase 2 Additional Metrics (Planned)
 
-```
+```text
 tcp_comm_routing_decision{transport, device_id}
 tcp_comm_canary_percentage
 tcp_comm_slo_compliance{slo_name}
@@ -285,9 +285,11 @@ tcp_comm_error_budget_remaining{slo_name}
    - Capture real device packets using cloud relay
    - Validate protocol structure
    - Create test fixtures
+
 4. **Then Phase 1a**: `02b-phase-1a-protocol-codec.md`
    - Implement protocol encoder/decoder
    - Use Phase 0.5 captures for validation
+
 5. **Continue through 1b-1d** in sequence
 6. Reference `cync-controller/` code only for protocol documentation (not for integration)
 7. Use individual phase acceptance criteria for done definition
@@ -310,6 +312,26 @@ tcp_comm_error_budget_remaining{slo_name}
 
 ---
 
+## Living Documentation
+
+### `living/` Directory
+
+Operational guides and current-state documentation (updated as capabilities evolve):
+
+- **[mitm-local-intercept.md](living/mitm-local-intercept.md)** - 🆕 MITM proxy local intercept mode
+  - Capture live HA commands in real-time
+  - Bidirectional packet analysis
+  - Critical tool for protocol validation
+
+### `phase-0.5/` Directory
+
+Protocol validation results and analysis:
+
+- Packet captures and analysis
+- Validation reports
+- Deduplication strategy
+- Backpressure testing results
+
 ## Related Documentation
 
 ### External to This Directory
@@ -317,6 +339,7 @@ tcp_comm_error_budget_remaining{slo_name}
 - **Implementation**: `/python-rebuild-tcp-comm/src/` - Phase 0 code
 - **Tests**: `/python-rebuild-tcp-comm/tests/` - Phase 0 tests
 - **Scripts**: `/python-rebuild-tcp-comm/scripts/` - Dev tools
+- **MITM Proxy**: `/python-rebuild-tcp-comm/mitm/` - Packet capture tools
 - **Legacy Code**: `/cync-controller/src/cync_controller/` - Current system
 
 ### References
@@ -325,6 +348,7 @@ tcp_comm_error_budget_remaining{slo_name}
 - [Phase 0 Acceptance Criteria](01-phase-0.md#acceptance-criteria)
 - [SLO Definitions](03-phase-2-spec.md#service-level-objectives-slos)
 - [Rollback Procedures](03-phase-2-spec.md#rollback-procedure)
+- [MITM Local Intercept Guide](living/mitm-local-intercept.md)
 
 ---
 
@@ -352,6 +376,7 @@ A: Yes! This phased migration approach is reusable. See retrospective (Phase 3) 
 
 ## Change Log
 
+- **2025-11-07**: MITM local intercept mode documented; enables live HA command capture
 - **2025-11-02**: Phase 1 split into sub-phases (0.5, 1a, 1b, 1c, 1d); individual specs created
 - **2025-11-02**: Architecture context clarified: from-scratch rebuild, not integration
 - **2025-11-01**: Phase 0 complete; Phase 1-3 specifications created

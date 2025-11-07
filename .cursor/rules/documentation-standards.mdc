@@ -1,0 +1,53 @@
+---
+description: Concise documentation rules and anti-verbosity guidelines
+---
+
+# Documentation Standards
+
+## See Executive Rule 8 (Concise Communication) and Rule 9 (Completion Approval) in `_00-rules-prefix.mdc`
+
+## User Approval Workflow
+
+1. Complete investigation/test
+2. Share BRIEF summary with user (< 10 lines)
+3. Wait for user feedback/approval
+4. ONLY THEN update documentation
+
+## Document Length Limits
+
+- Target: 100-150 lines maximum
+- Absolute max: 200 lines
+- Max 1 findings file per investigation
+- NO separate completion/summary/README wrappers
+
+## Investigation Template
+
+```markdown
+## Investigation: [Question]
+
+## Answer
+
+[2-3 sentences max]
+
+## Evidence
+
+- Key findings only
+
+## Implications
+
+- What this means (NO repetition)
+
+## Files
+
+- Supporting artifacts
+```
+
+## Quick Checks
+
+Before creating docs:
+
+1. Can I answer in < 100 lines?
+2. Am I creating redundant files?
+3. Am I repeating myself?
+
+If yes to 2 or 3 → STOP and consolidate.

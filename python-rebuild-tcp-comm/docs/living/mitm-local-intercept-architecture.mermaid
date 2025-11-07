@@ -1,0 +1,36 @@
+flowchart TB
+    subgraph devices[Cync Devices 192.168.x.x]
+        D1[Bulb/Switch/Plug]
+        D2[Bulb/Switch/Plug]
+        D3[Bulb/Switch/Plug]
+    end
+
+    DNS[DNS Resolution<br/>cm.gelighting.com<br/>devcontainer IP]
+
+    subgraph devcontainer[Devcontainer]
+        MITM[MITM Proxy<br/>port 23779<br/>TLS Termination]
+        CAPTURE[Captures<br/>mitm/captures/]
+    end
+
+    subgraph ha[Home Assistant 192.168.50.32]
+        CONTROLLER[cync-controller<br/>port 23779<br/>SSL Connection]
+        UI[Home Assistant UI]
+    end
+
+    D1 -->|A. Resolve DNS| DNS
+    D2 -->|A. Resolve DNS| DNS
+    D3 -->|A. Resolve DNS| DNS
+    DNS -->|B. Connect TLS| MITM
+    MITM -->|C. Forward SSL| CONTROLLER
+    MITM -.->|Log packets| CAPTURE
+    UI -->|Issue commands| CONTROLLER
+    CONTROLLER -->|D. Response| MITM
+    MITM -->|E. Forward| D1
+    MITM -->|E. Forward| D2
+    MITM -->|E. Forward| D3
+
+    style MITM fill:#e1f5ff,stroke:#01579b,stroke-width:3px
+    style CONTROLLER fill:#fff3e0,stroke:#e65100,stroke-width:2px
+    style CAPTURE fill:#f3e5f5,stroke:#4a148c,stroke-width:2px
+    style DNS fill:#e8f5e9,stroke:#1b5e20,stroke-width:2px
+

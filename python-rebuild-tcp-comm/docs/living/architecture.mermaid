@@ -11,13 +11,13 @@ graph TD
 
     subgraph Backpressure["Backpressure Layer (Phase 1c)"]
         RecvQueue[BoundedQueue - Receive<br/>Policy: BLOCK/DROP_OLDEST/REJECT<br/>Max: 100 messages]
-        BulkSend[Bulk Send Operations<br/>Uses asyncio.gather\(\)<br/>No queue layer]:::conceptNode
+        BulkSend[Bulk Send Operations<br/>Uses asyncio.gather&#40;&#41;<br/>No queue layer]:::conceptNode
     end
 
     subgraph ReliableLayer["Reliable Transport Layer (Phase 1b)"]
         ConnMgr[ConnectionManager<br/>- Handshake: 0x23 → 0x28<br/>- Heartbeat: 0xD3 → 0xD8<br/>- Reconnection with backoff<br/>- State machine]
         ReliableTransport[ReliableTransport<br/>- send_reliable with ACK wait<br/>- recv_reliable with auto-ACK<br/>- Pending message tracking<br/>- ACK matching by msg_id]
-        LRUCache[LRUCache<br/>Deduplication<br/>1000 entries, 5min TTL<br/>Key: dedup_key (Full Fingerprint)]
+        LRUCache[LRUCache<br/>Deduplication<br/>1000 entries, 5min TTL<br/>Key: dedup_key &#40;Full Fingerprint&#41;]
         RetryPolicy[RetryPolicy<br/>Exponential backoff + jitter<br/>Max 3 retries]
     end
 
@@ -25,7 +25,7 @@ graph TD
         Encoder[CyncProtocol.encode<br/>0x23, 0x73, 0x83, 0xD3, etc.<br/>Checksum calculation]
         Decoder[CyncProtocol.decode<br/>Packet type parsing<br/>Checksum validation]
         Framer[PacketFramer<br/>TCP stream buffering<br/>Header-based extraction<br/>Multi-packet handling]
-        Checksum[Checksum Algorithm<br/>Sum % 256 between 0x7e markers]
+        Checksum[Checksum Algorithm<br/>Sum &#37; 256 between 0x7e markers]
     end
 
     subgraph Network["Network Layer"]
@@ -38,9 +38,9 @@ graph TD
     end
 
     %% Send Path
-    Client -->|send_reliable\(\)| ReliableTransport
-    Client -.->|bulk: asyncio.gather\(\)| BulkSend
-    BulkSend -.->|parallel send_reliable\(\)| ReliableTransport
+    Client -->|send_reliable&#40;&#41;| ReliableTransport
+    Client -.->|bulk: asyncio.gather&#40;&#41;| BulkSend
+    BulkSend -.->|parallel send_reliable&#40;&#41;| ReliableTransport
     ReliableTransport -->|encode packet| Encoder
     ReliableTransport -.->|track pending ACK<br/>msg_id + correlation_id| ReliableTransport
     ReliableTransport -.->|retry on timeout| RetryPolicy

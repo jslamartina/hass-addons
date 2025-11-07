@@ -12,14 +12,14 @@ If you followed the [DNS docs](./DNS.md) and the [Install docs](./install) and d
 
 **Symptom:** Adding new devices always fails at the last step "Adding to Home"
 
-**Solution:** Disable the DNS redirect so your phone app / new device(s) can connect to the cloud, power cycle the new device(s) after disabling DNS redirect
+**Solution:** Disable the DNS redirect so your phone app / new devices can connect to the cloud, power cycle the new devices after disabling DNS redirect
 
-After device(s) are added to your Cync account:
+After devices are added to your Cync account:
 
 - [export](./cync-controller%20sub-commands.md#export) a new config
 - re-enable the [DNS redirection](./DNS.md)
 - restart the server
-- power cycle the new device(s)
+- power cycle the new devices
 - **Optional:** _you may need to power cycle other Cync devices if the DNS redirection was disabled for a while_
 
 ---
@@ -28,7 +28,7 @@ After device(s) are added to your Cync account:
 
 ### Commands Don't Work / Lights Don't Turn On
 
-**Symptoms:**
+#### Symptoms
 
 - Logs show commands sent, ACKs received, but physical devices don't respond
 - GUI updates but lights don't physically turn on/off
@@ -38,10 +38,10 @@ After device(s) are added to your Cync account:
 
 **Fix:** Always register callback in `bridge_device.messages.control[msg_id]` before calling `bridge_device.write()`
 
-**Example fix:**
+### Example fix
 
 ```python
-# BEFORE sending command:
+## BEFORE sending command:
 m_cb = ControlMessageCallback(
     msg_id=cmsg_id,
     message=payload_bytes,
@@ -51,13 +51,13 @@ m_cb = ControlMessageCallback(
 )
 bridge_device.messages.control[cmsg_id] = m_cb
 
-# THEN send:
+## THEN send:
 await bridge_device.write(payload_bytes)
 ```
 
 ### Commands Work Once, Then Fail / Need to Click Twice
 
-**Symptoms:**
+#### Symptoms
 
 - First command after refresh doesn't work
 - Need to toggle twice for commands to take effect
@@ -70,7 +70,7 @@ await bridge_device.write(payload_bytes)
 
 ### Devices Flicker Between Available/Unavailable
 
-**Symptoms:**
+#### Symptoms
 
 - Device entities show as "unavailable" intermittently
 - Availability status changes rapidly in GUI
@@ -86,18 +86,18 @@ await bridge_device.write(payload_bytes)
 
 The add-on outputs structured JSON logs to `/var/log/cync_controller.json` for detailed analysis.
 
-**Access JSON logs:**
+#### Access JSON logs
 
 ```bash
-# View recent logs
+## View recent logs
 docker exec addon_local_cync-controller cat /var/log/cync_controller.json | jq '.'
 
-# Filter by correlation ID
+## Filter by correlation ID
 CORR_ID="abc123"
 docker exec addon_local_cync-controller \
   sh -c "grep '$CORR_ID' /var/log/cync_controller.json | jq '.'"
 
-# Find errors
+## Find errors
 docker exec addon_local_cync-controller \
   sh -c "grep '\"level\":\"ERROR\"' /var/log/cync_controller.json | jq '.'"
 ```
@@ -106,25 +106,25 @@ docker exec addon_local_cync-controller \
 
 Every async operation gets a unique correlation ID that propagates across the codebase.
 
-**Filter logs by operation:**
+#### Filter logs by operation
 
 ```bash
-# Get correlation ID from any log entry
-# Then filter all related logs
+## Get correlation ID from any log entry
+## Then filter all related logs
 ha addons logs local_cync-controller | grep "correlation-id"
 ```
 
 ### Performance Issues
 
-**Symptoms:**
+#### Symptoms
 
 - Commands take a long time to execute
 - Logs show "exceeded threshold" warnings
 
-**Interpreting timing logs:**
+### Interpreting timing logs
 
 ```bash
-# View performance warnings
+## View performance warnings
 ha addons logs local_cync-controller --follow | grep "exceeded.*threshold"
 ```
 
@@ -132,12 +132,12 @@ ha addons logs local_cync-controller --follow | grep "exceeded.*threshold"
 
 ### Device Offline Debugging
 
-**Understanding offline count thresholds:**
+#### Understanding offline count thresholds
 
 Devices are marked offline after 3 consecutive offline reports (not immediately):
 
 ```python
-# Device reports offline
+## Device reports offline
 if connected_to_mesh == 0:
     device.offline_count += 1  # Increment counter
     if device.offline_count >= 3 and device.online:
@@ -148,16 +148,16 @@ if connected_to_mesh == 0:
     })
 ```
 
-**Monitor offline tracking:**
+### Monitor offline tracking
 
 ```bash
-# Watch offline count progression
+## Watch offline count progression
 ha addons logs local_cync-controller --follow | grep "OFFLINE_TRACKING"
 
-# See when devices marked offline
+## See when devices marked offline
 ha addons logs local_cync-controller | grep "OFFLINE_STATE"
 
-# See when devices come back online
+## See when devices come back online
 ha addons logs local_cync-controller | grep "ONLINE_STATE"
 ```
 

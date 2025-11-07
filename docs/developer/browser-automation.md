@@ -8,7 +8,7 @@
 
 **Problem:** Buttons with nested SVG icons fail with "element intercepts pointer events" error.
 
-**Solutions (in order of preference):**
+### Solutions (in order of preference)
 
 1. **Click parent containers** - Click the card/container element instead of buttons:
 
@@ -43,6 +43,7 @@
    ```
 
 4. **Force clicks as last resort** - Only when absolutely necessary:
+
    ```javascript
    // ❌ AVOID: Bypasses actionability checks (makes tests flaky)
    await page.getByRole("button", { name: "Toggle" }).click({ force: true });
@@ -52,10 +53,12 @@
 
 - **Never use `{force: true}`** unless absolutely necessary - it bypasses Playwright's safety checks
 - **Prefer API tools** over browser automation for configuration changes (see `scripts/configure-addon.sh`)
-- **Wait for elements** - Playwright auto-waits, but add explicit waits for dynamic content:
+- **Wait for elements** - Playwright autowaits, but add explicit waits for dynamic content:
+
   ```javascript
   await page.waitForTimeout(3000); // Wait for dialog to load
   ```
+
 - **Use semantic selectors** - Prefer `getByRole`, `getByLabel`, `getByText` over CSS selectors
 - **Test with snapshots** - Use `browser_snapshot` to see current page state before clicking
 
@@ -99,7 +102,7 @@ await page.getByLabel("Close").click();
     .click();
   ```
 
-- Programmatic fallback when user interaction is not critical:
+- Programmatic fallback when user interaction isn't critical:
 
   ```ts
   const btn = page.getByRole("button", { name: /Save/i });
@@ -113,6 +116,7 @@ await page.getByLabel("Close").click();
 ### Switches, Sliders, and Textboxes
 
 - Prefer interactive controls directly (more reliable than small icon buttons):
+
   ```ts
   await page.getByRole("switch", { name: /Debug/i }).click();
   await page.getByRole("slider", { name: /Brightness/i }).click();
@@ -122,6 +126,7 @@ await page.getByLabel("Close").click();
 ### Iframes (Supervisor Add-on UI)
 
 - The add-on pages under Settings → Add-ons are rendered in an iframe. Use a frame locator to interact with inner content:
+
   ```ts
   const f = page.frameLocator("iframe");
   await f.getByRole("link", { name: /Configuration/i }).click();
@@ -130,7 +135,7 @@ await page.getByLabel("Close").click();
 
 ### Enable Save Before Clicking
 
-- The add-on "Save" button is disabled until a change is made. Toggle a field (e.g., `Debug`) first, then click Save:
+- The add-on "Save" button is disabled until a change is made. Toggle a field (for example, `Debug`) first, then click Save:
 
   ```ts
   const f = page.frameLocator("iframe");
@@ -148,7 +153,7 @@ await page.getByLabel("Close").click();
 
 ### Waiting for Stability
 
-- Auto-wait helps, but add explicit waits for dynamic content or tab changes:
+- Autowait helps, but add explicit waits for dynamic content or tab changes:
 
   ```ts
   const tab = page.getByRole("tab", { name: /Configuration/i });
@@ -157,6 +162,7 @@ await page.getByLabel("Close").click();
   ```
 
 - Prefer `expect` when available for clearer intent:
+
   ```ts
   import { expect } from "@playwright/test";
   const f = page.frameLocator("iframe");
@@ -187,7 +193,7 @@ await page.getByLabel("Close").click();
 
 ### Finding Search Inputs in Shadow DOM
 
-- Home Assistant's search boxes (e.g., on Settings → Entities page) are nested inside shadow roots and can't be located with plain CSS selectors
+- Home Assistant's search boxes (for example, on Settings → Entities page) are nested inside shadow roots and can't be located with plain CSS selectors
 - **Always use role-based selectors** that pierce through shadow DOM:
 
   ```ts
@@ -205,13 +211,14 @@ await page.getByLabel("Close").click();
 
 ### Deleting Entities via UI
 
-- **MQTT entities cannot be deleted through the UI** - they require the integration to stop providing them
+- **MQTT entities can't be deleted through the UI** - they require the integration to stop providing them
 - When attempting to delete MQTT entities, Home Assistant shows: "You can only delete 0 of N entities"
 - To actually remove MQTT entities:
   1. Stop the addon/integration that provides them
   2. Wait for entities to become unavailable
   3. Delete them through the UI (they become deletable once unavailable)
   4. Alternatively: Restart Home Assistant after stopping the integration to clear the MQTT discovery cache
+
 - For the "Delete selected" menu item: click the text "Delete selected" directly (ref to text element) rather than the menuitem role to avoid SVG interception
 
 ## Credentials
