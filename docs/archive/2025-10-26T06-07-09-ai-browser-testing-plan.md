@@ -83,7 +83,7 @@ mcp_cursor -
 
 // 5. Wait for dashboard
 mcp_cursor - playwright_browser_wait_for({ text: "Overview", time: 10 });
-```
+```text
 
 ### Credentials
 
@@ -120,7 +120,7 @@ mcp_cursor -
 // 4. Switch to Configuration tab (add-on UI is in iframe!)
 const iframe = page.frameLocator("iframe");
 iframe.getByRole("tab", { name: "Configuration" }).click();
-```
+```text
 
 **Important:** Add-on pages are rendered in iframes - use `frameLocator` to access content.
 
@@ -157,7 +157,7 @@ mcp_cursor -
     }));
   }`,
   });
-```
+```text
 
 ### 4. Toggle Device Controls
 
@@ -194,7 +194,7 @@ mcp_cursor -
     element: "Close button",
     ref: "button[aria-label='Close']",
   });
-```
+```text
 
 ### 5. Check Add-on Logs
 
@@ -222,7 +222,7 @@ mcp_cursor -
 
 // OR: Take screenshot for visual review
 mcp_cursor - playwright_browser_take_screenshot({ filename: "addon-logs.png" });
-```
+```text
 
 ---
 
@@ -239,8 +239,9 @@ mcp_cursor - playwright_browser_take_screenshot({ filename: "addon-logs.png" });
    ```typescript
    mcp_cursor - playwright_browser_snapshot();
    // Examine output to find accessible names and roles
+   ```
 
-```
+```text
 
 1. **Prefer role-based selectors** - Automatically work through Shadow DOM
 
@@ -250,7 +251,7 @@ mcp_cursor - playwright_browser_take_screenshot({ filename: "addon-logs.png" });
 
    // ❌ BAD: Fails with Shadow DOM
    ref: "button.mdc-button"
-   ```
+```text
 
 2. **Use text-based selectors** - Also pierce Shadow DOM
 
@@ -315,7 +316,7 @@ mcp_cursor - playwright_browser_take_screenshot({ filename: "addon-logs.png" });
 ref: "iframe >> button[name='Save']";
 
 // Or use frameLocator pattern (see examples above)
-```
+```text
 
 ### Dynamic Content Loading
 
@@ -328,15 +329,16 @@ ref: "iframe >> button[name='Save']";
    ```typescript
    mcp_cursor -
      playwright_browser_wait_for({ text: "Configuration saved", time: 5 });
+   ```
 
-```
+```text
 
 1. **Wait for network idle** (use browser_network_requests to monitor)
 
    ```typescript
    mcp_cursor - playwright_browser_network_requests();
    // Check if requests are complete
-   ```
+```text
 
 2. **Use fixed delays** (last resort)
 
@@ -375,7 +377,7 @@ mcp_cursor -
     element: "Search button",
     ref: "button[aria-label='Search entities']",
   });
-```
+```text
 
 ### Advantages
 
@@ -408,7 +410,7 @@ mcp_cursor -
   playwright_browser_take_screenshot({ filename: "after-click.png" });
 
 // 5. Compare screenshots to verify behavior
-```
+```text
 
 ### Advantages
 
@@ -436,7 +438,7 @@ const messages = mcp_cursor - playwright_browser_console_messages();
 // 3. Check network requests
 const requests = mcp_cursor - playwright_browser_network_requests();
 // Look for failed requests, slow responses, or unexpected API calls
-```
+```text
 
 ### Advantages
 
@@ -492,7 +494,7 @@ mcp_cursor -
   });
 mcp_cursor -
   playwright_browser_wait_for({ text: "Configuration saved", time: 5 }); // Wait for success
-```
+```text
 
 ### Advantages
 
@@ -726,7 +728,7 @@ test("Toggle debug mode", async ({ page }) => {
 
   await page.waitForSelector("text=Configuration saved");
 });
-```
+```text
 
 ---
 
@@ -769,8 +771,9 @@ test("Toggle debug mode", async ({ page }) => {
      element: "Filter card",
      ref: "div:has(button[aria-label='Filters'])",
    });
+   ```
 
-```
+```text
 
 1. **Use `browser_snapshot()` to find the actual clickable element**
    - The snapshot shows what's REALLY clickable (often a wrapper div)
@@ -785,7 +788,7 @@ test("Toggle debug mode", async ({ page }) => {
      ref: "button-ref",
      function: "(element) => element.click()",
    });
-   ```
+```text
 
 **Playwright Philosophy:** The "element intercepts pointer events" error is **catching a real UX issue** - something is blocking natural interaction. Work with Playwright, not against it.
 
@@ -864,7 +867,7 @@ async function loginToHomeAssistant() {
   (await mcp_cursor) -
     playwright_browser_wait_for({ text: "Overview", time: 10 });
 }
-```
+```text
 
 ### Template: Verify Entity State
 
@@ -888,7 +891,7 @@ async function verifyEntityState(entityId: string, expectedState: string) {
 
   return snapshot.includes(expectedState);
 }
-```
+```text
 
 ### Template: Take Debug Screenshots
 
@@ -916,7 +919,7 @@ async function debugWorkflow(workflowName: string) {
   // Log results for analysis
   return { console, network };
 }
-```
+```text
 
 ---
 
@@ -1016,7 +1019,7 @@ async function debugWorkflow(workflowName: string) {
 
 📚 More Help
    See docs/developer/browser-automation.md
-```
+```text
 
 ---
 
@@ -1054,7 +1057,7 @@ async function debugWorkflow(workflowName: string) {
     ref: "button-ref",
     function: "(element) => element.click()",
   });
-```
+```text
 
 **Lesson:** **Use `browser_snapshot()` to find the actual clickable element** (usually a parent container), not the button itself. Playwright's actionability checks are a feature, not a bug - they catch real UX issues.
 

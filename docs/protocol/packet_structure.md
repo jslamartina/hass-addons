@@ -41,11 +41,11 @@ cloud using nikshrivs cync_data.json exporter.
 
 #### Actual auth code zeroed out
 
-```text
+````text
 > 2024/03/11 00:14:18.000813563  length=31 from=0 to=30
  23 00 00 00 1a 03 39 87 c8 57 00 10 31 65 30 37     #.....9..W..1e07
  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 3c     ...............<
-```
+```text
 
 | byte  | value               | description |
 | ----- | ------------------- | ----------- |
@@ -64,7 +64,7 @@ This seems to be a device connection packet, the device will not respond to comm
 
 ```text
 
-```
+```text
 
 ### Response
 
@@ -78,7 +78,7 @@ This is a ping from the device to the server.
 
 ```text
 
-```
+```text
 
 ### Response
 
@@ -127,7 +127,7 @@ The status is 19 bytes long for each device. Sometimes there are incorrect devic
  01 64 33 00 00 00 00 14 0b 00 00 00 00 00 00 16  .d3.............
  00 10 03 01 64 01 00 00 00 01 ff 0b 00 00 00 00  ....d...........
  00 00                                            ..
-```
+```text
 
 - header: `43 00 00 01 5d` (349 bytes, pkt mltplier 1\*256 + 93 = 349)
 - endpoint: `16 b0 56 fc`
@@ -173,7 +173,7 @@ This is a bi-directional data channel packet.
 ```text
 ## Control packet
 
-```
+```text
 
 ### Response
 
@@ -191,7 +191,7 @@ This is a bi-directional data channel packet. I am unsure of what exactly this c
 
 ```text
 ## device firmware version
-```
+```text
 
 ### Response
 
@@ -217,3 +217,4 @@ The server responds with a 0x88 packet: `0x88 0x00 0x00 0x00 0x03 <queue id: 3 b
 17 0 0 0 [ctrl] 20 0 25 28 51 7 0 256 256 234 17 ID id 161 1 3 1 0 0 0 0 0 1
 
 """
+````

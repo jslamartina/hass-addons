@@ -43,10 +43,10 @@ Unfortunately, the motion and ambient light data isn't available in the Cync clo
 
 Enable detailed debug logging to troubleshoot issues:
 
-```yaml
+````yaml
 ## config.yaml
 debug_log_level: 1 # 0=INFO, 1=DEBUG
-```
+```text
 
 This enables verbose logging with packet-level details and performance timing information.
 
@@ -64,7 +64,7 @@ docker exec addon_local_cync-controller \
 
 ## Adjust threshold if needed (in config.yaml)
 CYNC_PERF_THRESHOLD_MS: 200 # Default: 100ms
-```
+```text
 
 ## Log Analysis Tools
 
@@ -83,4 +83,5 @@ docker exec addon_local_cync-controller \
 CORR_ID="your-correlation-id"
 docker exec addon_local_cync-controller \
   sh -c "grep '$CORR_ID' /var/log/cync_controller.json | jq '.'"
-```
+```text
+````

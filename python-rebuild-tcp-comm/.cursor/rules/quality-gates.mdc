@@ -79,14 +79,14 @@ def parse(data: bytes) -> dict[str, Any]:
     ...
 ```
 
-2. **Return types explicit**:
+1. **Return types explicit**:
 
 ```python
 async def connect() -> bool:
     ...
 ```
 
-3. **No `Any` without justification**:
+1. **No `Any` without justification**:
 
 ```python
 ## Bad

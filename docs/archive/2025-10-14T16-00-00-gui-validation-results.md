@@ -59,7 +59,7 @@
 ```text
 20:03:00.713 INFO > CyncDevice:Hallway Floodlight 1(147):set_power:
 Sent power state command to TCP devices: {} in 0.00000 seconds - waiting for ACK...
-```
+```text
 
 ### Analysis
 

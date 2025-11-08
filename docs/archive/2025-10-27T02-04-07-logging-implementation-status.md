@@ -247,7 +247,7 @@ ha addons logs local_cync-controller --follow
 ## 4. Verify dual output
 ## - Check stdout for human-readable logs
 ## - Check /var/log/cync_controller.json for JSON logs
-```
+```text
 
 ## 📖 Reference
 

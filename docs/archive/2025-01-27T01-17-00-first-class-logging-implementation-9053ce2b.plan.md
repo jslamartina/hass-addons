@@ -53,7 +53,7 @@ async def handle_connection():
 async def test_critical_path():
     with correlation_context("CRIT-PATH-001"):
         await process_command()
-```
+```text
 
 ### 3. Add Performance Instrumentation
 
@@ -157,7 +157,7 @@ Add new logging configuration constants:
 logger.info("→ Starting mesh refresh", extra={"device_count": len(devices)})
 ## ... operation ...
 logger.info("✓ Mesh refresh completed", extra={"duration_ms": elapsed})
-```
+```text
 
 **State Changes**:
 
@@ -169,7 +169,7 @@ logger.info("Device state change", extra={
     "new_state": "ON",
     "brightness": 75
 })
-```
+```text
 
 **Errors** (always include context):
 
@@ -181,7 +181,7 @@ logger.error("Command failed", extra={
     "error": str(e),
     "correlation_id": get_correlation_id()
 }, exc_info=True)
-```
+```text
 
 **Performance** (automatic via decorator):
 
@@ -189,7 +189,7 @@ logger.error("Command failed", extra={
 @timed("mqtt_publish")
 async def publish(topic, payload):
     # Automatically logs: "⏱️ mqtt_publish completed in 45ms"
-```
+```text
 
 ### 8. Testing & Verification Phase
 
@@ -203,7 +203,7 @@ async def publish(topic, payload):
 npm run lint:python:fix            # Fix any linting issues
 npm run format:python              # Format code
 cd cync-controller && ./rebuild.sh # Rebuild addon
-```
+```text
 
 ### Step 2: Dual-Format Output Verification
 

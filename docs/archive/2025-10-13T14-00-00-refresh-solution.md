@@ -26,7 +26,7 @@ elif extra_data[0] == "refresh_status":
     if norm_pl == "press":
         logger.info(f"{lp} Refresh Status button pressed! Triggering immediate status refresh...")
         await self.trigger_status_refresh()
-```
+```text
 
 ### 2. Automatic 5-Second Refresh
 
@@ -57,7 +57,7 @@ async def periodic_fast_refresh(self):
         except Exception as e:
             logger.error(f"{lp} Error in fast refresh: {e}")
             await asyncio.sleep(5)
-```
+```text
 
 ### 3. Refresh After Command ACK
 
@@ -78,7 +78,7 @@ if device.pending_command:
     # Trigger immediate status refresh after ACK
     if g.mqtt_client:
         asyncio.create_task(g.mqtt_client.trigger_status_refresh())
-```
+```text
 
 ### 4. Core Refresh Implementation
 
@@ -119,7 +119,7 @@ async def trigger_status_refresh(self):
             await asyncio.sleep(0.1)
         except Exception as e:
             logger.warning(f"{lp} Failed to refresh from bridge {bridge_device.address}: {e}")
-```
+```text
 
 ## Benefits
 
@@ -138,14 +138,16 @@ async def trigger_status_refresh(self):
 
 ```markdown
 ## 5-second automatic refresh
+
 20:51:54 mesh info: Sending status updates for all devices
 20:51:58 mesh info: Sending status updates for all devices
 
 ## Manual button press
+
 20:52:29 Refresh Status button pressed! Triggering immediate status refresh...
 20:52:29 trigger_refresh: Requesting mesh info from bridge 140.82.114.5
 20:52:29 trigger_refresh: Status refresh completed
-```
+```text
 
 ## Combined Solution
 

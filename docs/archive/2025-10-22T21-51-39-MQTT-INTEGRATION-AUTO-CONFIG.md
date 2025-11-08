@@ -32,7 +32,7 @@ Automated MQTT integration configuration in the fresh Home Assistant setup scrip
   "username": "$MQTT_USER", // from hass-credentials.env
   "password": "$MQTT_PASS" // from hass-credentials.env
 }
-```
+```text
 
 ### Workflow Integration
 
@@ -51,7 +51,7 @@ configure_mqtt_integration
 ## Step 7: Install and configure Cync Controller
 install_cync_lan
 configure_cync_lan
-```
+```text
 
 ## How It Works
 
@@ -72,8 +72,9 @@ The function uses the Home Assistant config flow API to programmatically set up 
        "password": "dev"
      }
    }
+   ```
 
-```
+```text
 
 1. **Extract flow_id from response**
 
@@ -82,7 +83,7 @@ The function uses the Home Assistant config flow API to programmatically set up 
    ```bash
    POST http://supervisor/core/api/config_entries/flow/{flow_id}
    {}
-   ```
+```text
 
 3. **MQTT integration is now configured and active**
 
@@ -93,7 +94,7 @@ Reads from `hass-credentials.env`:
 ```bash
 MQTT_USER=dev
 MQTT_PASSWORD=dev
-```
+```text
 
 ### Idempotency
 
@@ -103,7 +104,7 @@ The function checks if MQTT integration already exists before attempting configu
 existing_mqtt=$(curl -H "Authorization: Bearer ${SUPERVISOR_TOKEN}" \
   "http://supervisor/core/api/config_entries/entry" \
   | jq -r '.data[] | select(.domain == "mqtt") | .entry_id')
-```
+```text
 
 If found, it skips configuration and logs the existing entry_id.
 
@@ -141,7 +142,7 @@ curl -sf -H "Authorization: Bearer ${SUPERVISOR_TOKEN}" \
 
 ## 3. Subscribe to test in Home Assistant
 ## Developer Tools → Events → Listen to "mqtt_event"
-```
+```text
 
 ## Error Handling
 
@@ -165,7 +166,7 @@ MQTT integration configured successfully
 MQTT Broker: localhost:1883
 MQTT Username: dev
 
-```
+```text
 
 ### Already configured
 
@@ -174,7 +175,7 @@ MQTT Username: dev
 Configuring MQTT integration...
 MQTT integration already configured (entry_id: abc123...)
 
-```
+```text
 
 ### Missing credentials
 
@@ -184,7 +185,7 @@ Configuring MQTT integration...
 MQTT credentials not found in credentials file
 Skipping MQTT integration setup
 
-```
+```text
 
 ## Updated User Instructions
 
@@ -203,7 +204,7 @@ Next steps:
 
   3. Update Cync Controller configuration with your real Cync credentials...
 
-```
+```text
 
 ## Future Enhancements
 

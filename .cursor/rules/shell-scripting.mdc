@@ -147,4 +147,4 @@ npm run lint:shell
 
 - [CONTRIBUTING.md](mdc:CONTRIBUTING.md) - Code standards
 - [setup-fresh-ha.sh](mdc:scripts/setup-fresh-ha.sh) - Good example
-- [scripts/README.md](mdc:scripts/README.md) - Scripts reference
+- [helper-scripts.mdc](mdc:.cursor/rules/helper-scripts.mdc) - Scripts reference

@@ -6,7 +6,7 @@ The `setup-fresh-ha.sh` script was failing during the onboarding process with HT
 
 ```bash
 [setup-fresh-ha.sh] Onboarding completion failed with HTTP 400
-```
+```text
 
 ## Root Cause Analysis
 
@@ -20,7 +20,7 @@ The error showed:
 
 ConnectionRefusedError: [Errno 111] Connect call failed ('172.17.0.2', 19531)
 
-```
+```text
 
 This indicates HA's internal components were still initializing.
 
@@ -59,7 +59,7 @@ if [ $onboarding_result -eq 2 ]; then
   ha core restart > /dev/null 2>&1
   # Wait for restart...
 fi
-```
+```text
 
 ## Testing Results
 

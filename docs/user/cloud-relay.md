@@ -10,12 +10,12 @@ In normal operation, the Cync Controller add-on acts as a **local replacement** 
 
 With **Cloud Relay Mode** enabled, the add-on acts as a **transparent proxy**:
 
-```text
+````text
 Device ←→ Cync Controller Relay ←→ Cync Cloud
               ↓
           MQTT/HA
           Packet Logs
-```
+```text
 
 This architecture provides:
 
@@ -61,7 +61,7 @@ cloud_relay:
   cloud_port: 23779 # Cync cloud port (default: 23779)
   debug_packet_logging: false # Log all packets (default: false)
   disable_ssl_verification: false # Disable SSL verify - DEBUG ONLY (default: false)
-```
+```text
 
 ### Configuration Options
 
@@ -83,7 +83,7 @@ cloud_relay:
 ```yaml
 cloud_relay:
   enabled: false
-```
+```text
 
 ### Behavior
 
@@ -105,7 +105,7 @@ cloud_relay:
   enabled: true
   forward_to_cloud: true
   debug_packet_logging: false
-```
+```text
 
 ### Behavior
 
@@ -128,7 +128,7 @@ cloud_relay:
   enabled: true
   forward_to_cloud: true
   debug_packet_logging: true
-```
+```text
 
 ### Behavior
 
@@ -145,7 +145,7 @@ cloud_relay:
   Device Statuses (12 devices):
     [160] ON  Bri:100 Temp: 50 Online:True
     [ 94] OFF Bri:  0 Temp:  0 Online:True
-```
+```text
 
 ---
 
@@ -158,7 +158,7 @@ cloud_relay:
   enabled: true
   forward_to_cloud: false
   debug_packet_logging: true
-```
+```text
 
 ### Behavior
 
@@ -181,7 +181,7 @@ cloud_relay:
   forward_to_cloud: true
   debug_packet_logging: true
   disable_ssl_verification: true
-```
+```text
 
 ### Behavior
 
@@ -197,7 +197,7 @@ cloud_relay:
 This mode should ONLY be used for local debugging!
 DO NOT use on untrusted networks or production systems!
 ============================================================
-```
+```text
 
 **Use When:** Local development when SSL cert issues prevent connection.
 
@@ -214,7 +214,7 @@ cloud_relay:
   enabled: true
   forward_to_cloud: true
   debug_packet_logging: true
-```
+```text
 
 ### Workflow
 
@@ -236,7 +236,7 @@ cloud_relay:
   enabled: true
   forward_to_cloud: true
   debug_packet_logging: true
-```
+```text
 
 ### Workflow
 
@@ -261,7 +261,7 @@ cloud_relay:
 cloud_relay:
   enabled: true
   forward_to_cloud: false
-```
+```text
 
 ### Workflow
 
@@ -283,7 +283,7 @@ cloud_relay:
   enabled: true
   forward_to_cloud: true
   debug_packet_logging: false
-```
+```text
 
 **Benefit:** If your Home Assistant instance goes down, devices still work via Cync app since they maintain cloud connection.
 
@@ -298,7 +298,7 @@ Create a file with hex-formatted packet data:
 ```bash
 ## From add-on container
 echo "73 00 00 00 1e 1b dc da 3e 00 13 00 7e 0d 01 00 00 f8 8e 0c 00 0e 01 00 00 00 a0 00 f7 11 02 01 01 55 7e" > /tmp/cync_inject_raw_bytes.txt
-```
+```text
 
 The relay will:
 
@@ -317,7 +317,7 @@ echo "smart" > /tmp/cync_inject_command.txt
 
 ## Switch to traditional mode
 echo "traditional" > /tmp/cync_inject_command.txt
-```
+```text
 
 **Note:** This only works if the relay has identified a device endpoint from the connection handshake.
 
@@ -505,7 +505,7 @@ cloud_relay:
   enabled: true
   cloud_server: "backup.cync-cloud.example.com"
   cloud_port: 23779
-```
+```text
 
 ### Multiple Relay Instances
 
@@ -524,7 +524,7 @@ For deep analysis, combine relay logging with packet capture:
 sudo tcpdump -i any port 23779 -w cync_packets.pcap
 
 ## Analyze with Wireshark or tshark
-```
+```text
 
 ## FAQ
 
@@ -557,3 +557,4 @@ A: No. Authentication happens during device setup via the cloud API (not the TCP
 
 **Last Updated:** October 2025
 **Version:** 0.0.4.0
+````

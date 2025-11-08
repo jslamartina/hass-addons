@@ -157,7 +157,7 @@ mcp_cursor - playwright_browser_snapshot();
 
 // 4. Screenshot for documentation
 mcp_cursor - playwright_browser_take_screenshot({ filename: "config.png" });
-```
+```text
 
 ### Test Entity Control
 
@@ -182,7 +182,7 @@ mcp_cursor -
     element: "Brightness slider",
     ref: "input[type='range']",
   });
-```
+```text
 
 ### Debug UI Issue
 
@@ -200,7 +200,7 @@ mcp_cursor - playwright_browser_take_screenshot({ filename: "after.png" });
 // 4. Check for errors
 const console = mcp_cursor - playwright_browser_console_messages();
 const network = mcp_cursor - playwright_browser_network_requests();
-```
+```text
 
 ---
 
@@ -234,21 +234,21 @@ const network = mcp_cursor - playwright_browser_network_requests();
 
 1. **Read the quick reference:**
 
-```
+```text
 
 .cursor/rules/ai-browser-testing.mdc
 
-```
+```text
 
-```
+```text
 
 1. **Follow a workflow:**
 
-```
+```text
 
 docs/developer/ai-browser-testing-plan.md
 
-```
+```text
 
 1. **Use the patterns:**
    - Start with `browser_snapshot()` to understand structure
@@ -258,37 +258,37 @@ docs/developer/ai-browser-testing-plan.md
 
 ### Example Session
 
-```
+```text
 
 // 1. Login
 (await mcp_cursor) -
-  playwright_browser_navigate({ url: "<http://localhost:8123>" });
+playwright_browser_navigate({ url: "<http://localhost:8123>" });
 (await mcp_cursor) -
-  playwright_browser_fill_form({
-    fields: [
-      {
-        name: "Username",
-        type: "textbox",
-        ref: "input[name='username']",
-        value: "dev",
-      },
-      {
-        name: "Password",
-        type: "textbox",
-        ref: "input[name='password']",
-        value: "dev",
-      },
-    ],
-  });
+playwright_browser_fill_form({
+fields: [
+{
+name: "Username",
+type: "textbox",
+ref: "input[name='username']",
+value: "dev",
+},
+{
+name: "Password",
+type: "textbox",
+ref: "input[name='password']",
+value: "dev",
+},
+],
+});
 (await mcp_cursor) -
-  playwright_browser_click({ element: "Log in", ref: "button[type='submit']" });
+playwright_browser_click({ element: "Log in", ref: "button[type='submit']" });
 
 // 2. Explore
 (await mcp_cursor) - playwright_browser_snapshot(); // See what's available
 
 // 3. Test
 (await mcp_cursor) -
-  playwright_browser_take_screenshot({ filename: "dashboard.png" });
+playwright_browser_take_screenshot({ filename: "dashboard.png" });
 
 // 4. Debug
 (await mcp_cursor) - playwright_browser_console_messages(); // Check for errors
@@ -343,22 +343,22 @@ docs/developer/ai-browser-testing-plan.md
 
 ## 📖 Documentation Structure
 
-```
+```text
 
 docs/developer/
-├── ai-browser-testing-plan.md       # 📘 Main guide (start here)
-├── browser-automation.md            # Playwright patterns
-├── mcp-tools.md                     # All MCP tools (includes browser)
-├── BROWSER_TESTING_SETUP.md         # What was created
-└── DEMO_BROWSER_TOOLS.md            # Verification results
+├── ai-browser-testing-plan.md # 📘 Main guide (start here)
+├── browser-automation.md # Playwright patterns
+├── mcp-tools.md # All MCP tools (includes browser)
+├── BROWSER_TESTING_SETUP.md # What was created
+└── DEMO_BROWSER_TOOLS.md # Verification results
 
 .cursor/rules/
-└── ai-browser-testing.mdc           # 🚀 Quick reference (fast access)
+└── ai-browser-testing.mdc # 🚀 Quick reference (fast access)
 
-AGENTS.md                            # Points to browser testing
-AI_BROWSER_TESTING_READY.md          # This file
+AGENTS.md # Points to browser testing
+AI_BROWSER_TESTING_READY.md # This file
 
-```
+```text
 
 ---
 
@@ -395,3 +395,4 @@ AI agents can:
 
 _Created: October 24, 2025_
 _Tested and verified working with Home Assistant_
+```text

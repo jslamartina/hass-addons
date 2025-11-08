@@ -24,7 +24,7 @@ The addon shows device 103 is actively connected:
 ```text
 10/25/25 23:20:05.960 Device connected: 172.67.68.90:26114[103]
 TCP Pool: 8/8 ready_to_control
-```
+```text
 
 **Status**: Device is ready and waiting for commands ✓
 
@@ -65,7 +65,7 @@ percentage: <value>
 percentage_step: 1
 preset_mode: <off|low|medium|high>
 preset_modes: [off, low, medium, high]
-```
+```text
 
 If NO: Fan entity doesn't exist → Discovery failed
 
@@ -77,7 +77,7 @@ Check addon logs at startup for:
 Registering fan device: Master Bedroom Fan Switch
 Publishing percentage_command_topic: cync_controller_addon/set/{id}/percentage
 Publishing percentage_state_topic: cync_controller_addon/status/{id}/percentage
-```
+```text
 
 ### Phase 3: Test Direct MQTT
 
@@ -94,7 +94,7 @@ docker exec addon_emqx mosquitto_pub -h localhost \
 
 ## Check addon logs for ">>> FAN PERCENTAGE COMMAND"
 ha addons logs local_cync-controller | grep "FAN PERCENTAGE"
-```
+```text
 
 If addon receives the test command → Issue is Home Assistant configuration
 If addon does NOT receive → Issue is MQTT broker/networking

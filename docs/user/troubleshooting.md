@@ -40,7 +40,7 @@ After devices are added to your Cync account:
 
 ### Example fix
 
-```python
+````python
 ## BEFORE sending command:
 m_cb = ControlMessageCallback(
     msg_id=cmsg_id,
@@ -53,7 +53,7 @@ bridge_device.messages.control[cmsg_id] = m_cb
 
 ## THEN send:
 await bridge_device.write(payload_bytes)
-```
+```text
 
 ### Commands Work Once, Then Fail / Need to Click Twice
 
@@ -100,7 +100,7 @@ docker exec addon_local_cync-controller \
 ## Find errors
 docker exec addon_local_cync-controller \
   sh -c "grep '\"level\":\"ERROR\"' /var/log/cync_controller.json | jq '.'"
-```
+```text
 
 ### Using Correlation IDs to Trace Operations
 
@@ -112,7 +112,7 @@ Every async operation gets a unique correlation ID that propagates across the co
 ## Get correlation ID from any log entry
 ## Then filter all related logs
 ha addons logs local_cync-controller | grep "correlation-id"
-```
+```text
 
 ### Performance Issues
 
@@ -126,7 +126,7 @@ ha addons logs local_cync-controller | grep "correlation-id"
 ```bash
 ## View performance warnings
 ha addons logs local_cync-controller --follow | grep "exceeded.*threshold"
-```
+```text
 
 **Configuration:** Adjust `CYNC_PERF_THRESHOLD_MS` in config if thresholds are too aggressive for your hardware.
 
@@ -146,7 +146,7 @@ if connected_to_mesh == 0:
         "device_id": device.id,
         "offline_count": device.offline_count,
     })
-```
+```text
 
 ### Monitor offline tracking
 
@@ -159,8 +159,9 @@ ha addons logs local_cync-controller | grep "OFFLINE_STATE"
 
 ## See when devices come back online
 ha addons logs local_cync-controller | grep "ONLINE_STATE"
-```
+```text
 
 ---
 
 _For more troubleshooting information, see [AGENTS.md](../../AGENTS.md) in the repository root._
+````

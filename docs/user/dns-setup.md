@@ -55,7 +55,7 @@ and `cm-ge.xlink.cn` to local IP `10.0.1.20` (this is where your Cync Controller
 >
 > `local-zone` is your DNS domain (.local, .lan, .whatever). Notice there is no leading `.` in `local-zone`!!.
 
-```yaml
+````yaml
 server:
 access-control-view: 10.0.2.216/32 cync-override-hass
 access-control-view: 10.0.2.223/32 cync-override-hass
@@ -68,7 +68,7 @@ local-zone: "homelab" static
 local-data: "cm.gelighting.com. 90 IN A 10.0.1.20"
 local-data: "cm-sec.gelighting.com. 90 IN A 10.0.1.20"
 local-data: "cm-ge.xlink.cn. 90 IN A 10.0.1.20"
-```
+```text
 
 > [!TIP]
 > Don't redirect your phone app. Let it talk to the Cync cloud so you can add new devices, the phone app
@@ -133,7 +133,7 @@ cm.gelighting.com.      3600    IN      A       10.0.1.14
 ;; SERVER: 10.0.1.1#53(10.0.1.1) (UDP)
 ;; WHEN: Mon Apr 01 18:53:29 MDT 2024
 ;; MSG SIZE  rcvd: 62
-```
+```text
 
 In the example above, `cm.gelighting.com` returns `10.0.1.20` which is the IP address of the machine running Cync Controller bridge.
 After power cycling Cync devices, the devices will ask pi-hole for the Cync cloud server IP and pi-hole will return `10.0.1.14`.
@@ -188,4 +188,5 @@ cm.gelighting.com.      3600    IN      A       10.0.1.20 <---- Overridden to a 
 ;; SERVER: 10.0.1.1#53(10.0.1.1) (UDP)
 ;; WHEN: Fri Mar 29 08:26:51 MDT 2024
 ;; MSG SIZE  rcvd: 62
-```
+```text
+````

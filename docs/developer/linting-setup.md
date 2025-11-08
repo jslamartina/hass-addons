@@ -92,9 +92,7 @@ Running `./scripts/lint-all.sh` shows **61 Ruff errors** (42 autofixable):
 - Added to developer documentation structure diagram
 - Updated all cross-references in AGENTS.md and README.md
 
-✅ **scripts/README.md** - Already documents lint-all.sh and npm scripts
-
-✅ **.devcontainer/README.md** - Already documents formatting, linting info in AGENTS.md
+✅ Linting and formatting information documented in AGENTS.md and cursor rules
 
 ## Summary
 

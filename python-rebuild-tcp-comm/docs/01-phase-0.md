@@ -397,7 +397,7 @@ p99 latency:  0.54ms ✅ (target: 800ms)
 
 - Complete integration test documentation in `tests/integration/README.md`
 - Network flow diagrams in `docs/rebuild-tcp-comm/integration-test-network-flow.md`
-- Helper script usage in `scripts/README.md`
+- Helper scripts documented in cursor rules (`.cursor/rules/helper-scripts.mdc`)
 
 ### Implementation Summary
 

@@ -96,7 +96,7 @@ await mcp_cursor_browser_extension_browser_take_screenshot({
 
 // 3. Check console for errors
 await mcp_cursor_browser_extension_browser_console_messages();
-```
+```text
 
 #### Test Add-on Configuration
 
@@ -105,7 +105,7 @@ await mcp_cursor_browser_extension_browser_console_messages();
 // 2. Go to add-on config (remember: iframe!)
 // 3. Use snapshot to find options
 // 4. Verify changes with screenshots
-```
+```text
 
 #### Debug UI Issue
 
@@ -115,7 +115,7 @@ await mcp_cursor_browser_extension_browser_console_messages();
 // 3. Perform action
 // 4. Screenshot after action
 // 5. Check console and network
-```
+```text
 
 ## Key Features
 
@@ -250,7 +250,7 @@ docs/developer/
 
 AGENTS.md                        # Points to browser testing docs
 
-```
+```text
 
 ## Success Criteria
 

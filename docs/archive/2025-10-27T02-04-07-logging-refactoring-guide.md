@@ -44,7 +44,7 @@ logger.exception(
         "error": str(e),
     },
 )
-```
+```text
 
 ### 2. Correlation Tracking (`correlation.py`)
 
@@ -68,7 +68,7 @@ async def handle_connection():
 async def test_critical_path():
     with correlation_context("TEST-123"):
         await process_command()
-```
+```text
 
 ### 3. Performance Instrumentation (`instrumentation.py`)
 
@@ -88,7 +88,7 @@ async def read_packet(reader):
     data = await reader.read(4096)
     return data
     # Automatically logs: "⏱️ [tcp_read] completed in 45ms"
-```
+```text
 
 ## Refactoring Patterns
 
@@ -99,14 +99,14 @@ async def read_packet(reader):
 ```python
 import logging
 logger = logging.getLogger(CYNC_LOG_NAME)
-```
+```text
 
 ### After
 
 ```python
 from cync_controller.logging_abstraction import get_logger
 logger = get_logger(__name__)
-```
+```text
 
 ### Pattern 2: Remove `lp` (Log Prefix) Pattern
 
@@ -117,7 +117,7 @@ def some_method(self):
     lp = f"{self.lp}some_method:"
     logger.info("%s Starting operation", lp)
     logger.error("%s Operation failed: %s", lp, error)
-```
+```text
 
 ### After
 
@@ -128,7 +128,7 @@ def some_method(self):
         "✗ Operation failed",
         extra={"error": str(error)},
     )
-```
+```text
 
 ### Pattern 3: Add Structured Context
 
@@ -136,7 +136,7 @@ def some_method(self):
 
 ```python
 logger.info("Device %s connected at %s", device_id, ip_addr)
-```
+```text
 
 ### After
 
@@ -148,7 +148,7 @@ logger.info(
         "ip_address": ip_addr,
     },
 )
-```
+```text
 
 ### Pattern 4: Improve Error Logging
 
@@ -157,7 +157,7 @@ logger.info(
 ```python
 except Exception:
     logger.exception("Error in operation")
-```
+```text
 
 ### After
 
@@ -171,7 +171,7 @@ except Exception as e:
             "error": str(e),
         },
     )
-```
+```text
 
 ### Pattern 5: Add Entry/Exit Logging for Async Operations
 
@@ -182,7 +182,7 @@ async def process_command(device_id, command):
     # No entry/exit logging
     result = await send_command(device_id, command)
     return result
-```
+```text
 
 ### After
 
@@ -209,7 +209,7 @@ async def process_command(device_id, command):
         },
     )
     return result
-```
+```text
 
 ### Pattern 6: Add Performance Timing
 
@@ -218,7 +218,7 @@ async def process_command(device_id, command):
 ```python
 async def publish_message(topic, payload):
     await client.publish(topic, payload)
-```
+```text
 
 ### After
 
@@ -227,7 +227,7 @@ async def publish_message(topic, payload):
 async def publish_message(topic, payload):
     await client.publish(topic, payload)
     # Automatically logs timing
-```
+```text
 
 ## Log Message Standards
 
@@ -314,7 +314,7 @@ CYNC_PERF_TRACKING=true
 
 ## Performance threshold in milliseconds
 CYNC_PERF_THRESHOLD_MS=100
-```
+```text
 
 ## Testing
 

@@ -250,25 +250,23 @@ reliable_transport:
 **Files to Create**:
 
 ```bash
-
 docs/
 ├── architecture/
-│   ├── reliable-transport-design.md
-│   ├── protocol-specification.md
-│   └── migration-history.md
+│ ├── reliable-transport-design.md
+│ ├── protocol-specification.md
+│ └── migration-history.md
 ├── runbooks/
-│   ├── tcp-transport-operations.md
-│   ├── incident-response.md
-│   └── rollback-procedures.md
+│ ├── tcp-transport-operations.md
+│ ├── incident-response.md
+│ └── rollback-procedures.md
 ├── guides/
-│   ├── monitoring-guide.md
-│   ├── troubleshooting-guide.md
-│   └── performance-tuning.md
+│ ├── monitoring-guide.md
+│ ├── troubleshooting-guide.md
+│ └── performance-tuning.md
 └── reference/
-    ├── metrics-reference.md
-    ├── configuration-reference.md
-    └── api-reference.md
-
+├── metrics-reference.md
+├── configuration-reference.md
+└── api-reference.md
 ```
 
 ---

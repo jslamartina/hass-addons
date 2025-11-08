@@ -1,69 +1,264 @@
 ---
 description: Helper scripts and automation tools available in the project
+appliesTo:
+  - "scripts/**"
+  - "hass-credentials.env"
 ---
 
 # Helper Scripts
 
-## Setup and Configuration
+## Credentials File Setup
 
-### Complete Factory Reset
+**Required:** Create `hass-credentials.env` before using automation scripts.
 
 ```bash
-./scripts/reset-ha-to-fresh.sh           # Wipe to fresh state (= devcontainer rebuild)
-./scripts/reset-ha-to-fresh-onboarded.sh # Wipe + auto onboarding (one command)
-$()$(
-  markdown
+cp hass-credentials.env.example hass-credentials.env
+nano hass-credentials.env
+```
 
-  ### Fresh Home Assistant Setup:
+### Required Fields
 
-)$()bash
-./scripts/setup-fresh-ha.sh # Automated user, EMQX, addon setup (idempotent)
-$()$(
-  markdown
+| Field                     | Description             | Default              |
+| ------------------------- | ----------------------- | -------------------- |
+| `HASS_USERNAME`           | HA username             | `dev`                |
+| `HASS_PASSWORD`           | HA password             | `dev`                |
+| `CYNC_USERNAME`           | Cync account email      | `your-email@...`     |
+| `CYNC_PASSWORD`           | Cync account password   | `your-password`      |
+| `MQTT_USER`               | MQTT username           | `dev`                |
+| `MQTT_PASS`               | MQTT password           | `dev`                |
+| `LONG_LIVED_ACCESS_TOKEN` | HA API token (optional) | Leave blank for auto |
 
-  ### Configure Add-on:
+**Security:** File is gitignored, never committed. Use test credentials (`dev`/`dev`) for development.
 
-)$()bash
-./scripts/configure-addon.sh get                       # Show config
+## Setup and Configuration Scripts
+
+### Factory Reset Scripts
+
+| Script                           | Purpose                    | Time    | Usage                                      |
+| -------------------------------- | -------------------------- | ------- | ------------------------------------------ |
+| `reset-ha-to-fresh-onboarded.sh` | Factory reset + onboarding | ~3-4min | `./scripts/reset-ha-to-fresh-onboarded.sh` |
+| `reset-ha-to-fresh.sh`           | Factory reset only         | ~2-3min | `./scripts/reset-ha-to-fresh.sh`           |
+
+**reset-ha-to-fresh.sh** - Equivalent to rebuilding devcontainer, saves ~7 minutes vs full rebuild:
+
+- Stops and removes HA Core container (releases file locks)
+- Wipes all data: config, database, backups, media, SSL, temp files
+- Starts fresh HA Core
+- Requires "yes" confirmation
+- Preserves addon code in `addons/local/`
+
+**When to use:** Testing fresh install scenarios, debugging initialization errors on first boot.
+
+### Fresh HA Setup
+
+```bash
+./scripts/setup-fresh-ha.sh # Automated onboarding, EMQX install, addon config
+```
+
+**What it does:**
+
+1. Creates first user from `hass-credentials.env`
+2. Installs and configures EMQX MQTT broker
+3. Installs and configures Cync Controller addon
+4. Verifies all services running
+
+**Idempotent:** Safe to re-run, skips completed steps.
+
+**Environment variables:**
+
+- `HA_URL` - Home Assistant URL (default: `http://homeassistant.local:8123`)
+- `CREDENTIALS_FILE` - Credentials file path (default: `../hass-credentials.env`)
+
+### Addon Configuration
+
+```bash
+## View current config
+./scripts/configure-addon.sh get
+
+## Set cloud relay options
+./scripts/configure-addon.sh set-cloud-relay <enabled> <forward> <debug>
+
+## Quick presets
 ./scripts/configure-addon.sh preset-baseline           # LAN-only mode
-./scripts/configure-addon.sh preset-relay-with-forward # Cloud relay
-./scripts/configure-addon.sh restart                   # Restart
-$()$(
-  markdown
+./scripts/configure-addon.sh preset-relay-with-forward # Cloud relay enabled
+./scripts/configure-addon.sh preset-relay-debug        # With packet logging
+./scripts/configure-addon.sh preset-lan-only           # Privacy mode
 
-  ## Entity Management
+## Utility
+./scripts/configure-addon.sh restart
+./scripts/configure-addon.sh logs
+```
 
-  ### Delete MQTT Entities:
+**How it works:** Extracts `SUPERVISOR_TOKEN` from `hassio_cli` container, sends HTTP POST to Supervisor API, automatically restarts addon.
 
-)$()bash
-sudo python3 scripts/delete-mqtt-safe.py --dry-run # Preview
-sudo python3 scripts/delete-mqtt-safe.py           # Delete
-sudo python3 scripts/delete-mqtt-safe.py --restart # Delete + restart
-$()$(
-  bash
+**API endpoints:**
 
-  ## Testing
+- `GET /addons/local_cync-controller/info` - Read config
+- `POST /addons/local_cync-controller/options` - Update config
+- `POST /addons/local_cync-controller/restart` - Restart addon
 
-  ### Unit Tests
+**Performance:** Config change ~5s, restart ~5-8s.
 
-)$()bash
+See `testing-workflows.mdc` for detailed testing procedures.
+
+### Cloud Relay Test Suite
+
+```bash
+./scripts/test-cloud-relay.sh # Full automated test suite
+```
+
+**Test phases:** Baseline LAN-only, cloud relay with forwarding, debug logging, LAN-only relay, packet injection, return to baseline.
+
+**Exit codes:** 0 = all passed, 1 = some failed.
+
+**Time:** ~2-3 minutes for full suite.
+
+See `testing-workflows.mdc` for detailed test documentation.
+
+## Entity Management
+
+### Delete MQTT Entities
+
+```bash
+## Preview what will be deleted
+sudo python3 scripts/delete-mqtt-safe.py --dry-run
+
+## Delete (preserves Cync Controller entities)
+sudo python3 scripts/delete-mqtt-safe.py
+
+## Delete + restart addon
+sudo python3 scripts/delete-mqtt-safe.py --restart
+```
+
+**Features:**
+
+- Preserves Cync Controller bridge entities
+- Cleans entity and device registries
+- Clears restore state (removes history memory)
+- Creates backups before deletion
+- Safe dry-run mode
+
+**When to use:** Cleaning up stale entities during development, testing entity cleanup workflows.
+
+See `mqtt-entity-cleanup.mdc` for detailed workflows.
+
+## Development Tools
+
+### MCP Environment Loader
+
+```bash
+## Usage in .cursor/mcp.json
+{
+  "mcpServers": {
+    "my-server": {
+      "command": "/absolute/path/to/scripts/run-mcp-with-env.sh",
+      "args": ["npx", "-y", "@org/server", "--transport", "stdio"]
+    }
+  }
+}
+```
+
+**Purpose:** Loads secrets from `.mcp-secrets.env` before launching MCP servers (Cursor doesn't support `${ENV_VAR}` expansion).
+
+**Setup:**
+
+1. `cp .mcp-secrets.env.example .mcp-secrets.env`
+2. Fill in API keys
+3. Update `mcp.json` with absolute path
+
+**Security:** `.mcp-secrets.env` is gitignored.
+
+See `mcp-tools-guide.mdc` for detailed MCP documentation.
+
+### Memory Monitoring
+
+```bash
+## Monitor default test:unit command
+./scripts/monitor-test-memory.sh
+
+## Or via npm
+npm run test:unit:mem
+
+## Monitor custom command
+./scripts/monitor-test-memory.sh "cd cync-controller && pytest tests/unit/ -n 2"
+```
+
+**What it shows:**
+
+- Real-time monitoring: current/peak memory, process count
+- Final summary: peak usage, system delta
+- Detailed metrics: max resident set size, user/system time
+
+**When to use:** Identifying memory-intensive test configs, comparing pytest worker counts, debugging OOM errors.
+
+## Unit Tests
+
+```bash
 cd cync-controller
 pytest tests/unit/                # All tests
 pytest tests/unit/test_devices.py # Specific file
 pytest -k "test_set_power"        # Pattern match
-$()$(
-  markdown
-
-  ### Cloud Relay Test Suite:
-
-)$()bash
-./scripts/test-cloud-relay.sh # Full automated test
+pytest tests/unit/ --cov          # With coverage
 ```
+
+See `testing-workflows.mdc` for E2E tests and comprehensive testing procedures.
+
+## Troubleshooting
+
+### "Couldn't retrieve SUPERVISOR_TOKEN"
+
+**Cause:** `hassio_cli` container not running.
+
+**Solution:**
+
+```bash
+docker ps | grep hassio_cli # Check if running
+ha supervisor restart       # Restart if needed
+```
+
+### "Configuration update failed (HTTP 401)"
+
+**Cause:** Invalid or expired Supervisor token.
+
+**Solution:**
+
+```bash
+docker exec hassio_cli env | grep SUPERVISOR_TOKEN # Verify token
+ha supervisor restart                              # Refresh token
+```
+
+### "Add-on restart timeout"
+
+**Cause:** Add-on taking longer than expected.
+
+**Solution:**
+
+```bash
+ha addons logs local_cync-controller    # Check logs
+ha addons restart local_cync-controller # Manual restart
+tail -f /tmp/supervisor_run.log         # Check supervisor logs
+```
+
+### "Credentials file not found"
+
+**Cause:** `hass-credentials.env` doesn't exist.
+
+**Solution:** Create file from template (see Credentials File Setup above).
 
 ## Script Features
 
-**Idempotent:** All scripts safe to run multiple times.
+**All scripts are:**
 
-**Error handling:** All scripts use `set -e` for early exit.
+- Idempotent: Safe to run multiple times
+- Error-handled: Use `set -e` for early exit
+- API-based: Use Supervisor API for reliable configuration
+- Non-interactive: Suitable for automation and CI/CD
 
-**Use helper scripts** instead of manual operations.
+**Prefer scripts over manual operations** for consistency and repeatability.
+
+## Related Documentation
+
+- `testing-workflows.mdc` - Comprehensive testing procedures
+- `mqtt-entity-cleanup.mdc` - Entity deletion workflows
+- `mcp-tools-guide.mdc` - MCP development tools
+- `devcontainer-quirks.mdc` - Environment setup

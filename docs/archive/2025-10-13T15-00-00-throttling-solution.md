@@ -40,7 +40,7 @@ Callback: update_device_state()
 MQTT State Update
   ↓
 GUI Updates ✓
-```
+```text
 
 ### Implementation
 
@@ -53,7 +53,7 @@ if self.pending_command:
 
 self.pending_command = True
 logger.debug(f"🚀 Command sent - awaiting confirmation")
-```
+```text
 
 **Throttle Exit Point** (`devices.py::parse` - 0x48 ACK handler):
 
@@ -66,7 +66,7 @@ if success:
     device = g.ncync_server.devices[msg.device_id]
     device.pending_command = False
     logger.debug(f"✅ ACK confirmed - ready for new commands")
-```
+```text
 
 ## Results
 

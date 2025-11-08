@@ -14,6 +14,33 @@ Phase 1a implements the real Cync device protocol encoder/decoder based on valid
 
 ---
 
+## Phase 0.5 Prerequisites ✅ Complete
+
+Phase 0.5 validation completed 2025-11-07 with all blocking requirements met:
+
+**Checksum Algorithm** (✅ Validated):
+
+- Algorithm: `sum(packet[start+6:end-1]) % 256` between 0x7e markers
+- Validation: 100% match rate across 13 packets (2 legacy + 11 real)
+- Reference: `docs/phase-0.5/validation-report.md`
+- Status: Ready for Phase 1a implementation
+
+**Byte Positions** (✅ Confirmed):
+
+- endpoint: bytes[5:10] (5 bytes)
+- msg_id: bytes[10:13] (3 bytes)
+- No byte overlap confirmed
+- Reference: `docs/phase-0.5/packet-structure-validated.md`
+
+**Test Fixtures** (✅ Available):
+
+- Location: `tests/fixtures/real_packets.py`
+- Coverage: 13 validated packets from diverse device types
+- Includes: Handshake, toggle, status, heartbeat packets
+- Reference: Phase 0.5 Deliverable #3
+
+---
+
 ## Goals
 
 1. Implement encoder/decoder for all major Cync packet types
@@ -32,7 +59,7 @@ Phase 1a implements the real Cync device protocol encoder/decoder based on valid
 - Packet decoding (bytes → Python dataclass)
 - Packet types: 0x23, 0x28, 0x43, 0x48, 0x73, 0x7B, 0x83, 0x88, 0xD3, 0xD8
 - Header parsing (type, length, multiplier)
-- Endpoint/queue_id/msg_id extraction
+- Endpoint/msg_id extraction
 - 0x7e framing and checksum validation
 - Unit tests (15+ tests)
 
@@ -202,7 +229,7 @@ class CyncPacket:
 @dataclass
 class CyncDataPacket(CyncPacket):
     """0x73 data channel packet."""
-    endpoint: bytes  # 4 bytes or queue_id (5 bytes)
+    endpoint: bytes  # 5 bytes (bytes[5:10])
     msg_id: bytes    # 3 bytes - wire protocol message ID
     data: bytes      # Inner payload (between 0x7e markers)
     checksum: int
@@ -217,7 +244,7 @@ class CyncProtocol:
         """Encode 0x23 handshake packet."""
 
     @staticmethod
-    def encode_data_packet(queue_id: bytes, msg_id: bytes, payload: bytes) -> bytes:
+    def encode_data_packet(endpoint: bytes, msg_id: bytes, payload: bytes) -> bytes:
         """Encode 0x73 data channel packet."""
 
     @staticmethod
@@ -372,18 +399,19 @@ class PacketFramer:
 
 ### Step 2: Checksum Algorithm
 
-**Prerequisite**: Phase 0.5 checksum validation complete
+**Prerequisite**: Phase 0.5 checksum validation complete ✅
 
-**Pre-Step Checklist**:
+**Phase 0.5 Validation Results**:
 
-1. Verify `docs/protocol/checksum-validation.md` exists
-2. Confirm validation results: Algorithm validated against legacy test fixtures and real packets
-3. Review algorithm specification in validation report
+- ✅ Validation PASSED: 100% match rate (13/13 packets)
+- ✅ Algorithm confirmed: `sum(packet[start+6:end-1]) % 256` between 0x7e markers
+- ✅ Tested against 2 legacy fixtures + 11 real packets from diverse devices
+- ✅ Reference: `docs/phase-0.5/validation-report.md`
 
-**If Validation Passed**:
+**Implementation**:
 Copy validated algorithm from legacy code into `src/protocol/checksum.py` (see implementation steps below)
 
-**If Validation Failed** (mismatches found):
+**Contingency Plan** (NOT NEEDED - Validation Passed):
 
 **Contingency Plan: Reverse-Engineer Checksum Algorithm** (Time-boxed: 4 hours maximum)
 
@@ -563,16 +591,16 @@ def calculate_checksum_between_markers(packet: bytes) -> int:
 
 - Implement header parser (5 bytes)
 - Length calculation (multiplier \* 256 + base)
-- Use queue_id and msg_id byte positions from Phase 0.5 Deliverable #2
-  - Phase 0.5 determines exact positions (handles potential byte overlap)
-  - Implementation uses validated positions
+- Use endpoint and msg_id byte positions from Phase 0.5 Deliverable #2
+  - Phase 0.5 validated exact positions (no byte overlap)
+  - endpoint: bytes[5:10], msg_id: bytes[10:13]
 - Unit tests for all packet types
 
 ### Step 4: Packet Encoders
 
 - Implement encoders for each packet type
 - 0x7e framing for data packets
-- Endpoint/queue_id/msg_id insertion
+- Endpoint/msg_id insertion
 - Unit tests with expected output
 
 ### Step 5: Packet Decoders
@@ -870,7 +898,7 @@ python harness/toggler_v2.py --host 192.168.1.100 --port 23779
 - [ ] **Malformed packet handling**: Raise `PacketDecodeError` with specific reason + log error + increment `tcp_comm_decode_errors_total{reason}`
 - [ ] `decode_packet()` raises `PacketDecodeError` for all parse errors (no None returns)
 - [ ] Supported error reasons: "too_short", "invalid_checksum", "unknown_type", "invalid_length", "missing_0x7e_markers"
-- [ ] Endpoint/queue_id/msg_id extracted correctly from valid packets
+- [ ] Endpoint/msg_id extracted correctly from valid packets
 
 ### Security (PacketFramer Buffer Overflow Protection)
 
@@ -931,10 +959,10 @@ def test_encode_handshake():
 
 def test_encode_data_packet():
     """Test 0x73 data packet encoding with 0x7e framing."""
-    queue_id = bytes.fromhex("1b dc da 3e 00")
+    endpoint = bytes.fromhex("1b dc da 3e 00")
     msg_id = bytes.fromhex("13 00 00")
     payload = bytes.fromhex("0d 01 00...")
-    packet = CyncProtocol.encode_data_packet(queue_id, msg_id, payload)
+    packet = CyncProtocol.encode_data_packet(endpoint, msg_id, payload)
     assert packet[0] == 0x73
     assert 0x7e in packet  # Has framing marker
 ```

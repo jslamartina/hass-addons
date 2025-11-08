@@ -191,8 +191,9 @@ Failed: 1
 
    ```bash
    SUPERVISOR_TOKEN=$(docker exec hassio_cli env | grep SUPERVISOR_TOKEN | cut -d= -f2)
+   ```
 
-```
+````text
 
 1. **API Endpoint**
 
@@ -210,7 +211,7 @@ Failed: 1
        }
      }
    }
-   ```
+```text
 
 2. **Configuration Reload**
    - Supervisor API updates `/data/options.json` automatically
@@ -227,7 +228,7 @@ Failed: 1
 
 ```bash
 ./scripts/configure-addon.sh preset-relay-with-forward
-```
+````
 
 ### Logs Confirm
 
@@ -271,7 +272,7 @@ Failed: 1
 The cloud relay implementation is now fully documented in:
 
 - `docs/developer/agents-guide.md` - Comprehensive guide for AI agents and developers
-- `scripts/README.md` - Automated testing tools and configuration
+- `docs/developer/testing-guide.md` - Testing procedures and workflows
 - `docs/user/cloud-relay.md` - User-facing documentation
 
 **Note:** Automated testing via Supervisor API is now the preferred approach.

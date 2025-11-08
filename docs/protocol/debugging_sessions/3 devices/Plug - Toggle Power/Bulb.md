@@ -19,7 +19,7 @@ The bulb is a BT 'slave/client' device connected to the plug via BT
 - `<` is the server to plug
 - `>` is the plug to server
 
-```text
+````text
 ## device sends auth code to server
 > 2024/03/11 00:14:18.000813563  length=31 from=0 to=30
  23 00 00 00 1a 03 39 87 c8 57 00 10 31 65 30 37  #.....9..W..1e07
@@ -206,4 +206,5 @@ The bulb is a BT 'slave/client' device connected to the plug via BT
 < 2024/03/11 00:17:40.000307340  length=5 from=168 to=172
  d8 00 00 00 00                                   .....
 --
-```
+```text
+````

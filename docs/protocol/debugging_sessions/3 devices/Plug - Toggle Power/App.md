@@ -17,7 +17,7 @@ All HTTP devices are redirected to their own `socat` MITM instance.
 - `>` is the App to server
 - `<` is the server to App
 
-```text
+````text
 ## app sends auth to cloud
 > 2024/03/11 00:16:08.864274  length=48 from=0 to=47
  13 00 00 00 2b 03 2d e4 b5 d2 00 10 32 32 30 37  ....+.-.....2207
@@ -408,7 +408,7 @@ All HTTP devices are redirected to their own `socat` MITM instance.
  78 00 00 00 07 37 96 24 69 15 40 0a              x....7.$i.@.
 --
 
-```
+```text
 
 ## NEW STUFF
 
@@ -486,4 +486,5 @@ All HTTP devices are redirected to their own `socat` MITM instance.
 --
 
 
-```
+```text
+````

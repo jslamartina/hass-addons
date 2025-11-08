@@ -14,6 +14,30 @@ Phase 1c adds bounded queues and flow control to prevent buffer bloat and memory
 
 ---
 
+## Phase 0.5 Prerequisites ✅ Complete
+
+Phase 0.5 validation completed 2025-11-07 with backpressure behavior analysis:
+
+**Device Backpressure Behavior** (✅ Analyzed):
+
+- Peak throughput: 161 packets/second observed
+- Aggressive device buffering: 52,597 rapid sequences (<100ms between packets)
+- Devices can handle backpressure (tolerate slow consumers)
+- Quick reconnection: avg 2.6 seconds after disconnect
+- Reference: `docs/phase-0.5/backpressure-behavior.md`
+
+**Preliminary Recommendations** (from Phase 0.5):
+
+- recv_queue size: **100 packets** (preliminary - validate in Phase 1d)
+  - Calculation: 100 packets ÷ 161 pkts/sec = ~620ms buffer at peak
+  - Conservative sizing for typical smart home usage patterns
+- recv_queue policy: **BLOCK** (preliminary - validate in Phase 1d)
+  - Rationale: Devices tolerate backpressure (confirmed via analysis)
+  - Prevents message loss while maintaining flow control
+- **Note**: These are preliminary recommendations pending Phase 1d chaos testing validation
+
+---
+
 ## Architectural Scope: Phase 1 vs Phase 2
 
 **Phase 1 Scope** (This Phase): Single-Device Reliability
@@ -329,7 +353,7 @@ if not result.success:
     # Take action: pause, alert, switch mode
 ```
 
-#### Policy Comparison Table
+### Policy Comparison Table
 
 | Policy          | Control Commands  | Status Updates    | Sensor Data       | Use Case             |
 | --------------- | ----------------- | ----------------- | ----------------- | -------------------- |
@@ -392,10 +416,10 @@ if not result.success:
 - **Monitor**: `tcp_comm_queue_full_total` metric during Phase 1d
 - **Threshold**: If queue_full events > 5% of total messages → Requires action
 - **Actions if threshold exceeded**:
-
   1. Increase queue size (if memory allows)
   2. Split queues by traffic type (control: BLOCK, status: DROP_OLDEST)
   3. Optimize consumer speed (if bottleneck identified)
+
 - **Default validated**: If queue_full < 5% → BLOCK policy works as-is (no changes needed)
 
 This resolves apparent contradiction: BLOCK is correct default AND we monitor for edge cases requiring optimization.
@@ -652,8 +676,6 @@ Phase 0.5 Deliverable #9 can optionally test device backpressure behavior:
 
 **Recommendation**: Use BLOCK for event-driven smart home control, contingent on Phase 0.5 validation.
 
-```
-
 ---
 
 ## Implementation Plan
@@ -729,72 +751,72 @@ Phase 0.5 Deliverable #9 can optionally test device backpressure behavior:
 
 ### Unit Tests
 
-```
+```python
 
 ## test_bounded_queue.py
 
 async def test_queue_block_policy():
-    """BLOCK policy blocks when queue full."""
-    queue = BoundedQueue(maxsize=2, policy=QueuePolicy.BLOCK)
-    await queue.put("item1")
-    await queue.put("item2")
+"""BLOCK policy blocks when queue full."""
+queue = BoundedQueue(maxsize=2, policy=QueuePolicy.BLOCK)
+await queue.put("item1")
+await queue.put("item2")
 
-    # Third put should timeout
-    result = await queue.put("item3", timeout=0.1)
-    assert result.success is False
-    assert result.reason == "timeout"
+# Third put should timeout
+result = await queue.put("item3", timeout=0.1)
+assert result.success is False
+assert result.reason == "timeout"
 
 async def test_queue_drop_oldest_policy():
-    """DROP_OLDEST evicts oldest item."""
-    queue = BoundedQueue(maxsize=2, policy=QueuePolicy.DROP_OLDEST)
-    await queue.put("item1")
-    await queue.put("item2")
+"""DROP_OLDEST evicts oldest item."""
+queue = BoundedQueue(maxsize=2, policy=QueuePolicy.DROP_OLDEST)
+await queue.put("item1")
+await queue.put("item2")
 
-    result = await queue.put("item3")  # Should drop item1
-    assert result.success is True
-    assert result.dropped is True
-    assert queue.dropped_count == 1
+result = await queue.put("item3")  # Should drop item1
+assert result.success is True
+assert result.dropped is True
+assert queue.dropped_count == 1
 
-    # Queue should contain item2, item3
-    assert await queue.get() == "item2"
-    assert await queue.get() == "item3"
+# Queue should contain item2, item3
+assert await queue.get() == "item2"
+assert await queue.get() == "item3"
 
 async def test_queue_reject_policy():
-    """REJECT returns error when full."""
-    queue = BoundedQueue(maxsize=2, policy=QueuePolicy.REJECT)
-    await queue.put("item1")
-    await queue.put("item2")
+"""REJECT returns error when full."""
+queue = BoundedQueue(maxsize=2, policy=QueuePolicy.REJECT)
+await queue.put("item1")
+await queue.put("item2")
 
-    result = await queue.put("item3")
-    assert result.success is False
-    assert result.reason == "queue_full"
+result = await queue.put("item3")
+assert result.success is False
+assert result.reason == "queue_full"
 
 ```
 
 ### Load Tests
 
-```
+`````python
 
 ## test_queue_performance.py
 
 async def test_high_load_block_policy():
-    """Test BLOCK policy under high load."""
-    queue = BoundedQueue(maxsize=100, policy=QueuePolicy.BLOCK)
+"""Test BLOCK policy under high load."""
+queue = BoundedQueue(maxsize=100, policy=QueuePolicy.BLOCK)
 
-    # Producer: 1000 msgs/sec
-    async def producer():
-        for i in range(1000):
-            await queue.put(f"msg{i}")
-            await asyncio.sleep(0.001)
+# Producer: 1000 msgs/sec
+async def producer():
+    for i in range(1000):
+        await queue.put(f"msg{i}")
+        await asyncio.sleep(0.001)
 
-    # Consumer: 900 msgs/sec (slower)
-    async def consumer():
-        for _ in range(1000):
-            await queue.get()
-            await asyncio.sleep(0.0011)
+# Consumer: 900 msgs/sec (slower)
+async def consumer():
+    for _ in range(1000):
+        await queue.get()
+        await asyncio.sleep(0.0011)
 
-    await asyncio.gather(producer(), consumer())
-    assert queue.qsize() < 100  # Should never overflow
+await asyncio.gather(producer(), consumer())
+assert queue.qsize() < 100  # Should never overflow
 
 ```sql
 
@@ -806,39 +828,37 @@ async def test_high_load_block_policy():
 
 ### Conservative (Low Memory, Reject Overload)
 
-```
+```text
 
 transport = ReliableTransport(
-    connection=conn,
-    protocol=protocol,
-    recv_queue_size=50,
-    recv_queue_policy=QueuePolicy.REJECT,
+connection=conn,
+protocol=protocol,
+recv_queue_size=50,
+recv_queue_policy=QueuePolicy.REJECT,
 )
 
 ## Bulk operations: use asyncio.gather() for parallelism
 
 tasks = [transport.send_reliable(cmd) for cmd in commands]
-results = await asyncio.gather(*tasks, return_exceptions=True)
+results = await asyncio.gather(\*tasks, return_exceptions=True)
 
 ```markdown
-
 ### Aggressive (High Throughput, Drop Old Data)
-
 ```
 
 transport = ReliableTransport(
-    connection=conn,
-    protocol=protocol,
-    recv_queue_size=200,
-    recv_queue_policy=QueuePolicy.DROP_OLDEST,
+connection=conn,
+protocol=protocol,
+recv_queue_size=200,
+recv_queue_policy=QueuePolicy.DROP_OLDEST,
 )
 
 ## Bulk operations: asyncio.gather() with timeout
 
 tasks = [transport.send_reliable(cmd, timeout=2.0) for cmd in commands]
 results = await asyncio.wait_for(
-    asyncio.gather(*tasks, return_exceptions=True),
-    timeout=10.0
+asyncio.gather(\*tasks, return_exceptions=True),
+timeout=10.0
 )
 
 ```python
@@ -848,10 +868,10 @@ results = await asyncio.wait_for(
 ```
 
 transport = ReliableTransport(
-    connection=conn,
-    protocol=protocol,
-    recv_queue_size=100,
-    recv_queue_policy=QueuePolicy.BLOCK,  # Default: preserve event ordering
+connection=conn,
+protocol=protocol,
+recv_queue_size=100,
+recv_queue_policy=QueuePolicy.BLOCK, # Default: preserve event ordering
 )
 
 ## Bulk operations: asyncio.gather() for group commands
@@ -860,16 +880,16 @@ transport = ReliableTransport(
 
 devices = get_devices_in_group("living_room")
 tasks = [
-    device.transport.send_reliable(encode_turn_on_command(device))
-    for device in devices
+device.transport.send_reliable(encode_turn_on_command(device))
+for device in devices
 ]
-results = await asyncio.gather(*tasks, return_exceptions=True)
+results = await asyncio.gather(\*tasks, return_exceptions=True)
 
 ## Check for failures
 
 failures = [r for r in results if isinstance(r, Exception) or not r.success]
 if failures:
-    logger.warning("Group command had %d failures", len(failures))
+logger.warning("Group command had %d failures", len(failures))
 
 ```text
 
@@ -894,7 +914,7 @@ if failures:
 
 result = await queue.put(item, timeout=10.0)
 if not result.success:
-    logger.error("Queue full timeout - consumer may be stuck")
+logger.error("Queue full timeout - consumer may be stuck")
 
 ```python
 
@@ -905,19 +925,19 @@ if not result.success:
 ## After 10 consecutive full events, escalate alert
 
 if queue.full_events > 10:
-    logger.error("Queue persistently full - system degraded")
-    record_metric("tcp_comm_queue_degraded_total")
+logger.error("Queue persistently full - system degraded")
+record_metric("tcp_comm_queue_degraded_total")
 
-```python
+````python
 
 **Layer 3: Automatic Policy Switch** (Phase 1c implementation - Technical Review Finding 5.1 - Resolved)
 
 **Approved enhancement**: Add simplified automatic recovery to Phase 1c (not deferred to Phase 2):
 
-```
+```python
 
 class BoundedQueue:
-    """Async queue with automatic deadlock recovery."""
+"""Async queue with automatic deadlock recovery."""
 
     def __init__(self, maxsize: int, policy: QueuePolicy = QueuePolicy.BLOCK, name: str = "queue"):
         self.queue = asyncio.Queue(maxsize=maxsize)
@@ -997,10 +1017,10 @@ class BoundedQueue:
 
 For production deployments, consider automatic policy switching:
 
-```
+```python
 
 class AdaptiveQueue(BoundedQueue):
-    """Queue with circuit breaker for deadlock prevention."""
+"""Queue with circuit breaker for deadlock prevention."""
 
     def __init__(self, maxsize: int, policy: QueuePolicy = QueuePolicy.BLOCK):
         super().__init__(maxsize, policy)
@@ -1049,7 +1069,7 @@ class AdaptiveQueue(BoundedQueue):
         # Check queue depth
         return self.qsize() < (self.queue.maxsize * 0.5)
 
-```
+```text
 
 **Implementation Decision (Updated - Technical Review Finding 5.1)**:
 
@@ -1094,3 +1114,4 @@ class AdaptiveQueue(BoundedQueue):
 - **Phase 1 Program**: `02-phase-1-spec.md` - Architecture
 - **Phase 1b**: `02c-phase-1b-reliable-transport.md` - Prerequisite
 - **Phase 1d**: `02e-phase-1d-simulator.md` - Next phase
+`````

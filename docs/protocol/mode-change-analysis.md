@@ -10,15 +10,15 @@ We have successfully reverse engineered the Cync protocol commands to switch a s
 
 #### Switch to TRADITIONAL Mode
 
-```text
+````text
 73 00 00 00 1e 1b dc da 3e 00 3a 00 7e 3d 01 00 00 f8 8e 0c 00 3e 01 00 00 00 a0 00 f7 11 02 01 01 85 7e
-```
+```text
 
 #### Switch to SMART (Dimmable) Mode
 
 ```text
 73 00 00 00 1e 1b dc da 3e 00 29 00 7e 30 01 00 00 f8 8e 0c 00 31 01 00 00 00 a0 00 f7 11 02 01 02 79 7e
-```
+```text
 
 ### Packet Structure Breakdown
 
@@ -45,7 +45,7 @@ Commands can be injected using the MITM proxy:
 
 ## Switch to Smart mode
 ./inject_raw.sh '73 00 00 00 1e 1b dc da 3e 00 29 00 7e 30 01 00 00 f8 8e 0c 00 31 01 00 00 00 a0 00 f7 11 02 01 02 79 7e'
-```
+```text
 
 The switch responds with a STATUS_BROADCAST (0x83) confirming the mode change.
 
@@ -66,7 +66,7 @@ The switch responds with a STATUS_BROADCAST (0x83) confirming the mode change.
 00 f8 8e 0c 00 24 01 00 00 00 a0 00 f7 11 02 01
 01 6b 7e
 
-```
+```text
 
 ### Decoded
 
@@ -85,7 +85,7 @@ Device ACKs with 0x7b packet
 73 00 00 00 13 1b dc da 3e 00 ff 00 7e 23 01 00
 00 f9 8e 01 00 00 8f 7e
 
-```
+```text
 
 #### Packet 3: Device → Cloud (0x73 - THE KEY PACKET!)
 
@@ -96,7 +96,7 @@ Device ACKs with 0x7b packet
 00 fa 8e 14 00 73 04 00 a0 00 4c 00 ea 11 02 a0
 81 50 00 00 00 00 00 00 14 87 7e
 
-```
+```text
 
 ### Decoded
 
@@ -123,7 +123,7 @@ Device ACKs with 0x7b packet
 73 00 00 00 12 1b dc da 3e 00 20 00 7e 25 01 00
 00 f8 ea 00 00 ea 7e
 
-```
+```text
 
 #### Packet 5: Device → Cloud (0x73)
 
@@ -133,7 +133,7 @@ Device ACKs with 0x7b packet
 73 00 00 00 13 1b dc da 3e 01 01 00 7e 25 01 00
 00 f9 ea 01 00 00 eb 7e
 
-```
+```text
 
 ## Key Findings
 
@@ -166,7 +166,7 @@ The critical bytes appear to be in **Packet 3**:
             ^^                        ^^
          Byte 22                   Byte 30
 
-```
+```text
 
 ### Traditional → Smart (from traditional_to_smart.txt, line 2272-2275)
 
@@ -179,7 +179,7 @@ The critical bytes appear to be in **Packet 3**:
    ^^          ^^                        ^^
 Byte 22     Byte 30                  Byte 36
 
-```
+```text
 
 ## KEY FINDINGS - THE MODE CONTROL BYTE
 
@@ -207,7 +207,7 @@ Position 34-39: 00 00 00 00 00 00       - Padding
 Position 40:    14                       - Unknown
 Position 41-42: XX 7e                    - Checksum + end marker
 
-```
+```text
 
 ### Mode Values
 
@@ -223,3 +223,4 @@ To complete the reverse engineering:
 2. Capture Smart Non-Dimmable → Traditional
 3. Document all three mode byte values
 4. Implement TCP-based mode switching in cync-controller!
+````

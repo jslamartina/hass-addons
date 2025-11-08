@@ -40,7 +40,7 @@ cync_controller/
 │   ├── tcp_device.py        # CyncTCPDevice class core (~600 lines)
 │   ├── tcp_connection.py    # Connection/read/write logic (~400 lines)
 │   └── tcp_packet_handler.py # Packet parsing logic (~500 lines)
-```
+```text
 
 ### Benefits
 
@@ -68,7 +68,7 @@ cync_controller/
 │   ├── discovery.py          # Home Assistant MQTT discovery (~600 lines)
 │   ├── command_routing.py    # MQTT message handling/routing (~500 lines)
 │   └── state_updates.py      # State publishing to MQTT (~400 lines)
-```
+```text
 
 ### Benefits
 

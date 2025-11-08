@@ -54,7 +54,7 @@ await g.mqtt_client.publish_group_state(
     temperature=subgroup.temperature,
     origin=f"aggregated:{from_pkt or 'mesh'}",
 )
-```
+```text
 
 This code properly:
 

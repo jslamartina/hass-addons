@@ -180,22 +180,23 @@ edit_file(
    ```bash
    # View the file with whitespace visible
    cat -A cync-controller/src/app.py | grep "def foo"
+   ```
 
-```
+````text
 
 1. Check for **encoding issues**:
 
    ```bash
    # Verify file encoding
    file cync-controller/src/app.py
-   ```
+```text
 
 1. Check for **line ending differences** (LF vs CRLF):
 
    ```bash
    # Check for CRLF
    grep -U $'\r' cync-controller/src/app.py && echo "Has CRLF" || echo "Has LF"
-   ```
+````
 
 1. **Verify the exact content** - Copy directly from the file:
 
@@ -280,8 +281,9 @@ When validation fails, the validator suggests similar lines:
    ```python
    context = r"""def foo():
        pass"""
+   ```
 
-```
+````text
 
 1. **Extract directly from file** - Copy-paste to ensure accuracy
 2. **Validate once, edit once** - Minimize file state changes
@@ -290,7 +292,7 @@ When validation fails, the validator suggests similar lines:
    ```python
    is_valid, msg = validator.validate_context(old_string)
    logger.info(f"Context validation: {msg}")
-   ```
+```text
 
 ## Integration in Deployment Pipelines
 
@@ -306,7 +308,7 @@ python3 scripts/validate-edit-context.py "$FILE" "$CONTEXT" || {
 
 ## Safe to proceed with edit
 ## ... call edit_file tool ...
-```
+````
 
 ## See Also
 

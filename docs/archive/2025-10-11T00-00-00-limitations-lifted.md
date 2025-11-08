@@ -41,7 +41,7 @@ $ ./scripts/configure-addon.sh preset-relay-with-forward
 ## Logs confirm cloud relay mode activated:
 10/11/25 17:03:16.343 INFO [server:748] New connection in RELAY mode > nCync:new_conn:172.67.135.131:
 10/11/25 17:03:16.474 INFO [server:77] Connected to cloud server 35.196.85.236:23779 > CloudRelay:172.67.135.131:connect_cloud:
-```
+```text
 
 ---
 
@@ -114,7 +114,7 @@ Created `scripts/test-cloud-relay.sh` - a comprehensive automated test suite tha
 ## Utility commands
 ./scripts/configure-addon.sh restart
 ./scripts/configure-addon.sh logs
-```
+```text
 
 ## Key Features
 
@@ -179,7 +179,7 @@ Failed: 1
 ║ ✅ MOST TESTS PASSED - CLOUD RELAY WORKING! ✅ ║
 ║ ║
 ╚═══════════════════════════════════════════════════════╝
-```
+```text
 
 ---
 
@@ -191,7 +191,7 @@ Failed: 1
 
 ```bash
 SUPERVISOR_TOKEN=$(docker exec hassio_cli env | grep SUPERVISOR_TOKEN | cut -d= -f2)
-```
+```text
 
 ### API Endpoint
 
@@ -209,7 +209,7 @@ Content-Type: application/json
     }
   }
 }
-```
+```text
 
 ### Configuration Reload
 
@@ -227,7 +227,7 @@ Content-Type: application/json
 
 ```bash
 ./scripts/configure-addon.sh preset-relay-with-forward
-```
+```text
 
 ### Logs Confirm
 
@@ -237,7 +237,7 @@ Content-Type: application/json
 10/11/25 17:03:16.474 INFO [server:77] > CloudRelay:172.67.135.131:connect_cloud: Connected to cloud server 35.196.85.236:23779
 10/11/25 17:03:16.475 INFO [server:112] > CloudRelay:172.67.135.131:start_relay: Device endpoint: 60 b1 7c 4a
 10/11/25 17:03:16.475 DEBUG [server:224] > CloudRelay:172.67.135.131:injection: Injection checker started
-```
+```text
 
 ### Key Observations
 
@@ -297,7 +297,7 @@ ha addons logs local_cync-controller --follow | grep -i "relay\|cloud"
 
 ## 5. Return to baseline
 ./scripts/configure-addon.sh preset-baseline
-```
+```text
 
 ### For End Users (Manual UI Testing)
 

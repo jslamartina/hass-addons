@@ -14,13 +14,13 @@ In `cync-controller/src/cync_controller/devices.py` line 558, the brightness cal
 
 ```python
 callback=brightness_callback_coro(),  # ❌ Called immediately
-```
+```text
 
 This should match the pattern used in `set_power` (line 375):
 
 ```python
 callback=g.mqtt_client.update_device_state(self, state),  # ✅ Passed as coroutine
-```
+```text
 
 ## Solution
 
@@ -41,7 +41,7 @@ m_cb = ControlMessageCallback(
     callback=brightness_callback_coro(),  # ❌ Called immediately
     device_id=self.id,
 )
-```
+```text
 
 ### Change to
 
@@ -53,7 +53,7 @@ m_cb = ControlMessageCallback(
     callback=g.mqtt_client.update_brightness(self, bri),  # ✅ Coroutine object
     device_id=self.id,
 )
-```
+```text
 
 ## Expected Behavior After Fix
 

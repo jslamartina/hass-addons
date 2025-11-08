@@ -58,7 +58,7 @@ Applied seconds-level accuracy to all newly archived files:
 ├── README.md           # Main repository readme
 ├── CONTRIBUTING.md     # Contribution guidelines
 └── AGENTS.md           # Points to Cursor Rules
-```
+```text
 
 ### docs/user/ (User-Facing Documentation)
 
@@ -70,7 +70,7 @@ docs/user/
 ├── known-devices.md      # Device compatibility list
 ├── cloud-relay.md        # Cloud relay mode documentation
 └── assets/               # Screenshots and images
-```
+```text
 
 ### docs/developer/ (Developer Documentation)
 
@@ -87,7 +87,7 @@ docs/developer/
 ├── mcp-tools.md                     # MCP tools documentation
 ├── test-results.md                  # Test execution results
 └── testing-guide.md                 # Testing patterns and best practices
-```
+```text
 
 ### docs/archive/ (Historical Documentation)
 
@@ -107,7 +107,7 @@ docs/archive/
 ├── 2025-10-26T06-07-09-addon-logs-ui-setup-summary.md
 ├── 2025-10-26T06-07-09-addon-logs-ui.md
 └── [50+ additional archived files with accurate timestamps]
-```
+```text
 
 **Note:** All newly archived files now use seconds-level precision (HH-MM-SS format), not placeholder zeros.
 

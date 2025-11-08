@@ -53,9 +53,8 @@ docs/
 
 1. **[Developer Guide](../AGENTS.md)** - **START HERE** - Cursor rules and development workflow
 2. **[Testing Guide](developer/testing-guide.md)** - Unit and E2E testing
-3. **[Testing Tools](../scripts/README.md)** - Automated testing and configuration
-4. **[Entity Management](developer/entity-management.md)** - Entity deletion workflows
-5. **[Linting Setup](developer/linting-setup.md)** - Ruff linting configuration and npm scripts
+3. **[Entity Management](developer/entity-management.md)** - Entity deletion workflows
+4. **[Linting Setup](developer/linting-setup.md)** - Ruff linting configuration and npm scripts
 
 ### For Protocol Researchers
 
@@ -125,11 +124,9 @@ Historical documentation and completed testing artifacts.
 
 | Location                                                               | Description                                |
 | ---------------------------------------------------------------------- | ------------------------------------------ |
-| **[../scripts/README.md](../scripts/README.md)**                       | Automated testing and configuration tools  |
 | **[developer/linting-setup.md](developer/linting-setup.md)**           | Linting setup summary (Ruff configuration) |
 | **[../cync-controller/README.md](../cync-controller/README.md)**       | Add-on quick start guide                   |
 | **[../cync-controller/CHANGELOG.md](../cync-controller/CHANGELOG.md)** | Version history and breaking changes       |
-| **[../.devcontainer/README.md](../.devcontainer/README.md)**           | Devcontainer setup and quirks              |
 
 ---
 
@@ -145,7 +142,7 @@ Historical documentation and completed testing artifacts.
 
 ### "I need to configure cloud relay mode"
 
-→ [../scripts/README.md](../scripts/README.md) (automated tools) or [user/cloud-relay.md](user/cloud-relay.md) (manual)
+→ [user/cloud-relay.md](user/cloud-relay.md)
 
 ### "I need to test my changes"
 
@@ -220,7 +217,7 @@ npm run lint:python:fix                 # Auto-fix Python issues
 - **Installation**: `../README.md` and `docs/user/dns-setup.md`
 - **Troubleshooting**: `docs/user/troubleshooting.md`
 - **Development**: `docs/developer/agents-guide.md`
-- **Testing**: `../scripts/README.md`
+- **Testing**: `docs/developer/testing-guide.md`
 - **Protocol Analysis**: `docs/protocol/findings.md`
 
 ### By File Type

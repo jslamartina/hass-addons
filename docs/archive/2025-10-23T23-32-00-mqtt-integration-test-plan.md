@@ -33,7 +33,7 @@ Validate the new MQTT automation in `scripts/setup-fresh-ha.sh`:
 ```bash
 export HA_URL=http://homeassistant.local:8123
 source ./hass-credentials.env
-```
+```text
 
 ### Happy-path (fresh setup)
 
@@ -47,7 +47,7 @@ source ./hass-credentials.env
 ```bash
 curl -sf -H "Authorization: Bearer $LONG_LIVED_ACCESS_TOKEN" \
   "$HA_URL/api/services" | jq 'any(.[]; .domain=="mqtt")'
-```
+```text
 
 - Verify publish works (HTTP 200):
 
@@ -57,7 +57,7 @@ curl -s -o /dev/null -w "%{http_code}\n" -X POST \
   -H "Content-Type: application/json" \
   "$HA_URL/api/services/mqtt/publish" \
   -d '{"topic":"cync_controller_addon/test","payload":"ok"}'
-```
+```text
 
 ### Idempotency (re-run)
 

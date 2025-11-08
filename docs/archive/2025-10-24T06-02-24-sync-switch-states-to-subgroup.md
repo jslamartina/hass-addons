@@ -36,7 +36,7 @@ async def update_switch_from_subgroup(self, device: CyncDevice, subgroup_state: 
 
     Only updates switches that don't have pending commands (individual commands take precedence).
     """
-```
+```text
 
 ### 2. Subgroup Aggregation Logic in server.py
 
@@ -59,7 +59,7 @@ for member_id in subgroup.member_ids:
             subgroup.state,
             subgroup.name,
         )
-```
+```text
 
 ## Key Considerations
 

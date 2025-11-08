@@ -42,7 +42,7 @@ Added structured logging to track offline detection progression:
 [OFFLINE_TRACKING] - Every time offline_count increments (debug level)
 [OFFLINE_STATE]    - When device marked offline after 3 failures (warning level)
 [ONLINE_STATE]     - When device reconnects (info level)
-```
+```text
 
 Each log includes:
 
@@ -64,7 +64,7 @@ if connected_to_mesh == 0:
 else:
     device.offline_count = 0   # Reset counter
     device.online = True       # Mark online
-```
+```text
 
 ## Key Behavior Changes
 
@@ -89,7 +89,7 @@ cync-controller/src/cync_controller/
 ├── mqtt_client.py      (-5 device.online = True assignments, +docstrings)
 └── server.py           (+enhanced logging in parse_status())
 
-```
+```text
 
 ## No Breaking Changes
 
@@ -120,19 +120,19 @@ The implementation has been completed and is ready for testing:
    git diff cync-controller/src/cync_controller/server.py
    ```
 
-2. **Rebuild the add-on** (Python files changed):
+1. **Rebuild the add-on** (Python files changed):
 
    ```bash
    cd cync-controller && ./rebuild.sh
    ```
 
-3. **Start add-on**:
+2. **Start add-on**:
 
    ```bash
    ha addons start local_cync-controller
    ```
 
-4. **Monitor logs**:
+3. **Monitor logs**:
 
    ```bash
    ha addons logs local_cync-controller --follow | grep -E "OFFLINE|ONLINE"

@@ -1,38 +1,120 @@
 ---
 description: Devcontainer quirks and setup
+appliesTo:
+  - ".devcontainer/**"
+  - ".devcontainer.json"
+  - "post-start.sh"
+  - "post-create.sh"
 ---
 
 # Devcontainer Essentials
 
-Read `.devcontainer/README.md` first; supervisor + Docker already managed.
+## Setup Script Execution Order
+
+Devcontainer runs scripts automatically on creation:
+
+| Order | Script                             | Purpose                     |
+| ----- | ---------------------------------- | --------------------------- |
+| 1     | `00-setup-prettier.sh`             | Node.js + Prettier          |
+| 2     | `03-setup-playwright.sh`           | Playwright browsers         |
+| 3     | `01-00-python-setup-all.sh`        | Python env (runs all below) |
+| 3.1   | `01-01-python-env-setup.sh`        | Python + uv                 |
+| 3.2   | `01-02-python-clone-repo.sh`       | Clone cync-controller       |
+| 3.3   | `01-03-python-workspace-setup.sh`  | Workspace config            |
+| 3.4   | `01-04-python-vscode-configure.sh` | VS Code settings            |
+| 3.5   | `01-05-python-venv-setup.sh`       | Virtual environment         |
+
+**Manual run:** `bash .devcontainer/<script-name>.sh`
+
+## Multi-Repository Workspace
+
+1. Open `hass-cync-dev.code-workspace` from local machine
+2. VS Code/Cursor prompts "Reopen in Container"
+3. Both `hass-addons` and `cync-controller` repos load automatically
+
+**If opened folder first:** File → Open Workspace from File → `hass-cync-dev.code-workspace`
+
+## Directory Structure
+
+```text
+/mnt/supervisor/addons/local/
+├── hass-addons/                   # Addon repo (this project)
+├── cync-controller/               # Python package repo
+└── .vscode/                       # Global VS Code settings
+```
 
 ## Docker Management
 
 - **Never start Docker manually** - `supervisor_run` handles lifecycle
 - Docker is managed by supervisor
 - Manual Docker start causes conflicts
+- See `critical-docker.mdc` for details
+
+## Critical Quirks
+
+### Docker CLI Version Pinning
+
+**Issue:** HA pins Docker CLI to exact daemon version (for example, `docker:28.5.0-cli`), but Docker doesn't publish CLI images for every patch version.
+
+**Workaround in `post-start.sh`:**
+
+1. Pulls major version that exists (`docker:28-cli`)
+2. Tags it as specific version HA expects (`docker:28.5.0-cli`)
+3. Prevents devcontainer breakage on HA updates
+
+**Don't remove this step.**
+
+### Supervisor Log Filtering
+
+Suppress DEBUG logs while preserving full logs for debugging:
+
+```bash
+## Log to file only, suppress console
+sudo script -qefc 'sudo supervisor_run' /tmp/supervisor_run.log > /dev/null 2>&1 &
+
+## Tail file and filter DEBUG lines for console
+tail -f /tmp/supervisor_run.log 2> /dev/null | grep --line-buffered -v "DEBUG" &
+```
+
+**Why:** `script -qefc` provides pseudo-TTY required by `supervisor_run`. Full logs saved to `/tmp/supervisor_run.log`.
+
+### Supervisor API Access
+
+**Problem:** Devcontainer not in `hassio` Docker network - `supervisor` hostname doesn't resolve.
+
+**Solution:** Use `ha` CLI (handles networking automatically):
+
+```bash
+## ✅ Works - ha CLI uses Unix socket
+ha core info --raw-json | jq -r '.data.version'
+
+## ✅ Works - get supervisor IP directly
+SUPERVISOR_IP=$(docker network inspect hassio | jq -r '.[0].Containers | to_entries[] | select(.value.Name | contains("supervisor")) | .value.IPv4Address' | cut -d'/' -f1)
+curl -s -H "Authorization: Bearer ${TOKEN}" "http://${SUPERVISOR_IP}/core/info"
+
+## ❌ Fails - hostname doesn't resolve
+curl -s http://supervisor/core/info
+```
+
+**Why:** Devcontainer runs in default bridge network, supervisor runs in isolated `hassio` network (172.30.32.0/24).
+
+See `supervisor-api-access.mdc` for detailed patterns.
 
 ## Backup Restore
 
 - Backup restore in `post-start.sh` is currently **disabled**
 - See lines 131-216 in `.devcontainer/post-start.sh`
-- Only re-enable after thorough testing
-
-## Supervisor API Access
-
-Scripts needing Supervisor API must run via `ha` CLI or `docker exec hassio_cli ...`.
-
-**Why:** `supervisor` hostname isn't reachable from devcontainer shell. See `supervisor-api-access.mdc` for details.
+- Only re-enable after thorough testing in isolated environment
 
 ## Credentials
 
 - Home Assistant: `http://localhost:8123`
 - Username: `dev`, Password: `dev`
-- See `hass-credentials.env`
+- See `hass-credentials.env` for all credentials
 
 ## Quick Start
 
-For fresh HA setup with EMQX and Cync Controller:
+Fresh HA setup with EMQX and Cync Controller:
 
 ```bash
 cd scripts
@@ -41,5 +123,6 @@ cd scripts
 
 ## Related
 
-- `supervisor-api-access.mdc` - How to access Supervisor API
-- `critical-docker.mdc` - Docker handling rules
+- `critical-docker.mdc` - Docker handling rules and Python rebuild requirements
+- `supervisor-api-access.mdc` - Detailed API access patterns
+- `helper-scripts.mdc` - Available automation scripts

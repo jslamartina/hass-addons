@@ -18,13 +18,13 @@ For device 160 (adapt device ID and counter for other devices):
 
 ```text
 73 00 00 00 1e 1b dc da 3e 00 3a 00 7e 3d 01 00 00 f8 8e 0c 00 3e 01 00 00 00 a0 00 f7 11 02 01 01 85 7e
-```
+```text
 
 ### Smart (Dimmable) Mode
 
 ```text
 73 00 00 00 1e 1b dc da 3e 00 29 00 7e 30 01 00 00 f8 8e 0c 00 31 01 00 00 00 a0 00 f7 11 02 01 02 79 7e
-```
+```text
 
 See [mode_change_analysis.md](./mode_change_analysis.md) for complete details and testing methodology.
 
@@ -68,7 +68,7 @@ Position  Bytes                           Description
 40        14                              Unknown
 41        XX                              Checksum
 42        7e                              End marker
-```
+```text
 
 ## Captured Examples
 
@@ -82,7 +82,7 @@ Timestamp: 2025/10/07 20:24:27
 00 fa 8e 14 00 73 04 00 a0 00 4c 00 ea 11 02 a0
 81 50 00 00 00 00 00 00 14 87 7e
    ^^                                    Mode = 0x50 (Traditional)
-```
+```text
 
 ### Traditional → Smart Mode
 
@@ -94,7 +94,7 @@ Timestamp: 2025/10/07 20:31:26
 00 fa 8e 14 00 7e 04 00 a0 00 4c 00 ea 11 02 a0
 81 b0 00 00 00 00 00 00 14 f2 7e
    ^^                                    Mode = 0xb0 (Smart Dimmable)
-```
+```text
 
 ## Communication Flow
 

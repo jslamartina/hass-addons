@@ -24,7 +24,7 @@ Check addon logs for:
 
 ```bash
 ha addons logs local_cync-controller | grep -E "0x83|0x43|Internal STATUS|parse_status"
-```
+```text
 
 **Expected:** Should see status packets arriving regularly for switches, especially after physical toggle.
 
@@ -45,7 +45,7 @@ Verify switches are correctly identified:
 ```python
 logger.info("%s Device %s: is_switch=%s, is_light=%s, is_plug=%s",
             lp, device.name, device.is_switch, device.is_light, device.is_plug)
-```
+```text
 
 ### 3. Examine MQTT Publishing Logic for Switches
 
@@ -61,7 +61,7 @@ Critical distinction at line 792-833:
 
 ```python
 if device.is_light or not device.is_switch:
-```
+```text
 
 This adds color_mode to devices that are NOT switches. But in `parse_device_status()` lines 825-831, color_mode is added regardless, which may confuse Home Assistant for switch entities.
 
@@ -94,7 +94,7 @@ Verify switches are registered correctly:
 ```bash
 ## If using EMQX addon, check WebSocket or logs
 ## Look for homeassistant/switch/*/config topics
-```
+```text
 
 ### 6. Compare Switch vs Light Code Paths
 
@@ -119,13 +119,13 @@ In `mqtt_client.py` `parse_device_status()` at line 785:
 ```python
 logger.info("%s Processing status for device '%s' (ID: %s): is_switch=%s, is_plug=%s, state=%s",
             lp, device.name, device_id, device.is_switch, device.is_plug, device_status.state)
-```
+```text
 
 In `mqtt_client.py` `send_device_status()` at line 703:
 
 ```python
 logger.info("%s Publishing to topic '%s': %s", lp, tpc, msg)
-```
+```text
 
 ### Step 2: Test Physical Switch Toggle
 
@@ -151,7 +151,7 @@ if not color_mode_set and (device.is_light or not device.is_switch):
         mqtt_dev_state["color_mode"] = "rgb"
     else:
         mqtt_dev_state["color_mode"] = "brightness"
-```
+```text
 
 ### Step 4: Verify MQTT Payload Format
 
@@ -161,19 +161,19 @@ Monitor MQTT messages to ensure switches send correct format:
 
 ```json
 { "state": "ON" }
-```
+```text
 
 ### Expected for dimmer switches
 
 ```json
 { "state": "ON", "brightness": 100 }
-```
+```text
 
 ### NOT expected for switches
 
 ```json
 { "state": "ON", "color_mode": "brightness" } // WRONG - should not have color_mode
-```
+```text
 
 ## Common Root Causes
 

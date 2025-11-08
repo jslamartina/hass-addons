@@ -27,7 +27,7 @@
 
 - Finding 1.1: Strengthened Phase 0.5 exit criteria (definitive ACK findings required)
 - Finding 1.2: Added Phase 0.5 → 1b handoff with timeout recalibration
-- Finding 1.3: Clarified queue_id overlap decision is conditional
+- Finding 1.3: Clarified endpoint byte boundaries (no overlap with msg_id)
 - Finding 2.1: Approved no send_queue (Phase 2 optimization if needed)
 - Finding 2.2: Approved DNS hard requirement with escalation paths
 - Finding 5.1: Added automatic deadlock recovery to Phase 1c
@@ -369,64 +369,29 @@ Phase 1 adds reliability primitives (ACK/NACK, idempotency, backpressure) and im
 
 To avoid confusion, this glossary defines key protocol terms:
 
-- **Endpoint**: 4-byte identifier in 0x23 handshake packet (bytes[6:10]). Assigned by cloud during initial authentication. Represents the connection context for subsequent data channel operations.
-- **Queue ID**: 5-byte identifier in 0x73/0x83 data packets (bytes[5:10]). Used for routing data channel messages. Derived from endpoint but includes additional routing information.
-- **Endpoint ↔ Queue ID Relationship**: Endpoint is assigned during handshake and establishes connection. Queue ID is used in subsequent data packets for message routing. Both identify the connection but serve different protocol layers.
+- **Endpoint**: 5-byte identifier in packets (bytes[5:10]). Appears in 0x23 handshake packets and 0x73/0x83 data packets. Assigned by cloud during initial authentication. Represents the connection context for routing messages.
 
-  **Derivation Algorithm** (PENDING PHASE 0.5 VALIDATION):
+  **Byte Position** (✅ VALIDATED IN PHASE 0.5):
+  - Position: bytes[5:10] (5 bytes total)
+  - Same position in ALL packet types (handshake and data packets)
+  - Example: `0x39 0x87 0xC8 0x57 0x00`
 
-  The exact relationship between endpoint (4 bytes) and queue_id (5 bytes) is **unknown** until Phase 0.5 packet captures validate the pattern. Three possible options:
+  **Byte Boundaries** (✅ VALIDATED - NO OVERLAP):
+  - endpoint: bytes 5-9 (packet[5:10])
+  - msg_id: bytes 10-12 (packet[10:13])
+  - **Clean boundaries**: No byte overlap between endpoint and msg_id
 
-  **Option A: Queue ID = Endpoint + Routing Suffix**
-  - First 4 bytes of queue_id match endpoint exactly
-  - 5th byte is routing/channel identifier
-  - Example: endpoint=`0x39 0x87 0xC8 0x57` → queue_id=`0x39 0x87 0xC8 0x57 0x01`
-  - Validation: Compare endpoint from 0x23 with first 4 bytes of queue_id in subsequent 0x73
-
-  **Option B: Independent Assignment (No Direct Derivation)**
-  - Queue ID assigned independently by cloud
-  - No algorithmic relationship to endpoint
-  - Both stored in connection state but unrelated
-  - Validation: No pattern found in byte comparison
-
-  **Option C: Endpoint Embedded in Queue ID (Different Position)**
-  - Queue ID embeds endpoint but not in first 4 bytes
-  - Example: queue_id bytes 1-4 or bytes 2-5 contain endpoint
-  - Transformation algorithm needed
-  - Validation: Search for endpoint bytes within queue_id
-
-  **Option D: Overlapping Identifiers (Shared Byte)**
-  - queue_id = 5 bytes at positions 5-9 (packet[5:10])
-  - msg_id = 3 bytes at positions 9-11 (packet[9:12])
-  - **NOTE**: Byte 9 is shared between queue_id and msg_id
-  - Example: Legacy code extracts packet_header[5:10] for queue_id, packet_header[9:12] for msg_id
-  - Byte 9 serves dual purpose in protocol structure
-  - Validation: Check if both identifiers extract overlapping byte ranges from packet
-  - Implementation: Extract both with overlap, handle byte 9 appropriately in both contexts
-
-  **Phase 0.5 Requirement** (Deliverable #2: Protocol Capture Document):
-  - Capture 5+ handshake→data packet sequences (0x23 followed by 0x73/0x83)
-  - Extract endpoint from byte positions [6:10] in 0x23 packet (NOTE: Byte 5 is unknown/padding)
-  - Extract queue_id from byte positions [5:10] in 0x73/0x83 packet
-  - Extract msg_id from byte positions (TBD: [9:12] or [10:13]) in 0x73/0x83 packet
-  - **CRITICAL**: Determine exact byte positions of queue_id and msg_id, including any overlap
-  - Compare bytes to identify pattern (Option A, B, C, or D)
-  - Document transformation algorithm in validation report
-  - Provide annotated examples showing derivation
-
-  **Implementation Impact**:
-  - If Option A or C: Store endpoint, derive queue_id programmatically
-  - If Option B: Store both endpoint and queue_id independently
-  - If Option D: Extract both with overlapping byte ranges, handle shared byte appropriately
-  - Connection state must track both identifiers regardless of relationship
+  **Phase 0.5 Validation Results**:
+  - ✅ Confirmed 5-byte endpoint at bytes[5:10] in 0x23 handshake packet
+  - ✅ Confirmed 5-byte endpoint at bytes[5:10] in 0x73/0x83 data packets
+  - ✅ Confirmed msg_id at bytes[10:13] in 0x73/0x83 data packets
+  - ✅ Confirmed NO overlap between endpoint and msg_id
 
 - **msg_id**: 3-byte message identifier in wire protocol (bytes[10:13] in data packets). Generated sequentially for ACK matching. NOT used for deduplication (see dedup_key in Phase 1b).
 - **correlation_id**: UUID v7 for internal tracking and observability. Generated per-message for logs, metrics, and tracing. NOT sent over wire. NOT used for deduplication (see dedup_key in Phase 1b).
 - **dedup_key**: Deterministic hash of packet content used for duplicate detection. Generated from packet_type + endpoint + msg_id + payload hash. Same logical packet always produces same dedup_key (unlike correlation_id which is unique per reception). Uses Full Fingerprint strategy for maximum robustness.
 - **Packet Type**: First byte of every packet (0x23, 0x73, 0x83, etc.). Determines packet structure and handling.
 - **0x7e Markers**: Frame delimiters in data payloads (not in all packet types). Checksum calculated between markers.
-
-**Important**: Do NOT confuse endpoint (4 bytes, handshake) with queue_id (5 bytes, data channel). While related, they serve different protocol layers and have different byte lengths.
 
 ### Technical Acronyms
 
@@ -569,13 +534,13 @@ The sections below provide high-level summaries for coordination purposes.
 
 Sequential execution order for solo implementation:
 
-| Phase                             | Prerequisites         | Key Deliverables Needed                                                                                                                    |
-| --------------------------------- | --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
-| **Phase 0.5**                     | Phase 0 complete ✓    | All Phase 0 tests passing                                                                                                                  |
-| **Phase 1a** (Protocol Codec)     | Phase 0.5 complete    | - Protocol Capture Document<br/>- Checksum validation complete<br/>- Updated protocol documentation<br/>- Deduplication field verification |
-| **Phase 1b** (Reliable Transport) | Phase 1a complete     | - All codec tests passing<br/>- ACK packet structure validated<br/>- Full Fingerprint strategy confirmed                                   |
-| **Phase 1c** (Backpressure)       | Phase 1b complete     | - All transport tests passing<br/>- ReliableTransport working<br/>- Integration tests passing                                              |
-| **Phase 1d** (Simulator)          | Phases 1a-1c complete | - Full protocol stack working<br/>- Integration tests passing                                                                              |
+| Phase                             | Prerequisites         | Key Deliverables Needed                                                                                                        |
+| --------------------------------- | --------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| **Phase 0.5**                     | Phase 0 complete ✓    | All Phase 0 tests passing                                                                                                      |
+| **Phase 1a** (Protocol Codec)     | Phase 0.5 complete    | - Protocol Capture Document - Checksum validation complete - Updated protocol documentation - Deduplication field verification |
+| **Phase 1b** (Reliable Transport) | Phase 1a complete     | - All codec tests passing - ACK packet structure validated - Full Fingerprint strategy confirmed                               |
+| **Phase 1c** (Backpressure)       | Phase 1b complete     | - All transport tests passing - ReliableTransport working - Integration tests passing                                          |
+| **Phase 1d** (Simulator)          | Phases 1a-1c complete | - Full protocol stack working - Integration tests passing                                                                      |
 
 ### Sequential Execution Notes
 

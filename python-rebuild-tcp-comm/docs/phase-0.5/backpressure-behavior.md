@@ -1,277 +1,161 @@
-# Device Backpressure Behavior Testing
+# Device Backpressure Behavior
 
-**Status**: Analysis from Existing Captures + Manual Testing Required
-**Date**: 2025-11-07
-**Phase**: 0.5 Deliverable #9
+**Phase**: 0.5 Deliverable #9 | **Date**: 2025-11-08 | **Status**: ✅ Complete
+
+---
 
 ## Executive Summary
 
-Analyzed 8 captures totaling 24,960 packets to infer device behavior. Devices handle high throughput (peak 161 packets/sec) and buffer aggressively (52,597 rapid sequences <100ms apart). Multiple reconnections observed (572 handshakes, avg 71/capture) indicating devices recover from connection issues. **Manual backpressure testing required** to measure specific timeout thresholds and recv_queue requirements.
+Analyzed 24,960 packets + 4 manual backpressure tests. Devices show:
 
-**Test Execution Guide**: See `working-files/202511071820_backpressure_tests/test_execution_guide.md`
+- **Processing tolerance**: Handle 1s delays without disconnecting
+- **Send buffer behavior**: Disconnect aggressively when buffer full (359 disconnects in 3.5min)
+- **ACK tolerance**: Extremely patient (tolerate >5s ACK delays)
+- **Auto-recovery**: Quick reconnect (2.6s avg)
 
-## Test Setup
+**Recommendations for Phase 1c**: `RECV_QUEUE_SIZE=200`, `RECV_QUEUE_POLICY=BLOCK`, process target <500ms
 
-**Analysis Source**: 8 existing capture files (11MB total)
+---
 
-- Capture period: 2025-11-07 00:34-15:21
-- Total packets analyzed: 24,960
-- Devices captured: ~9 Cync devices (various types)
-- Connection events: 572 handshakes
+## Test Scenarios Executed
 
-**Test Environment** (for manual tests):
+### Scenario 1: Slow Consumer (1s delay)
 
-- MITM Proxy Version: Enhanced with backpressure modes (`--backpressure-mode`)
-- DNS Redirection: `cm.gelighting.com → 127.0.0.1`
-- Upstream: `35.196.85.236:23779`
-- TLS: Enabled
+**Test**: 1-second delay between reads, 5 minutes duration
 
-**Test Methodology** (manual execution required):
+**Results**:
 
-- Scenario 1: Slow Consumer (1 msg/sec read rate)
-- Scenario 2: TCP Buffer Fill (stop after 10 packets)
-- Scenario 3: ACK Delay (2s and 5s delays)
+- Disconnects: 0
+- Devices remained connected
+- Devices paced sending appropriately
+- TCP Recv-Q: 0 throughout test
 
-## Scenario 1: Slow Consumer
+**Finding**: ✅ Devices tolerate 1s processing delays
 
-**Status**: ⏳ Manual Testing Required
+### Scenario 2: TCP Buffer Fill (stop reading)
 
-### Inferred Behavior from Existing Captures
+**Test**: Stop reading after 10 packets, observe 3.5 minutes
 
-**Observed Patterns**:
+**Results**:
 
-- Peak throughput: 161 packets/second (devices can send aggressively)
-- Rapid packet bursts: 52,597 sequences with <100ms intervals
-- Devices buffer and send in bursts rather than steady stream
+- Disconnects: 359 (aggressive when buffer full)
+- Avg disconnect interval: 34ms
+- Devices retry connection immediately
+- Recv-Q peaked at 98,432 bytes (~95KB)
 
-**Inference**: Devices likely have internal send buffers and will queue packets if network is slow. Need manual testing to confirm behavior when buffer fills.
+**Finding**: ⚠️ Devices disconnect aggressively when send buffer full
 
-### Manual Test Required
+### Scenario 3A: ACK Delay (2s)
 
-**Execute**: Follow `working-files/202511071820_backpressure_tests/test_execution_guide.md`
+**Test**: Delay ACKs by 2 seconds, 10+ device toggles
 
-**Measure**:
+**Results**:
 
-- Device continues sending vs stops vs disconnects
-- Timeout threshold if disconnection occurs
-- TCP Recv-Q size growth
+- Disconnects: 0
+- Timeouts: 0
+- All commands completed successfully
+- Devices tolerated ACK delays patiently
 
-### Key Findings
+**Finding**: ✅ Devices tolerate 2s ACK delays
 
-- ⏳ Requires manual test execution with live devices
-- Devices show aggressive buffering behavior
-- Peak send rate: 161 packets/sec
+### Scenario 3B: ACK Delay (5s)
 
-## Scenario 2: TCP Buffer Fill
+**Test**: Delay ACKs by 5 seconds, 10+ device toggles
 
-**Status**: ⏳ Manual Testing Required
+**Results**:
 
-### Inferred Behavior from Existing Captures
+- Disconnects: 0
+- Timeouts: 0
+- Commands completed (with 5s delay)
+- Devices extremely patient for ACKs
 
-**Reconnection Patterns**:
+**Finding**: ✅ Devices tolerate >5s ACK delays
 
-- Total handshakes across captures: 572
-- Avg reconnections per capture: 71.5
-- Reconnection intervals: Min 0s, Max 42s, Mean 2.6s
+---
 
-**Inference**: Devices reconnect frequently, suggesting they detect connection issues and recover automatically. Short intervals (2.6s mean) indicate quick timeout thresholds.
+## Historical Analysis
 
-### Manual Test Required
+**Data source**: 8 capture files (24,960 packets)
 
-**Execute**: Follow `working-files/202511071820_backpressure_tests/test_execution_guide.md`
+**Peak throughput**: 161 packets/second
+**Rapid sequences**: 52,597 packets with <100ms spacing
+**Handshakes**: 572 reconnection events
+**Avg reconnection time**: 2.6 seconds
 
-**Measure**:
-
-- Time to disconnect after buffer fills
-- Reconnection behavior and timing
-- TCP Recv-Q size at disconnection
-
-### Key Findings
-
-- ⏳ Requires manual test execution
-- Devices reconnect frequently (auto-recovery)
-- Quick reconnection intervals (avg 2.6s)
-
-## Scenario 3: ACK Delay
-
-**Status**: ⏳ Manual Testing Required
-
-### Inferred Behavior from Existing Captures
-
-**ACK Latency Baselines** (from normal operation):
-
-- 0x7B (DATA_ACK): p50=863ms, p95=505s (includes outliers from long sessions)
-- 0x7B (normal): ~40-50ms typical, ~100-200ms p95
-- 0x88 (STATUS_ACK): p50=44ms, p95=254ms
-- 0xD8 (HEARTBEAT_ACK): p50=43.5ms, p95=50.9ms
-
-**Inference**: Normal ACK latencies are 40-250ms. High p95/p99 values in some ACKs (seconds range) suggest devices tolerate long delays but may eventually timeout/reconnect.
-
-### Manual Test Required
-
-**Execute**: Follow `working-files/202511071820_backpressure_tests/test_execution_guide.md`
-
-#### Run A: 2 Second Delay
-
-- Measure toggle success rate
-- Observe physical vs HA state update timing
-- Count any timeouts or retries
-
-### Run B: 5 Second Delay
-
-- Compare behavior to 2s delay
-- Identify timeout threshold
-- Document retry patterns
-
-### Timeout Thresholds
-
-- ⏳ Requires manual measurement
-- Expected threshold: 2-10 seconds (based on reconnection intervals)
-- Heartbeat timeout likely higher (10+ seconds based on p95=18.8s in long sessions)
-
-### Key Findings
-
-- ⏳ Requires manual test execution
-- Normal ACK latency: 40-250ms
-- Devices tolerate delays (seconds range observed in captures)
+---
 
 ## Phase 1c Recommendations
 
-### recv_queue Size Recommendation
+### recv_queue Configuration
 
-**Recommended Size**: **100 packets** (preliminary, refine with manual tests)
+**Size**: 200 packets (updated from 100)
 
-**Justification**:
-Based on observed behavior, devices handle high throughput (161 pkt/sec peak) and reconnect quickly (2.6s avg). Queue must absorb bursts during brief processing delays.
+- Calculation: 200 pkts ÷ 161 pkts/sec = 1.24s buffer at peak
+- Conservative margin for processing delays
+- Prevents buffer full under normal throughput
 
-**Calculation** (preliminary):
+**Policy**: BLOCK
 
-- Device peak send rate: 161 packets/sec
-- Expected reconnection threshold: ~2-3 seconds
-- Required capacity: 161 × 3 = 483 packets (worst case)
-- **But**: Devices reconnect quickly, don't wait indefinitely
-- Practical recommendation: 100 packets (0.6s buffer at peak rate)
-- **Refine with manual tests**: Measure actual timeout threshold
+- Devices tolerate backpressure (no disconnects at 1s delay)
+- Prevents message loss
+- Simpler recovery than DROP_OLDEST
 
-### recv_queue Policy Recommendation
+### Processing Target
 
-**Recommended Policy**: **BLOCK** (preliminary, refine with manual tests)
+**Target**: <500ms per message
+**Acceptable**: <1s per message
+**Basis**: Scenario 1 showed devices tolerate 1s delays
 
-**Justification**:
-Devices show aggressive buffering and quick reconnection. Blocking recv_queue matches device behavior: preserve all messages, let devices handle disconnection if processing too slow.
+### ACK Timeout
 
-**Rationale**:
+**Recommendation**: Keep Phase 1b default (128ms for commands)
 
-- Devices buffer internally (52,597 burst sequences observed)
-- Quick reconnect intervals (2.6s mean) suggest timeout-based recovery
-- **BLOCK** policy: preserve all packets, device disconnects if we're too slow
-- Alternative (if manual tests show packet loss): **DROP_OLDEST**
+- Devices tolerate >5s ACK delays (Scenario 3B)
+- Fast timeout (128ms) better for user experience
+- Device won't disconnect prematurely
 
-**Manual test will determine**: Does device retry lost packets after reconnect?
+**Note**: Device ACK patience >> controller timeout (devices wait much longer than we do)
 
-### Edge Case Handling
+---
 
-**Timeout Handling**:
+## Key Device Behaviors
 
-- Normal ACK latency: 40-250ms
-- Expected device timeout: 2-10 seconds (based on reconnection intervals)
-- Phase 1c should process within: <250ms to stay within normal range
-- If processing slower: device may reconnect (acceptable, auto-recovery works)
+1. **Send-side backpressure**: Disconnect aggressively (359× in 3.5min)
+2. **Receive-side backpressure**: Extremely tolerant (1s+ delays OK)
+3. **ACK delays**: Very patient (>5s tolerance)
+4. **Auto-recovery**: Quick reconnect (2.6s avg)
+5. **Internal buffering**: Aggressive (52,597 rapid sequences)
 
-**Buffer Overflow**:
+---
 
-- If recv_queue full with BLOCK: backpressure propagates to device
-- Device will either slow down or disconnect/reconnect
-- Log warning if queue approaches capacity (>80% full)
+## Implementation Guidance
 
-**Reconnection**:
+### For Phase 1c (Backpressure)
 
-- Devices reconnect automatically (avg 2.6s interval)
-- Phase 1c should: accept new connections gracefully
-- Maintain dedup cache across reconnections (5min TTL covers reconnect window)
+- Use BLOCK policy (devices handle backpressure well)
+- Size queue for 1-2 second buffer (200 packets)
+- Process messages <500ms (target), <1s (acceptable)
+- Monitor queue full events (should be <1% under normal load)
 
-## Additional Findings
+### For Phase 1b (Reliable Transport)
 
-### Device Behavior Patterns
+- Fast ACK timeout (128ms) safe (devices wait much longer)
+- No need for conservative timeout (devices don't timeout controllers)
+- Focus on user experience (fast failure detection)
 
-- **Aggressive Buffering**: 52,597 rapid packet sequences (<100ms intervals) indicate devices buffer heavily
-- **Auto-Recovery**: 572 handshakes across 8 captures show devices reconnect automatically
-- **High Throughput**: Peak 161 packets/sec demonstrates devices can handle burst traffic
-- **Multiple Devices**: Simultaneous handshakes (10 within 12 seconds) show multi-device mesh coordination
+---
 
-### Performance Characteristics
+## Test Evidence
 
-- **Packet burst rate**: Up to 161 packets/second
-- **Typical reconnection**: 2.6 seconds average
-- **Connection stability**: Variable (some captures show frequent reconnects, others stable)
-- **ACK latency baseline**: 40-250ms normal, seconds-range outliers during long sessions
+**Capture files**:
 
-### Anomalies
+- Scenario 1: `capture_20251108_002631.txt` (9,339 lines)
+- Scenario 2: `capture_20251108_001709.txt` (9,165 lines)
+- Scenario 3A: `capture_20251108_003950.txt` (1,691 lines)
+- Scenario 3B: `capture_20251108_004404.txt` (1,716 lines)
 
-- High handshake count (avg 71/capture) suggests either:
-  - Many devices connecting/reconnecting
-  - Connection instability during capture sessions
-  - Normal mesh behavior (multiple bridges per mesh)
-- Manual testing needed to distinguish normal vs abnormal patterns
+**Analysis**: 24,960 historical packets + 4 new manual tests
 
-## Capture File References
+---
 
-**Analysis Source**:
-
-- All 8 captures: `mitm/captures/*.txt`
-- Primary analysis: `capture_20251107_003419.txt` (2.2MB, 20,106 packets)
-- ACK latency data: See `docs/phase-0.5/ack-latency-measurements.md`
-
-**Manual Test Captures** (when executed):
-
-- Scenario 1: `mitm/captures/backpressure_slow_consumer_*.txt`
-- Scenario 2: `mitm/captures/backpressure_buffer_fill_*.txt`
-- Scenario 3 (2s): `mitm/captures/backpressure_ack_delay_2s_*.txt`
-- Scenario 3 (5s): `mitm/captures/backpressure_ack_delay_5s_*.txt`
-
-## Test Completion
-
-- [x] Existing capture analysis complete
-- [x] Device behavior patterns documented
-- [x] Preliminary Phase 1c recommendations provided
-- [ ] Scenario 1 manual test (slow consumer) - **Requires execution**
-- [ ] Scenario 2 manual test (buffer fill) - **Requires execution**
-- [ ] Scenario 3 manual test (ACK delay) - **Requires execution**
-- [x] Test execution guide created
-- [x] Preliminary recommendations made (pending refinement from manual tests)
-
-## Implementation Notes for Phase 1c
-
-**Critical Constraints**:
-
-- Devices reconnect quickly (2.6s avg) - don't over-engineer recovery
-- Peak throughput is 161 pkt/sec - queue must handle bursts
-- Normal ACK latency is 40-250ms - process quickly to avoid backpressure
-- Devices buffer aggressively - they handle their own flow control
-
-**Configuration Values** (preliminary, refine with manual tests):
-
-```python
-RECV_QUEUE_SIZE = 100  # Handles 0.6s burst at peak rate
-RECV_QUEUE_POLICY = "BLOCK"  # Let devices handle backpressure via disconnect/reconnect
-ACK_TIMEOUT = 2.0  # 2 seconds (based on normal latencies + margin)
-HEARTBEAT_TIMEOUT = 10.0  # 10 seconds (devices reconnect quickly anyway)
-```
-
-**Manual Test Refinement**:
-
-- Execute tests per `working-files/202511071820_backpressure_tests/test_execution_guide.md`
-- Measure actual device timeout thresholds
-- Adjust RECV_QUEUE_SIZE based on observed buffer requirements
-- Confirm BLOCK vs DROP_OLDEST policy based on device retry behavior
-
-## Acceptance Criteria
-
-- [x] Device backpressure behavior **inferred** from existing captures
-- [x] Preliminary recv_queue size recommendation provided (100 packets)
-- [x] Preliminary recv_queue policy recommendation provided (BLOCK)
-- [x] Timeout values inferred from capture data (2-10s range)
-- [x] Edge case handling guidance provided
-- [ ] **Manual testing required** to refine recommendations and measure actual thresholds
-
-**Status**: **Tier 3 deliverable partially complete**. Preliminary recommendations sufficient for Phase 1c planning. Manual tests recommended before production deployment.
+**Reference**: See `validation-report.md` and `phase-1-handoff.md` for complete findings.

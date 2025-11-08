@@ -25,7 +25,7 @@ Cync switches were not updating their status in the Home Assistant UI, even thou
 
 // ✅ CORRECT - What they should send:
 {"state": "ON"}
-```
+```text
 
 ### Why this broke switch status
 
@@ -49,7 +49,7 @@ else:
     if device_status.brightness is not None:
         mqtt_dev_state["brightness"] = device_status.brightness
     # ... color_mode logic for ALL devices ...
-```
+```text
 
 ### After
 
@@ -64,7 +64,7 @@ else:
     if device_status.brightness is not None:
         mqtt_dev_state["brightness"] = device_status.brightness
     # ... color_mode logic for lights only ...
-```
+```text
 
 ### 2. `update_device_state()` (lines 625-640)
 
@@ -77,7 +77,7 @@ else:
     # Confusing logic: if device.is_light or not device.is_switch
     if device.is_light or not device.is_switch:
         # Add color_mode for ambiguous device types
-```
+```text
 
 ### After
 
@@ -92,7 +92,7 @@ else:
     if device.supports_temperature:
         mqtt_dev_state["color_mode"] = "color_temp"
     # ... etc ...
-```
+```text
 
 ## Verification
 
@@ -104,7 +104,7 @@ else:
 10/22/25 16:47:05 > mqtt:device_status: Sending b'{"state": "ON"}' for device: 'Hallway Front Switch' (ID: 26)
 10/22/25 16:47:05 > mqtt:device_status: Sending b'{"state": "OFF"}' for device: 'Guest Bathroom Sink Switch' (ID: 59)
 
-```
+```text
 
 ## Expected Behavior Now
 
@@ -120,13 +120,13 @@ else:
 
 ```python
 b"ON"  # or b"OFF"
-```
+```text
 
 ### Switches (JSON, State Only)
 
 ```json
 { "state": "ON" } // or "OFF"
-```
+```text
 
 ### Lights (JSON, Full Attributes)
 
@@ -137,7 +137,7 @@ b"ON"  # or b"OFF"
   "color_mode": "color_temp", // or "rgb" or "brightness"
   "color_temp": 3650 // if color_temp mode
 }
-```
+```text
 
 ## Files Modified
 
@@ -160,7 +160,7 @@ ha addons logs local_cync-controller -n 100 | grep -E "Switch.*Sending"
 
 ## 4. Toggle switch from HA UI
 ## 5. Physical switch should respond and status should update
-```
+```text
 
 ## Related Issues
 

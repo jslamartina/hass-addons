@@ -36,7 +36,7 @@ curl -sf -X POST "$HA_URL/api/config/config_entries/flow" \
   -H "Authorization: Bearer $AUTH_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"handler":"mqtt","show_advanced_options":true}'
-```
+```text
 
 - If response has `type:"abort"` with reasons like `already_configured` or `single_instance_allowed`, treat as success and skip.
 - Else extract `flow_id` and `data_schema`. Build `user_input` only for fields present (typical fields: `broker`, `port`, `username`, `password`, optionally `discovery`, `client_id`). Submit:
@@ -46,7 +46,7 @@ curl -sf -X POST "$HA_URL/api/config/config_entries/flow/$FLOW_ID" \
   -H "Authorization: Bearer $AUTH_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"user_input":{"broker":"$MQTT_BROKER_HOST","port":$MQTT_BROKER_PORT,"username":"$MQTT_USERNAME","password":"$MQTT_PASSWORD","discovery":true}}'
-```
+```text
 
 - If another step is returned, repeat: read `data_schema`, fill only known fields with safe defaults. Stop when `type:"create_entry"`.
 
@@ -59,7 +59,7 @@ curl -sf -X POST "$HA_URL/api/services/mqtt/publish" \
   -H "Authorization: Bearer $AUTH_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"topic":"cync_controller_addon/test","payload":"ok","qos":0,"retain":false}'
-```
+```text
 
 - On success (HTTP 200), print success message. If 404, the integration didn’t load; log and continue with guidance.
 

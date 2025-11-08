@@ -43,4 +43,3 @@ log_info "Starting Brave Search MCP server..."
 
 # Run the MCP server
 exec npx -y @brave/brave-search-mcp-server --transport stdio
-

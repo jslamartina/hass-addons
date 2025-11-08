@@ -42,7 +42,7 @@ async function createTokenFullyAutomated() {
   // 4. Use bootstrap token with WebSocket to create long-lived token
   return await createLongLivedTokenViaWebSocket(bootstrapToken);
 }
-```
+```text
 
 ### Phase 2: WebSocket Token Creation
 
@@ -79,7 +79,7 @@ async function createLongLivedTokenViaWebSocket(bootstrapToken) {
     });
   });
 }
-```
+```text
 
 ### Phase 3: Integration with Setup Script
 
@@ -126,7 +126,7 @@ get_ha_auth_token() {
     return 1
   fi
 }
-```
+```text
 
 ## Implementation Steps
 
@@ -310,7 +310,7 @@ createTokenFullyAutomated()
     console.error("[auto-token] ❌ Error:", error.message);
     process.exit(1);
   });
-```
+```text
 
 ### Step 2: Update Setup Script
 
@@ -326,7 +326,7 @@ node scripts/create-token-automated.js
 
 ## Test the full setup script
 ./scripts/setup-fresh-ha.sh
-```
+```text
 
 ## Benefits
 

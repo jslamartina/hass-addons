@@ -20,7 +20,7 @@ When HTTP API calls fail (non-200 status codes), the script often only logs the 
 ```bash
 log_warn "EMQX configuration returned HTTP $http_code"
 ## Missing: What did the API say? Why did it fail?
-```
+```text
 
 ---
 
@@ -71,7 +71,7 @@ else
     echo "$body" | jq '.' 2> /dev/null || echo "$body"
   fi
 fi
-```
+```text
 
 ### Benefits
 
@@ -128,7 +128,7 @@ response=$(api_call "Configure EMQX" "POST" \
   "http://supervisor/addons/$EMQX_SLUG/options" \
   "$config" \
   "$SUPERVISOR_TOKEN")
-```
+```text
 
 ### Benefits
 
@@ -159,7 +159,7 @@ else
     log_warn "Response: $(echo "$body" | jq -c '.' 2>/dev/null || echo "$body")"
   fi
 fi
-```
+```text
 
 #### 2. `enable_emqx_sidebar()` (Lines 438-456)
 
@@ -172,7 +172,7 @@ else
   fi
   return 0
 fi
-```
+```text
 
 #### 3. `configure_mqtt_integration()` - Initial flow (Lines 570-620)
 
@@ -184,7 +184,7 @@ else
     log_warn "Response: $(echo "$body" | jq -c '.' 2>/dev/null || echo "$body")"
   fi
 fi
-```
+```text
 
 #### 4. `configure_mqtt_integration()` - Complete flow (Lines 590-615)
 
@@ -198,7 +198,7 @@ else
     log_warn "Response: $(echo "$complete_body" | jq -c '.' 2>/dev/null || echo "$complete_body")"
   fi
 fi
-```
+```text
 
 #### 5. `configure_cync_lan()` (Lines 694-712)
 
@@ -211,7 +211,7 @@ else
   fi
   log_info "You may need to configure it manually via Home Assistant UI"
 fi
-```
+```text
 
 #### 6. `enable_cync_sidebar()` (Lines 721-739)
 
@@ -224,7 +224,7 @@ else
   fi
   return 0
 fi
-```
+```text
 
 #### 7. `get_ha_auth_token()` - Password auth (Lines 266-276)
 
@@ -254,7 +254,7 @@ if [ -z "$temp_token" ]; then
   log_info "MQTT integration will need to be configured manually"
   return 1
 fi
-```
+```text
 
 #### 8. `get_ha_auth_token()` - Long-lived token creation (Lines 280-295)
 
@@ -288,7 +288,7 @@ else
   log_info "MQTT integration will need to be configured manually"
   return 1
 fi
-```
+```text
 
 ---
 
@@ -322,19 +322,15 @@ After implementing changes, test scenarios where HTTP errors occur:
 ### Before
 
 ```bash
-
 [setup-fresh-ha.sh] ⚠ EMQX configuration returned HTTP 400
-
-```
+```text
 
 ### After
 
 ```bash
-
 [setup-fresh-ha.sh] ⚠ EMQX configuration returned HTTP 400
 [setup-fresh-ha.sh] ⚠ Response: {"result":"error","message":"Invalid option 'env_vars': expected list, got string"}
-
-```
+```text
 
 **Much better!** Now we know exactly what's wrong.
 
@@ -346,7 +342,7 @@ After implementing changes, test scenarios where HTTP errors occur:
 
 ```bash
 echo "$body" | jq -c '.' 2> /dev/null || echo "$body"
-```
+```text
 
 - Single line output
 - Easier to grep through logs
@@ -356,7 +352,7 @@ echo "$body" | jq -c '.' 2> /dev/null || echo "$body"
 
 ```bash
 echo "$body" | jq '.' 2> /dev/null || echo "$body"
-```
+```text
 
 - Multi-line output
 - More readable for complex responses
@@ -372,7 +368,7 @@ if [ ${#body} -lt 200 ]; then
 else
   echo "$body" | jq '.' 2> /dev/null || echo "$body"
 fi
-```
+```text
 
 **Recommendation:** Start with Option 1 (compact) for consistency.
 

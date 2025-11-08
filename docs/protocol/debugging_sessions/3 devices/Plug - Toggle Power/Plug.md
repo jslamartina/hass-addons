@@ -20,7 +20,7 @@ The plug is the BT 'master/hub' device. All other Cync devices are connected to 
 - `<` is the server to plug
 - `>` is the plug to server
 
-```text
+````text
 ## device sends authorization code to server
 > 2024/03/11 00:14:27.455916  length=31 from=0 to=30
  23 00 00 00 1a 03 37 96 24 69 00 10 31 65 30 37  #.....7.$i..1e07
@@ -491,4 +491,5 @@ The plug is the BT 'master/hub' device. All other Cync devices are connected to 
 < 2024/03/11 00:17:29.956265  length=5 from=759 to=763
  d8 00 00 00 00                                   .....
 --
-```
+```text
+````

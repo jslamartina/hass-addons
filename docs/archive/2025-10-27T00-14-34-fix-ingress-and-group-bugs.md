@@ -38,7 +38,7 @@ logger.info("%s ✓ Token set in memory cache (user_id: %s)", lp, computed_token
 write_success = await self.write_token_cache(computed_token)
 if not write_success:
     logger.warning("%s Token set in memory but file write failed - token will be lost on restart", lp)
-```
+```text
 
 ### Bug 2: Restart Button Shows Error Despite Success
 
@@ -65,7 +65,7 @@ catch (e) {
     window.location.reload();
   }, 5000);
 }
-```
+```text
 
 ### Bug 3: Restart Button Disappears After Navigation
 
@@ -100,7 +100,7 @@ async function checkExistingConfig() {
     console.log("No existing config found:", e.message);
   }
 }
-```
+```text
 
 ### Bug 4: Switches Don't Update When Group Turns Off Lights
 
@@ -137,7 +137,7 @@ async def sync_group_switches(self, group_id: int, group_state: int, group_name:
 ## BUG FIX: Sync switch states after group command
 if g.mqtt_client:
     await g.mqtt_client.sync_group_switches(self.id, state, self.name)
-```
+```text
 
 ## Testing
 
@@ -170,7 +170,7 @@ test = [
     "pytest-asyncio>=0.23.0",
     "pytest-playwright>=0.4.0",
 ]
-```
+```text
 
 ## Technical Details
 
@@ -206,7 +206,7 @@ All changes passed linting requirements:
 npm run lint:python:fix # No issues
 npm run format:python   # Formatted successfully
 npm run lint            # All checks pass
-```
+```text
 
 ## Files Modified Summary
 

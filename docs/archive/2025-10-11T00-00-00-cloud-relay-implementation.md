@@ -64,7 +64,7 @@ Modified: src/cync_lan/structs.py
 New: src/cync_lan/packet_checksum.py
 New: src/cync_lan/packet_parser.py
 New: docs/CLOUD_RELAY.md
-```
+```text
 
 ## Configuration
 
@@ -78,7 +78,7 @@ cloud_relay:
   cloud_port: 23779 # Cloud server port
   debug_packet_logging: false # Verbose packet logs
   disable_ssl_verification: false # Debug SSL mode (insecure)
-```
+```text
 
 ## Build and Test
 
@@ -91,7 +91,7 @@ cd /mnt/supervisor/addons/local/hass-addons/cync-controller
 
 ## View logs
 ha addons logs local_cync-controller --follow
-```
+```text
 
 ## Testing Modes
 
@@ -100,7 +100,7 @@ ha addons logs local_cync-controller --follow
 ```yaml
 cloud_relay:
   enabled: false
-```
+```text
 
 - Existing LAN-only behavior
 - No changes required to existing configs
@@ -111,7 +111,7 @@ cloud_relay:
 cloud_relay:
   enabled: true
   forward_to_cloud: true
-```
+```text
 
 - Acts as transparent proxy
 - Devices → Relay → Cloud
@@ -125,7 +125,7 @@ cloud_relay:
   enabled: true
   forward_to_cloud: true
   debug_packet_logging: true
-```
+```text
 
 - Same as #2 but with verbose packet logs
 - Good for protocol analysis
@@ -137,7 +137,7 @@ cloud_relay:
   enabled: true
   forward_to_cloud: false
   debug_packet_logging: true
-```
+```text
 
 - Blocks cloud communication
 - Still logs packets locally
@@ -154,7 +154,7 @@ echo "traditional" > /tmp/cync_inject_command.txt
 
 ## Inject raw packet bytes
 echo "73 00 00 00 1e ..." > /tmp/cync_inject_raw_bytes.txt
-```
+```text
 
 ## Architecture
 
@@ -182,7 +182,7 @@ _register_new_connection()
     │
     └─ else:
         └─ CyncTCPDevice (existing)
-```
+```text
 
 ## Key Features
 
@@ -210,16 +210,16 @@ _register_new_connection()
    ./rebuild.sh
    ```
 
-2. **Verify default mode** (relay disabled)
+1. **Verify default mode** (relay disabled)
    - Check devices still connect
    - Verify commands work
 
-3. **Enable relay mode** and test
+2. **Enable relay mode** and test
    - Try each configuration variant
    - Monitor logs for errors
    - Test packet injection
 
-4. **Commit changes** (when satisfied)
+3. **Commit changes** (when satisfied)
 
    ```bash
    cd /mnt/supervisor/addons/local/hass-addons

@@ -14,6 +14,45 @@ Phase 1d builds a realistic Cync device simulator that speaks the real protocol 
 
 ---
 
+## Phase 0.5 Prerequisites ✅ Complete
+
+Phase 0.5 validation completed 2025-11-07 with performance baselines for comparison:
+
+**Performance Baselines** (from Real Devices):
+
+- **Median RTT**: 20-45ms across all ACK types
+  - 0x28 HELLO_ACK: 45.9ms median
+  - 0x7B DATA_ACK: 21.4ms median
+  - 0x88 STATUS_ACK: 41.7ms median
+  - 0xD8 HEARTBEAT_ACK: 43.5ms median
+- **p95 Latency**: 30-130ms range
+  - 0x28: 129.4ms
+  - 0x7B: 30.4ms
+  - 0x88: 47.7ms
+  - 0xD8: 50.9ms
+- **p99 Latency**: 84.1ms (HEARTBEAT_ACK, highest confidence with 21,441 samples)
+- Reference: `docs/phase-0.5/ack-latency-measurements.md`
+
+**Device Behavior Observations**:
+
+- Zero retries observed in 2,251 packets (stable local network)
+- No malformed packets detected
+- Protocol stability: 100% well-formed packets
+- Peak throughput: 161 packets/second
+- Reference: `docs/phase-0.5/validation-report.md`
+
+**Phase 1d Testing Requirements**:
+
+1. **Simulator performance target**: Match or exceed real device performance
+   - Target median RTT: 20-50ms range
+   - Target p99: < 100ms under no-chaos conditions
+2. **Chaos testing**: Validate retry behavior (not observed in Phase 0.5 stable conditions)
+   - Test 20% packet loss scenario
+   - Confirm hybrid ACK matching works correctly
+3. **Timeout validation**: Monitor if 51ms p99 (from small Phase 0.5 sample) needs adjustment
+
+---
+
 ## Goals
 
 1. Build device simulator that speaks real Cync protocol
@@ -708,11 +747,11 @@ Phase 1d baseline tests measure ACK latency to validate timeout configuration (s
 
 Phase 1d baseline tests validate the "no send_queue" architectural decision (authoritative validation):
 
-5. **Test Setup**:
+1. **Test Setup**:
    - Create 10 simulated devices (or use real devices if available)
    - Prepare group command: Turn on all 10 devices simultaneously
 
-6. **Measurements Required**:
+2. **Measurements Required**:
    - **p50/p95/p99 latency** for 10-device parallel bulk operation
    - **Success rate** for group operations
    - **State lock hold time** during group operations (expected: <1ms per device)
@@ -721,19 +760,19 @@ Phase 1d baseline tests validate the "no send_queue" architectural decision (aut
    - Execution method: `results = await asyncio.gather([device.transport.send_reliable(cmd) for device in devices])`
    - Timing: Measure total time from first send_reliable() call to last ACK received
 
-7. **Purpose**: These measurements validate Phase 1c "no send_queue" architectural decision
+3. **Purpose**: These measurements validate Phase 1c "no send_queue" architectural decision
 
-8. **Re-evaluation Criteria**:
+4. **Re-evaluation Criteria**:
    - **If p99 < 2s**: No send_queue decision validated, proceed as specified
    - **If p99 ≥ 2s**: Document findings, proceed without send_queue (optimization deferred to Phase 2)
 
-9. **Diagnostic Measurements** (if p99 ≥ 2s):
+5. **Diagnostic Measurements** (if p99 ≥ 2s):
    - Measure state lock hold time during group operations
    - Check for lock contention (time spent waiting for lock)
    - Profile: Is delay from lock contention, network I/O, or device processing?
    - Document: Bottleneck analysis
 
-10. **Acceptable Outcome**:
+6. **Acceptable Outcome**:
 
 - Phase 1 proceeds without send_queue regardless of findings
 - If p99 ≥ 2s, document need for send_queue in Phase 2 backlog
@@ -816,8 +855,7 @@ Phase 1d baseline tests validate the "no send_queue" architectural decision (aut
       assert final_growth < 5.0, f"Memory leak detected: {final_growth:.2f}% growth"
 
       tracemalloc.stop()
-
-```
+  ```
 
 ### Quality
 

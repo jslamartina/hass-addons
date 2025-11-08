@@ -39,7 +39,7 @@ SEVERITY │       │  SEC-2 │     │
      Low │  BUG-1│  MAINT-│     │ Medium
          │       │    1   │     │
          └─────────────────────┘
-```
+```text
 
 ---
 
@@ -65,13 +65,13 @@ options:
   account_username: jslamartina@gmail.com # ❌ Personal email exposed
   mqtt_user: "dev" # ❌ Default credentials
   mqtt_pass: "dev" # ❌ Weak password
-```
+```text
 
 ```dockerfile
 ## cync-controller/Dockerfile
 ENV CYNC_MQTT_USER="jslamartina@gmail.com" # ❌ Hardcoded in image
 CYNC_MQTT_PASS=""                          # ❌ Empty password default
-```
+```text
 
 ## Impact
 
@@ -97,7 +97,7 @@ options:
   account_password: null
   mqtt_user: null # Configure via add-on UI
   mqtt_pass: null
-```
+```text
 
 ---
 
@@ -120,7 +120,7 @@ All MITM debugging scripts disable SSL certificate verification:
 context = ssl.create_default_context()
 context.check_hostname = False
 context.verify_mode = ssl.CERT_NONE  # ❌ No certificate validation
-```
+```text
 
 ### Impact
 
@@ -161,7 +161,7 @@ Configuration backup file with credentials is tracked in git. This file should n
 git rm cync-controller/config.yaml.backup
 echo "*.backup" >> .gitignore
 echo "config.yaml.backup" >> .gitignore
-```
+```text
 
 ---
 
@@ -193,7 +193,7 @@ mitm/
 ├── run_mitm.sh
 └── ... (19 more debug scripts)
 
-```
+```text
 
 ### Remediation (3-4 hours)
 
@@ -217,7 +217,7 @@ Zero automated tests found. The `package.json` has a failing test script:
 "scripts": {
   "test": "echo \"Error: no test specified\" && exit 1"
 }
-```
+```text
 
 ### Impact
 
@@ -232,16 +232,16 @@ Zero automated tests found. The `package.json` has a failing test script:
 2. Add `jest` or `vitest` for JavaScript
 3. Create test structure:
 
-```
+```text
 
 tests/
 ├── unit/
 ├── integration/
 └── e2e/
 
-```
+```text
 
-```
+```text
 
 1. Add GitHub Actions test workflow
 2. Achieve minimum 60% coverage
@@ -271,15 +271,15 @@ Start with smoke tests for critical paths:
 
 Bare `except` clauses silently swallow errors:
 
-```
+```text
 
 ## mitm/mitm_with_injection.py:72-75
 
 try:
-    with open("mitm.log", "a") as f:
-        f.write(log_msg + "\n")
+with open("mitm.log", "a") as f:
+f.write(log_msg + "\n")
 except Exception:
-    pass  # ❌ Silent failure - no error logged
+pass # ❌ Silent failure - no error logged
 
 ```python
 
@@ -291,20 +291,19 @@ except Exception:
 
 ### Remediation (1-2 hours):
 
-```
+```text
 
 ## Better approach
 
 try:
-    with open("mitm.log", "a") as f:
-        f.write(log_msg + "\n")
+with open("mitm.log", "a") as f:
+f.write(log_msg + "\n")
 except IOError as e:
-    print(f"WARNING: Failed to write log: {e}", file=sys.stderr)
+print(f"WARNING: Failed to write log: {e}", file=sys.stderr)
 except Exception as e:
-    print(f"ERROR: Unexpected logging failure: {e}", file=sys.stderr)
+print(f"ERROR: Unexpected logging failure: {e}", file=sys.stderr)
 
 ```bash
-
 ---
 
 ### 🟡 MAINT-1: Code Duplication in Checksum Calculations
@@ -313,30 +312,28 @@ except Exception as e:
 
 #### Locations
 
-- `mitm/send_via_mitm.py:16-18`
-- `mitm/test_mode_change.py:18-22`
-- `mitm/verify_checksum.py:50-72`
-- `mitm/mitm_with_injection.py:78-84`
+- $(mitm/send_via_mitm.py:16-18)
+- $(mitm/test_mode_change.py:18-22)
+- $(mitm/verify_checksum.py:50-72)
+- $(mitm/mitm_with_injection.py:78-84)
 
 #### Issue
 
 Same checksum algorithm duplicated across 4 files with slight variations:
-
-```
+```text
 
 ## Different implementations of the same logic
 
 def calculate_checksum(data):
-    return sum(data[18:41]) % 256  # Version 1
+return sum(data[18:41]) % 256 # Version 1
 
 def calculate_checksum(data):
-    return sum(data[start:end]) % 256  # Version 2
+return sum(data[start:end]) % 256 # Version 2
 
 ```bash
-
 ### Remediation (1 hour):
 
-1. Create `cync_protocol/checksum.py`
+1. Create $(cync_protocol/checksum.py)
 2. Centralize algorithm
 3. Add comprehensive tests
 4. Import in all locations
@@ -349,23 +346,21 @@ def calculate_checksum(data):
 
 #### Locations:
 
-- `.devcontainer/post-start.sh:52-58, 66-74, 92-119`
-- `mitm/mitm_with_injection.py:411-422`
+- $(.devcontainer/post-start.sh:52-58, 66-74, 92-119)
+- $(mitm/mitm_with_injection.py:411-422)
 
 #### Issue:
 Multiple busy-wait loops with fixed sleep intervals:
-
-```
+```text
 
 ## .devcontainer/post-start.sh
 
 until ha supervisor info 2> /dev/null; do
-  echo "  Still waiting for Supervisor..."
-  sleep 2 # ❌ Fixed 2s interval, no backoff
+echo " Still waiting for Supervisor..."
+sleep 2 # ❌ Fixed 2s interval, no backoff
 done
 
 ```bash
-
 ### Impact
 
 - CPU waste during startup
@@ -374,15 +369,14 @@ done
 
 #### Remediation (2 hours):
 Implement exponential backoff:
-
-```
+```text
 
 RETRY_DELAY=1
 MAX_DELAY=30
 while ! ha supervisor info 2> /dev/null; do
-  sleep $RETRY_DELAY
-  RETRY_DELAY=$((RETRY_DELAY * 2))
-  [ $RETRY_DELAY -gt $MAX_DELAY ] && RETRY_DELAY=$MAX_DELAY
+sleep $RETRY_DELAY
+  RETRY_DELAY=$((RETRY_DELAY \* 2))
+[ $RETRY_DELAY -gt $MAX_DELAY ] && RETRY_DELAY=$MAX_DELAY
 done
 
 ```bash
@@ -395,21 +389,21 @@ done
 
 **Deprecated API Usage** (`cync-controller/static/index.html:142`)
 
-```
+```text
 
 document.execCommand("copy"); // ❌ Deprecated, use Clipboard API
 
-```
+```text
 
 **Fix:** Use modern `navigator.clipboard.writeText()`
 
 **Missing Input Validation** (`cync-controller/static/index.html:196`)
 
-```
+```text
 
 if (!/^[0-9]{4,10}$/.test(otp)) // ✅ Good, but could be stronger
 
-```
+```text
 
 **Enhancement:** Add rate limiting, brute force protection
 
@@ -417,53 +411,53 @@ if (!/^[0-9]{4,10}$/.test(otp)) // ✅ Good, but could be stronger
 
 1. **Magic Numbers** (throughout `mitm/*.py`)
 
-   ```
+```text
 
-   packet[41] = checksum  # ❌ What is position 41?
+packet[41] = checksum # ❌ What is position 41?
 
-   ```
+```text
 
-   **Fix:** Use named constants:
+**Fix:** Use named constants:
 
-   ```
+```text
 
-   CHECKSUM_POSITION = 41
-   packet[CHECKSUM_POSITION] = checksum
+CHECKSUM_POSITION = 41
+packet[CHECKSUM_POSITION] = checksum
 
-   ```
+```text
 
 2. **Hardcoded IPs** (`mitm/test_mode_change.py:10`)
 
-   ```
+```text
 
-   DEVICE_IP = "172.64.66.1"  # ❌ Hardcoded
+DEVICE_IP = "172.64.66.1" # ❌ Hardcoded
 
-   ```
+```text
 
-   **Fix:** Environment variable or config file
+**Fix:** Environment variable or config file
 
 3. **Missing Docstrings**
-   - Only 40% of functions have docstrings
-   - No module-level documentation
+- Only 40% of functions have docstrings
+- No module-level documentation
 
 ### Shell Script Issues
 
 1. **Unquoted Variables** (various `*.sh` files)
 
-   ```
+```text
 
-   rsync -av --delete $SOURCE $DEST # ❌ Should be quoted
+rsync -av --delete $SOURCE $DEST # ❌ Should be quoted
 
-   ```
+```text
 
 2. **Missing Error Checks**
 
-   ```
+```text
 
-   cd "/mnt/supervisor/..." # ❌ No check if cd fails
-   python -c "..."          # ❌ No error handling
+cd "/mnt/supervisor/..." # ❌ No check if cd fails
+python -c "..." # ❌ No error handling
 
-   ```
+```text
 
 ---
 
@@ -480,7 +474,7 @@ if (!/^[0-9]{4,10}$/.test(otp)) // ✅ Good, but could be stronger
 
 ### Remediation
 
-```
+```text
 
 ## Dockerfile - pin versions
 
@@ -500,7 +494,7 @@ RUN pip install --no-cache-dir \
 
 ### Priority 1: Security
 
-```
+```text
 
 1. **Add security warnings** (30 min)
    - Add `SECURITY.md`
@@ -521,15 +515,15 @@ RUN pip install --no-cache-dir \
 
 2. **Add shellcheck** (1 hour)
 
-   ```
+```text
 
 # .github/workflows/shellcheck.yaml
 
 - uses: ludeeus/action-shellcheck@master
 
-   ```
+  ```
 
-3. **Pin dependencies** (1 hour)
+1. **Pin dependencies** (1 hour)
    - Lock Python versions
    - Lock npm packages
    - Lock GitHub Actions
@@ -538,19 +532,16 @@ RUN pip install --no-cache-dir \
 
 1. **Add EditorConfig** (15 min)
 
-   ```
-
-# .editorconfig
-
+   ```ini
    root = true
    [*]
    charset = utf-8
    indent_style = space
    indent_size = 2
-
    ```
 
 1. **Consolidate duplicates** (2 hours)
+
    - Extract checksum logic
    - Create utility module
    - DRY up scripts
@@ -593,16 +584,15 @@ RUN pip install --no-cache-dir \
 
 ### Code Volume
 
-```
+```text
 
-Total Files:     ~80
-Python Files:    7 (2,347 lines)
-Shell Scripts:   23 (1,245 lines)
-Config Files:    12 (892 lines)
-Documentation:   8 (3,421 lines)
+Total Files: ~80
+Python Files: 7 (2,347 lines)
+Shell Scripts: 23 (1,245 lines)
+Config Files: 12 (892 lines)
+Documentation: 8 (3,421 lines)
 
 ```markdown
-
 ### Technical Debt
 
 | Category     | Debt Items       | Est. Fix Time |
@@ -659,15 +649,14 @@ Top 5 most complex files:
 - **After Full Remediation:** Low risk
 
 ### Effort vs. Impact:
+```text
 
-```
+High Impact, Low Effort: ████████ (Security fixes, gitignore)
+High Impact, High Effort: ████ (Testing, restructure)
+Low Impact, Low Effort: ██ (Linting, formatting)
+Low Impact, High Effort: ▌ (Full rewrite - not recommended)
 
-High Impact, Low Effort:    ████████ (Security fixes, gitignore)
-High Impact, High Effort:   ████     (Testing, restructure)
-Low Impact, Low Effort:     ██       (Linting, formatting)
-Low Impact, High Effort:    ▌        (Full rewrite - not recommended)
-
-```
+```text
 
 ---
 
@@ -724,3 +713,4 @@ The repository has good bones and active maintenance. With focused effort on sec
 **Files analyzed:** 80
 **Issues found:** 27 (8 critical/high, 19 medium/low)
 **Estimated remediation effort:** ~10 working days
+```text

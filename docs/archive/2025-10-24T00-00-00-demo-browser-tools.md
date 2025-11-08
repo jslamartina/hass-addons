@@ -38,7 +38,7 @@ Successfully tested Cursor's MCP Playwright browser automation tools with Home A
 - button "Log in"
 - combobox (language selector)
 - link "Help"
-```
+```text
 
 ### Key Findings
 
@@ -111,7 +111,7 @@ mcp_cursor - playwright_browser_click({ element: "Log in", ref: "e39" });
 
 // 6. Verify dashboard loaded
 mcp_cursor - playwright_browser_wait_for({ text: "Overview", time: 10 });
-```
+```text
 
 ## Ready for Production Use
 
@@ -170,19 +170,19 @@ mcp_cursor - playwright_browser_wait_for({ text: "Overview", time: 10 });
    // Fill credentials → Click login → Verify dashboard
    ```
 
-2. **Add-on Configuration Verification**
+1. **Add-on Configuration Verification**
 
    ```typescript
    // Navigate to add-on → Switch to Config tab (iframe) → Verify options
    ```
 
-3. **Entity State Inspection**
+2. **Entity State Inspection**
 
    ```typescript
    // Developer Tools → States → Search entities → Verify state
    ```
 
-4. **Device Control Testing**
+3. **Device Control Testing**
 
    ```typescript
    // Dashboard → Click entity → Adjust controls → Verify state

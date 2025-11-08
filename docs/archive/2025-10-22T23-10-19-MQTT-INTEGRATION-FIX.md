@@ -25,7 +25,7 @@ existing_mqtt=$(timeout 30 docker exec hassio_cli curl -sf \
 response=$(timeout 30 docker exec hassio_cli curl -sf ... -X POST \
   -H "Authorization: Bearer ${SUPERVISOR_TOKEN}" \
   "http://supervisor/core/api/config_entries/flow" ...)
-```
+```text
 
 **Result:** HTTP 401 Unauthorized → MQTT integration never created
 
@@ -39,7 +39,7 @@ response=$(timeout 30 docker exec hassio_cli curl -sf ... -X POST \
 
 ```bash
 HA_AUTH_TOKEN="" # Home Assistant access token for Core API
-```
+```text
 
 #### 2. New Function: `get_ha_auth_token()` (Lines 244-296)
 
@@ -69,7 +69,7 @@ get_ha_auth_token() {
   # Try to create a long-lived access token...
   # (See implementation for details)
 }
-```
+```text
 
 #### 3. Updated Main Flow (Lines 870-871, 928-929)
 
@@ -89,7 +89,7 @@ get_ha_auth_token
 
 ## Step 9: Configure MQTT integration
 configure_mqtt_integration
-```
+```text
 
 #### 4. Updated `configure_mqtt_integration()` (Lines 534-620)
 
@@ -103,7 +103,7 @@ configure_mqtt_integration
 response=$(timeout 30 docker exec hassio_cli curl -sf ... -X POST \
   -H "Authorization: Bearer ${SUPERVISOR_TOKEN}" \
   "http://supervisor/core/api/config_entries/flow" ...)
-```
+```text
 
 ### After
 
@@ -117,7 +117,7 @@ fi
 response=$(curl -sf -w "\n%{http_code}" -X POST \
   -H "Authorization: Bearer ${HA_AUTH_TOKEN}" \
   "$HA_URL/api/config_entries/flow" ...)
-```
+```text
 
 ---
 
@@ -129,8 +129,9 @@ response=$(curl -sf -w "\n%{http_code}" -X POST \
 
    ```bash
    ./scripts/setup-fresh-ha.sh
+   ```
 
-```
+```text
 
 - Creates first user → gets auth token
 - Saves token to `HA_AUTH_TOKEN`
@@ -142,9 +143,9 @@ response=$(curl -sf -w "\n%{http_code}" -X POST \
    ```bash
    # In hass-credentials.env:
    LONG_LIVED_ACCESS_TOKEN=eyJhbGciOiJIUzI1NiIs...
-   
+
    ./scripts/setup-fresh-ha.sh
-   ```
+```text
 
 - Skips onboarding
 - Loads token from credentials file
@@ -171,7 +172,7 @@ response=$(curl -sf -w "\n%{http_code}" -X POST \
 [setup-fresh-ha.sh] ✅ MQTT integration configured successfully
 [setup-fresh-ha.sh] MQTT Broker: localhost:1883
 [setup-fresh-ha.sh] MQTT Username: dev
-```
+```text
 
 ### Failure (no token available)
 
@@ -182,7 +183,7 @@ response=$(curl -sf -w "\n%{http_code}" -X POST \
 [setup-fresh-ha.sh] Configuring MQTT integration...
 [setup-fresh-ha.sh] ⚠ No Home Assistant auth token available
 [setup-fresh-ha.sh] Skipping MQTT integration setup - configure manually via UI
-```
+```text
 
 ---
 

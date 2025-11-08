@@ -23,13 +23,13 @@
       ]
     },
     "sequential-thinking": {
-    "command": "uv",
-    "args": [
-      "run",
-      "--with",
-      "mcp-sequential-thinking-server",
-      "mcp-sequential-thinking-server"
-    ]
+      "command": "uv",
+      "args": [
+        "run",
+        "--with",
+        "mcp-sequential-thinking-server",
+        "mcp-sequential-thinking-server"
+      ]
     },
     "brave-search": {
       "command": "/workspaces/hass-addons/scripts/start-brave-search-mcp.sh",

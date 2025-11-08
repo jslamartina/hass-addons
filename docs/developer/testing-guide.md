@@ -64,16 +64,16 @@ The Cync Controller add-on has complex async workflows involving:
 ```bash
 cync-controller/tests/
 ├── unit/
-│   ├── __init__.py
-│   ├── conftest.py                 # Shared fixtures
-│   ├── test_packet_parser.py      # 41 tests - packet parsing
-│   ├── test_packet_checksum.py    # 28 tests - checksum calculation
-│   ├── test_devices.py             # 48 tests - device/group models
-│   ├── test_mqtt_client.py         # 36 tests - MQTT client
-│   ├── test_server.py              # 19 tests - server and cloud relay
-│   └── test_cloud_api.py           # 20 tests - authentication/export
-├── integration/                     # Phase 3 (planned)
-└── e2e/                             # Phase 3/4 (planned)
+│ ├── __init__.py
+│ ├── conftest.py             # Shared fixtures
+│ ├── test_packet_parser.py   # 41 tests - packet parsing
+│ ├── test_packet_checksum.py # 28 tests - checksum calculation
+│ ├── test_devices.py         # 48 tests - device/group models
+│ ├── test_mqtt_client.py     # 36 tests - MQTT client
+│ ├── test_server.py          # 19 tests - server and cloud relay
+│ └── test_cloud_api.py       # 20 tests - authentication/export
+├── integration/              # Phase 3 (planned)
+└── e2e/                      # Phase 3/4 (planned)
 ```
 
 ### Test File Naming
@@ -188,7 +188,7 @@ class TestParseCyncPacket:
         assert result["packet_type_name"] == "DATA_CHANNEL"
 ```
 
-### Key Patterns
+### Key Patterns (Packet Parser)
 
 - Use `bytes.fromhex()` for readability
 - Test both valid and malformed packets
@@ -214,7 +214,7 @@ class TestCyncDevice:
             device.brightness = 256
 ```
 
-### Key Patterns
+### Key Patterns (Device Model)
 
 - Test initialization with/without optional params
 - Validate property setters enforce constraints
@@ -250,7 +250,7 @@ class TestMQTTClient:
             assert result is True
 ```
 
-### Key Patterns
+### Key Patterns (MQTT Client)
 
 - Reset singleton between tests with `@pytest.fixture(autouse=True)`
 - Set `_connected = True` for methods that check connection
@@ -276,7 +276,7 @@ class TestNCyncServer:
             assert server.shutting_down is False
 ```
 
-### Key Patterns
+### Key Patterns (Server)
 
 - Mock all environment variables via `mock_g.env`
 - Mock event loop to avoid runtime errors
@@ -309,7 +309,7 @@ class TestCyncCloudAPI:
         assert result is True
 ```
 
-### Key Patterns
+### Key Patterns (Cloud API)
 
 - Mock `aiohttp.ClientSession` and responses
 - Use correct field names (`expire_in` not `expires_in`, `refresh_token`)

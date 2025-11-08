@@ -18,7 +18,7 @@ hass-addons/
     ├── main.py
     ├── server.py
     └── ... (all Python files)
-```
+```text
 
 ### Build-Time Copies (Synced by rebuild.sh)
 
@@ -29,7 +29,7 @@ hass-addons/cync-controller/
     ├── __init__.py
     ├── main.py
     └── ... (all Python files)
-```
+```text
 
 ## Why Duplicates Exist
 
@@ -110,25 +110,26 @@ The `rebuild.sh` script syncs files to `cync-controller/` because Docker's build
    # Build-time copies (synced from ../src by rebuild.sh)
    cync-controller/src/
    cync-controller/pyproject.toml
+   ```
 
-```
+```text
 
 1. **Update rebuild.sh with clear comments:**
 
    ```bash
    #!/bin/bash
    set -e
-   
+
    # Sync source code from primary location (../src) to build directory
    # These are build-time copies required for Docker build context
    echo "Syncing cync-controller source code from ../src..."
    rsync -av --delete ../src/ src/ --exclude='__pycache__' --exclude='*.pyc'
    cp ../pyproject.toml pyproject.toml
-   
+
    echo "Rebuilding addon..."
    ha addons rebuild local_cync-controller
    # ... rest
-   ```
+```text
 
 1. **Add README note in cync-controller/ directory:**
 
@@ -143,7 +144,7 @@ synced from `../src/` and `../pyproject.toml` by `rebuild.sh`.
 **DO NOT EDIT FILES HERE** - Edit the primary source in `../src/cync_lan/` instead.
 
 These copies exist because Docker's build context is limited to this directory.
-```
+```text
 
 1. **Update AGENTS.md to explain the structure:**
 

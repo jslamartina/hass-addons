@@ -36,14 +36,14 @@ Home Assistant Supervisor requires access to systemd journal to retrieve and dis
 cync-logs        # View all logs via journalctl
 cync-logs-follow # Follow logs in real-time
 cync-logs-tail   # View last 100 lines
-```
+```text
 
 ### Fallback aliases (Docker-based)
 
 ```bash
 cync-logs-docker        # Direct Docker logs access
 cync-logs-docker-follow # Follow Docker logs
-```
+```text
 
 ### 4. Created Documentation
 
@@ -67,14 +67,14 @@ $ docker info | grep "Logging Driver"
 $ sudo journalctl CONTAINER_NAME=addon_local_cync-controller --lines=10
 Oct 21 21:08:37 addon_local_cync-controller[4568]: 10/21/25 16:08:37.583 INFO (uvicorn.access) > 172.30.32.2:49984 - "GET / HTTP/1.1" 200
 ...
-```
+```text
 
 ### ✅ Add-on Container Running
 
 ```bash
 $ ha addons info local_cync-controller --raw-json | jq '.data.state'
 "started"
-```
+```text
 
 ### ✅ Logs Available via Multiple Methods
 
@@ -92,7 +92,7 @@ $ ha addons info local_cync-controller --raw-json | jq '.data.state'
   "log-driver": "journald",
   "storage-driver": "overlay2"
 }
-```
+```text
 
 ### Log Flow
 
@@ -110,7 +110,7 @@ Home Assistant Supervisor API
   ↓
 Web UI (Logs tab)
 
-```
+```text
 
 ## Future Improvements
 
@@ -147,11 +147,11 @@ Web UI (Logs tab)
 
    ```
 
-2. **Verify logs appear** - You should see real-time logs with auto-refresh
+1. **Verify logs appear** - You should see real-time logs with auto-refresh
 
-3. **Test log streaming** - The logs should update automatically as the add-on runs
+2. **Test log streaming** - The logs should update automatically as the add-on runs
 
-4. **Try the new aliases** (in a new shell):
+3. **Try the new aliases** (in a new shell):
 
    ```bash
    cync-logs-tail   # View recent logs

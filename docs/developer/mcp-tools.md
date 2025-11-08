@@ -107,7 +107,7 @@ Fetch web pages as simplified markdown or raw HTML.
 
 - `mcp_web_fetch_fetch` - Fetch URL content
 
-### When to use
+### When to use web fetch
 
 - ✅ Reading documentation and API specs
 - ✅ Retrieving release notes or changelogs
@@ -119,7 +119,7 @@ Fetch web pages as simplified markdown or raw HTML.
 - ❌ Searching the codebase (use `codebase_search`)
 - ❌ Reading project files (use `read_file`)
 
-### Features
+### Web fetch features
 
 - **Markdown mode** - Simplified, readable content (default)
 - **Raw HTML mode** - Full HTML for custom parsing

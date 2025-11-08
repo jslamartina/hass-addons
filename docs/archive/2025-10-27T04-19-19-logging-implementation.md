@@ -121,7 +121,7 @@ CYNC_LOG_HUMAN_OUTPUT = "stdout"
 CYNC_LOG_CORRELATION_ENABLED = True
 CYNC_PERF_TRACKING = True
 CYNC_PERF_THRESHOLD_MS = 100
-```
+```text
 
 ---
 
@@ -136,7 +136,7 @@ CYNC_PERF_THRESHOLD_MS = 100
 ```python
 def info(self, msg: str, *args, extra: dict[str, Any] | None = None, **kwargs):
     self._log(logging.INFO, msg, *args, extra=extra, **kwargs)
-```
+```text
 
 ### 2. Multi-line Logging Calls
 
@@ -154,7 +154,7 @@ logger.info(
 
 ## After (single-line)
 logger.info("%s UUID found in %s", lp, uuid_file.as_posix())
-```
+```text
 
 ### 3. datetime.UTC Compatibility
 
@@ -165,7 +165,7 @@ logger.info("%s UUID found in %s", lp, uuid_file.as_posix())
 ```python
 from datetime import datetime, timezone
 log_data = {"timestamp": datetime.now(timezone.utc).isoformat()}
-```
+```text
 
 ### 4. Plan/Todo Synchronization
 
@@ -221,7 +221,7 @@ log_data = {"timestamp": datetime.now(timezone.utc).isoformat()}
 ```text
 10/26/25 22:59:30.224 INFO [logging_abstraction:164] [c88ce93a] > → Initializing Cync Controller
 10/26/25 22:59:30.243 INFO [logging_abstraction:164] [c88ce93a] > ✓ Configuration loaded
-```
+```text
 
 - ✅ 2 unique correlation IDs per session
 - ✅ IDs propagate across all async operations
@@ -236,7 +236,7 @@ log_data = {"timestamp": datetime.now(timezone.utc).isoformat()}
 
 ```text
 10/26/25 22:59:30.243 INFO [logging_abstraction:164] [c88ce93a] > ✓ Configuration loaded | device_count=43 | group_count=14
-```
+```text
 
 - ✅ 116+ structured log entries
 - ✅ Context keys: device_count, group_count, device_id, device_name, brightness, capabilities, etc.

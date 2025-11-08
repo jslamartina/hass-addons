@@ -67,7 +67,7 @@ def test_group_turns_off_all_switches(ha_login: Page, ha_base_url: str):
     Current behavior: Physical switches turn off but UI doesn't update.
     Expected behavior: Both physical switches AND UI should reflect off state.
     """
-```
+```text
 
 **Test Steps**:
 
@@ -118,7 +118,7 @@ async def handle_group_command(self, group_id, command):
 
     # NEW: Sync member switch states
     await self.sync_group_switches(group_id)  # ← ADD THIS
-```
+```text
 
 ---
 
@@ -166,7 +166,7 @@ Once the fix is implemented:
    pytest tests/e2e/test_group_control.py::test_group_turns_off_all_switches -v
    ```
 
-2. **Manual verification**:
+1. **Manual verification**:
    - Open Home Assistant UI
    - Find a group with multiple switches
    - Turn group off
@@ -174,7 +174,7 @@ Once the fix is implemented:
    - Turn group on
    - Verify all switches show "on" immediately
 
-3. **Performance check**:
+2. **Performance check**:
    - Monitor logs for timing issues
    - Ensure `sync_group_switches()` doesn't cause delays
    - Check that individual device queries don't overwhelm network

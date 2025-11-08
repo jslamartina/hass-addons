@@ -13,7 +13,7 @@ The `setup-fresh-ha.sh` script was failing when trying to configure the MQTT int
 [setup-fresh-ha.sh] Failed to start MQTT integration config flow (curl error)
 [setup-fresh-ha.sh] Full response (with headers):
 [setup-fresh-ha.sh]   HTTP/1.1 404 Not Found
-```
+```text
 
 ### Initial Misdiagnosis
 
@@ -29,8 +29,9 @@ The real issue was **authentication failure**:
    ```bash
    curl -H "Authorization: Bearer $TOKEN" http://localhost:8123/api/
    # Returns: 401: Unauthorized
+   ```
 
-```
+```text
 
 1. The HTTP 404 error was a secondary symptom - the API likely returns 404 for authenticated endpoints when auth fails in certain contexts
 
@@ -42,7 +43,7 @@ Home Assistant no longer supports the `grant_type=password` authentication flow 
 curl -X POST http://localhost:8123/auth/token \
   -d "grant_type=password&username=...&password=..."
 ## Returns: {"error":"unsupported_grant_type"}
-```
+```text
 
 This means:
 
@@ -72,7 +73,7 @@ Created `/workspaces/hass-addons/scripts/update-token.sh` to guide users through
 
 ```bash
 ./scripts/update-token.sh
-```
+```text
 
 ### What it does
 
@@ -112,7 +113,7 @@ validate_ha_auth_token() {
     return 0
   fi
 }
-```
+```text
 
 ### Updated `configure_mqtt_integration()` to call validation before attempting API calls
 

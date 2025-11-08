@@ -338,4 +338,4 @@ jq '.metrics.p95_ms' test-reports/performance-report.json
 
 - **Phase 0 Spec**: `docs/rebuild-tcp-comm/01-phase-0.md`
 - **Unit Tests**: `tests/test_toggler.py`
-- **Helper Scripts**: `scripts/README.md`
+- **Helper Scripts**: `.cursor/rules/helper-scripts.mdc` (cursor rules)

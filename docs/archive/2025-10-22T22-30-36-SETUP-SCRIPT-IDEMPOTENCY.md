@@ -39,7 +39,7 @@ while [ $retry_count -lt $max_retries ]; do
 
   # Times out if endpoint doesn't exist...
 done
-```
+```text
 
 ### After
 
@@ -61,7 +61,7 @@ while [ $retry_count -lt $max_retries ]; do
 
   # Continue waiting...
 done
-```
+```text
 
 ### Key Addition
 
@@ -96,7 +96,7 @@ The script is now idempotent for all major steps:
 ```bash
 ## Start with completely reset HA
 ./scripts/setup-fresh-ha.sh
-```
+```text
 
 ## Expected
 
@@ -110,7 +110,7 @@ The script is now idempotent for all major steps:
 ```bash
 ## Run on existing configured HA
 ./scripts/setup-fresh-ha.sh
-```
+```text
 
 ## Expected
 
@@ -126,7 +126,7 @@ The script is now idempotent for all major steps:
 ```bash
 ## Run after some components already installed
 ./scripts/setup-fresh-ha.sh
-```
+```text
 
 ## Expected
 
@@ -182,7 +182,7 @@ configure_mqtt_integration || {
   log_info "You may need to configure manually"
   # Script continues - doesn't block other components
 }
-```
+```text
 
 Most functions:
 
@@ -198,7 +198,7 @@ Most functions:
 ```bash
 ## Clean HA → Full setup
 ./scripts/setup-fresh-ha.sh
-```
+```text
 
 ## 2. Repair Incomplete Setup
 
@@ -206,7 +206,7 @@ Most functions:
 ## EMQX failed to install? Re-run the script
 ./scripts/setup-fresh-ha.sh
 ## Will skip completed steps, finish EMQX setup
-```
+```text
 
 ## 3. Update Configurations
 
@@ -214,7 +214,7 @@ Most functions:
 ## Changed MQTT credentials in hass-credentials.env
 ./scripts/setup-fresh-ha.sh
 ## Updates addon configs with new credentials
-```
+```text
 
 ## 4. Add Missing Components
 
@@ -222,7 +222,7 @@ Most functions:
 ## Manually deleted MQTT integration? Re-run:
 ./scripts/setup-fresh-ha.sh
 ## Will reinstall just the MQTT integration
-```
+```text
 
 ## 5. DevContainer Startup
 
@@ -230,7 +230,7 @@ Most functions:
 ## Run automatically in post-start.sh
 ## Safe to run every time container starts
 ./scripts/setup-fresh-ha.sh
-```
+```text
 
 ## Files Modified
 

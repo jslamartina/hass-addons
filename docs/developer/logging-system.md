@@ -136,11 +136,9 @@ Log messages use visual prefixes for quick scanning:
 Example:
 
 ```bash
-
 2025-10-27 12:00:00 INFO [main:42] [abc123] > ════════════════════════════════════════
-2025-10-27 12:00:01 INFO [main:45] [abc123] > → Initializing Cync Controller
-2025-10-27 12:00:02 INFO [main:48] [abc123] > ✓ Configuration loaded | device_count=43
-
+2025-10-27 12:00:01 INFO [main:45] [abc123] Initializing Cync Controller > →
+2025-10-27 12:00:02 INFO [main:48] [abc123] Configuration loaded > ✓ | device_count=43
 ```
 
 ## Correlation IDs

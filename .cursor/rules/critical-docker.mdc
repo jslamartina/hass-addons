@@ -10,8 +10,7 @@ description: Critical Docker and devcontainer rules
 
 - Docker is managed by `supervisor_run`
 - Manual Docker start causes conflicts
-- Read `.devcontainer/README.md` for setup details
-- See `devcontainer-quirks.mdc` for common issues and workarounds
+- See `devcontainer-quirks.mdc` for setup details and workarounds
 
 ## Rule: Python Edits Require Rebuild
 
@@ -46,11 +45,12 @@ docker start some-container
 
 ## Rule: Backup Restore Logic
 
-### Don't change backup restore logic without testing per `.devcontainer/README.md`
+### Don't change backup restore logic without testing
 
 - Backup restore in `post-start.sh` is disabled by default
 - Only re-enable after thorough testing
 - Commented lines: see `.devcontainer/post-start.sh` lines 131-216
+- See `devcontainer-quirks.mdc` for details
 
 ### Why This Matters
 

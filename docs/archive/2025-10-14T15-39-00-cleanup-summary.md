@@ -103,7 +103,7 @@ docs/cync-controller/
   ├── troubleshooting.md     # Common issues
   ├── tips.md                # Best practices
   └── known_devices.md       # Compatibility list
-```
+```text
 
 ### Developer Documentation
 
@@ -113,7 +113,7 @@ DOCUMENTATION_INDEX.md       # Navigation and organization
 docs/developer/limitations-lifted.md        # Resolved limitations and solutions
 docs/developer/exploration-notes.md         # UI navigation findings
 .devcontainer/README.md      # Devcontainer quirks
-```
+```text
 
 ### Testing & Automation
 
@@ -126,7 +126,7 @@ scripts/
       └── README.md          # Playwright automation
 docs/developer/entity-management.md     # Entity management guide
 CLOUD_RELAY_TEST_EXECUTION_RESULTS.md  # Test results
-```
+```text
 
 ### Protocol Research
 
@@ -135,7 +135,7 @@ mitm/
   ├── FINDINGS_SUMMARY.md    # Protocol documentation
   ├── README.md              # MITM tools
   └── MITM_TESTING_GUIDE.md  # Testing procedures
-```
+```text
 
 ---
 

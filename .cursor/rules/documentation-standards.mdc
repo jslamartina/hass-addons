@@ -1,5 +1,5 @@
 ---
-description: Concise documentation rules and anti-verbosity guidelines
+alwaysApply: true
 ---
 
 # Documentation Standards

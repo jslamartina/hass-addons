@@ -47,7 +47,7 @@ When devices are first registered, the initial preset mode is published with `re
 50  → "medium"
 75  → "high"
 100 → "max"
-```
+```text
 
 ## Files Modified
 
@@ -78,7 +78,7 @@ When devices are first registered, the initial preset mode is published with `re
 ```text
 10/26/25 00:45:46.854 INFO [mqtt_client:1647] > mqtt:hass: Registered fan: Master Bedroom Fan Switch (ID: 103)
 10/26/25 00:45:46.854 INFO [mqtt_client:1689] > mqtt:hass: >>> FAN INITIAL PRESET: Published 'max' (brightness=100) for 'Master Bedroom Fan Switch'
-```
+```text
 
 ### User Testing
 

@@ -51,7 +51,7 @@ cloud_relay:
   debug_packet_logging: false
 ```
 
-### Validated
+### Validated (Phase 2)
 
 - 4 devices connected in RELAY mode
 - SSL connections established to cloud (35.196.85.236:23779)
@@ -126,7 +126,7 @@ cloud_relay:
   debug_packet_logging: true
 ```
 
-### Validated
+### Validated (Phase 4)
 
 - Clear message: "LAN-only mode - cloud forwarding disabled"
 - NO cloud connection attempts

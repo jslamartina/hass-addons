@@ -71,13 +71,13 @@ cync-controller/src/cync_lan/* → hass-addons/src/cync_lan/
 └── metadata/
     ├── __init__.py
     └── model_info.py
-```
+```text
 
 ### Files to Copy
 
 ```text
 cync-controller/pyproject.toml → hass-addons/pyproject.toml (new file)
-```
+```text
 
 ### Phase 2: Consolidate Documentation
 
@@ -90,7 +90,7 @@ cync-controller/docs/ → hass-addons/docs/package/
 ├── packet_structure.md (protocol docs)
 ├── debugging_sessions/ (protocol research)
 └── CLOUD_RELAY.md (implementation details)
-```
+```text
 
 ### Update Existing Docs
 
@@ -120,7 +120,7 @@ COPY ../src /tmp/src
 COPY ../pyproject.toml /tmp/
 WORKDIR /tmp
 RUN pip install --no-cache-dir .
-```
+```text
 
 ### Delete rebuild.sh
 
@@ -133,7 +133,7 @@ RUN pip install --no-cache-dir .
 ```gitignore
 ## Add to hass-addons/.gitignore:
 .cache-cync-controller-python/ # No longer needed
-```
+```text
 
 ### Phase 4: Update Devcontainer Setup
 
@@ -153,7 +153,7 @@ RUN pip install --no-cache-dir .
 }
 
 // Result: Single workspace folder for hass-addons only
-```
+```text
 
 ### Update Python Setup
 
@@ -230,7 +230,7 @@ Use the **[Cync Controller Home Assistant Add-on](https://github.com/jslamartina
 ## For Contributors
 
 Submit pull requests to: https://github.com/jslamartina/hass-addons
-```
+```text
 
 ## Implementation Steps
 

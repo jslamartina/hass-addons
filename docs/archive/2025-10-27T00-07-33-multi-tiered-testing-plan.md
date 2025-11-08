@@ -130,7 +130,7 @@ This document outlines a three-tiered testing approach for the Cync Controller a
 /  Unit Tests  \  Unit Tests (pytest)
 /              \  - Fast, isolated
 /______________\  - High coverage
-```
+```text
 
 ### Guiding Principles
 
@@ -180,7 +180,7 @@ test = [
 
 ## Install
 pip install -e ".[test]"
-```
+```text
 
 ## Directory Structure
 
@@ -206,7 +206,7 @@ cync-controller/
     └── e2e/
         └── ... (covered in Tier 3)
 
-```
+```text
 
 ### Test Categories
 
@@ -267,7 +267,7 @@ class TestPacketParser:
         packet = bytes.fromhex(packet_hex)
         result = parse_cync_packet(packet)
         assert result.packet_type == expected_type
-```
+```text
 
 #### 2. Checksum Tests (`test_packet_checksum.py`)
 
@@ -303,7 +303,7 @@ class TestPacketChecksum:
         packet = bytes()
         checksum = calculate_checksum_between_markers(packet)
         assert checksum == 0
-```
+```text
 
 #### 3. Device Model Tests (`test_devices.py`)
 
@@ -400,7 +400,7 @@ class TestCyncGroup:
 
         # Assert
         mock_tcp.register_callback.assert_called_once()
-```
+```text
 
 #### 4. MQTT Client Tests (`test_mqtt_client.py`)
 
@@ -472,7 +472,7 @@ class TestMQTTClient:
         assert "state_topic" in discovery_msg
         assert "command_topic" in discovery_msg
         assert discovery_msg["suggested_area"] == "Bedroom"
-```
+```text
 
 #### 5. Server Tests (`test_server.py`)
 
@@ -553,7 +553,7 @@ class TestCloudRelayConnection:
             # Assert
             assert connected is True
             mock_connect.assert_called_once()
-```
+```text
 
 #### 6. Cloud API Tests (`test_cloud_api.py`)
 
@@ -591,7 +591,7 @@ pytest tests/unit/ --timeout=10
 
 ## Fast fail on first error
 pytest tests/unit/ -x
-```
+```text
 
 ## Add to `package.json`
 
@@ -603,7 +603,7 @@ pytest tests/unit/ -x
     "test:unit:watch": "cd cync-controller && pytest-watch tests/unit/"
   }
 }
-```
+```text
 
 ---
 
@@ -657,7 +657,7 @@ services:
       dockerfile: Dockerfile
     depends_on:
       - cync-controller
-```
+```text
 
 ### Directory Structure
 
@@ -681,7 +681,7 @@ tests/
     └── test_device_control.py
     └── test_cloud_relay.py
 
-```
+```text
 
 ### Test Categories
 
@@ -759,7 +759,7 @@ class TestMQTTIntegration:
 
         # Assert
         assert state == "ON"
-```
+```text
 
 #### 2. Device Control Integration Tests
 
@@ -828,7 +828,7 @@ class TestDeviceControl:
 
         # Assert
         assert all(state == "OFF" for state in device_states.values())
-```
+```text
 
 #### 3. Cloud Relay Integration Tests
 
@@ -874,7 +874,7 @@ class TestCloudRelay:
         # Assert
         with pytest.raises(asyncio.TimeoutError):
             await capture_cloud_packet(timeout=2)
-```
+```text
 
 ### Running Integration Tests
 
@@ -892,7 +892,7 @@ pytest tests/integration/ -m integration -s
 
 ## Stop test environment
 docker-compose -f tests/integration/docker-compose.test.yml down
-```
+```text
 
 ## Add to `package.json`
 
@@ -904,7 +904,7 @@ docker-compose -f tests/integration/docker-compose.test.yml down
     "test:integration:teardown": "docker-compose -f tests/integration/docker-compose.test.yml down"
   }
 }
-```
+```text
 
 ---
 
@@ -939,7 +939,7 @@ cync-controller/tests/e2e/
 ├── happy-path.spec.ts           # Login and discovery test
 ├── test-click-shadow-div.spec.ts # Shadow DOM interaction tests
 └── test-fan-speed.spec.ts       # Fan speed control tests
-```
+```text
 
 ### Utility Scripts (in `scripts/playwright/`)
 
@@ -1006,7 +1006,7 @@ test.describe("Add-on Configuration", () => {
     // ... similar pattern for MQTT settings
   });
 });
-```
+```text
 
 #### 2. Device Control Tests
 
@@ -1069,7 +1069,7 @@ test.describe("Device Control", () => {
     await page.keyboard.press("Escape");
   });
 });
-```
+```text
 
 #### 3. MQTT Integration Tests
 
@@ -1117,7 +1117,7 @@ test.describe("MQTT Integration", () => {
     await expect(page.getByText("Area: Living Room")).toBeVisible();
   });
 });
-```
+```text
 
 #### 4. Error Handling Tests
 
@@ -1150,7 +1150,7 @@ npx playwright test --ui
 
 ## Debug specific test
 npx playwright test --debug tests/e2e/test_device_control.spec.ts
-```
+```text
 
 ## Add to `package.json`
 
@@ -1163,7 +1163,7 @@ npx playwright test --debug tests/e2e/test_device_control.spec.ts
     "test:e2e:debug": "npx playwright test tests/e2e/ --debug"
   }
 }
-```
+```text
 
 ---
 
@@ -1215,7 +1215,7 @@ def sample_device_data():
         "model": "SMART_SWITCH",
         "capabilities": ["on_off", "brightness"]
     }
-```
+```text
 
 #### Mock Cync Device (`tests/integration/mock-device/mock_cync_device.py`)
 
@@ -1280,7 +1280,7 @@ class MockCyncDevice:
             self.writer.close()
             await self.writer.wait_closed()
         self.connected = False
-```
+```text
 
 ### Test Data Management
 
@@ -1306,7 +1306,7 @@ MESH_INFO_RESPONSE = bytes.fromhex("""
 BROADCAST_STATE = bytes.fromhex("""
     43 00 00 00 1a 6e fc b9 57 0f 01 64 ...
 """)
-```
+```text
 
 ### Device Configurations
 
@@ -1337,7 +1337,7 @@ groups:
     room: "Living Room"
     devices:
       - 0x1234
-```
+```text
 
 ### Helper Scripts
 
@@ -1365,7 +1365,7 @@ echo "Tearing down..."
 docker-compose -f tests/integration/docker-compose.test.yml down
 
 echo "Integration tests complete!"
-```
+```text
 
 ---
 
@@ -1478,7 +1478,7 @@ jobs:
         run: |
           echo "All tests completed!"
           # Add logic to fail if any tests failed
-```
+```text
 
 ### Pre-commit Hooks
 
@@ -1505,7 +1505,7 @@ fi
 
 echo "✅ Pre-commit checks passed"
 exit 0
-```
+```text
 
 ---
 

@@ -131,11 +131,10 @@ Use [ShellCheck](https://www.shellcheck.net/wiki/) for shell script analysis:
   if [ ! -d "/path/to/dir" ]; then
     mkdir -p /path/to/dir
   fi
-
+  
   # ✅ BETTER: mkdir -p is inherently idempotent
   mkdir -p /path/to/dir
-
-```
+  ```
 
 - ✅ **Use conditional operations** - Only perform actions when necessary:
 
@@ -146,6 +145,8 @@ Use [ShellCheck](https://www.shellcheck.net/wiki/) for shell script analysis:
   fi
   ```
 
+````text
+
 - ✅ **Use upsert patterns** - Create or update (don't fail if exists):
 
   ```bash
@@ -155,7 +156,7 @@ Use [ShellCheck](https://www.shellcheck.net/wiki/) for shell script analysis:
 
   # ✅ GOOD: Use || true for non-critical operations
   docker network create my-network 2> /dev/null || true
-  ```
+````
 
 - ✅ **Cleanup stale state** - Remove partial/corrupted state before creating:
 

@@ -296,7 +296,9 @@ def test_device_struct_parsing_invalid_length(device_ops):
 
     # Execute & Assert
     with pytest.raises(DeviceStructParseError) as exc_info:
-        device_ops._parse_device_struct(invalid_struct, correlation_id="12345678-1234-1234-1234-123456789abc")
+        device_ops._parse_device_struct(
+            invalid_struct, correlation_id="12345678-1234-1234-1234-123456789abc"
+        )
 
     assert "Invalid device struct length" in str(exc_info.value)
 
@@ -423,7 +425,9 @@ async def test_parse_0x83_packet_multiple_devices(device_ops):
     packet = MockCyncPacket(packet_type=0x83, payload=payload)
 
     # Execute
-    devices = device_ops._parse_0x83_packet(packet, correlation_id="12345678-1234-1234-1234-123456789abc")
+    devices = device_ops._parse_0x83_packet(
+        packet, correlation_id="12345678-1234-1234-1234-123456789abc"
+    )
 
     # Assert
     assert len(devices) == 2

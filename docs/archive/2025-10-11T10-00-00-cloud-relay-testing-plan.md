@@ -52,7 +52,7 @@ mcp_docker_list_containers(all=True, filters={"name": ["addon_local_cync-control
 
 ## Fetch logs with specific tail count
 mcp_docker_fetch_container_logs("addon_local_cync-controller", tail=100)
-```
+```text
 
 **Python MCP** - Log analysis and packet validation:
 
@@ -68,7 +68,7 @@ expected_fields = ['Type', 'Seq', 'Device', 'RSSI']
 for field in expected_fields:
     count = logs.count(field)
     print(f"{field}: {count} occurrences")
-```
+```text
 
 **Git MCP** - Track test changes:
 
@@ -78,7 +78,7 @@ mcp_git_git_status("/mnt/supervisor/addons/local/cync-controller/")
 
 ## Review changes made during testing
 mcp_git_git_diff_unstaged("/mnt/supervisor/addons/local/cync-controller/", context_lines=3)
-```
+```text
 
 ## Phase 1: Baseline - Normal LAN-only Mode
 
@@ -91,7 +91,7 @@ mcp_git_git_diff_unstaged("/mnt/supervisor/addons/local/cync-controller/", conte
 ```yaml
 cloud_relay:
   enabled: false
-```
+```text
 
 ### Results
 
@@ -119,7 +119,7 @@ cloud_relay:
   enabled: true
   forward_to_cloud: true
   debug_packet_logging: false
-```
+```text
 
 ### Results
 
@@ -148,7 +148,7 @@ cloud_relay:
   enabled: true
   forward_to_cloud: true
   debug_packet_logging: true
-```
+```text
 
 ### Results
 
@@ -185,7 +185,7 @@ cloud_relay:
   enabled: true
   forward_to_cloud: false
   debug_packet_logging: true
-```
+```text
 
 ### Results
 
@@ -380,7 +380,7 @@ for phase in test_results["phases"]:
 passed = sum(1 for p in test_results["phases"] if p["status"] == "Pass")
 total = len(test_results["phases"])
 print(f"\nOverall: {passed}/{total} phases passed ({passed/total*100:.1f}%)")
-```
+```text
 
 ## Rollback Plan
 

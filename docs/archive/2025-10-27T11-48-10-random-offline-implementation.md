@@ -62,7 +62,7 @@ Else:
   - Log: [ONLINE_STATE]
 ↓
 MQTT client updates WITHOUT modifying device.online
-```
+```text
 
 ## Deployment
 

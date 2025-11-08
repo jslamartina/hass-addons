@@ -31,13 +31,13 @@ The MITM proxy requires SSL certificates to decrypt device traffic:
 ```bash
 cd /mnt/supervisor/addons/local/hass-addons/mitm
 ls -la certs/server.pem
-```
+```text
 
 If certificates don't exist, generate them:
 
 ```bash
 ./create_certs.sh
-```
+```text
 
 ### 2. Port Availability
 
@@ -49,13 +49,13 @@ The MITM proxy listens on **port 23779** (same as Cync cloud). You must stop any
 lsof -i :23779
 ## or
 netstat -tlnp | grep 23779
-```
+```text
 
 ## Stop Cync Controller Add-on (if running)
 
 ```bash
 docker stop addon_local_cync-controller
-```
+```text
 
 ### 3. DNS Redirection
 
@@ -76,21 +76,21 @@ See [DNS.md](../docs/user/dns-setup.md) for detailed instructions.
 ```bash
 cd /mnt/supervisor/addons/local/hass-addons/mitm
 ./run_mitm.sh
-```
+```text
 
 ### Method 2: Direct Python Execution
 
 ```bash
 cd /mnt/supervisor/addons/local/hass-addons/mitm
 python3 mitm_with_injection.py 2>&1 | tee mitm_proxy.log
-```
+```text
 
 ### Method 3: Background Execution
 
 ```bash
 cd /mnt/supervisor/addons/local/hass-addons/mitm
 python3 mitm_with_injection.py > mitm_proxy.log 2>&1 &
-```
+```text
 
 ### Expected Startup Output
 
@@ -103,7 +103,7 @@ python3 mitm_with_injection.py > mitm_proxy.log 2>&1 &
 [08:17:57] Forwarding to 35.196.85.236:23779
 [08:17:57] Type 'smart' or 'traditional' and press Enter to inject packet
 
-```
+```text
 
 ---
 
@@ -115,7 +115,7 @@ In a separate terminal:
 
 ```bash
 tail -f /mnt/supervisor/addons/local/hass-addons/mitm/mitm_proxy.log
-```
+```text
 
 ### What to Look For
 
@@ -126,26 +126,26 @@ tail -f /mnt/supervisor/addons/local/hass-addons/mitm/mitm_proxy.log
 [08:18:03] SSL handshake complete with device
 [08:18:03] Connected to cloud server 35.196.85.236:23779
 [08:18:03] Device endpoint: 64 a4 f2 da
-```
+```text
 
 ### Target Device Discovery (Device 160 - Hallway 4way Switch)
 
 ```text
 🎯 FOUND TARGET SWITCH! Device ID: 160 (Hallway 4way Switch)
    Home/User Endpoint: 1b dc da 3e
-```
+```text
 
 ### Injection Capability
 
 ```ini
 [INJECT] This connection (EP:64 57 e7 f2) handles device 160 - injection enabled
-```
+```text
 
 or
 
 ```ini
 [INJECT] This connection (EP:64 a4 f2 da) is not for device 160 - injection disabled
-```
+```text
 
 ### Device Status Updates
 
@@ -155,7 +155,7 @@ or
   Device Statuses (2 devices):
     [160] ON  Bri: 33 Temp: 50 Online:True
     [ 76] OFF Bri:  0 Temp:  0 Online:True
-```
+```text
 
 ---
 
@@ -170,13 +170,13 @@ or
 ```bash
 cd /mnt/supervisor/addons/local/hass-addons/mitm
 ./inject_mode.sh smart
-```
+```text
 
 ### Switch to Traditional (On/Off) Mode
 
 ```bash
 ./inject_mode.sh traditional
-```
+```text
 
 ### Option 2: Direct File Write
 
@@ -184,13 +184,13 @@ cd /mnt/supervisor/addons/local/hass-addons/mitm
 
 ```bash
 echo "smart" > /mnt/supervisor/addons/local/hass-addons/mitm/inject_command.txt
-```
+```text
 
 ### Traditional Mode
 
 ```bash
 echo "traditional" > /mnt/supervisor/addons/local/hass-addons/mitm/inject_command.txt
-```
+```text
 
 ### Option 3: Raw Packet Injection (Advanced)
 
@@ -200,13 +200,13 @@ For testing with exact packet bytes or custom commands. These are the **verified
 
 ```bash
 ./inject_raw.sh '73 00 00 00 1e 1b dc da 3e 00 3a 00 7e 3d 01 00 00 f8 8e 0c 00 3e 01 00 00 00 a0 00 f7 11 02 01 01 85 7e'
-```
+```text
 
 ### Switch to Smart (Dimmable) Mode
 
 ```bash
 ./inject_raw.sh '73 00 00 00 1e 1b dc da 3e 00 29 00 7e 30 01 00 00 f8 8e 0c 00 31 01 00 00 00 a0 00 f7 11 02 01 02 79 7e'
-```
+```text
 
 **Note:** Device ID is `a0 00` (160) and mode byte is the second-to-last byte before the final `7e`:
 
@@ -220,12 +220,14 @@ For testing with exact packet bytes or custom commands. These are the **verified
 ### Successful Injection Log Output
 
 ```markdown
-*** INJECTING SMART MODE PACKET TO DEVICE 160 ***
-    Using counter: 0x15
+**_ INJECTING SMART MODE PACKET TO DEVICE 160 _**
+Using counter: 0x15
 INJECT: 73 00 00 00 1e 1b dc da 3e 00 15 00 7e 10 01 00 00 f8 8e 0c 00 11 01 00 00 00 a0 00 f7 11 02 01 02 59 7e
-### * INJECTION COMPLETE *
+
+### _ INJECTION COMPLETE _
+
 Watching for device response...
-```
+```text
 
 ### Device Response
 
@@ -233,14 +235,14 @@ The device will acknowledge with a 0x7b ACK packet:
 
 ```ini
 [DEV->CLOUD] 0x7b ACK
-```
+```text
 
 Followed by a status update showing the new mode:
 
 ```ini
 [DEV->CLOUD] 0x73 CONFIG_RESPONSE
 [MODE DETECTED] Device 160: SMART/DIMMABLE (0xb0)
-```
+```text
 
 ### Physical Behavior
 
@@ -267,7 +269,7 @@ Followed by a status update showing the new mode:
 
 ```yaml
 OSError: [Errno 98] Address already in use
-```
+```text
 
 ### Solution
 
@@ -276,15 +278,16 @@ OSError: [Errno 98] Address already in use
    ```bash
    lsof -i :23779
    netstat -tlnp | grep 23779
+   ```
 
-```
+```text
 
 1. Stop the Cync Controller add-on:
 
    ```bash
    docker ps --filter "name=addon_local_cync-controller"
    docker stop addon_local_cync-controller
-   ```
+```text
 
 2. Restart the MITM proxy
 
@@ -309,11 +312,11 @@ All devices show "injection disabled"
    # Should return your local IP
    ```
 
-2. Check device power and connectivity
+1. Check device power and connectivity
 
-3. Toggle the physical switch to force reconnection
+2. Toggle the physical switch to force reconnection
 
-4. Review captured endpoints in logs to identify which connection handles device 160
+3. Review captured endpoints in logs to identify which connection handles device 160
 
 ### Problem: Injection Has No Effect
 
@@ -388,7 +391,7 @@ Constant reconnections in logs
 
 ```bash
 Ctrl+C
-```
+```text
 
 ### If running in background
 
@@ -397,13 +400,13 @@ pkill -f mitm_with_injection.py
 ## or
 ps aux | grep mitm_with_injection
 kill <PID>
-```
+```text
 
 ### 2. Restart the Cync Controller Add-on
 
 ```bash
 docker start addon_local_cync-controller
-```
+```text
 
 Or via Home Assistant UI:
 
@@ -447,31 +450,31 @@ To inject commands to different devices, modify the target device ID in `mitm_wi
 
 ```bash
 grep "FOUND TARGET SWITCH" mitm_proxy.log
-```
+```text
 
 ### Track mode changes
 
 ```bash
 grep "MODE DETECTED" mitm_proxy.log
-```
+```text
 
 ### Monitor injections
 
 ```bash
 grep "INJECTING" mitm_proxy.log
-```
+```text
 
 ### Check device status
 
 ```bash
 grep "Device Statuses" mitm_proxy.log
-```
+```text
 
 ### View only errors
 
 ```bash
 grep -i "error" mitm_proxy.log
-```
+```text
 
 ### Common Log Patterns
 
@@ -479,19 +482,19 @@ grep -i "error" mitm_proxy.log
 
 ```sql
 Device connected from → SSL handshake complete → Connected to cloud server
-```
+```text
 
 ### Mode Change Sequence
 
 ```text
 INJECTING SMART MODE → INJECTION COMPLETE → 0x7b ACK → MODE DETECTED: SMART
-```
+```text
 
 ### Keepalive Pattern
 
 ```ini
 [CLOUD->DEV] 0x78 KEEPALIVE (every 5 seconds)
-```
+```text
 
 ---
 
@@ -530,25 +533,25 @@ INJECTING SMART MODE → INJECTION COMPLETE → 0x7b ACK → MODE DETECTED: SMAR
 cd /mnt/supervisor/addons/local/hass-addons/mitm
 docker stop addon_local_cync-controller
 python3 mitm_with_injection.py 2>&1 | tee mitm_proxy.log
-```
+```text
 
 ### Monitor Logs
 
 ```bash
 tail -f mitm_proxy.log
-```
+```text
 
 ### Inject Smart Mode
 
 ```bash
 ./inject_mode.sh smart
-```
+```text
 
 ### Inject Traditional Mode
 
 ```bash
 ./inject_mode.sh traditional
-```
+```text
 
 ### Stop MITM
 
@@ -556,13 +559,13 @@ tail -f mitm_proxy.log
 ## Ctrl+C (if foreground)
 ## or
 pkill -f mitm_with_injection.py
-```
+```text
 
 ### Restore Normal
 
 ```bash
 docker start addon_local_cync-controller
-```
+```text
 
 ---
 

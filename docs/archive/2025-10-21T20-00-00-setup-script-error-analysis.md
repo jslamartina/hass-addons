@@ -19,7 +19,7 @@ response=$(curl -sf -w "\n%{http_code}" -X POST \
   "$HA_URL/api/onboarding/core_config" \
   -H "Content-Type: application/json" \
   -d "{}" 2>&1)
-```
+```text
 
 ### Problem
 
@@ -46,7 +46,7 @@ start_emqx() {
     return 1 # ← Script exits here with set -e
   fi
 }
-```
+```text
 
 ### Problem
 
@@ -85,14 +85,14 @@ start_emqx() {
 [0
 31m[setup-fresh-ha.sh][0m Failed to start EMQX
 + return 1
-```
+```text
 
 Verification:
 
 ```bash
 $ ha addons info a0d7b954_emqx --raw-json | jq '.data.state'
 "started" # ← Already running!
-```
+```text
 
 ## Solutions Implemented
 
@@ -136,7 +136,7 @@ complete_onboarding() {
     return 0
   fi
 }
-```
+```text
 
 ### Fix 2: Check addon state before starting
 
@@ -169,7 +169,7 @@ start_emqx() {
     return 1
   fi
 }
-```
+```text
 
 ### Fix 3: Fix shellcheck warning SC2155
 
@@ -179,14 +179,14 @@ start_emqx() {
 
 ```bash
 local body=$(echo "$response" | sed '$d')
-```
+```text
 
 ### After
 
 ```bash
 local body
 body=$(echo "$response" | sed '$d')
-```
+```text
 
 ## Test Results
 
@@ -198,7 +198,7 @@ $ ./setup-fresh-ha.sh
 [setup-fresh-ha.sh] Starting EMQX add-on...
 [setup-fresh-ha.sh] Failed to start EMQX
 ## Script exits with code 1
-```
+```text
 
 ## After fix
 
@@ -212,7 +212,7 @@ $ ./setup-fresh-ha.sh
 [setup-fresh-ha.sh] ✅ Cync Controller installed successfully
 ## ... continues successfully ...
 [setup-fresh-ha.sh] ✅ Setup completed successfully!
-```
+```text
 
 ## Key Takeaways
 
@@ -238,4 +238,4 @@ shellcheck scripts/setup-fresh-ha.sh
 ## Check addon states
 ha addons info a0d7b954_emqx --raw-json | jq '.data.state'
 ha addons info local_cync-controller --raw-json | jq '.data.state'
-```
+```text

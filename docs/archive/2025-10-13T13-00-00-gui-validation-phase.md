@@ -345,7 +345,7 @@ Result: PASS / FAIL / PARTIAL
 Notes: [observations]
 Screenshots: [if applicable]
 Logs: [relevant log excerpts]
-```
+```text
 
 ---
 

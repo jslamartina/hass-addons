@@ -42,8 +42,14 @@ def get_api_key() -> str:
     print("  - Not set in environment", file=sys.stderr)
     print(f"  - Not found in {package_env}", file=sys.stderr)
     print("", file=sys.stderr)
-    print("To set up credentials, copy .env.example to .env and add your API key:", file=sys.stderr)
-    print(f"  cp {os.path.join(script_dir, '.env.example')} {package_env}", file=sys.stderr)
+    print(
+        "To set up credentials, copy .env.example to .env and add your API key:",
+        file=sys.stderr,
+    )
+    print(
+        f"  cp {os.path.join(script_dir, '.env.example')} {package_env}",
+        file=sys.stderr,
+    )
     sys.exit(1)
 
 
