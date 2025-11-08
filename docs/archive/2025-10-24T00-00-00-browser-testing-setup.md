@@ -87,13 +87,15 @@ A comprehensive browser testing framework for AI agents to autonomously test and
 
 ```typescript
 // 1. Take snapshot to understand structure
-mcp_cursor - playwright_browser_snapshot();
+await mcp_cursor_browser_extension_browser_snapshot();
 
 // 2. Take screenshot for visual verification
-mcp_cursor - playwright_browser_take_screenshot({ filename: "state.png" });
+await mcp_cursor_browser_extension_browser_take_screenshot({
+  filename: "state.png",
+});
 
 // 3. Check console for errors
-mcp_cursor - playwright_browser_console_messages();
+await mcp_cursor_browser_extension_browser_console_messages();
 ```
 
 #### Test Add-on Configuration
