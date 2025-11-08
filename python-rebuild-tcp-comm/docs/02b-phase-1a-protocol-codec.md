@@ -390,6 +390,155 @@ class PacketFramer:
 
 ## Implementation Plan
 
+### Step 0: MITM Plugin Architecture (Foundation)
+
+Build plugin infrastructure that allows Phase 1a codec to run as an observer in MITM proxy.
+
+#### Architecture
+
+- MITM proxy remains standalone in `mitm/` directory
+- Phase 1a codec components live in `src/protocol/` package
+- Plugin adapter bridges MITM events to Phase 1a function calls
+- No networking between plugin and codec (in-process function calls)
+
+#### Components to Create
+
+**1. Observer Interface** (`mitm/interfaces/packet_observer.py`):
+
+```python
+from typing import Protocol
+from enum import Enum
+
+class PacketDirection(Enum):
+    DEVICE_TO_CLOUD = "device_to_cloud"
+    CLOUD_TO_DEVICE = "cloud_to_device"
+
+class PacketObserver(Protocol):
+    """Type protocol for MITM packet observers.
+
+    Enforced by mypy at type-check time. No inheritance required.
+    """
+
+    def on_packet_received(
+        self, direction: PacketDirection, data: bytes, connection_id: int
+    ) -> None:
+        """Called when packet received."""
+        ...
+
+    def on_connection_established(self, connection_id: int) -> None:
+        """Called when connection established."""
+        ...
+
+    def on_connection_closed(self, connection_id: int) -> None:
+        """Called when connection closed."""
+        ...
+```
+
+**2. Refactor MITMProxy** (`mitm/mitm_proxy.py`):
+
+Add observer pattern to existing `MITMProxy` class:
+
+```python
+class MITMProxy:
+    def __init__(self, ...):
+        # ... existing init ...
+        self.observers: list[PacketObserver] = []
+
+    def register_observer(self, observer: PacketObserver) -> None:
+        """Register plugin to receive packet notifications."""
+        self.observers.append(observer)
+
+    async def _handle_device_to_cloud(self, data: bytes, conn_id: int):
+        # ... existing forward logic ...
+
+        # Notify observers (in-process function calls)
+        for observer in self.observers:
+            try:
+                observer.on_packet_received(
+                    PacketDirection.DEVICE_TO_CLOUD, data, conn_id
+                )
+            except Exception as e:
+                # Observer failures don't break proxy
+                print(f"Observer error: {e}")
+```
+
+**3. Codec Validator Plugin Stub** (`mitm/plugins/mitm_plugin_codec_validator.py`):
+
+Create stub that will wrap Phase 1a components (implemented after codec is built):
+
+```python
+from mitm.interfaces.packet_observer import PacketObserver, PacketDirection
+import logging
+
+logger = logging.getLogger(__name__)
+
+class CodecValidatorPlugin:
+    """Phase 1a codec validator plugin.
+
+    Will wrap CyncProtocol and PacketFramer once they're implemented.
+    For now, just logs packet events.
+    """
+
+    def __init__(self) -> None:
+        self.framers: dict[int, Any] = {}  # Will use PacketFramer
+        logger.info("CodecValidatorPlugin initialized (stub)")
+
+    def on_packet_received(
+        self, direction: PacketDirection, data: bytes, connection_id: int
+    ) -> None:
+        """Validate packet with Phase 1a codec."""
+        logger.info(
+            f"Packet received: {direction.value}, {len(data)} bytes, conn {connection_id}"
+        )
+        # TODO: After Step 6, add:
+        # packets = self.framers[connection_id].feed(data)
+        # for packet in packets:
+        #     decoded = self.protocol.decode_packet(packet)
+        #     logger.info(f"✅ Validated: {hex(decoded.packet_type)}")
+
+    def on_connection_established(self, connection_id: int) -> None:
+        logger.info(f"Connection established: {connection_id}")
+        # TODO: self.framers[connection_id] = PacketFramer()
+
+    def on_connection_closed(self, connection_id: int) -> None:
+        logger.info(f"Connection closed: {connection_id}")
+        self.framers.pop(connection_id, None)
+```
+
+**4. Main Entry Point** (`mitm/main.py`):
+
+```python
+import argparse
+from mitm.mitm_proxy import MITMProxy
+from mitm.plugins.mitm_plugin_codec_validator import CodecValidatorPlugin
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--enable-codec-validation", action="store_true")
+    # ... existing args ...
+    args = parser.parse_args()
+
+    proxy = MITMProxy(
+        listen_port=args.listen_port,
+        upstream_host=args.upstream_host,
+        upstream_port=args.upstream_port
+    )
+
+    if args.enable_codec_validation:
+        proxy.register_observer(CodecValidatorPlugin())
+
+    proxy.run()
+```
+
+#### Success Criteria
+
+- [ ] `PacketObserver` Protocol interface defined
+- [ ] `MITMProxy` refactored with observer pattern
+- [ ] `CodecValidatorPlugin` stub created
+- [ ] Plugin can be enabled via CLI flag
+- [ ] mypy validates Protocol implementation
+- [ ] Zero impact on existing MITM packet capture functionality
+
 ### Step 1: Packet Type Definitions
 
 - Define packet type constants
@@ -779,7 +928,7 @@ class ReliableTransport:
 - Device behavior doesn't constrain controller generation strategy
 - Controller acts independently when sending commands
 
-### Step 5.6: Implement PacketFramer
+### Step 6: Implement PacketFramer
 
 - Create `PacketFramer` class after decoder is complete
 - Implements buffering for incomplete packets across multiple TCP reads
@@ -790,75 +939,70 @@ class ReliableTransport:
   - Multi-packet extraction (single read contains 2+ complete packets)
   - Empty buffer, exact boundaries, length overflow scenarios
 
-### Step 6: Create New Toggler
+### Step 7: Complete Codec Validator Plugin
 
-**Phase 1a Scope** (minimal viable test using codec directly):
+Now that Phase 1a codec components are implemented, complete the plugin stub from Step 0.
 
-- Create `harness/toggler_v2.py` using real Cync protocol
-- **Phase 1a Implementation** (direct codec usage):
-  - Uses `CyncProtocol.encode()` and `CyncProtocol.decode()` directly
-  - Manual handshake: encode 0x23, send, recv 0x28, decode
-  - Manual toggle: encode 0x73, send, recv 0x7B, decode
-  - Simple timeout (5s), fail immediately if no response
-  - NO retry logic (fail fast on first timeout)
-  - NO deduplication (not needed for single command test)
-  - NO heartbeat keepalive (short-lived test script)
-  - Log success/failure with timing metrics
-
-**Phase 1b Refactoring** (will replace manual logic):
-
-Once Phase 1b `ReliableTransport` is implemented, `toggler_v2.py` will be refactored to:
-
-- Replace manual handshake with `ConnectionManager.connect()`
-- Replace manual send/recv with `ReliableTransport.send_reliable()`
-- Inherit automatic retries from ReliableTransport
-- Inherit deduplication from ReliableTransport
-- Inherit heartbeat from ConnectionManager
-
-**Example Progression**:
+**Update** (`mitm/plugins/mitm_plugin_codec_validator.py`):
 
 ```python
-## Phase 1a version (direct codec):
-protocol = CyncProtocol()
-handshake_packet = protocol.encode_handshake(endpoint, auth_code)
-writer.write(handshake_packet)
-await writer.drain()
-response = await asyncio.wait_for(reader.read(4096), timeout=5.0)
-ack_packet = protocol.decode_packet(response)
-assert ack_packet.packet_type == 0x28
+from mitm.interfaces.packet_observer import PacketObserver, PacketDirection
+from src.protocol.cync_protocol import CyncProtocol
+from src.protocol.packet_framer import PacketFramer
+from src.protocol.exceptions import PacketDecodeError, PacketFramingError
+import logging
 
-## Phase 1b version (ReliableTransport wrapper):
-transport = ReliableTransport(conn, protocol)
-await transport.connect()  # Handles handshake + retries
-result = await transport.send_reliable(toggle_payload)  # Handles ACK + retries
-assert result.success
+logger = logging.getLogger(__name__)
+
+class CodecValidatorPlugin:
+    """Phase 1a codec validator - validates packets using real codec."""
+
+    def __init__(self) -> None:
+        self.protocol = CyncProtocol()
+        self.framers: dict[int, PacketFramer] = {}
+
+    def on_packet_received(
+        self, direction: PacketDirection, data: bytes, connection_id: int
+    ) -> None:
+        if connection_id not in self.framers:
+            self.framers[connection_id] = PacketFramer()
+
+        try:
+            packets = self.framers[connection_id].feed(data)
+            for packet in packets:
+                decoded = self.protocol.decode_packet(packet)
+                logger.info(
+                    f"✅ Phase 1a validated",
+                    extra={
+                        "direction": direction.value,
+                        "type": hex(decoded.packet_type),
+                        "length": decoded.length
+                    }
+                )
+        except (PacketDecodeError, PacketFramingError) as e:
+            logger.error(f"❌ Phase 1a validation failed: {e}")
+
+    def on_connection_established(self, connection_id: int) -> None:
+        self.framers[connection_id] = PacketFramer()
+
+    def on_connection_closed(self, connection_id: int) -> None:
+        self.framers.pop(connection_id, None)
 ```
 
-**Phase 1a vs 1b Boundary**:
+**Testing**:
 
-- **Phase 1a**: Codec works (can encode/decode packets correctly)
-- **Phase 1b**: Reliability works (automatic retries, deduplication, reconnection)
-- **toggler_v2.py**: Simple test harness that evolves with each phase
+1. Start MITM with validation enabled:
+   ```bash
+   python mitm/main.py --upstream-host homeassistant.local --enable-codec-validation
+   ```
 
-**Connection Target**:
+2. Use Home Assistant UI to trigger commands (manual user intervention required)
 
-- Default: localhost:9000 (for Phase 1d simulator)
-- Optional: Real device IP via CLI argument
+3. Watch logs for validation results:
+   - ✅ Successful decode: "Phase 1a validated type=0x73"
+   - ❌ Failed decode: "Phase 1a validation failed: invalid checksum"
 
-**Legacy Comparison**:
-
-- `toggler.py` = Phase 0 test harness (custom 0xF00D protocol) - UNCHANGED
-- `toggler_v2.py` = Phase 1a+ with real Cync protocol - EVOLVING
-
-**Example Usage**:
-
-```bash
-## Test with simulator (Phase 1d)
-python harness/toggler_v2.py --host localhost --port 9000
-
-## Test with real device
-python harness/toggler_v2.py --host 192.168.1.100 --port 23779
-```
+**Note**: This replaces `toggler_v2.py`. MITM plugin IS the integration test harness.
 
 ---
 
@@ -871,7 +1015,10 @@ python harness/toggler_v2.py --host 192.168.1.100 --port 23779
 - [ ] `src/protocol/packet_framer.py` (80-100 lines)
 - [ ] `src/protocol/checksum.py` (30-40 lines)
 - [ ] 15+ unit tests in `tests/unit/protocol/`
-- [ ] New `harness/toggler_v2.py` using real Cync protocol
+- [ ] `mitm/interfaces/packet_observer.py` (~50 lines)
+- [ ] `mitm/plugins/mitm_plugin_codec_validator.py` (~80 lines)
+- [ ] `mitm/main.py` entry point (~50 lines)
+- [ ] Updated `mitm/mitm_proxy.py` with observer pattern
 
 ### Documentation
 
@@ -980,6 +1127,38 @@ def test_decode_real_handshake():
     assert packet.length == 26
     # Validate endpoint extraction...
 ```
+
+### Integration Testing with MITM Plugin
+
+**Manual validation against real traffic**:
+
+1. Start MITM with codec validation:
+   ```bash
+   python mitm/main.py \
+     --upstream-host homeassistant.local \
+     --upstream-port 23779 \
+     --enable-codec-validation
+   ```
+
+2. Trigger commands via Home Assistant UI:
+   - Toggle lights on/off
+   - Change brightness
+   - Change colors
+   - Various device types
+
+3. Monitor logs for validation results:
+   - All packets should decode successfully (✅)
+   - Any decode failures indicate codec bugs (❌)
+
+4. Compare with file captures for debugging:
+   - MITM still writes to `mitm/captures/`
+   - Cross-reference failed packets with hex dumps
+
+**Validation criteria**:
+- ✅ 100% of HA-generated commands decode successfully
+- ✅ 100% of device responses decode successfully
+- ✅ All packet types (0x23, 0x28, 0x73, 0x7B, etc.) handled
+- ✅ No checksum validation failures on real traffic
 
 ### Security Tests (Buffer Overflow Protection)
 

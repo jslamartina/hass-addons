@@ -1,0 +1,468 @@
+# Mermaid Diagrams Guide
+
+## When to Use Mermaid Diagrams
+
+Create Mermaid diagrams when visual explanations enhance understanding:
+
+- **Architecture**: System components, layers, modules
+- **Flows**: Processes, algorithms, decision trees
+- **Interactions**: Message sequences, API calls, protocols
+- **State Machines**: FSM transitions, lifecycle states
+- **Timelines**: Project schedules, releases, dependencies
+- **Data Models**: Entity relationships, schemas
+
+## Diagram Type Selection
+
+| Type      | Use Case                  | Best For                       |
+| --------- | ------------------------- | ------------------------------ |
+| Flowchart | Process flows, algorithms | Control flow, decision logic   |
+| Sequence  | Interactions, protocols   | Message passing, API calls     |
+| Class     | Object structure          | Architecture, inheritance      |
+| State     | State machines, lifecycle | FSM, status transitions        |
+| Gantt     | Timelines, schedules      | Project planning, releases     |
+| ER        | Data models               | Database design, relationships |
+| Git Graph | Version control           | Branch strategy, releases      |
+
+## Flowchart Diagrams
+
+### Use Case
+
+Process flows, control logic, system architecture, algorithm steps.
+
+### Basic Syntax
+
+```mermaid
+graph TD
+    Start[Start] --> Decision{Condition?}
+    Decision -->|Yes| Action1[Do Action]
+    Decision -->|No| Action2[Skip]
+    Action1 --> End[End]
+    Action2 --> End
+```
+
+### Direction Options
+
+- `TD` - Top to bottom (default)
+- `LR` - Left to right
+- `BT` - Bottom to top
+- `RL` - Right to left
+
+### Node Shapes
+
+```mermaid
+graph LR
+    A[Rectangle]
+    B(Rounded)
+    C([Stadium])
+    D[[Subroutine]]
+    E[(Database)]
+    F((Circle))
+    G{Diamond}
+    H{{Hexagon}}
+```
+
+### Complete Example
+
+```mermaid
+graph TD
+    subgraph Client["Client Layer"]
+        App[Application Code]
+    end
+
+    subgraph Transport["Transport Layer"]
+        Conn[Connection Manager]
+        Proto[Protocol Codec]
+    end
+
+    App -->|send_command| Conn
+    Conn -->|encode| Proto
+    Proto -->|TCP| Network[Network Socket]
+
+    classDef clientStyle fill:#e1f5ff,stroke:#0288d1
+    classDef transportStyle fill:#f3e5f5,stroke:#7b1fa2
+
+    class App clientStyle
+    class Conn,Proto transportStyle
+```
+
+## Sequence Diagrams
+
+### Use Case
+
+Message flows, API interactions, protocol handshakes, async operations.
+
+### Basic Syntax
+
+```mermaid
+sequenceDiagram
+    participant A as Client
+    participant B as Server
+
+    A->>B: Request
+    B-->>A: Response
+```
+
+### Arrow Types
+
+- `->` Solid line
+- `-->` Dashed line
+- `->>` Solid arrow
+- `-->>` Dashed arrow
+- `-x` Cross end (fail)
+- `-)` Async message
+
+### Complete Example
+
+```mermaid
+sequenceDiagram
+    participant Client
+    participant Relay as Cloud Relay
+    participant Device
+
+    Note over Client,Device: Handshake Sequence
+
+    Client->>Relay: Connect (0x23)
+    activate Relay
+    Relay->>Device: Forward 0x23
+    activate Device
+    Device-->>Relay: ACK (0x28)
+    deactivate Device
+    Relay-->>Client: Forward 0x28
+    deactivate Relay
+
+    Note over Client,Device: Command Sequence
+
+    Client->>Relay: Toggle ON (0x73)
+    Relay->>Device: Forward 0x73
+    Device-->>Relay: ACK (0x7B)
+    Relay-->>Client: Forward 0x7B
+
+    Note right of Device: Device state<br/>changed to ON
+```
+
+## Class Diagrams
+
+### Use Case
+
+Object-oriented architecture, inheritance, composition, module structure.
+
+### Basic Syntax
+
+```mermaid
+classDiagram
+    class Animal {
+        +String name
+        +int age
+        +makeSound()
+    }
+
+    class Dog {
+        +String breed
+        +bark()
+    }
+
+    Animal <|-- Dog
+```
+
+### Relationships
+
+- `<|--` Inheritance
+- `*--` Composition
+- `o--` Aggregation
+- `-->` Association
+- `..>` Dependency
+- `..|>` Realization
+
+### Complete Example
+
+```mermaid
+classDiagram
+    class TCPConnection {
+        -StreamReader reader
+        -StreamWriter writer
+        +connect() bool
+        +send(bytes) None
+        +recv(int) bytes
+        +close() None
+    }
+
+    class ReliableTransport {
+        -TCPConnection conn
+        -LRUCache cache
+        +send_reliable(bytes) bool
+        +recv_reliable() bytes
+    }
+
+    class ConnectionManager {
+        -RetryPolicy retry
+        +handshake() bool
+        +heartbeat() None
+        +reconnect() bool
+    }
+
+    ReliableTransport *-- TCPConnection
+    ReliableTransport *-- LRUCache
+    ConnectionManager --> ReliableTransport
+    ConnectionManager *-- RetryPolicy
+```
+
+## State Diagrams
+
+### Use Case
+
+Finite state machines, lifecycle management, connection states.
+
+### Basic Syntax
+
+```mermaid
+stateDiagram-v2
+    [*] --> Idle
+    Idle --> Connecting: connect()
+    Connecting --> Connected: success
+    Connecting --> Failed: error
+    Connected --> [*]: disconnect()
+```
+
+### Complete Example
+
+```mermaid
+stateDiagram-v2
+    [*] --> Disconnected
+
+    Disconnected --> Connecting: connect()
+
+    Connecting --> Handshaking: TCP connected
+    Connecting --> Disconnected: connection failed
+
+    Handshaking --> Connected: 0x23 → 0x28
+    Handshaking --> Disconnected: handshake timeout
+
+    Connected --> Heartbeating: periodic check
+    Connected --> Sending: send_command()
+    Connected --> Receiving: data available
+
+    Heartbeating --> Connected: 0xD3 → 0xD8
+    Heartbeating --> Reconnecting: heartbeat failed
+
+    Sending --> Connected: ACK received
+    Sending --> Reconnecting: timeout
+
+    Receiving --> Connected: data processed
+
+    Reconnecting --> Connecting: retry
+    Reconnecting --> Disconnected: max retries
+
+    Connected --> Disconnected: close()
+    Disconnected --> [*]
+```
+
+## Gantt Charts
+
+### Use Case
+
+Project timelines, release schedules, phase planning.
+
+### Basic Syntax
+
+```mermaid
+gantt
+    title Project Schedule
+    dateFormat YYYY-MM-DD
+
+    section Phase 1
+    Task 1 :a1, 2024-01-01, 30d
+    Task 2 :after a1, 20d
+
+    section Phase 2
+    Task 3 :2024-02-20, 15d
+```
+
+### Complete Example
+
+```mermaid
+gantt
+    title TCP Rebuild Project Phases
+    dateFormat YYYY-MM-DD
+
+    section Phase 1a
+    Protocol Codec :done, p1a, 2024-10-01, 2024-10-15
+    Packet Framing :done, 2024-10-08, 2024-10-15
+
+    section Phase 1b
+    Reliable Transport :active, p1b, 2024-10-16, 2024-10-30
+    ACK Handling :2024-10-23, 7d
+    Retry Logic :2024-10-23, 7d
+
+    section Phase 1c
+    Backpressure Queue :crit, 2024-10-31, 2024-11-10
+    Policy Implementation :2024-11-01, 9d
+
+    section Phase 1d
+    Testing Infrastructure :2024-11-11, 2024-11-20
+    Integration Tests :milestone, 2024-11-20, 0d
+```
+
+## Entity Relationship Diagrams
+
+### Use Case
+
+Database schemas, data models, entity relationships.
+
+### Basic Syntax
+
+```mermaid
+erDiagram
+    CUSTOMER ||--o{ ORDER : places
+    ORDER ||--|{ LINE-ITEM : contains
+    PRODUCT ||--o{ LINE-ITEM : "ordered in"
+```
+
+### Relationships
+
+- `||--||` One to one
+- `||--o{` One to many
+- `}o--o{` Many to many
+
+### Complete Example
+
+```mermaid
+erDiagram
+    DEVICE ||--o{ COMMAND : sends
+    DEVICE {
+        string device_id PK
+        string endpoint
+        int port
+        bool connected
+    }
+
+    COMMAND ||--|| ACK : expects
+    COMMAND {
+        int msg_id PK
+        bytes packet_data
+        timestamp sent_at
+        int retry_count
+    }
+
+    ACK {
+        int msg_id FK
+        bytes response_data
+        timestamp received_at
+    }
+
+    DEVICE ||--o{ METRIC : generates
+    METRIC {
+        string metric_name
+        float value
+        timestamp recorded_at
+    }
+```
+
+## Git Graph
+
+### Use Case
+
+Branch strategies, release flows, version history.
+
+### Basic Syntax
+
+```mermaid
+gitGraph
+    commit
+    branch develop
+    checkout develop
+    commit
+    checkout main
+    merge develop
+```
+
+### Complete Example
+
+```mermaid
+gitGraph
+    commit id: "Initial"
+    branch develop
+    checkout develop
+    commit id: "Phase 1a"
+    commit id: "Protocol codec"
+
+    branch feature/reliable-transport
+    checkout feature/reliable-transport
+    commit id: "Add retry logic"
+    commit id: "Add ACK handling"
+
+    checkout develop
+    merge feature/reliable-transport
+    commit id: "Phase 1b complete"
+
+    checkout main
+    merge develop tag: "v0.2.0"
+
+    checkout develop
+    commit id: "Phase 1c start"
+```
+
+## Best Practices
+
+### File Naming
+
+Save diagrams as `.mermaid` files:
+
+- `architecture.mermaid` - System architecture
+- `protocol-flow.mermaid` - Protocol sequences
+- `state-machine.mermaid` - State transitions
+- `release-timeline.mermaid` - Release schedule
+
+### File Location
+
+Store in docs directory near related content:
+
+- `/docs/living/` - Living documentation
+- `/docs/architecture/` - Architecture diagrams
+- `/docs/protocols/` - Protocol flows
+
+### Frontmatter Configuration
+
+Add YAML frontmatter for layout control:
+
+```yaml
+---
+config:
+  layout: elk # Better for complex graphs
+---
+graph TD
+...
+```
+
+### Complexity Limits
+
+- Max 20-30 nodes per diagram
+- Split large diagrams into multiple views
+- Use subgraphs to organize sections
+
+### Accessibility
+
+- Use descriptive node labels
+- Add notes for context
+- Include legend when using custom styling
+
+### Styling
+
+Apply consistent styles with CSS classes:
+
+```mermaid
+classDef primary fill:#e1f5ff,stroke:#0288d1
+classDef secondary fill:#f3e5f5,stroke:#7b1fa2
+class NodeA,NodeB primary
+```
+
+## Real Example Reference
+
+See working example: `python-rebuild-tcp-comm/docs/living/architecture.mermaid`
+
+This diagram shows:
+
+- Multi-layer architecture with subgraphs
+- Clear visual hierarchy with colors
+- Mix of solid/dashed lines for different flows
+- Annotations with notes
+- Custom styling for node types

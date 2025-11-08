@@ -31,7 +31,7 @@ TIER 0: INSTANT RECOGNITION
 
 TIER 1: ALWAYS APPLY - EXECUTIVE RULES
 
-**12 CRITICAL RULES (Must Follow)**:
+**13 CRITICAL RULES (Must Follow)**:
 
 1. **Development Loop**: Edit → Rebuild → Verify. STOP if: env error, broken tooling, tool returns error/500/timeout, stale docs, misunderstood requirement. **DON'T WORK AROUND ISSUES** - raise to user immediately.
 
@@ -56,6 +56,8 @@ TIER 1: ALWAYS APPLY - EXECUTIVE RULES
 11. **Web Search Only via Brave MCP**: NEVER use built-in `web_search` tool (broken). ALWAYS use `mcp_brave-search_brave_web_search` or specialized tools (`brave_news_search`, `brave_video_search`, `brave_image_search`). Autosearch when uncertain (per memory [[memory:9966253]]). See web-search-brave.mdc.
 
 12. **AI Grounding for Reliable Answers**: WHEN need synthesized, factual answers (not raw search results) → use Brave AI Grounding CLI tool via `run_terminal_cmd`. Responses are anchored in verifiable web sources, reducing hallucinations. Use `--research` flag for complex queries requiring multiple searches. Citations included by default with formatted footer. Prefer over raw search when need: authoritative answers, fact-checking, research with citations, or context about topics. Use regular Brave Search for: finding specific pages, current events, or raw result lists.
+
+13. **Visual Diagrams**: WHEN explaining architecture, flows, processes, or relationships → create Mermaid.js diagrams. Save as `.mermaid` files in appropriate docs directory. Use flowchart (processes), sequence (interactions), class (structure), state (FSM), gantt (timelines), or ER diagrams (data models). See mermaid-diagrams.mdc for templates.
 
 ---
 
@@ -140,6 +142,7 @@ TIER 3: AVAILABLE REFERENCES (On Demand)
 - documentation-standards.mdc: Concise docs, anti-verbosity rules, approval workflow
 - working-files-convention.mdc: Timestamp format, directory structure, cleanup
 - documentation-archiving.mdc: Where and how to document completed work
+- mermaid-diagrams.mdc: Visual diagram patterns, templates, best practices
 
 **Development Patterns**:
 
