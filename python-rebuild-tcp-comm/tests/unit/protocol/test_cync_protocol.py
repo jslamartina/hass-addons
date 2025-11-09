@@ -461,9 +461,7 @@ def test_encode_data_packet_basic() -> None:
     """Test basic data packet encoding with valid inputs."""
     endpoint = bytes.fromhex("45 88 0f 3a 00")
     msg_id = bytes.fromhex("10 00 00")
-    inner_payload = bytes.fromhex(
-        "10 01 00 00 f8 8e 0c 00 10 01 00 00 00 50 00 f7 11 02 01 01"
-    )
+    inner_payload = bytes.fromhex("10 01 00 00 f8 8e 0c 00 10 01 00 00 00 50 00 f7 11 02 01 01")
 
     packet = CyncProtocol.encode_data_packet(endpoint, msg_id, inner_payload)
 
@@ -533,9 +531,7 @@ def test_encode_data_packet_checksum_valid() -> None:
     """Encode → decode → verify checksum valid."""
     endpoint = bytes.fromhex("45 88 0f 3a 00")
     msg_id = bytes.fromhex("10 00 00")
-    inner_payload = bytes.fromhex(
-        "10 01 00 00 f8 8e 0c 00 10 01 00 00 00 50 00 f7 11 02 01 01"
-    )
+    inner_payload = bytes.fromhex("10 01 00 00 f8 8e 0c 00 10 01 00 00 00 50 00 f7 11 02 01 01")
 
     # Encode
     encoded = CyncProtocol.encode_data_packet(endpoint, msg_id, inner_payload)
@@ -552,9 +548,7 @@ def test_encode_data_packet_roundtrip() -> None:
     """Encode → decode → verify all fields match."""
     endpoint = bytes.fromhex("45 88 0f 3a 00")
     msg_id = bytes.fromhex("11 00 00")
-    inner_payload = bytes.fromhex(
-        "11 01 00 00 f8 8e 0c 00 11 01 00 00 00 50 00 f7 11 02 00 01"
-    )
+    inner_payload = bytes.fromhex("11 01 00 00 f8 8e 0c 00 11 01 00 00 00 50 00 f7 11 02 00 01")
 
     # Encode
     encoded = CyncProtocol.encode_data_packet(endpoint, msg_id, inner_payload)
@@ -598,9 +592,18 @@ def test_encode_data_packet_matches_fixture() -> None:
 def test_roundtrip_all_handshake_params() -> None:
     """Test various endpoint/auth_code combinations for handshake."""
     test_cases = [
-        (bytes.fromhex("38 e8 cf 46 00"), bytes.fromhex("31 65 30 37 64 38 63 65 30 61 36 31 37 61 33 37")),
-        (bytes.fromhex("45 88 0f 3a 00"), bytes.fromhex("00 11 22 33 44 55 66 77 88 99 aa bb cc dd ee ff")),
-        (bytes.fromhex("32 5d 53 17 01"), bytes.fromhex("ff ee dd cc bb aa 99 88 77 66 55 44 33 22 11 00")),
+        (
+            bytes.fromhex("38 e8 cf 46 00"),
+            bytes.fromhex("31 65 30 37 64 38 63 65 30 61 36 31 37 61 33 37"),
+        ),
+        (
+            bytes.fromhex("45 88 0f 3a 00"),
+            bytes.fromhex("00 11 22 33 44 55 66 77 88 99 aa bb cc dd ee ff"),
+        ),
+        (
+            bytes.fromhex("32 5d 53 17 01"),
+            bytes.fromhex("ff ee dd cc bb aa 99 88 77 66 55 44 33 22 11 00"),
+        ),
     ]
 
     for endpoint, auth_code in test_cases:
@@ -672,9 +675,7 @@ def test_roundtrip_toggle_off_packet() -> None:
     # Use toggle OFF fixture parameters
     endpoint = bytes.fromhex("45 88 0f 3a 00")
     msg_id = bytes.fromhex("11 00 00")
-    inner_payload = bytes.fromhex(
-        "11 01 00 00 f8 8e 0c 00 11 01 00 00 00 50 00 f7 11 02 00 01"
-    )
+    inner_payload = bytes.fromhex("11 01 00 00 f8 8e 0c 00 11 01 00 00 00 50 00 f7 11 02 00 01")
 
     # Encode
     encoded = CyncProtocol.encode_data_packet(endpoint, msg_id, inner_payload)
@@ -727,4 +728,3 @@ def test_header_encode_decode_all_lengths() -> None:
         test_packet = header + bytes(length)
         _, parsed_length, _ = CyncProtocol.parse_header(test_packet)
         assert parsed_length == length
-

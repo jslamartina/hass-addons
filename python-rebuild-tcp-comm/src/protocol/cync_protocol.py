@@ -157,9 +157,7 @@ class CyncProtocol:
         # Validate packet length matches header
         expected_total = 5 + length
         if len(data) < expected_total:
-            raise ValueError(
-                f"Packet length mismatch: expected {expected_total}, got {len(data)}"
-            )
+            raise ValueError(f"Packet length mismatch: expected {expected_total}, got {len(data)}")
 
         # Extract payload
         payload = data[5 : 5 + length]
@@ -170,9 +168,7 @@ class CyncProtocol:
 
         # Base packet type for all others
         logger.debug("Decoded base packet: type=0x%02x", packet_type)
-        return CyncPacket(
-            packet_type=packet_type, length=length, payload=payload, raw=data
-        )
+        return CyncPacket(packet_type=packet_type, length=length, payload=payload, raw=data)
 
     @staticmethod
     def _decode_data_packet(
@@ -355,4 +351,3 @@ class CyncProtocol:
         )
 
         return bytes(full_packet)
-
