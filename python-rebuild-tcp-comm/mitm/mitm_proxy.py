@@ -24,6 +24,12 @@ from typing import Any, Optional
 
 from aiohttp import web
 
+try:
+    from mitm.interfaces.packet_observer import PacketDirection, PacketObserver
+except ModuleNotFoundError:
+    # For direct execution as script
+    from interfaces.packet_observer import PacketDirection, PacketObserver  # type: ignore
+
 
 class MITMProxy:
     """MITM proxy for Cync protocol packet capture."""
@@ -55,6 +61,7 @@ class MITMProxy:
         ] = {}  # connection_id -> (device_writer, cloud_writer)
         self.connection_lock = asyncio.Lock()  # Thread-safe injection
         self.current_annotation: Optional[str] = None  # For annotating capture sessions
+        self.observers: list[PacketObserver] = []  # Observer plugins
 
         # Backpressure testing configuration
         self.backpressure_mode = backpressure_mode
@@ -117,6 +124,44 @@ class MITMProxy:
         ]
         ssl_context.set_ciphers(":".join(ciphers))
         return ssl_context
+
+    def register_observer(self, observer: PacketObserver) -> None:
+        """Register plugin to receive packet notifications.
+
+        Args:
+            observer: Plugin implementing PacketObserver Protocol
+        """
+        self.observers.append(observer)
+        print(f"Registered observer: {observer.__class__.__name__}", file=sys.stderr)
+
+    def _notify_observers_packet(
+        self, direction: PacketDirection, data: bytes, connection_id: int
+    ) -> None:
+        """Notify all observers of packet event.
+
+        Observer failures don't break proxy - errors are logged but ignored.
+        """
+        for observer in self.observers:
+            try:
+                observer.on_packet_received(direction, data, connection_id)
+            except Exception as e:
+                print(f"Observer error ({observer.__class__.__name__}): {e}", file=sys.stderr)
+
+    def _notify_observers_connection_established(self, connection_id: int) -> None:
+        """Notify all observers of connection established event."""
+        for observer in self.observers:
+            try:
+                observer.on_connection_established(connection_id)
+            except Exception as e:
+                print(f"Observer error ({observer.__class__.__name__}): {e}", file=sys.stderr)
+
+    def _notify_observers_connection_closed(self, connection_id: int) -> None:
+        """Notify all observers of connection closed event."""
+        for observer in self.observers:
+            try:
+                observer.on_connection_closed(connection_id)
+            except Exception as e:
+                print(f"Observer error ({observer.__class__.__name__}): {e}", file=sys.stderr)
 
     def _is_ack_packet(self, data: bytes) -> bool:
         """Detect if packet is an ACK (0x28, 0x7B, 0x88, 0xD8)."""
@@ -194,6 +239,9 @@ class MITMProxy:
             async with self.connection_lock:
                 self.active_connections[connection_id] = (writer, cloud_writer)
 
+            # Notify observers of connection establishment
+            self._notify_observers_connection_established(connection_id)
+
             # Bidirectional forwarding with logging (include connection ID)
             await asyncio.gather(
                 self._forward_and_log(reader, cloud_writer, "DEV→CLOUD", connection_id),
@@ -211,6 +259,9 @@ class MITMProxy:
                         del self.active_connections[connection_id]
                     self.metrics["disconnects"] += 1
 
+                # Notify observers of connection closure (outside lock for symmetry with establishment)
+                self._notify_observers_connection_closed(connection_id)
+
             writer.close()
             await writer.wait_closed()
 
@@ -226,7 +277,7 @@ class MITMProxy:
         src: asyncio.StreamReader,
         dst: asyncio.StreamWriter,
         direction: str,
-        connection_id: int = None,
+        connection_id: Optional[int] = None,
     ) -> None:
         """Forward packets and log hex dumps with optional backpressure simulation."""
         packet_count = 0
@@ -270,6 +321,15 @@ class MITMProxy:
                 # Save to capture file with connection tracking
                 self._save_capture(data, direction, connection_id)
 
+                # Notify observers of packet (if connection_id available)
+                if connection_id is not None:
+                    packet_direction = (
+                        PacketDirection.DEVICE_TO_CLOUD
+                        if direction == "DEV→CLOUD"
+                        else PacketDirection.CLOUD_TO_DEVICE
+                    )
+                    self._notify_observers_packet(packet_direction, data, connection_id)
+
                 # Scenario 3: ACK Delay - Delay forwarding of ACK packets
                 if (
                     self.backpressure_mode == "ack_delay"
@@ -312,7 +372,9 @@ class MITMProxy:
         }
         print(json.dumps(log_entry))
 
-    def _save_capture(self, data: bytes, direction: str, connection_id: int = None) -> None:
+    def _save_capture(
+        self, data: bytes, direction: str, connection_id: Optional[int] = None
+    ) -> None:
         """Save raw capture to file with connection tracking."""
         with open(self.capture_file, "a") as f:
             annotation_str = f" [{self.current_annotation}]" if self.current_annotation else ""
@@ -523,6 +585,11 @@ async def main() -> None:
         default=8080,
         help="REST API port for packet injection (default: 8080)",
     )
+    parser.add_argument(
+        "--enable-codec-validation",
+        action="store_true",
+        help="Enable Phase 1a codec validation plugin",
+    )
 
     # Backpressure testing arguments
     parser.add_argument(
@@ -563,6 +630,16 @@ async def main() -> None:
         buffer_fill_packet_limit=args.buffer_fill_packet_limit,
         ack_delay=args.ack_delay,
     )
+
+    # Register codec validation plugin if enabled
+    if args.enable_codec_validation:
+        try:
+            from mitm.validation.codec_validator import CodecValidatorPlugin
+        except ModuleNotFoundError:
+            # For direct execution as script
+            from validation.codec_validator import CodecValidatorPlugin  # type: ignore
+
+        proxy.register_observer(CodecValidatorPlugin())
 
     # Setup signal handlers for graceful shutdown
     loop = asyncio.get_running_loop()
