@@ -60,7 +60,7 @@ All Full Fingerprint deduplication fields (packet_type, endpoint, msg_id, payloa
 **Sequential counter** (bridge-autonomous):
 
 - msg_id increments: `0x09 0x00 0x00` → `0x0a 0x00 0x00` → `0x0b 0x00 0x00`
-- Wraps at 0xFFFFFF (16,777,216)
+- Wraps at 0x1000000 (16,777,216 = 2^24)
 - Bridge-specific counter
 
 **Shared counter** (mesh-coordinated):

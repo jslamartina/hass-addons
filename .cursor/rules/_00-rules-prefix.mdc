@@ -26,6 +26,7 @@ TIER 0: INSTANT RECOGNITION
 - ❌ Creating todos for <3 step task? → Overkill (Rule 2: multi-step only)
 - ❌ Brave Search for "explain X"? → Wrong (Rule 12: use AI Grounding for answers)
 - ❌ AI Grounding to find docs? → Wrong (Rule 12: use Brave Search for pages)
+- ❌ Using built-in tools to check for lint errors? → Wrong (Rule 3: use `npm run lint`)
 
 ---
 
@@ -37,7 +38,7 @@ TIER 1: ALWAYS APPLY - EXECUTIVE RULES
 
 2. **Todo Discipline**: WHEN task has 3+ steps → create todos, keep 1 in_progress, update after each step.
 
-3. **Lint-Format-First**: BEFORE committing/building → run linting and formatting. Treat warnings as errors. No code that fails linting or formatting..
+3. **Lint-Format-First**: BEFORE committing/building → run linting and formatting. Treat warnings as errors. No code that fails linting or formatting. `npm run lint` must PASS.
 
 4. **Logging-First**: BEFORE editing code → add entry/exit logs for new functions; NEVER log secrets; set logger AND handler levels from config.
 

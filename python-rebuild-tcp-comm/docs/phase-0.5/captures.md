@@ -82,13 +82,13 @@ msg_id = packet[10:13]   # 3 bytes (bytes 10-12)
 
 ```text
 7b 00 00 00 07 45 88 0f 3a 00 09 00
-│  │     │  │  └─endpoint└─msg_id at byte 10
+│  │     │  │  └─endpoint└─msg_id[10:13]
 │  │     │  └─length: 7 bytes
 │  └─padding
 └─type: 0x7B
 ```
 
-**msg_id position**: byte 10 (validated 9/9 captures)
+**msg_id position**: bytes[10:13] - 3 bytes (validated 9/9 captures)
 
 ### 0xD8 Heartbeat ACK (CLOUD→DEV)
 

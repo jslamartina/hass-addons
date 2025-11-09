@@ -1,0 +1,78 @@
+---
+id: d4e5f6a7-b8c9-0d1e-2f3a-4b5c6d7e8f9a
+title: Phase 1a Data Flow Diagram
+config:
+    layout: elk
+---
+graph LR
+    %% Data Sources
+    Network[Network<br/>TCP Stream]
+
+    %% Data Transformations/Processes
+    MITM[MITM Proxy<br/>Intercept & Forward]
+    Observer[on_packet_received<br/>Event Handler]
+    Buffer[PacketFramer<br/>Buffer Management]
+    Extract[Extract Complete Packets<br/>Header-based length]
+    Decode[CyncProtocol<br/>Decode Packet]
+    Validate[Checksum Validation<br/>0x7e markers]
+    TypeCheck[Packet Type Detection<br/>0x23, 0x73, etc.]
+
+    %% Data Outputs/Sinks
+    DataPacket[CyncDataPacket<br/>endpoint, msg_id, data]
+    BasePacket[CyncPacket<br/>type, length, payload]
+    Logs[Logs & Metrics<br/>Validated packets]
+    Errors[Error Handler<br/>PacketDecodeError]
+
+    %% Data Stores
+    FramerBuffer[(Incomplete Packet<br/>Buffer)]
+
+    %% Main Data Flow
+    Network -->|raw bytes| MITM
+    MITM -->|notify observers<br/>raw bytes| Observer
+    Observer -->|feed bytes| Buffer
+    Buffer -->|append| FramerBuffer
+    FramerBuffer -->|check completeness| Extract
+    Extract -->|complete packet bytes| Decode
+
+    %% Decode Branch
+    Decode -->|parse header| TypeCheck
+    TypeCheck -->|type=0x73| Validate
+    TypeCheck -->|type=0x23,0x83,0xD3| BasePacket
+
+    %% Validation Branch
+    Validate -->|checksum valid| DataPacket
+    Validate -->|checksum invalid| Errors
+    Decode -->|malformed| Errors
+
+    %% Output Flow
+    DataPacket --> Logs
+    BasePacket --> Logs
+    Errors --> Logs
+
+    %% Data Descriptions
+    RawBytes[("Raw Bytes<br/>Variable length<br/>Partial or multiple packets")]
+    CompletePacket[("Complete Packet<br/>5-byte header + payload<br/>Length validated")]
+    DecodedPacket[("Decoded Packet<br/>Typed structure<br/>Checksum verified")]
+
+    %% Connect data descriptions to flow
+    Network -.-> RawBytes
+    Extract -.-> CompletePacket
+    DataPacket -.-> DecodedPacket
+
+    %% Styling
+    classDef source fill:#e3f2fd,stroke:#1976d2,stroke-width:2px,color:#000
+    classDef process fill:#e8f5e9,stroke:#388e3c,stroke-width:2px,color:#000
+    classDef transform fill:#fff3e0,stroke:#f57c00,stroke-width:2px,color:#000
+    classDef output fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px,color:#000
+    classDef error fill:#ffebee,stroke:#c62828,stroke-width:2px,color:#000
+    classDef store fill:#fce4ec,stroke:#c2185b,stroke-width:3px,color:#000
+    classDef data fill:#f5f5f5,stroke:#616161,stroke-width:1px,stroke-dasharray: 5 5,color:#000
+
+    class Network source
+    class MITM,Observer,Buffer process
+    class Extract,Decode,Validate,TypeCheck transform
+    class DataPacket,BasePacket,Logs output
+    class Errors error
+    class FramerBuffer store
+    class RawBytes,CompletePacket,DecodedPacket data
+

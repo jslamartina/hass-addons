@@ -15,8 +15,6 @@ alwaysApply: true
 
 ## Document Length Limits
 
-- Target: 100-150 lines maximum
-- Absolute max: 200 lines
 - Max 1 findings file per investigation
 - NO separate completion/summary/README wrappers
 

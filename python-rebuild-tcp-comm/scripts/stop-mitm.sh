@@ -26,7 +26,7 @@ echo "🛑 Stopping MITM proxy (PID: $MITM_PID)..."
 kill -TERM "$MITM_PID" 2> /dev/null || true
 
 # Wait up to 5 seconds for graceful shutdown
-for i in {1..5}; do
+for _ in {1..5}; do
   if ! ps -p "$MITM_PID" > /dev/null 2>&1; then
     echo "✅ MITM proxy stopped gracefully"
     rm -f "$PID_FILE"

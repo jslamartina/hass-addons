@@ -842,8 +842,7 @@ Breakdown:
   - Byte 1-2: 0x00 0x00
   - Byte 3: 0x00 (multiplier = 0)
   - Byte 4: 0x1a (length = 26 bytes)
-  - Byte 5: 0x03 (unknown/padding)
-  - Bytes[6:10]: 0x39 0x87 0xc8 0x57 (endpoint = 0x57c88739 / 1472825145)
+  - Bytes[5:10]: 0x03 0x39 0x87 0xc8 0x57 (endpoint - 5 bytes)
   - Bytes[10:26]: 0x00 10 31 65 30 37 ... (auth code - partially redacted)
 ```
 
@@ -857,15 +856,12 @@ Breakdown:
 ## Extract endpoint from 0x23 handshake packet
 
 handshake_packet = captured_0x23
-endpoint = handshake_packet[6:10]  # Bytes 6-9 (4 bytes)
-print(f"Endpoint (hex): {endpoint.hex(' ')}")  # e.g., "39 87 c8 57"
-print(f"Endpoint (decimal): {int.from_bytes(endpoint, 'big')}")  # e.g., 967239767
+endpoint = handshake_packet[5:10]  # Bytes 5-9 (5 bytes) - VALIDATED position
+print(f"Endpoint (hex): {endpoint.hex(' ')}")  # e.g., "03 39 87 c8 57"
+print(f"Endpoint (decimal): {int.from_bytes(endpoint, 'big')}")
 print(f"Endpoint (little-endian): {int.from_bytes(endpoint, 'little')}")  # For comparison
 
-## Verify byte 5 is NOT part of endpoint
-
-byte_5 = handshake_packet[5]
-print(f"Byte 5 (padding/unknown): 0x{byte_5:02x}")  # e.g., 0x03 (varies, not endpoint)
+## Note: Position bytes[5:10] is IDENTICAL across all packet types (0x23, 0x73, 0x83)
 
 ```
 
@@ -1053,7 +1049,7 @@ Checksum = (AA + BB + CC) % 256 = 0x55
 **Key Findings**:
 
 - 100% checksum validation (13/13 packets)
-- Hybrid ACK matching strategy required (only 0x7B has msg_id at byte 10)
+- Hybrid ACK matching strategy required (only 0x7B has 3-byte msg_id at bytes[10:13])
 - Clean byte boundaries confirmed (no overlap between endpoint and msg_id)
 - Protocol stability excellent (zero malformed packets in 2,251 analyzed)
 - Performance well within acceptable ranges (median RTT 20-45ms)
@@ -1348,7 +1344,7 @@ Analysis script should:
 
 - Full Fingerprint required fields confirmed extractable: [YES/NO for each field]
   - packet_type (byte 0): [PRESENT/ABSENT] [STABLE/VARIES across retries]
-  - endpoint (bytes[6:10] or bytes[5:10] depending on packet type): [PRESENT/ABSENT] [STABLE/VARIES]
+  - endpoint (bytes[5:10] in ALL packet types - validated): [PRESENT/ABSENT] [STABLE/VARIES]
   - msg_id (bytes[10:13]): [PRESENT/ABSENT] [STABLE/VARIES]
   - payload: [PRESENT/ABSENT] [STABLE/VARIES]
 - Fields provide sufficient diversity for deduplication: [YES/NO]

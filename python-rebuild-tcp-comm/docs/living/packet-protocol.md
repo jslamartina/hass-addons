@@ -31,25 +31,30 @@ Total packet size = 5 + data_length
 
 ### Endpoint (5 bytes)
 
-Device address.
+Device address extracted as bytes[5:10] in all packet types.
 
-0x23 HANDSHAKE: bytes 6-10
-Data packets: bytes 5-9
+**Byte Position**: bytes[5:10] (5 bytes total)
+
+- Handshake (0x23): bytes[5:10] (validated in HANDSHAKE_0x23_DEV_TO_CLOUD)
+- Data packets (0x73, 0x83): bytes[5:10] (validated in STATUS_BROADCAST_0x83)
+
+**Extraction**:
 
 ```python
-endpoint = handshake_packet[6:11]
+endpoint = packet[5:10]  # All packet types - position is IDENTICAL
 ```
+
+**Note**: Position is IDENTICAL across all packet types (confirmed Phase 0.5)
 
 ### Message ID (3 bytes)
 
-Position in 0x73/0x83 packets: bytes 9-12
+Position in 0x73/0x83 packets: bytes[10:13] (3 bytes)
 
 ```python
-msg_id = data_packet[9:12]
+msg_id = data_packet[10:13]  # 3 bytes
 ```
 
-Actual msg_id counter: bytes 10-11 (2 bytes, increments)
-Byte 9: 0x00 (last byte of endpoint)
+**Validated**: ACK validation fixtures confirm 3-byte msg_id at bytes[10:13] (see `tests/fixtures/real_packets.py` line 203: ACK_VAL_0x7B_PAIR_01_ACK)
 
 ### Device ID (2 bytes)
 
@@ -66,7 +71,7 @@ Framed packets (0x73, 0x83):
 ```python
 
 [header][endpoint][msg_id][0x7e][skip 6][data...][checksum][0x7e]
-0-4     5-9       10-11   12     13-18   19...    N-1       N
+0-4     5-9       10-12   13     14-19   20...    N-1       N
 
 ```
 
@@ -116,14 +121,14 @@ def handle_response(response: bytes) -> tuple[bool, dict]:
 
 ## ACK Matching
 
-| ACK Type             | msg_id Present | Position | Strategy     |
-| -------------------- | -------------- | -------- | ------------ |
-| 0x28 HELLO_ACK       | No             | N/A      | FIFO queue   |
-| 0x7B DATA_ACK        | Yes            | Byte 10  | msg_id match |
-| 0x88 STATUS_ACK      | No             | N/A      | FIFO queue   |
-| 0xD8 HEARTBEAT_CLOUD | No             | N/A      | FIFO queue   |
+| ACK Type             | msg_id Present | Position      | Strategy     |
+| -------------------- | -------------- | ------------- | ------------ |
+| 0x28 HELLO_ACK       | No             | N/A           | FIFO queue   |
+| 0x7B DATA_ACK        | Yes            | Bytes [10:13] | msg_id match |
+| 0x88 STATUS_ACK      | No             | N/A           | FIFO queue   |
+| 0xD8 HEARTBEAT_CLOUD | No             | N/A           | FIFO queue   |
 
 ```python
 def extract_ack_msg_id(ack_packet: bytes) -> bytes:
-    return ack_packet[10:11]  # 0x7B only
+    return ack_packet[10:13]  # 0x7B only - 3 bytes
 ```

@@ -1,0 +1,198 @@
+---
+title: Phase 1a Architecture - Comprehensive Component Diagram
+id: e22e584e-4474-484d-a044-01491c74b736
+config:
+    layout: elk
+---
+classDiagram
+    %% Protocol Codec Layer - Core Components
+    namespace src_protocol {
+        class CyncProtocol {
+            <<static methods>>
+            +encode_handshake(endpoint, auth_code) bytes
+            +encode_data_packet(endpoint, msg_id, payload) bytes
+            +decode_packet(data) CyncPacket
+            +calculate_checksum(data) int
+        }
+
+        class PacketFramer {
+            -buffer: bytearray
+            -MAX_PACKET_SIZE: int = 4096
+            +feed(data: bytes) List~bytes~
+            -_extract_packets() List~bytes~
+        }
+
+        class CyncPacket {
+            <<dataclass>>
+            +packet_type: int
+            +length: int
+            +payload: bytes
+            +raw: bytes
+        }
+
+        class CyncDataPacket {
+            <<dataclass>>
+            +packet_type: int
+            +length: int
+            +payload: bytes
+            +raw: bytes
+            +endpoint: bytes
+            +msg_id: bytes
+            +data: bytes
+            +checksum: int
+            +checksum_valid: bool
+        }
+
+        class ChecksumAlgorithm {
+            <<utility>>
+            +calculate_checksum_between_markers(packet: bytes) int
+        }
+
+        class PacketTypes {
+            <<constants>>
+            +HANDSHAKE_REQUEST: 0x23
+            +HANDSHAKE_ACK: 0x28
+            +DATA_REQUEST: 0x73
+            +DATA_ACK: 0x7B
+            +STATUS_REQUEST: 0x83
+            +STATUS_ACK: 0x88
+            +HEARTBEAT_REQUEST: 0xD3
+            +HEARTBEAT_ACK: 0xD8
+        }
+    }
+
+    %% Exception Hierarchy
+    namespace src_protocol_exceptions {
+        class CyncProtocolError {
+            <<exception>>
+            +message: str
+        }
+
+        class PacketDecodeError {
+            <<exception>>
+            +reason: str
+            +data_preview: bytes
+        }
+
+        class PacketFramingError {
+            <<exception>>
+            +reason: str
+            +buffer_size: int
+        }
+    }
+
+    %% MITM Integration Components
+    namespace mitm {
+        class PacketObserver {
+            <<Protocol Interface>>
+            +on_packet_received(direction, data, connection_id)*
+            +on_connection_established(connection_id)*
+            +on_connection_closed(connection_id)*
+        }
+
+        class PacketDirection {
+            <<enum>>
+            DEVICE_TO_CLOUD
+            CLOUD_TO_DEVICE
+        }
+
+        class MITMProxy {
+            -observers: List~PacketObserver~
+            +register_observer(observer: PacketObserver) void
+            -_handle_device_to_cloud(data, conn_id) async
+            -_handle_cloud_to_device(data, conn_id) async
+        }
+
+        class CodecValidatorPlugin {
+            -protocol: CyncProtocol
+            -framers: Dict~int, PacketFramer~
+            +on_packet_received(direction, data, conn_id) void
+            +on_connection_established(conn_id) void
+            +on_connection_closed(conn_id) void
+        }
+    }
+
+    %% Testing Infrastructure
+    namespace tests {
+        class TestEncoder {
+            +test_encode_handshake()
+            +test_encode_data_packet()
+            +test_encode_with_checksum()
+        }
+
+        class TestDecoder {
+            +test_decode_handshake()
+            +test_decode_data_packet()
+            +test_decode_invalid_checksum()
+            +test_decode_unknown_type()
+        }
+
+        class TestFramer {
+            +test_feed_partial_packet()
+            +test_feed_multiple_packets()
+            +test_buffer_overflow_protection()
+            +test_recovery_limit()
+        }
+
+        class TestChecksum {
+            +test_checksum_algorithm()
+            +test_checksum_validation()
+        }
+
+        class RealPacketsFixtures {
+            +HANDSHAKE_0x23_DEV_TO_CLOUD: bytes
+            +HANDSHAKE_0x28_ACK: bytes
+            +DATA_0x73_TOGGLE: bytes
+            +DATA_0x7B_ACK: bytes
+            +STATUS_0x83_REQUEST: bytes
+            +HEARTBEAT_0xD3_REQUEST: bytes
+        }
+    }
+
+    %% Relationships - Protocol Components
+    CyncProtocol ..> ChecksumAlgorithm : uses
+    CyncProtocol ..> PacketTypes : references
+    CyncProtocol ..> CyncPacket : creates
+    CyncProtocol ..> CyncDataPacket : creates
+    CyncDataPacket --|> CyncPacket : inherits
+    PacketFramer ..> CyncProtocol : feeds packets to
+
+    %% Relationships - Exceptions
+    CyncProtocol ..> PacketDecodeError : raises
+    PacketFramer ..> PacketFramingError : raises
+    PacketDecodeError --|> CyncProtocolError : inherits
+    PacketFramingError --|> CyncProtocolError : inherits
+
+    %% Relationships - MITM Integration
+    CodecValidatorPlugin ..|> PacketObserver : implements
+    MITMProxy *-- PacketObserver : contains
+    CodecValidatorPlugin *-- CyncProtocol : uses
+    CodecValidatorPlugin *-- PacketFramer : manages
+    CodecValidatorPlugin ..> PacketDirection : uses
+    CodecValidatorPlugin ..> PacketDecodeError : catches
+    CodecValidatorPlugin ..> PacketFramingError : catches
+
+    %% Relationships - Testing
+    TestEncoder ..> CyncProtocol : tests
+    TestDecoder ..> CyncProtocol : tests
+    TestFramer ..> PacketFramer : tests
+    TestChecksum ..> ChecksumAlgorithm : tests
+    TestEncoder ..> RealPacketsFixtures : uses
+    TestDecoder ..> RealPacketsFixtures : uses
+    TestFramer ..> RealPacketsFixtures : uses
+
+    %% Notes
+    note for CyncProtocol "Main encoder/decoder<br/>Stateless static methods<br/>Supports 10+ packet types"
+    note for PacketFramer "TCP stream buffering<br/>Header-based extraction<br/>Buffer overflow protection<br/>MAX_PACKET_SIZE=4096 bytes"
+    note for ChecksumAlgorithm "sum(packet[start+6:end-1]) % 256<br/>Validated in Phase 0.5<br/>100% match rate"
+    note for CodecValidatorPlugin "Observer pattern integration<br/>Real-time packet validation<br/>Runs alongside MITM proxy"
+    note for CyncDataPacket "0x73 data packets only<br/>Includes endpoint + msg_id<br/>Checksum validation"
+    note for PacketDecodeError "Reasons: too_short, invalid_checksum,<br/>unknown_type, invalid_length,<br/>missing_0x7e_markers"
+
+    %% Styling
+    style CyncProtocol fill:#e8f5e9,stroke:#388e3c,stroke-width:3px
+    style PacketFramer fill:#e8f5e9,stroke:#388e3c,stroke-width:3px
+    style CodecValidatorPlugin fill:#e1f5ff,stroke:#0288d1,stroke-width:3px
+    style CyncProtocolError fill:#ffebee,stroke:#c62828,stroke-width:2px
+    style PacketDecodeError fill:#ffebee,stroke:#c62828,stroke-width:2px
+    style PacketFramingError fill:#ffebee,stroke:#c62828,stroke-width:2px

@@ -20,7 +20,7 @@ Phase 0.5 validation completed 2025-11-07 with critical findings for Phase 1b ar
 
 **ACK Structure** (✅ Validated - HYBRID MATCHING REQUIRED):
 
-- 0x7B DATA_ACK: msg_id present at byte 10 (✅ parallel matching possible)
+- 0x7B DATA_ACK: 3-byte msg_id present at bytes[10:13] (✅ parallel matching possible)
 - 0x28 HELLO_ACK: NO msg_id (⚠️ requires FIFO queue)
 - 0x88 STATUS_ACK: NO msg_id (⚠️ requires FIFO queue)
 - 0xD8 HEARTBEAT_ACK: NO msg_id, minimal 5-byte packet (⚠️ requires FIFO queue)
@@ -663,7 +663,7 @@ Phase 1b introduces three separate identifier systems for different purposes. Un
 
 - **Purpose**: ACK matching over the network
 - **Type**: `bytes` (3 bytes)
-- **Generation**: Sequential counter (0x000000 → 0xFFFFFF, wraps)
+- **Generation**: Sequential counter (0x000000 → 0xFFFFFF, wraps at 0x1000000)
 - **Sent over wire**: YES (embedded in packet)
 - **Use for deduplication**: NO (use `dedup_key` instead)
 
@@ -1068,12 +1068,12 @@ class ReliableTransport:
 
 ✅ **PHASE 0.5 VALIDATION COMPLETE**: ACK structure validated from 780 real request→ACK pairs captured on 2025-11-06. See `docs/phase-0.5/captures.md` for full analysis.
 
-| ACK Type | Packet Name   | msg_id Present? | Position | Confidence | Sample Size | Notes                                |
-| -------- | ------------- | --------------- | -------- | ---------- | ----------- | ------------------------------------ |
-| 0x28     | HELLO_ACK     | N/A             | N/A      | N/A        | 25 pairs    | Request (0x23) has no msg_id field   |
-| 0x7B     | DATA_ACK      | YES ✅           | byte 10  | High       | 9 pairs     | msg_id consistently at byte 10 (9/9) |
-| 0x88     | STATUS_ACK    | NO ❌            | N/A      | High       | 97 pairs    | msg_id NOT present in ACKs (0/97)    |
-| 0xD8     | HEARTBEAT_ACK | N/A             | N/A      | N/A        | 658 pairs   | Request (0xD3) has no msg_id field   |
+| ACK Type | Packet Name   | msg_id Present? | Position      | Confidence | Sample Size | Notes                                        |
+| -------- | ------------- | --------------- | ------------- | ---------- | ----------- | -------------------------------------------- |
+| 0x28     | HELLO_ACK     | N/A             | N/A           | N/A        | 25 pairs    | Request (0x23) has no msg_id field           |
+| 0x7B     | DATA_ACK      | YES ✅           | bytes[10:13] | High       | 9 pairs     | 3-byte msg_id consistently at bytes[10:13] (9/9) |
+| 0x88     | STATUS_ACK    | NO ❌            | N/A           | High       | 97 pairs    | msg_id NOT present in ACKs (0/97)            |
+| 0xD8     | HEARTBEAT_ACK | N/A             | N/A           | N/A        | 658 pairs   | Request (0xD3) has no msg_id field           |
 
 **Phase 0.5 Validation Summary**:
 
@@ -1087,7 +1087,7 @@ class ReliableTransport:
 
 **Use Hybrid Approach**:
 
-- **0x7B (DATA_ACK)**: Parallel matching using msg_id at byte 10 (High confidence, 100% consistency)
+- **0x7B (DATA_ACK)**: Parallel matching using 3-byte msg_id at bytes[10:13] (High confidence, 100% consistency)
 - **0x28, 0x88, 0xD8**: Connection-level FIFO queue (no msg_id available)
 
 **Rationale**:
@@ -1105,8 +1105,8 @@ async def match_ack(self, ack_packet: bytes) -> Optional[PendingRequest]:
     ack_type = ack_packet[0]
 
     if ack_type == 0x7B:  # DATA_ACK - use msg_id matching
-        if len(ack_packet) >= 11:
-            msg_id = ack_packet[10:11]  # Extract from validated byte 10
+        if len(ack_packet) >= 13:
+            msg_id = ack_packet[10:13]  # Extract 3-byte msg_id from validated position
             return self.pending_requests_by_msgid.get(msg_id)
         else:
             # Malformed ACK, fall back to FIFO
@@ -1761,7 +1761,7 @@ class ReliableTransport:
 
     def generate_msg_id(self) -> bytes:
         """Generate sequential 3-byte msg_id."""
-        msg_id = (self._msg_id_counter % 0xFFFFFF).to_bytes(3, 'big')
+        msg_id = (self._msg_id_counter % 0x1000000).to_bytes(3, 'big')  # 2^24 for full 3-byte range
         self._msg_id_counter += 1
         return msg_id
 

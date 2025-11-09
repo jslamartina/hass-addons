@@ -73,14 +73,14 @@ def calculate_checksum_between_markers(packet: bytes) -> int:
 
 **Implementation** (Phase 1b):
 
-- 0x7B: Use msg_id at byte 10 for parallel ACK matching
+- 0x7B: Use 3-byte msg_id at bytes[10:13] for parallel ACK matching
 - 0x28/0x88/0xD8: Use connection-level FIFO queue
 
 **Code Pattern**:
 
 ```python
 if ack_type == 0x7B:
-    msg_id = ack_packet[10:11]
+    msg_id = ack_packet[10:13]  # 3-byte msg_id
     return self.pending_requests_by_msgid.get(msg_id)
 else:
     return self.fifo_queue.pop_first_matching(ack_type)

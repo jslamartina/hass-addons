@@ -387,7 +387,7 @@ To avoid confusion, this glossary defines key protocol terms:
   - ✅ Confirmed msg_id at bytes[10:13] in 0x73/0x83 data packets
   - ✅ Confirmed NO overlap between endpoint and msg_id
 
-- **msg_id**: 3-byte message identifier in wire protocol (bytes[10:13] in data packets). Generated sequentially for ACK matching. NOT used for deduplication (see dedup_key in Phase 1b).
+- **msg_id**: 3-byte message identifier in wire protocol (bytes[10:13] in data packets). Generated sequentially for ACK matching. Part of the composite dedup_key (along with packet_type, endpoint, and payload hash) but NOT sufficient alone for deduplication. The full fingerprint is required (see dedup_key in Phase 1b).
 - **correlation_id**: UUID v7 for internal tracking and observability. Generated per-message for logs, metrics, and tracing. NOT sent over wire. NOT used for deduplication (see dedup_key in Phase 1b).
 - **dedup_key**: Deterministic hash of packet content used for duplicate detection. Generated from packet_type + endpoint + msg_id + payload hash. Same logical packet always produces same dedup_key (unlike correlation_id which is unique per reception). Uses Full Fingerprint strategy for maximum robustness.
 - **Packet Type**: First byte of every packet (0x23, 0x73, 0x83, etc.). Determines packet structure and handling.

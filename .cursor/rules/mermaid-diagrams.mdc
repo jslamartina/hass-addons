@@ -430,7 +430,6 @@ config:
   layout: elk # Better for complex graphs
 ---
 graph TD
-...
 ```
 
 ### Complexity Limits
