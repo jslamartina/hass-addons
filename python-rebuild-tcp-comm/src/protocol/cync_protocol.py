@@ -249,36 +249,110 @@ class CyncProtocol:
     def encode_handshake(endpoint: bytes, auth_code: bytes) -> bytes:
         """Encode 0x23 handshake packet.
 
-        To be implemented in Step 4.
+        Packet structure (from Phase 0.5 captures):
+        - Header: [0x23, 0x00, 0x00, multiplier, base] (5 bytes)
+        - Payload:
+          - Byte 0: 0x03 (constant prefix)
+          - Bytes 1-5: endpoint (5 bytes)
+          - Bytes 6-21: auth_code (16 bytes)
+          - Bytes 22-24: suffix (0x00 0x00 0x3c)
 
         Args:
             endpoint: 5-byte device endpoint
-            auth_code: Authentication code
+            auth_code: 16-byte authentication code
 
         Returns:
-            Encoded handshake packet
+            Complete 0x23 handshake packet
 
         Raises:
-            NotImplementedError: Step 4 not yet implemented
+            ValueError: If endpoint not 5 bytes or auth_code not 16 bytes
         """
-        raise NotImplementedError("Step 4: Packet encoding not yet implemented")
+        # Validate inputs
+        if len(endpoint) != 5:
+            raise ValueError(f"Endpoint must be 5 bytes, got {len(endpoint)}")
+        if len(auth_code) != 16:
+            raise ValueError(f"Auth code must be 16 bytes, got {len(auth_code)}")
+
+        # Build payload: prefix + endpoint + length_indicator + auth_code + suffix
+        payload = bytearray([0x03])  # Constant prefix from captures
+        payload.extend(endpoint)
+        payload.append(0x10)  # Auth code length indicator (16 bytes)
+        payload.extend(auth_code)
+        payload.extend([0x00, 0x00, 0x3C])  # Suffix from captures
+
+        # Encode header
+        header = CyncProtocol.encode_header(0x23, len(payload))
+
+        logger.debug(
+            "Encoded handshake: endpoint=%s, auth_code_len=%d",
+            endpoint.hex(" "),
+            len(auth_code),
+        )
+
+        # Combine header + payload
+        return header + bytes(payload)
 
     @staticmethod
     def encode_data_packet(endpoint: bytes, msg_id: bytes, payload: bytes) -> bytes:
-        """Encode 0x73 data channel packet.
+        """Encode 0x73 data channel packet with 0x7e framing.
 
-        To be implemented in Step 4.
+        Packet structure:
+        - Header: [0x73, 0x00, 0x00, multiplier, base] (5 bytes)
+        - Payload:
+          - Bytes 0-4: endpoint (5 bytes)
+          - Bytes 5-7: msg_id (3 bytes)
+          - Byte 8: 0x7e (start marker)
+          - Bytes 9+: inner payload
+          - Byte N-1: checksum (calculated)
+          - Byte N: 0x7e (end marker)
 
         Args:
             endpoint: 5-byte device endpoint
             msg_id: 3-byte message ID
-            payload: Packet payload
+            payload: Inner payload bytes (between markers)
 
         Returns:
-            Encoded data packet with 0x7e framing
+            Complete 0x73 data packet with framing and checksum
 
         Raises:
-            NotImplementedError: Step 4 not yet implemented
+            ValueError: If endpoint not 5 bytes or msg_id not 3 bytes
         """
-        raise NotImplementedError("Step 4: Packet encoding not yet implemented")
+        # Validate inputs
+        if len(endpoint) != 5:
+            raise ValueError(f"Endpoint must be 5 bytes, got {len(endpoint)}")
+        if len(msg_id) != 3:
+            raise ValueError(f"msg_id must be 3 bytes, got {len(msg_id)}")
+
+        # Build outer payload: endpoint + msg_id
+        packet_payload = bytearray()
+        packet_payload.extend(endpoint)
+        packet_payload.extend(msg_id)
+
+        # Start framing (immediately after msg_id, no separator)
+        packet_payload.append(0x7E)  # Start marker
+        packet_payload.extend(payload)  # Inner payload
+
+        # Placeholder for checksum (will calculate after full packet built)
+        checksum_idx = len(packet_payload)
+        packet_payload.append(0x00)  # Placeholder
+        packet_payload.append(0x7E)  # End marker
+
+        # Build full packet with header
+        header = CyncProtocol.encode_header(0x73, len(packet_payload))
+        full_packet = bytearray(header)
+        full_packet.extend(packet_payload)
+
+        # Calculate and insert checksum
+        from protocol.checksum import insert_checksum_in_place
+
+        insert_checksum_in_place(full_packet, 5 + checksum_idx)
+
+        logger.debug(
+            "Encoded data packet: endpoint=%s, msg_id=%s, payload_len=%d",
+            endpoint.hex(" "),
+            msg_id.hex(" "),
+            len(payload),
+        )
+
+        return bytes(full_packet)
 

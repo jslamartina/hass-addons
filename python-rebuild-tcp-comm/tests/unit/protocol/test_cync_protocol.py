@@ -33,7 +33,6 @@ from tests.fixtures.real_packets import (
     TOGGLE_ON_0x73_CLOUD_TO_DEV,
 )
 
-
 # =============================================================================
 # Header Parsing Tests
 # =============================================================================
@@ -368,27 +367,328 @@ def test_decode_data_packet_with_trailing_data() -> None:
 
 
 # =============================================================================
-# Encoder Stub Tests (Step 4 not yet implemented)
+# Handshake Encoder Tests
 # =============================================================================
 
 
-def test_encode_handshake_not_implemented() -> None:
-    """Test encode_handshake raises NotImplementedError."""
-    endpoint = bytes.fromhex("45 88 0f 3a 00")
+def test_encode_handshake_basic() -> None:
+    """Test basic handshake encoding with valid inputs."""
+    endpoint = bytes.fromhex("38 e8 cf 46 00")
+    auth_code = bytes.fromhex("31 65 30 37 64 38 63 65 30 61 36 31 37 61 33 37")
+
+    packet = CyncProtocol.encode_handshake(endpoint, auth_code)
+
+    # Verify packet type
+    assert packet[0] == 0x23
+
+    # Verify length (26 bytes payload)
+    assert packet[3] == 0x00  # Multiplier
+    assert packet[4] == 0x1A  # Base (26)
+
+    # Verify structure
+    assert packet[5] == 0x03  # Prefix
+    assert packet[6:11] == endpoint  # Endpoint at bytes 6-10
+    assert packet[11] == 0x10  # Auth code length indicator
+    assert packet[12:28] == auth_code  # Auth code at bytes 12-27
+
+
+def test_encode_handshake_invalid_endpoint() -> None:
+    """Test ValueError for wrong endpoint size."""
     auth_code = bytes(16)
 
-    with pytest.raises(NotImplementedError, match="Step 4"):
-        CyncProtocol.encode_handshake(endpoint, auth_code)
+    # Too short
+    with pytest.raises(ValueError, match="Endpoint must be 5 bytes"):
+        CyncProtocol.encode_handshake(bytes(3), auth_code)
+
+    # Too long
+    with pytest.raises(ValueError, match="Endpoint must be 5 bytes"):
+        CyncProtocol.encode_handshake(bytes(7), auth_code)
 
 
-def test_encode_data_packet_not_implemented() -> None:
-    """Test encode_data_packet raises NotImplementedError."""
+def test_encode_handshake_invalid_auth_code() -> None:
+    """Test ValueError for wrong auth code size."""
+    endpoint = bytes(5)
+
+    # Too short
+    with pytest.raises(ValueError, match="Auth code must be 16 bytes"):
+        CyncProtocol.encode_handshake(endpoint, bytes(10))
+
+    # Too long
+    with pytest.raises(ValueError, match="Auth code must be 16 bytes"):
+        CyncProtocol.encode_handshake(endpoint, bytes(20))
+
+
+def test_encode_handshake_roundtrip() -> None:
+    """Test encode → decode → verify fields match."""
+    endpoint = bytes.fromhex("38 e8 cf 46 00")
+    auth_code = bytes.fromhex("31 65 30 37 64 38 63 65 30 61 36 31 37 61 33 37")
+
+    # Encode
+    encoded = CyncProtocol.encode_handshake(endpoint, auth_code)
+
+    # Decode
+    decoded = CyncProtocol.decode_packet(encoded)
+
+    # Verify round-trip
+    assert decoded.packet_type == 0x23
+    assert decoded.length == 26
+    assert decoded.raw == encoded
+    # Verify endpoint embedded correctly
+    assert encoded[6:11] == endpoint
+    assert encoded[12:28] == auth_code
+
+
+def test_encode_handshake_matches_fixture() -> None:
+    """Compare encoded output with HANDSHAKE_0x23_DEV_TO_CLOUD fixture."""
+    # Extract endpoint and auth_code from fixture
+    fixture = HANDSHAKE_0x23_DEV_TO_CLOUD
+    endpoint = fixture[6:11]  # Bytes 6-10
+    auth_code = fixture[12:28]  # Bytes 12-27 (after 0x10 length indicator)
+
+    # Encode with same parameters
+    encoded = CyncProtocol.encode_handshake(endpoint, auth_code)
+
+    # Should match fixture exactly
+    assert encoded == fixture
+
+
+# =============================================================================
+# Data Packet Encoder Tests
+# =============================================================================
+
+
+def test_encode_data_packet_basic() -> None:
+    """Test basic data packet encoding with valid inputs."""
     endpoint = bytes.fromhex("45 88 0f 3a 00")
     msg_id = bytes.fromhex("10 00 00")
-    payload = bytes(16)
+    inner_payload = bytes.fromhex(
+        "10 01 00 00 f8 8e 0c 00 10 01 00 00 00 50 00 f7 11 02 01 01"
+    )
 
-    with pytest.raises(NotImplementedError, match="Step 4"):
-        CyncProtocol.encode_data_packet(endpoint, msg_id, payload)
+    packet = CyncProtocol.encode_data_packet(endpoint, msg_id, inner_payload)
+
+    # Verify packet type
+    assert packet[0] == 0x73
+
+    # Verify endpoint and msg_id in packet
+    assert packet[5:10] == endpoint
+    assert packet[10:13] == msg_id
+
+    # Verify 0x7e markers present
+    assert 0x7E in packet
+    assert packet[-1] == 0x7E  # End marker
+
+
+def test_encode_data_packet_invalid_endpoint() -> None:
+    """Test ValueError for wrong endpoint size."""
+    msg_id = bytes(3)
+    payload = bytes(10)
+
+    # Too short
+    with pytest.raises(ValueError, match="Endpoint must be 5 bytes"):
+        CyncProtocol.encode_data_packet(bytes(3), msg_id, payload)
+
+    # Too long
+    with pytest.raises(ValueError, match="Endpoint must be 5 bytes"):
+        CyncProtocol.encode_data_packet(bytes(7), msg_id, payload)
+
+
+def test_encode_data_packet_invalid_msg_id() -> None:
+    """Test ValueError for wrong msg_id size."""
+    endpoint = bytes(5)
+    payload = bytes(10)
+
+    # Too short
+    with pytest.raises(ValueError, match="msg_id must be 3 bytes"):
+        CyncProtocol.encode_data_packet(endpoint, bytes(2), payload)
+
+    # Too long
+    with pytest.raises(ValueError, match="msg_id must be 3 bytes"):
+        CyncProtocol.encode_data_packet(endpoint, bytes(4), payload)
+
+
+def test_encode_data_packet_with_framing() -> None:
+    """Verify 0x7e markers present at correct positions."""
+    endpoint = bytes.fromhex("45 88 0f 3a 00")
+    msg_id = bytes.fromhex("10 00 00")
+    inner_payload = bytes(20)
+
+    packet = CyncProtocol.encode_data_packet(endpoint, msg_id, inner_payload)
+
+    # Find 0x7e markers
+    first_7e = packet.index(0x7E)
+    last_7e = len(packet) - 1 - packet[::-1].index(0x7E)
+
+    # Verify markers found
+    assert packet[first_7e] == 0x7E
+    assert packet[last_7e] == 0x7E
+    assert first_7e < last_7e
+
+    # Verify data between markers
+    data_between = packet[first_7e + 1 : last_7e - 1]  # Exclude checksum
+    assert data_between == inner_payload
+
+
+def test_encode_data_packet_checksum_valid() -> None:
+    """Encode → decode → verify checksum valid."""
+    endpoint = bytes.fromhex("45 88 0f 3a 00")
+    msg_id = bytes.fromhex("10 00 00")
+    inner_payload = bytes.fromhex(
+        "10 01 00 00 f8 8e 0c 00 10 01 00 00 00 50 00 f7 11 02 01 01"
+    )
+
+    # Encode
+    encoded = CyncProtocol.encode_data_packet(endpoint, msg_id, inner_payload)
+
+    # Decode
+    decoded = CyncProtocol.decode_packet(encoded)
+
+    # Verify checksum valid
+    assert isinstance(decoded, CyncDataPacket)
+    assert decoded.checksum_valid is True
+
+
+def test_encode_data_packet_roundtrip() -> None:
+    """Encode → decode → verify all fields match."""
+    endpoint = bytes.fromhex("45 88 0f 3a 00")
+    msg_id = bytes.fromhex("11 00 00")
+    inner_payload = bytes.fromhex(
+        "11 01 00 00 f8 8e 0c 00 11 01 00 00 00 50 00 f7 11 02 00 01"
+    )
+
+    # Encode
+    encoded = CyncProtocol.encode_data_packet(endpoint, msg_id, inner_payload)
+
+    # Decode
+    decoded = CyncProtocol.decode_packet(encoded)
+
+    # Verify all fields preserved
+    assert isinstance(decoded, CyncDataPacket)
+    assert decoded.packet_type == 0x73
+    assert decoded.endpoint == endpoint
+    assert decoded.msg_id == msg_id
+    assert decoded.data == inner_payload
+    assert decoded.checksum_valid is True
+
+
+def test_encode_data_packet_matches_fixture() -> None:
+    """Compare encoded packet with TOGGLE_ON_0x73_CLOUD_TO_DEV fixture."""
+    # Extract parameters from fixture
+    fixture = TOGGLE_ON_0x73_CLOUD_TO_DEV
+    endpoint = fixture[5:10]  # Bytes 5-9
+    msg_id = fixture[10:13]  # Bytes 10-12
+
+    # Extract inner payload (between 0x7e markers)
+    first_7e = fixture.index(0x7E)
+    last_7e = len(fixture) - 1 - fixture[::-1].index(0x7E)
+    inner_payload = fixture[first_7e + 1 : last_7e - 1]  # Exclude checksum
+
+    # Encode with same parameters
+    encoded = CyncProtocol.encode_data_packet(endpoint, msg_id, inner_payload)
+
+    # Should match fixture exactly
+    assert encoded == fixture
+
+
+# =============================================================================
+# Round-Trip Tests (Comprehensive)
+# =============================================================================
+
+
+def test_roundtrip_all_handshake_params() -> None:
+    """Test various endpoint/auth_code combinations for handshake."""
+    test_cases = [
+        (bytes.fromhex("38 e8 cf 46 00"), bytes.fromhex("31 65 30 37 64 38 63 65 30 61 36 31 37 61 33 37")),
+        (bytes.fromhex("45 88 0f 3a 00"), bytes.fromhex("00 11 22 33 44 55 66 77 88 99 aa bb cc dd ee ff")),
+        (bytes.fromhex("32 5d 53 17 01"), bytes.fromhex("ff ee dd cc bb aa 99 88 77 66 55 44 33 22 11 00")),
+    ]
+
+    for endpoint, auth_code in test_cases:
+        # Encode
+        encoded = CyncProtocol.encode_handshake(endpoint, auth_code)
+
+        # Decode
+        decoded = CyncProtocol.decode_packet(encoded)
+
+        # Verify round-trip preserves data
+        assert decoded.packet_type == 0x23
+        assert decoded.length == 26
+        assert encoded[6:11] == endpoint
+        assert encoded[12:28] == auth_code  # After 0x10 length indicator
+
+
+def test_roundtrip_data_packet_various_payloads() -> None:
+    """Test different payload sizes and content for data packets."""
+    endpoint = bytes.fromhex("45 88 0f 3a 00")
+    msg_id = bytes.fromhex("10 00 00")
+
+    # Test various payload sizes (minimum 10 bytes due to checksum offset requirements)
+    # Real Cync packets use 20+ byte payloads for toggle commands
+    payload_sizes = [10, 20, 50, 100]
+
+    for size in payload_sizes:
+        # Create payload with pattern
+        inner_payload = bytes(range(size % 256)) if size < 256 else bytes(size)
+
+        # Encode
+        encoded = CyncProtocol.encode_data_packet(endpoint, msg_id, inner_payload)
+
+        # Decode
+        decoded = CyncProtocol.decode_packet(encoded)
+
+        # Verify round-trip
+        assert isinstance(decoded, CyncDataPacket)
+        assert decoded.endpoint == endpoint
+        assert decoded.msg_id == msg_id
+        assert decoded.data == inner_payload
+        assert decoded.checksum_valid is True
+
+
+def test_encode_decode_preserves_data() -> None:
+    """Verify no data loss in encode → decode cycle."""
+    # Test handshake
+    endpoint_hs = bytes.fromhex("38 e8 cf 46 00")
+    auth_code = bytes.fromhex("31 65 30 37 64 38 63 65 30 61 36 31 37 61 33 37")
+    encoded_hs = CyncProtocol.encode_handshake(endpoint_hs, auth_code)
+    decoded_hs = CyncProtocol.decode_packet(encoded_hs)
+    assert decoded_hs.packet_type == 0x23
+    assert decoded_hs.raw == encoded_hs
+
+    # Test data packet
+    endpoint_dp = bytes.fromhex("45 88 0f 3a 00")
+    msg_id = bytes.fromhex("11 00 00")
+    inner_payload = bytes.fromhex("11 01 00 00 f8 8e 0c 00 11 01 00 00 00 50 00 f7 11 02 00 01")
+    encoded_dp = CyncProtocol.encode_data_packet(endpoint_dp, msg_id, inner_payload)
+    decoded_dp = CyncProtocol.decode_packet(encoded_dp)
+    assert isinstance(decoded_dp, CyncDataPacket)
+    assert decoded_dp.endpoint == endpoint_dp
+    assert decoded_dp.msg_id == msg_id
+    assert decoded_dp.data == inner_payload
+    assert decoded_dp.checksum_valid is True
+
+
+def test_roundtrip_toggle_off_packet() -> None:
+    """Test round-trip with toggle OFF packet parameters."""
+    # Use toggle OFF fixture parameters
+    endpoint = bytes.fromhex("45 88 0f 3a 00")
+    msg_id = bytes.fromhex("11 00 00")
+    inner_payload = bytes.fromhex(
+        "11 01 00 00 f8 8e 0c 00 11 01 00 00 00 50 00 f7 11 02 00 01"
+    )
+
+    # Encode
+    encoded = CyncProtocol.encode_data_packet(endpoint, msg_id, inner_payload)
+
+    # Decode
+    decoded = CyncProtocol.decode_packet(encoded)
+
+    # Verify
+    assert isinstance(decoded, CyncDataPacket)
+    assert decoded.packet_type == 0x73
+    assert decoded.endpoint == endpoint
+    assert decoded.msg_id == msg_id
+    assert decoded.data == inner_payload
+    assert decoded.checksum_valid is True
 
 
 # =============================================================================
