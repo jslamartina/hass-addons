@@ -34,11 +34,11 @@ TIER 1: ALWAYS APPLY - EXECUTIVE RULES
 
 **13 CRITICAL RULES (Must Follow)**:
 
-1. **Development Loop**: Edit → Rebuild → Verify. STOP if: env error, broken tooling, tool returns error/500/timeout, stale docs, misunderstood requirement. **DON'T WORK AROUND ISSUES** - raise to user immediately.
+1. **Development Loop**: Edit → Rebuild → Verify with Unit Tests and `npm run lint`. STOP if: env error, broken tooling, tool returns error/500/timeout, stale docs, misunderstood requirement. **DON'T WORK AROUND ISSUES** - raise to user immediately.
 
 2. **Todo Discipline**: WHEN task has 3+ steps → create todos, keep 1 in_progress, update after each step.
 
-3. **Lint-Format-First**: BEFORE committing/building → run linting and formatting. Treat warnings as errors. No code that fails linting or formatting. `npm run lint` must PASS.
+3. **Lint-Format-First**: BEFORE finishing a task → run linting and formatting. Treat warnings as errors. No code that fails linting or formatting. `npm run lint` must PASS.
 
 4. **Logging-First**: BEFORE editing code → add entry/exit logs for new functions; NEVER log secrets; set logger AND handler levels from config.
 
