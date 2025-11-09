@@ -7,8 +7,10 @@ encoding/decoding functions, and TCP stream framing.
 Public API:
 - Packet type constants (PACKET_TYPE_*)
 - Packet dataclasses (CyncPacket, CyncDataPacket)
+- Protocol encoder/decoder (CyncProtocol)
 """
 
+from protocol.cync_protocol import CyncProtocol
 from protocol.packet_types import (
     PACKET_TYPE_DATA_ACK,
     PACKET_TYPE_DATA_CHANNEL,
@@ -25,6 +27,8 @@ from protocol.packet_types import (
 )
 
 __all__ = [
+    # Protocol encoder/decoder
+    "CyncProtocol",
     # Packet type constants
     "PACKET_TYPE_HANDSHAKE",
     "PACKET_TYPE_HELLO_ACK",
