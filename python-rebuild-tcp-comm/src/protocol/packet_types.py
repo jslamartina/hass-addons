@@ -64,10 +64,12 @@ class CyncDataPacket(CyncPacket):
 
     Data packets include additional fields for routing and validation:
     - endpoint: 5-byte device endpoint identifier (bytes[5:10])
-    - msg_id: 3-byte wire protocol message ID (bytes[10:13])
+    - msg_id: 2-byte wire protocol message ID (bytes[10:12])
     - data: Inner payload between 0x7e frame markers
     - checksum: Calculated checksum byte (sum % 256 between markers)
     - checksum_valid: Whether checksum validation passed
+
+    Note: Byte 12 is padding (0x00), byte 13 is the 0x7e start marker.
 
     The data field is framed with 0x7e markers:
         0x7e [data bytes] [checksum] 0x7e
@@ -78,7 +80,7 @@ class CyncDataPacket(CyncPacket):
     """
 
     endpoint: bytes  # 5 bytes (bytes[5:10])
-    msg_id: bytes  # 3 bytes - wire protocol message ID
+    msg_id: bytes  # 2 bytes - wire protocol message ID (bytes[10:12])
     data: bytes  # Inner payload (between 0x7e markers)
     checksum: int
     checksum_valid: bool

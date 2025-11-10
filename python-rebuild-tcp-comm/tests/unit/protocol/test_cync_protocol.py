@@ -184,7 +184,7 @@ def test_decode_status_broadcast_0x83() -> None:
     assert packet.packet_type == PACKET_TYPE_STATUS_BROADCAST
     assert packet.length == 37
     assert packet.endpoint == bytes.fromhex("45 88 0f 3a 00")
-    assert packet.msg_id == bytes.fromhex("09 00 7e")  # Note: 0x7e is part of msg_id here
+    assert packet.msg_id == bytes.fromhex("09 00")  # 2 bytes - byte 12 is padding, not msg_id
     assert packet.checksum == 0x37
     assert packet.checksum_valid is True
 
@@ -235,7 +235,7 @@ def test_extract_endpoint_and_msg_id() -> None:
     endpoint, msg_id = CyncProtocol.extract_endpoint_and_msg_id(payload)
 
     assert endpoint == bytes.fromhex("45 88 0f 3a 00")
-    assert msg_id == bytes.fromhex("10 00 00")
+    assert msg_id == bytes.fromhex("10 00")
 
 
 def test_decode_data_packet_with_framing() -> None:
@@ -252,7 +252,7 @@ def test_decode_data_packet_with_framing() -> None:
 
     # Verify endpoint and msg_id extraction
     assert packet.endpoint == bytes.fromhex("45 88 0f 3a 00")
-    assert packet.msg_id == bytes.fromhex("10 00 00")
+    assert packet.msg_id == bytes.fromhex("10 00")
 
     # Verify checksum
     assert packet.checksum == 0x07
@@ -285,7 +285,7 @@ def test_decode_toggle_off_data_packet() -> None:
     assert isinstance(packet, CyncDataPacket)
     assert packet.packet_type == PACKET_TYPE_DATA_CHANNEL
     assert packet.endpoint == bytes.fromhex("45 88 0f 3a 00")
-    assert packet.msg_id == bytes.fromhex("11 00 00")
+    assert packet.msg_id == bytes.fromhex("11 00")
     assert packet.checksum == 0x07
     assert packet.checksum_valid is True
 
@@ -357,7 +357,7 @@ def test_decode_data_packet_with_trailing_data() -> None:
     assert isinstance(packet, CyncDataPacket)
     assert packet.packet_type == PACKET_TYPE_DATA_CHANNEL
     assert packet.endpoint == bytes.fromhex("45 88 0f 3a 00")
-    assert packet.msg_id == bytes.fromhex("10 00 00")
+    assert packet.msg_id == bytes.fromhex("10 00")
     assert packet.checksum == 0x07
     assert packet.checksum_valid is True
 
@@ -461,7 +461,7 @@ def test_encode_handshake_matches_fixture() -> None:
 def test_encode_data_packet_basic() -> None:
     """Test basic data packet encoding with valid inputs."""
     endpoint = bytes.fromhex("45 88 0f 3a 00")
-    msg_id = bytes.fromhex("10 00 00")
+    msg_id = bytes.fromhex("10 00")
     inner_payload = bytes.fromhex("10 01 00 00 f8 8e 0c 00 10 01 00 00 00 50 00 f7 11 02 01 01")
 
     packet = CyncProtocol.encode_data_packet(endpoint, msg_id, inner_payload)
@@ -471,7 +471,8 @@ def test_encode_data_packet_basic() -> None:
 
     # Verify endpoint and msg_id in packet
     assert packet[5:10] == endpoint
-    assert packet[10:13] == msg_id
+    assert packet[10:12] == msg_id  # 2 bytes
+    assert packet[12] == 0x00  # Padding byte
 
     # Verify 0x7e markers present
     assert 0x7E in packet
@@ -498,18 +499,18 @@ def test_encode_data_packet_invalid_msg_id() -> None:
     payload = bytes(10)
 
     # Too short
-    with pytest.raises(ValueError, match="msg_id must be 3 bytes"):
-        CyncProtocol.encode_data_packet(endpoint, bytes(2), payload)
+    with pytest.raises(ValueError, match="msg_id must be 2 bytes"):
+        CyncProtocol.encode_data_packet(endpoint, bytes(1), payload)
 
     # Too long
-    with pytest.raises(ValueError, match="msg_id must be 3 bytes"):
-        CyncProtocol.encode_data_packet(endpoint, bytes(4), payload)
+    with pytest.raises(ValueError, match="msg_id must be 2 bytes"):
+        CyncProtocol.encode_data_packet(endpoint, bytes(3), payload)
 
 
 def test_encode_data_packet_with_framing() -> None:
     """Verify 0x7e markers present at correct positions."""
     endpoint = bytes.fromhex("45 88 0f 3a 00")
-    msg_id = bytes.fromhex("10 00 00")
+    msg_id = bytes.fromhex("10 00")
     inner_payload = bytes(20)
 
     packet = CyncProtocol.encode_data_packet(endpoint, msg_id, inner_payload)
@@ -531,7 +532,7 @@ def test_encode_data_packet_with_framing() -> None:
 def test_encode_data_packet_checksum_valid() -> None:
     """Encode → decode → verify checksum valid."""
     endpoint = bytes.fromhex("45 88 0f 3a 00")
-    msg_id = bytes.fromhex("10 00 00")
+    msg_id = bytes.fromhex("10 00")
     inner_payload = bytes.fromhex("10 01 00 00 f8 8e 0c 00 10 01 00 00 00 50 00 f7 11 02 01 01")
 
     # Encode
@@ -548,7 +549,7 @@ def test_encode_data_packet_checksum_valid() -> None:
 def test_encode_data_packet_roundtrip() -> None:
     """Encode → decode → verify all fields match."""
     endpoint = bytes.fromhex("45 88 0f 3a 00")
-    msg_id = bytes.fromhex("11 00 00")
+    msg_id = bytes.fromhex("11 00")
     inner_payload = bytes.fromhex("11 01 00 00 f8 8e 0c 00 11 01 00 00 00 50 00 f7 11 02 00 01")
 
     # Encode
@@ -571,7 +572,7 @@ def test_encode_data_packet_matches_fixture() -> None:
     # Extract parameters from fixture
     fixture = TOGGLE_ON_0x73_CLOUD_TO_DEV
     endpoint = fixture[5:10]  # Bytes 5-9
-    msg_id = fixture[10:13]  # Bytes 10-12
+    msg_id = fixture[10:12]  # Bytes 10-11 (2 bytes, NOT 3)
 
     # Extract inner payload (between 0x7e markers)
     first_7e = fixture.index(0x7E)
@@ -624,7 +625,7 @@ def test_roundtrip_all_handshake_params() -> None:
 def test_roundtrip_data_packet_various_payloads() -> None:
     """Test different payload sizes and content for data packets."""
     endpoint = bytes.fromhex("45 88 0f 3a 00")
-    msg_id = bytes.fromhex("10 00 00")
+    msg_id = bytes.fromhex("10 00")
 
     # Test various payload sizes (minimum 10 bytes due to checksum offset requirements)
     # Real Cync packets use 20+ byte payloads for toggle commands
@@ -660,7 +661,7 @@ def test_encode_decode_preserves_data() -> None:
 
     # Test data packet
     endpoint_dp = bytes.fromhex("45 88 0f 3a 00")
-    msg_id = bytes.fromhex("11 00 00")
+    msg_id = bytes.fromhex("11 00")
     inner_payload = bytes.fromhex("11 01 00 00 f8 8e 0c 00 11 01 00 00 00 50 00 f7 11 02 00 01")
     encoded_dp = CyncProtocol.encode_data_packet(endpoint_dp, msg_id, inner_payload)
     decoded_dp = CyncProtocol.decode_packet(encoded_dp)
@@ -675,7 +676,7 @@ def test_roundtrip_toggle_off_packet() -> None:
     """Test round-trip with toggle OFF packet parameters."""
     # Use toggle OFF fixture parameters
     endpoint = bytes.fromhex("45 88 0f 3a 00")
-    msg_id = bytes.fromhex("11 00 00")
+    msg_id = bytes.fromhex("11 00")
     inner_payload = bytes.fromhex("11 01 00 00 f8 8e 0c 00 11 01 00 00 00 50 00 f7 11 02 00 01")
 
     # Encode

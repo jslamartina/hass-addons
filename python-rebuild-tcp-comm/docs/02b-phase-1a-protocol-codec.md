@@ -26,7 +26,8 @@ Phase 0.5 protocol validation provides:
 **Byte Positions**:
 
 - endpoint: bytes[5:10] (5 bytes)
-- msg_id: bytes[10:13] (3 bytes)
+- msg_id: bytes[10:12] (2 bytes)
+- padding: byte 12 (0x00 in 0x73 packets)
 - See: `docs/phase-0.5/packet-structure-validated.md`
 
 **Test Fixtures**:
@@ -230,7 +231,7 @@ class CyncPacket:
 class CyncDataPacket(CyncPacket):
     """0x73 data channel packet."""
     endpoint: bytes  # 5 bytes (bytes[5:10])
-    msg_id: bytes    # 3 bytes - wire protocol message ID
+    msg_id: bytes    # 2 bytes - wire protocol message ID (bytes[10:12])
     data: bytes      # Inner payload (between 0x7e markers)
     checksum: int
     checksum_valid: bool

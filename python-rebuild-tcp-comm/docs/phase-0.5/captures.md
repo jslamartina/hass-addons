@@ -31,8 +31,8 @@
 
 ```python
 endpoint = packet[5:10]  # 5 bytes (bytes 5-9)
-msg_id = packet[10:13]   # 3 bytes (bytes 10-12)
-# No overlap confirmed
+msg_id = packet[10:12]   # 2 bytes (bytes 10-11)
+# Byte 12 is 0x00 padding, byte 13 is 0x7e marker
 ```
 
 ### ACK Structure Validation
@@ -65,30 +65,31 @@ msg_id = packet[10:13]   # 3 bytes (bytes 10-12)
 
 ```text
 73 00 00 00 1e 45 88 0f 3a 00 09 00 00 7e 0d 01...
-│  │     │  │  └─endpoint└─msg_id─┘
-│  │     │  └─length: 30 bytes
-│  │     └─multiplier: 0
+│  │     │  │  └─endpoint└─msg_id─┘│  │
+│  │     │  └─length: 30 bytes      │  └─marker
+│  │     └─multiplier: 0            └─padding (0x00)
 │  └─padding
 └─type: 0x73
 ```
 
 **Byte positions validated**:
 
-- endpoint: bytes[5:10]
-- msg_id: bytes[10:13]
+- endpoint: bytes[5:10] (5 bytes)
+- msg_id: bytes[10:12] (2 bytes)
+- padding: byte 12 (0x00)
 - 0x7e marker: byte 13
 
 ### 0x7B Data ACK (DEV→CLOUD)
 
 ```text
 7b 00 00 00 07 45 88 0f 3a 00 09 00
-│  │     │  │  └─endpoint└─msg_id[10:13]
+│  │     │  │  └─endpoint└─msg_id[10:12]
 │  │     │  └─length: 7 bytes
 │  └─padding
 └─type: 0x7B
 ```
 
-**msg_id position**: bytes[10:13] - 3 bytes (validated 9/9 captures)
+**msg_id position**: bytes[10:12] - 2 bytes (validated 9/9 captures)
 
 ### 0xD8 Heartbeat ACK (CLOUD→DEV)
 

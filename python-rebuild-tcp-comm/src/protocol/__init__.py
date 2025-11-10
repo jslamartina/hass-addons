@@ -8,11 +8,13 @@ Public API:
 - Packet type constants (PACKET_TYPE_*)
 - Packet dataclasses (CyncPacket, CyncDataPacket)
 - Protocol encoder/decoder (CyncProtocol)
+- TCP stream framer (PacketFramer)
 - Exception types (CyncProtocolError, PacketDecodeError, PacketFramingError)
 """
 
 from protocol.cync_protocol import CyncProtocol
 from protocol.exceptions import CyncProtocolError, PacketDecodeError, PacketFramingError
+from protocol.packet_framer import PacketFramer
 from protocol.packet_types import (
     PACKET_TYPE_DATA_ACK,
     PACKET_TYPE_DATA_CHANNEL,
@@ -31,6 +33,8 @@ from protocol.packet_types import (
 __all__ = [
     # Protocol encoder/decoder
     "CyncProtocol",
+    # TCP stream framer
+    "PacketFramer",
     # Exception types
     "CyncProtocolError",
     "PacketDecodeError",

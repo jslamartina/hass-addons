@@ -41,9 +41,9 @@
 | Field    | Position     | Size    | Packet Types |
 | -------- | ------------ | ------- | ------------ |
 | endpoint | bytes[5:10]  | 5 bytes | All          |
-| msg_id   | bytes[10:13] | 3 bytes | 0x73, 0x83   |
+| msg_id   | bytes[10:12] | 2 bytes | 0x73, 0x83   |
 
-**No overlap**: Clean byte boundaries confirmed.
+**No overlap**: Clean byte boundaries confirmed. Byte 12 is padding (0x00), byte 13 is 0x7e marker.
 
 ### Extraction Code
 
@@ -54,7 +54,7 @@ data_length = (packet[3] * 256) + packet[4]
 endpoint = packet[5:10]  # 5 bytes
 
 # Data packets (0x73, 0x83)
-msg_id = packet[10:13]   # 3 bytes
+msg_id = packet[10:12]   # 2 bytes (byte 12 is 0x00 padding, byte 13 is 0x7e marker)
 ```
 
 ---
@@ -66,8 +66,10 @@ msg_id = packet[10:13]   # 3 bytes
 **Structure**:
 
 ```text
-[header][endpoint][msg_id][0x7e][skip 6][data...][checksum][0x7e]
+[header(5)][endpoint(5)][msg_id(2)][padding(1)][0x7e][skip 6][data...][checksum][0x7e]
 ```
+
+Note: Byte 12 is always 0x00 (padding), byte 13 is the 0x7e start marker.
 
 **Checksum Algorithm**:
 

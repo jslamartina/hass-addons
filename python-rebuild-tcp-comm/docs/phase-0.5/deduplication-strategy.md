@@ -27,7 +27,7 @@ All Full Fingerprint deduplication fields (packet_type, endpoint, msg_id, payloa
 | ----------- | ------------ | ------------ | ---------------------- |
 | packet_type | byte 0       | ✅ YES       | ✅ YES                 |
 | endpoint    | bytes[5:10]  | ✅ YES       | ✅ YES                 |
-| msg_id      | bytes[10:13] | ✅ YES       | ⚠️ VARIES (see below)  |
+| msg_id      | bytes[10:12] | ✅ YES       | ⚠️ VARIES (see below)  |
 | payload     | variable     | ✅ YES       | ✅ YES                 |
 
 **Conclusion**: All fields extractable. Full Fingerprint strategy viable.

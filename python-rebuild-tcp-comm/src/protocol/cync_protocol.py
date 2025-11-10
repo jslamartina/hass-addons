@@ -98,9 +98,12 @@ class CyncProtocol:
 
     @staticmethod
     def extract_endpoint_and_msg_id(payload: bytes) -> tuple[bytes, bytes]:
-        """Extract endpoint (bytes[0:5]) and msg_id (bytes[5:8]) from payload.
+        """Extract endpoint (bytes[0:5]) and msg_id (bytes[5:7]) from payload.
 
         Used for 0x73 (data channel) and 0x83 (status broadcast) packets.
+
+        Note: msg_id is 2 bytes. Byte 7 (byte 12 of full packet) is padding (0x00).
+        Byte 8 (byte 13 of full packet) is the 0x7e start marker.
 
         Args:
             payload: Packet payload (header stripped)
@@ -111,11 +114,11 @@ class CyncProtocol:
         Raises:
             PacketDecodeError: If payload too short to extract endpoint and msg_id
         """
-        if len(payload) < 8:
+        if len(payload) < 7:
             raise PacketDecodeError("too_short", payload)
 
         endpoint = payload[0:5]  # 5 bytes
-        msg_id = payload[5:8]  # 3 bytes
+        msg_id = payload[5:7]  # 2 bytes (NOT 3 - byte 7 is padding)
 
         logger.debug(
             "Extracted endpoint=%s, msg_id=%s",
@@ -194,7 +197,10 @@ class CyncProtocol:
         # This prevents finding markers in trailing data when buffer contains multiple packets
         packet_bytes = raw[: 5 + length]
 
-        # Find 0x7e markers within current packet only
+        # Find 0x7e markers within current packet
+        # NOTE: Protocol allows msg_id to end with 0x7e, which serves dual purpose
+        # as both msg_id's last byte AND the start marker (no separate marker byte)
+        # Example: msg_id "09 00 7e" in STATUS_BROADCAST_0x83 packet
         try:
             start_marker_idx = packet_bytes.index(0x7E)
             end_marker_idx = len(packet_bytes) - 1 - packet_bytes[::-1].index(0x7E)
@@ -295,7 +301,8 @@ class CyncProtocol:
         - Header: [0x73, 0x00, 0x00, multiplier, base] (5 bytes)
         - Payload:
           - Bytes 0-4: endpoint (5 bytes)
-          - Bytes 5-7: msg_id (3 bytes)
+          - Bytes 5-6: msg_id (2 bytes)
+          - Byte 7: padding (0x00)
           - Byte 8: 0x7e (start marker)
           - Bytes 9+: inner payload
           - Byte N-1: checksum (calculated)
@@ -303,27 +310,28 @@ class CyncProtocol:
 
         Args:
             endpoint: 5-byte device endpoint
-            msg_id: 3-byte message ID
+            msg_id: 2-byte message ID
             payload: Inner payload bytes (between markers)
 
         Returns:
             Complete 0x73 data packet with framing and checksum
 
         Raises:
-            ValueError: If endpoint not 5 bytes or msg_id not 3 bytes
+            ValueError: If endpoint not 5 bytes or msg_id not 2 bytes
         """
         # Validate inputs
         if len(endpoint) != 5:
             raise ValueError(f"Endpoint must be 5 bytes, got {len(endpoint)}")
-        if len(msg_id) != 3:
-            raise ValueError(f"msg_id must be 3 bytes, got {len(msg_id)}")
+        if len(msg_id) != 2:
+            raise ValueError(f"msg_id must be 2 bytes, got {len(msg_id)}")
 
-        # Build outer payload: endpoint + msg_id
+        # Build outer payload: endpoint + msg_id + padding
         packet_payload = bytearray()
         packet_payload.extend(endpoint)
         packet_payload.extend(msg_id)
+        packet_payload.append(0x00)  # Padding byte (always 0x00)
 
-        # Start framing (immediately after msg_id, no separator)
+        # Start framing (after padding byte)
         packet_payload.append(0x7E)  # Start marker
         packet_payload.extend(payload)  # Inner payload
 

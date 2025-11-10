@@ -29,7 +29,8 @@ Phase 0.5 captured 24,960 packets from 9 Cync devices, validating protocol struc
 **Byte Positions**:
 
 - endpoint: bytes[5:10] (5 bytes)
-- msg_id: bytes[10:13] (3 bytes)
+- msg_id: bytes[10:12] (2 bytes)
+- padding: byte 12 (always 0x00 in 0x73 packets)
 - No overlap confirmed
 
 **Validation**: 2,251 packets analyzed, all well-formed.
