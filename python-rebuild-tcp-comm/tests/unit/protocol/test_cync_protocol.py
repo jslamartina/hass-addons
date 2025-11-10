@@ -587,6 +587,217 @@ def test_encode_data_packet_matches_fixture() -> None:
 
 
 # =============================================================================
+# Encoder Tests: Heartbeat (0xD3)
+# =============================================================================
+
+
+def test_encode_heartbeat_basic() -> None:
+    """Test basic heartbeat packet encoding."""
+    packet = CyncProtocol.encode_heartbeat()
+
+    # Verify structure
+    assert len(packet) == 5
+    assert packet[0] == 0xD3  # Packet type
+    assert packet[1:] == bytes([0x00, 0x00, 0x00, 0x00])  # Reserved + length
+
+
+def test_encode_heartbeat_matches_fixture() -> None:
+    """Compare encoded heartbeat with HEARTBEAT_DEV_0xD3_DEV_TO_CLOUD fixture."""
+    from tests.fixtures.real_packets import HEARTBEAT_DEV_0xD3_DEV_TO_CLOUD
+
+    encoded = CyncProtocol.encode_heartbeat()
+
+    # Should match fixture exactly
+    assert encoded == HEARTBEAT_DEV_0xD3_DEV_TO_CLOUD
+
+
+def test_encode_heartbeat_roundtrip() -> None:
+    """Encode → decode → verify heartbeat packet."""
+    # Encode
+    encoded = CyncProtocol.encode_heartbeat()
+
+    # Decode
+    decoded = CyncProtocol.decode_packet(encoded)
+
+    # Verify
+    assert decoded.packet_type == 0xD3
+    assert decoded.length == 0
+    assert len(decoded.payload) == 0
+
+
+# =============================================================================
+# Encoder Tests: Status Broadcast (0x83)
+# =============================================================================
+
+
+def test_encode_status_broadcast_basic() -> None:
+    """Test basic status broadcast packet encoding with valid inputs."""
+    endpoint = bytes.fromhex("45 88 0f 3a 00")
+    msg_id = bytes.fromhex("09 00")
+    inner_payload = bytes.fromhex(
+        "1f 00 00 00 fa db 13 00 72 25 11 50 00 50 00 db 11 02 01 01 0a 0a ff ff ff 00 00"
+    )
+
+    packet = CyncProtocol.encode_status_broadcast(endpoint, msg_id, inner_payload)
+
+    # Verify structure
+    assert packet[0] == 0x83  # Packet type
+    assert packet[5:10] == endpoint
+    assert packet[10:12] == msg_id
+    assert packet[12] == 0x7E  # Start marker (no padding for 0x83)
+
+
+def test_encode_status_broadcast_with_framing() -> None:
+    """Verify 0x7e markers present at correct positions."""
+    endpoint = bytes.fromhex("45 88 0f 3a 00")
+    msg_id = bytes.fromhex("09 00")
+    inner_payload = bytes(20)
+
+    packet = CyncProtocol.encode_status_broadcast(endpoint, msg_id, inner_payload)
+
+    # Find 0x7e markers
+    marker_positions = [i for i, b in enumerate(packet) if b == 0x7E]
+
+    # Should have exactly 2 markers
+    assert len(marker_positions) == 2
+    start_marker = marker_positions[0]
+    end_marker = marker_positions[1]
+
+    # Verify markers are in expected range
+    assert start_marker == 12  # After header(5) + endpoint(5) + msg_id(2), no padding for 0x83
+    assert end_marker == len(packet) - 1  # Last byte
+
+
+def test_encode_status_broadcast_input_validation() -> None:
+    """Test endpoint and msg_id size validation."""
+    payload = bytes(20)
+
+    # Valid endpoint and msg_id
+    valid_endpoint = bytes(5)
+    valid_msg_id = bytes(2)
+
+    # Test endpoint validation
+    with pytest.raises(ValueError, match="Endpoint must be 5 bytes"):
+        CyncProtocol.encode_status_broadcast(bytes(4), valid_msg_id, payload)
+
+    with pytest.raises(ValueError, match="Endpoint must be 5 bytes"):
+        CyncProtocol.encode_status_broadcast(bytes(6), valid_msg_id, payload)
+
+    # Test msg_id validation
+    with pytest.raises(ValueError, match="msg_id must be 2 bytes"):
+        CyncProtocol.encode_status_broadcast(valid_endpoint, bytes(1), payload)
+
+    with pytest.raises(ValueError, match="msg_id must be 2 bytes"):
+        CyncProtocol.encode_status_broadcast(valid_endpoint, bytes(3), payload)
+
+
+def test_encode_status_broadcast_checksum_valid() -> None:
+    """Encode → decode → verify checksum valid."""
+    endpoint = bytes.fromhex("45 88 0f 3a 00")
+    msg_id = bytes.fromhex("09 00")
+    inner_payload = bytes.fromhex(
+        "1f 00 00 00 fa db 13 00 72 25 11 50 00 50 00 db 11 02 01 01 0a 0a ff ff ff 00 00"
+    )
+
+    # Encode
+    encoded = CyncProtocol.encode_status_broadcast(endpoint, msg_id, inner_payload)
+
+    # Decode
+    decoded = CyncProtocol.decode_packet(encoded)
+
+    # Verify checksum valid
+    assert isinstance(decoded, CyncDataPacket)
+    assert decoded.checksum_valid is True
+
+
+def test_encode_status_broadcast_roundtrip() -> None:
+    """Encode → decode → verify all fields match."""
+    endpoint = bytes.fromhex("45 88 0f 3a 00")
+    msg_id = bytes.fromhex("09 00")
+    inner_payload = bytes.fromhex(
+        "1f 00 00 00 fa db 13 00 72 25 11 50 00 50 00 db 11 02 01 01 0a 0a ff ff ff 00 00"
+    )
+
+    # Encode
+    encoded = CyncProtocol.encode_status_broadcast(endpoint, msg_id, inner_payload)
+
+    # Decode
+    decoded = CyncProtocol.decode_packet(encoded)
+
+    # Verify all fields preserved
+    assert isinstance(decoded, CyncDataPacket)
+    assert decoded.packet_type == 0x83
+    assert decoded.endpoint == endpoint
+    assert decoded.msg_id == msg_id
+    assert decoded.data == inner_payload
+    assert decoded.checksum_valid is True
+
+
+def test_encode_status_broadcast_matches_fixture() -> None:
+    """Compare encoded packet with STATUS_BROADCAST_0x83_DEV_TO_CLOUD fixture."""
+    from tests.fixtures.real_packets import STATUS_BROADCAST_0x83_DEV_TO_CLOUD
+
+    # Extract parameters from fixture
+    fixture = STATUS_BROADCAST_0x83_DEV_TO_CLOUD
+    endpoint = fixture[5:10]  # Bytes 5-9
+    msg_id = fixture[10:12]  # Bytes 10-11 (2 bytes)
+
+    # Extract inner payload (between 0x7e markers)
+    first_7e = fixture.index(0x7E)
+    last_7e = len(fixture) - 1 - fixture[::-1].index(0x7E)
+    inner_payload = fixture[first_7e + 1 : last_7e - 1]  # Exclude checksum
+
+    # Encode with same parameters
+    encoded = CyncProtocol.encode_status_broadcast(endpoint, msg_id, inner_payload)
+
+    # Should match fixture exactly
+    assert encoded == fixture
+
+
+# =============================================================================
+# Round-Trip Tests: All Packet Types
+# =============================================================================
+
+
+def test_roundtrip_all_packet_types() -> None:
+    """Test encode/decode for all major packet types (0x23, 0x73, 0x83, 0xD3)."""
+    # Test 0x23 Handshake
+    endpoint_hs = bytes.fromhex("45 88 0f 3a 00")
+    auth_code = bytes.fromhex("31 65 30 37 64 38 63 65 30 61 36 31 37 61 33 37")
+    encoded_hs = CyncProtocol.encode_handshake(endpoint_hs, auth_code)
+    decoded_hs = CyncProtocol.decode_packet(encoded_hs)
+    assert decoded_hs.packet_type == 0x23
+
+    # Test 0x73 Data Channel
+    endpoint_dc = bytes.fromhex("45 88 0f 3a 00")
+    msg_id_dc = bytes.fromhex("10 00")
+    inner_payload_dc = bytes.fromhex("10 01 00 00 f8 8e 0c 00 10 01 00 00 00 50 00 f7 11 02 01 01")
+    encoded_dc = CyncProtocol.encode_data_packet(endpoint_dc, msg_id_dc, inner_payload_dc)
+    decoded_dc = CyncProtocol.decode_packet(encoded_dc)
+    assert decoded_dc.packet_type == 0x73
+    assert isinstance(decoded_dc, CyncDataPacket)
+    assert decoded_dc.checksum_valid is True
+
+    # Test 0x83 Status Broadcast
+    endpoint_sb = bytes.fromhex("45 88 0f 3a 00")
+    msg_id_sb = bytes.fromhex("09 00")
+    inner_payload_sb = bytes.fromhex(
+        "1f 00 00 00 fa db 13 00 72 25 11 50 00 50 00 db 11 02 01 01 0a 0a ff ff ff 00 00"
+    )
+    encoded_sb = CyncProtocol.encode_status_broadcast(endpoint_sb, msg_id_sb, inner_payload_sb)
+    decoded_sb = CyncProtocol.decode_packet(encoded_sb)
+    assert decoded_sb.packet_type == 0x83
+    assert isinstance(decoded_sb, CyncDataPacket)
+    assert decoded_sb.checksum_valid is True
+
+    # Test 0xD3 Heartbeat
+    encoded_hb = CyncProtocol.encode_heartbeat()
+    decoded_hb = CyncProtocol.decode_packet(encoded_hb)
+    assert decoded_hb.packet_type == 0xD3
+    assert decoded_hb.length == 0
+
+
+# =============================================================================
 # Round-Trip Tests (Comprehensive)
 # =============================================================================
 

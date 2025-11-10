@@ -358,3 +358,83 @@ class CyncProtocol:
         )
 
         return bytes(full_packet)
+
+    @staticmethod
+    def encode_heartbeat() -> bytes:
+        """Encode 0xD3 heartbeat packet (device to cloud).
+
+        Heartbeat packets are simple keepalive messages with no payload.
+        Structure: [0xD3, 0x00, 0x00, 0x00, 0x00] (5 bytes total)
+
+        Returns:
+            Complete 0xD3 heartbeat packet (5 bytes)
+        """
+        return bytes([0xD3, 0x00, 0x00, 0x00, 0x00])
+
+    @staticmethod
+    def encode_status_broadcast(endpoint: bytes, msg_id: bytes, payload: bytes) -> bytes:
+        """Encode 0x83 status broadcast packet with 0x7e framing.
+
+        Status broadcast packets have similar structure to 0x73 data packets
+        but use packet type 0x83 and do NOT include the padding byte.
+        Typically sent by devices to report status.
+
+        Packet structure:
+        - Header: [0x83, 0x00, 0x00, multiplier, base] (5 bytes)
+        - Payload:
+          - Bytes 0-4: endpoint (5 bytes)
+          - Bytes 5-6: msg_id (2 bytes)
+          - Byte 7: 0x7e (start marker, NO padding byte for 0x83)
+          - Bytes 8+: inner payload
+          - Byte N-1: checksum (calculated)
+          - Byte N: 0x7e (end marker)
+
+        Args:
+            endpoint: 5-byte device endpoint
+            msg_id: 2-byte message ID
+            payload: Inner payload bytes (between markers)
+
+        Returns:
+            Complete 0x83 status broadcast packet with framing and checksum
+
+        Raises:
+            ValueError: If endpoint not 5 bytes or msg_id not 2 bytes
+        """
+        # Validate inputs
+        if len(endpoint) != 5:
+            raise ValueError(f"Endpoint must be 5 bytes, got {len(endpoint)}")
+        if len(msg_id) != 2:
+            raise ValueError(f"msg_id must be 2 bytes, got {len(msg_id)}")
+
+        # Build outer payload: endpoint + msg_id (NO padding for 0x83)
+        packet_payload = bytearray()
+        packet_payload.extend(endpoint)
+        packet_payload.extend(msg_id)
+
+        # Start framing (immediately after msg_id, no padding byte)
+        packet_payload.append(0x7E)  # Start marker
+        packet_payload.extend(payload)  # Inner payload
+
+        # Placeholder for checksum (will calculate after full packet built)
+        checksum_idx = len(packet_payload)
+        packet_payload.append(0x00)  # Placeholder
+        packet_payload.append(0x7E)  # End marker
+
+        # Build full packet with header
+        header = CyncProtocol.encode_header(0x83, len(packet_payload))
+        full_packet = bytearray(header)
+        full_packet.extend(packet_payload)
+
+        # Calculate and insert checksum
+        from protocol.checksum import insert_checksum_in_place
+
+        insert_checksum_in_place(full_packet, 5 + checksum_idx)
+
+        logger.debug(
+            "Encoded status broadcast: endpoint=%s, msg_id=%s, payload_len=%d",
+            endpoint.hex(" "),
+            msg_id.hex(" "),
+            len(payload),
+        )
+
+        return bytes(full_packet)
