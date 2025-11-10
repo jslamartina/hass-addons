@@ -9,18 +9,18 @@ import logging
 try:
     from mitm.interfaces.packet_observer import PacketDirection
     from protocol.cync_protocol import CyncProtocol
-    from protocol.packet_framer import PacketFramer
     from protocol.exceptions import PacketDecodeError, PacketFramingError
+    from protocol.packet_framer import PacketFramer
 except ModuleNotFoundError:  # pragma: no cover
     # For direct execution as script (when mitm module not in path)
     import sys
     from pathlib import Path
 
     sys.path.insert(0, str(Path(__file__).parent.parent.parent))
-    from mitm.interfaces.packet_observer import PacketDirection  # type: ignore[import-not-found, no-redef]
-    from protocol.cync_protocol import CyncProtocol  # type: ignore[import-not-found]
-    from protocol.packet_framer import PacketFramer  # type: ignore[import-not-found]
-    from protocol.exceptions import PacketDecodeError, PacketFramingError  # type: ignore[import-not-found]
+    from mitm.interfaces.packet_observer import PacketDirection  # noqa: F401, F811
+    from protocol.cync_protocol import CyncProtocol  # noqa: F401
+    from protocol.exceptions import PacketDecodeError, PacketFramingError  # noqa: F401
+    from protocol.packet_framer import PacketFramer  # noqa: F401
 
 logger = logging.getLogger(__name__)
 
