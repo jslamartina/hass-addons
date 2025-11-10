@@ -9,6 +9,7 @@ from __future__ import annotations
 import logging
 
 from protocol.checksum import calculate_checksum_between_markers
+from protocol.exceptions import PacketDecodeError
 from protocol.packet_types import (
     PACKET_TYPE_DATA_CHANNEL,
     PACKET_TYPE_STATUS_BROADCAST,
@@ -44,10 +45,10 @@ class CyncProtocol:
             Tuple of (packet_type, length, reserved)
 
         Raises:
-            ValueError: If data is too short to parse header
+            PacketDecodeError: If data is too short to parse header
         """
         if len(data) < 5:
-            raise ValueError(f"Packet too short for header: {len(data)} bytes (need 5)")
+            raise PacketDecodeError("too_short", data)
 
         packet_type = data[0]
         reserved = (data[1] << 8) | data[2]  # Bytes 1-2 combined
@@ -108,12 +109,10 @@ class CyncProtocol:
             Tuple of (endpoint, msg_id)
 
         Raises:
-            ValueError: If payload too short to extract endpoint and msg_id
+            PacketDecodeError: If payload too short to extract endpoint and msg_id
         """
         if len(payload) < 8:
-            raise ValueError(
-                f"Payload too short for endpoint/msg_id: {len(payload)} bytes (need 8)"
-            )
+            raise PacketDecodeError("too_short", payload)
 
         endpoint = payload[0:5]  # 5 bytes
         msg_id = payload[5:8]  # 3 bytes
@@ -147,7 +146,7 @@ class CyncProtocol:
             CyncPacket or CyncDataPacket instance
 
         Raises:
-            ValueError: If packet too short or malformed
+            PacketDecodeError: If packet too short or malformed
         """
         logger.debug("Decoding packet: %d bytes", len(data))
 
@@ -157,7 +156,7 @@ class CyncProtocol:
         # Validate packet length matches header
         expected_total = 5 + length
         if len(data) < expected_total:
-            raise ValueError(f"Packet length mismatch: expected {expected_total}, got {len(data)}")
+            raise PacketDecodeError("invalid_length", data)
 
         # Extract payload
         payload = data[5 : 5 + length]
@@ -186,7 +185,7 @@ class CyncProtocol:
             CyncDataPacket instance
 
         Raises:
-            ValueError: If 0x7e markers not found or checksum invalid
+            PacketDecodeError: If 0x7e markers not found or checksum invalid
         """
         # Extract endpoint and msg_id
         endpoint, msg_id = CyncProtocol.extract_endpoint_and_msg_id(payload)
@@ -200,11 +199,11 @@ class CyncProtocol:
             start_marker_idx = packet_bytes.index(0x7E)
             end_marker_idx = len(packet_bytes) - 1 - packet_bytes[::-1].index(0x7E)
         except ValueError as e:
-            raise ValueError(f"Missing 0x7e frame markers in data packet: {e}") from e
+            raise PacketDecodeError("missing_0x7e_markers", raw) from e
 
         # Extract framed data (between markers)
         if end_marker_idx <= start_marker_idx:
-            raise ValueError("Invalid 0x7e marker positions")
+            raise PacketDecodeError("missing_0x7e_markers", packet_bytes)
 
         # Data is between markers, excluding markers and checksum
         data_start = start_marker_idx + 1

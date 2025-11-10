@@ -5,6 +5,7 @@ from __future__ import annotations
 import pytest
 
 from protocol.cync_protocol import CyncProtocol
+from protocol.exceptions import PacketDecodeError
 from protocol.packet_types import (
     PACKET_TYPE_DATA_ACK,
     PACKET_TYPE_DATA_CHANNEL,
@@ -295,8 +296,8 @@ def test_decode_toggle_off_data_packet() -> None:
 
 
 def test_decode_packet_too_short() -> None:
-    """Test packet < 5 bytes raises ValueError."""
-    with pytest.raises(ValueError, match="too short"):
+    """Test packet < 5 bytes raises PacketDecodeError."""
+    with pytest.raises(PacketDecodeError, match="too_short"):
         CyncProtocol.decode_packet(bytes([0x23, 0x00]))
 
 
@@ -305,34 +306,34 @@ def test_decode_packet_length_mismatch() -> None:
     # Header claims length 100, but only provide 10 bytes of payload
     bad_packet = bytes([0x23, 0x00, 0x00, 0x00, 0x64]) + bytes(10)
 
-    with pytest.raises(ValueError, match="length mismatch"):
+    with pytest.raises(PacketDecodeError, match="invalid_length"):
         CyncProtocol.decode_packet(bad_packet)
 
 
 def test_parse_header_invalid_input() -> None:
-    """Test empty bytes raises ValueError."""
-    with pytest.raises(ValueError, match="too short"):
+    """Test empty bytes raises PacketDecodeError."""
+    with pytest.raises(PacketDecodeError, match="too_short"):
         CyncProtocol.parse_header(bytes())
 
 
 def test_parse_header_partial_header() -> None:
-    """Test partial header (3 bytes) raises ValueError."""
-    with pytest.raises(ValueError, match="too short"):
+    """Test partial header (3 bytes) raises PacketDecodeError."""
+    with pytest.raises(PacketDecodeError, match="too_short"):
         CyncProtocol.parse_header(bytes([0x23, 0x00, 0x00]))
 
 
 def test_extract_endpoint_payload_too_short() -> None:
     """Test payload too short for endpoint/msg_id extraction."""
-    with pytest.raises(ValueError, match="too short"):
+    with pytest.raises(PacketDecodeError, match="too_short"):
         CyncProtocol.extract_endpoint_and_msg_id(bytes([0x01, 0x02]))
 
 
 def test_decode_data_packet_missing_markers() -> None:
-    """Test data packet without 0x7e markers raises ValueError."""
+    """Test data packet without 0x7e markers raises PacketDecodeError."""
     # Create malformed 0x73 packet without 0x7e markers
     bad_packet = bytes([0x73, 0x00, 0x00, 0x00, 0x10]) + bytes(16)
 
-    with pytest.raises(ValueError, match="0x7e"):
+    with pytest.raises(PacketDecodeError, match="missing_0x7e_markers"):
         CyncProtocol.decode_packet(bad_packet)
 
 
