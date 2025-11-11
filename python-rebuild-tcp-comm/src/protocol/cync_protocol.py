@@ -46,6 +46,14 @@ class CyncProtocol:
 
         Raises:
             PacketDecodeError: If data is too short to parse header
+
+        Example:
+            >>> header = bytes([0x73, 0x00, 0x00, 0x00, 0x10])  # type=0x73, length=16
+            >>> packet_type, length, reserved = CyncProtocol.parse_header(header)
+            >>> packet_type == 0x73
+            True
+            >>> length == 16
+            True
         """
         if len(data) < 5:
             raise PacketDecodeError("too_short", data)
@@ -80,6 +88,13 @@ class CyncProtocol:
 
         Returns:
             5-byte header
+
+        Example:
+            >>> header = CyncProtocol.encode_header(0x73, 16)
+            >>> len(header) == 5
+            True
+            >>> header[0] == 0x73
+            True
         """
         multiplier = length // 256
         base = length % 256
@@ -113,6 +128,14 @@ class CyncProtocol:
 
         Raises:
             PacketDecodeError: If payload too short to extract endpoint and msg_id
+
+        Example:
+            >>> payload = bytes([0x01, 0x02, 0x03, 0x04, 0x05, 0x13, 0x00])
+            >>> endpoint, msg_id = CyncProtocol.extract_endpoint_and_msg_id(payload)
+            >>> len(endpoint) == 5
+            True
+            >>> len(msg_id) == 2
+            True
         """
         if len(payload) < 7:
             raise PacketDecodeError("too_short", payload)
@@ -150,6 +173,12 @@ class CyncProtocol:
 
         Raises:
             PacketDecodeError: If packet too short or malformed
+
+        Example:
+            >>> packet_bytes = bytes([0x73, 0x00, 0x00, 0x00, 0x10] + [0] * 16)
+            >>> packet = CyncProtocol.decode_packet(packet_bytes)
+            >>> packet.packet_type == 0x73
+            True
         """
         logger.debug("Decoding packet: %d bytes", len(data))
 

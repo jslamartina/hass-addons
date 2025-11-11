@@ -496,6 +496,12 @@ class DeviceOperations:
 
         Raises:
             DeviceStructParseError: If struct is invalid
+
+        Example:
+            >>> raw_bytes = bytes([0x39, 0x87, 0xC8, 0x57] + [0] * 20)  # 24 bytes
+            >>> device_info = device_ops._parse_device_struct(raw_bytes, "correlation-123")
+            >>> print(device_info.device_id_hex())
+            '3987c857'
         """
         if len(raw_bytes) != 24:
             raise DeviceStructParseError(
@@ -554,6 +560,12 @@ class DeviceOperations:
 
         Returns:
             Inner struct bytes for 0x73 packet
+
+        Example:
+            >>> device_id = bytes([0x39, 0x87, 0xC8, 0x57])
+            >>> inner_struct = device_ops._build_device_info_request(device_id)
+            >>> len(inner_struct) > 0
+            True
         """
         # TODO(phase-1a): Adapt from legacy code for individual device query
         # Placeholder structure - needs validation against real protocol
@@ -572,6 +584,11 @@ class DeviceOperations:
 
         Args:
             is_primary: True if this is the primary device
+
+        Example:
+            >>> device_ops.set_primary(True)
+            >>> devices = await device_ops.ask_for_mesh_info(parse=True)
+            >>> device_ops.set_primary(False)  # Release primary status
         """
         self.is_primary = is_primary
         logger.info("%s Primary device status: %s", self.logger_prefix, is_primary)
