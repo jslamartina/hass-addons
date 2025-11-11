@@ -56,7 +56,7 @@ class DeviceInfo:
     raw_bytes: bytes  # Original 24-byte struct for debugging
     correlation_id: str  # UUID v7 for tracking
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         """Validate device info fields after initialization."""
         # Validate device_id length
         if len(self.device_id) != 4:

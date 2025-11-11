@@ -213,8 +213,11 @@ class TCPConnection:
             try:
                 self.writer.close()
                 await self.writer.wait_closed()
-            except Exception as e:
+            except (OSError, ConnectionError) as e:
                 logger.warning("Error closing connection: %s", e)
+            except Exception as e:
+                # Unexpected error - log but don't fail cleanup
+                logger.error("Unexpected error during connection close: %s", e, exc_info=True)
             finally:
                 self._connected = False
                 self.writer = None

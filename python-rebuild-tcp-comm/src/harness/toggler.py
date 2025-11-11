@@ -224,6 +224,15 @@ async def toggle_device_with_retry(
     """
     logger = logging.getLogger(__name__)
 
+    correlation_id = uuid.uuid4().hex[:16]
+    logger.info(
+        "→ Starting toggle device with retry | correlation_id=%s device_id=%s state=%s max_attempts=%d",
+        correlation_id,
+        device_id,
+        state,
+        max_attempts,
+    )
+
     for attempt in range(1, max_attempts + 1):
         msg_id = uuid.uuid4().hex[:16]  # 16 char hex ID
 
@@ -256,7 +265,11 @@ async def toggle_device_with_retry(
                 await asyncio.sleep(delay)
                 continue
             else:
-                logger.error("All connection attempts failed")
+                logger.error(
+                    "✗ Toggle device with retry failed | correlation_id=%s device_id=%s reason=all_connection_attempts_failed",
+                    correlation_id,
+                    device_id,
+                )
                 return False
 
         # Send toggle
@@ -267,9 +280,10 @@ async def toggle_device_with_retry(
 
         if response is not None:
             logger.info(
-                "Toggle successful for device %s (msg_id: %s)",
+                "✓ Toggle device with retry complete | correlation_id=%s device_id=%s state=%s",
+                correlation_id,
                 device_id,
-                msg_id,
+                state,
             )
             return True
 
@@ -287,7 +301,11 @@ async def toggle_device_with_retry(
             record_retransmit(device_id, "timeout")
             await asyncio.sleep(delay)
 
-    logger.error("All toggle attempts failed for device %s", device_id)
+    logger.error(
+        "✗ Toggle device with retry failed | correlation_id=%s device_id=%s reason=all_toggle_attempts_failed",
+        correlation_id,
+        device_id,
+    )
     return False
 
 
