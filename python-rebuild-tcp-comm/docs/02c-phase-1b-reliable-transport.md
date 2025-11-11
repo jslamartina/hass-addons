@@ -25,7 +25,7 @@ Phase 0.5 validation completed 2025-11-07 with critical findings for Phase 1b ar
 - 0x88 STATUS_ACK: NO msg_id (⚠️ requires FIFO queue)
 - 0xD8 HEARTBEAT_ACK: NO msg_id, minimal 5-byte packet (⚠️ requires FIFO queue)
 - **Architecture Impact**: Hybrid ACK matching strategy required (see Step 0 below)
-- Reference: `docs/phase-0.5/validation-report.md` Section 1.3
+- Reference: See `docs/phase-0.5/packet-structure-validated.md` lines 93-102 for ACK structure table
 
 **ACK Latency Measurements** (✅ Measured - TIMEOUT RECALIBRATION):
 
@@ -43,6 +43,30 @@ Phase 0.5 validation completed 2025-11-07 with critical findings for Phase 1b ar
 - Fields stable across retries (confirmed via analysis)
 - Dedup strategy: Full Fingerprint (packet_type + endpoint + msg_id + payload hash)
 - Reference: `docs/phase-0.5/deduplication-strategy.md`
+
+---
+
+## Quick Reference: Phase 0.5 → Phase 1b Handoff
+
+**Critical Findings from Phase 0.5**:
+
+| Finding           | Details                                          | Reference                                    |
+| ----------------- | ------------------------------------------------ | -------------------------------------------- |
+| **ACK Structure** | 0x7B has msg_id at bytes[10:12]; others use FIFO | `packet-structure-validated.md` lines 93-102 |
+| **ACK Latency**   | p99=51ms for 0xD8 → timeout=128ms (51ms × 2.5)   | `ack-latency-measurements.md`                |
+| **msg_id Size**   | 2 bytes at bytes[10:12] (NOT 3 bytes)            | `packet-structure-validated.md` line 44      |
+| **Deduplication** | Full Fingerprint validated (all fields stable)   | `deduplication-strategy.md`                  |
+| **Packet Size**   | MAX_PACKET_SIZE=4096 bytes validated safe        | `packet-structure-validated.md`              |
+| **Checksum**      | 100% validation rate (13/13 packets)             | `validation-report.md`                       |
+| **Backpressure**  | recv_queue size: 200 packets recommended         | `backpressure-behavior.md` line 91           |
+
+**Implementation Impact**:
+
+- ✅ Hybrid ACK matching strategy (Step 0 implementation required)
+- ✅ Timeout recalibration: 128ms default (down from 2s)
+- ✅ 2-byte msg_id generation (corrected from initial 3-byte assumption)
+- ✅ Full Fingerprint deduplication strategy
+- ✅ Heartbeat timeout formula: max(3× ACK timeout, 10s) = 10s default
 
 ---
 
@@ -172,16 +196,16 @@ Phase 1b uses multiple timeout values for different operations. This guide docum
 
 **Architectural Decision**: Balanced timeout hierarchy (Option C from performance target review)
 
-| Operation                   | Default | Rationale                                              | Used In                                     |
-| --------------------------- | ------- | ------------------------------------------------------ | ------------------------------------------- |
-| **Handshake Timeout**       | 5s      | Initial connection (2.5× ACK timeout for slower setup) | `ConnectionManager.connect()`               |
-| **ACK Wait Timeout**        | 2s      | Data channel timeout (2.5× p99 target of 800ms)        | `ReliableTransport.send_reliable()`         |
-| **Send Timeout**            | 2s      | Network I/O timeout (matches ACK timeout)              | `conn.send()` wrapper                       |
-| **Heartbeat Send Interval** | 60s     | How often to send 0xD3 heartbeat packets               | `ConnectionManager._packet_router()`        |
-| **Heartbeat ACK Timeout**   | 10s     | How long to wait for 0xD8 response; max(3× ACK, 10s)   | `ConnectionManager._packet_router()`        |
-| **Global ACK Cleanup**      | 30s     | Catch-all for stuck ACKs; 15× ACK timeout for safety   | `ReliableTransport._cleanup_expired_acks()` |
+| Operation                   | Default        | Rationale                                               | Used In                                     |
+| --------------------------- | -------------- | ------------------------------------------------------- | ------------------------------------------- |
+| **Handshake Timeout**       | 5s             | Initial connection (2.5× ACK timeout for slower setup)  | `ConnectionManager.connect()`               |
+| **ACK Wait Timeout**        | 128ms (0.128s) | Data channel timeout (2.5× Phase 0.5 measured p99=51ms) | `ReliableTransport.send_reliable()`         |
+| **Send Timeout**            | 128ms (0.128s) | Network I/O timeout (matches ACK timeout)               | `conn.send()` wrapper                       |
+| **Heartbeat Send Interval** | 60s            | How often to send 0xD3 heartbeat packets                | `ConnectionManager._packet_router()`        |
+| **Heartbeat ACK Timeout**   | 10s            | How long to wait for 0xD8 response; max(3× ACK, 10s)    | `ConnectionManager._packet_router()`        |
+| **Global ACK Cleanup**      | 1.92s          | Catch-all for stuck ACKs; 15× ACK timeout (15 × 128ms)  | `ReliableTransport._cleanup_expired_acks()` |
 
-**Note**: ACK timeout changed from 5s to 2s based on performance target hierarchy (p99 target = 800ms, timeout = 2.5× p99 = 2000ms).
+**Note**: Default updated from 2s to 128ms based on Phase 0.5 measured p99=51ms. 2s is maximum acceptable for high-latency environments, 128ms is recommended default for local network operation.
 
 ### Tuning Guidelines
 
@@ -196,7 +220,7 @@ The heartbeat timeout uses formula: `max(3 × ack_timeout, 10s)` which ensures:
   - Conservative safety margin for production stability
   - Prevents false-positive reconnections from brief network hiccups
   - Heartbeat tolerance should exceed individual command tolerance (longer time scale)
-  - Even on fast local networks (ACK timeout = 1-2s), heartbeats need headroom for:
+  - Even on fast local networks (ACK timeout = 128ms-2s), heartbeats need headroom for:
     - Device processing backlog (if handling multiple commands)
     - Intermittent network congestion (brief packet reordering)
     - WiFi/Ethernet brief disconnections (< 10s recovery)
@@ -204,15 +228,15 @@ The heartbeat timeout uses formula: `max(3 × ack_timeout, 10s)` which ensures:
 
 **Scaling Examples**:
 
-| ACK Timeout  | Formula Calculation               | Heartbeat Timeout | Rationale                         |
-| ------------ | --------------------------------- | ----------------- | --------------------------------- |
-| 2s (default) | max(3 × 2s, 10s) = max(6s, 10s)   | **10s**           | Uses minimum (6s < 10s threshold) |
-| 3s           | max(3 × 3s, 10s) = max(9s, 10s)   | **10s**           | Uses minimum (9s < 10s threshold) |
-| 4s           | max(3 × 4s, 10s) = max(12s, 10s)  | **12s**           | Scales up (12s > 10s threshold)   |
-| 5s           | max(3 × 5s, 10s) = max(15s, 10s)  | **15s**           | Scales up (15s > 10s threshold)   |
-| 10s          | max(3 × 10s, 10s) = max(30s, 10s) | **30s**           | Scales up (30s > 10s threshold)   |
+| ACK Timeout     | Formula Calculation                     | Heartbeat Timeout | Rationale                             |
+| --------------- | --------------------------------------- | ----------------- | ------------------------------------- |
+| 128ms (default) | max(3 × 0.128s, 10s) = max(0.384s, 10s) | **10s**           | Uses minimum (0.384s < 10s threshold) |
+| 2s              | max(3 × 2s, 10s) = max(6s, 10s)         | **10s**           | Uses minimum (6s < 10s threshold)     |
+| 3s              | max(3 × 3s, 10s) = max(9s, 10s)         | **10s**           | Uses minimum (9s < 10s threshold)     |
+| 4s              | max(3 × 4s, 10s) = max(12s, 10s)        | **12s**           | Scales up (12s > 10s threshold)       |
+| 5s              | max(3 × 5s, 10s) = max(15s, 10s)        | **15s**           | Scales up (15s > 10s threshold)       |
 
-**Key Insight**: For default ACK timeout (2s), heartbeat uses 10s minimum. If Phase 0.5 measurements require higher ACK timeout (≥4s), heartbeat automatically scales up to maintain 3× margin.
+**Key Insight**: For default ACK timeout (128ms), heartbeat uses 10s minimum. If Phase 0.5 measurements require higher ACK timeout (≥4s), heartbeat automatically scales up to maintain 3× margin.
 
 ---
 
@@ -398,13 +422,13 @@ grep -r "timeout=[0-9]" src/
 
 **Phase 0.5 ACK Latency Measurement**:
 
-Phase 0.5 Tier 2 criteria includes ACK latency measurement for all 4 ACK types. Phase 1d baseline tests will also measure ACK latency to validate timeout assumptions. Default 2s timeout is based on assumed p99 = 800ms; if actual p99 differs significantly, timeout adjustment may be required.
+Phase 0.5 Tier 2 criteria includes ACK latency measurement for all 4 ACK types. Phase 1d baseline tests will also measure ACK latency to validate timeout assumptions. Default 128ms timeout is based on Phase 0.5 measured p99 = 51ms; if actual p99 in production differs significantly, timeout adjustment may be required.
 
 ### Environment-Specific Tuning
 
 **Local Network** (device on same LAN):
 
-- ACK timeout: 1-2s (low latency, stable)
+- ACK timeout: 128ms (default, based on Phase 0.5 measured p99=51ms) to 2s (conservative)
 - Heartbeat timeout: max(3× ACK, 10s) = 10s
 
 **Cloud Relay** (device connects via internet):
@@ -465,12 +489,13 @@ Phase 1d chaos testing will validate timeout choices:
 
 For production deployment, consider adaptive timeouts that adjust based on observed latency:
 
-```python
+**File**: `src/transport/reliable_layer.py` (future enhancement, Phase 2)
 
+```python
 ## Future: Exponentially weighted moving average
 
 class AdaptiveTimeout:
-    def **init**(self, initial: float = 5.0, alpha: float = 0.1):
+    def __init__(self, initial: float = 5.0, alpha: float = 0.1):
         self.timeout = initial
         self.alpha = alpha  # Smoothing factor
 
@@ -479,7 +504,6 @@ class AdaptiveTimeout:
         self.timeout = self.alpha * observed_latency + (1 - self.alpha) * self.timeout
         # Add safety margin (1.5×)
         self.timeout = self.timeout * 1.5
-
 ```
 
 **Note**: Adaptive timeouts deferred to Phase 2 - use fixed values from Phase 0.5 measurements for Phase 1.
@@ -583,50 +607,65 @@ CyncProtocolError (Phase 1a - base)
 ├── ACKTimeoutError (Phase 1b)
 └── QueueFullError (Phase 1c - see Phase 1c spec)
 
-```markdown
 **Cross-Reference**: See Phase 1c spec (`02d-phase-1c-backpressure.md`) for complete exception hierarchy across all Phase 1 sub-phases (1a-1c).
+
+**Note on Formatting**: Exception `__init__` methods may use f-strings for message construction (e.g., `f"Connection error: {reason}"`). However, logging calls must use `%` formatting (e.g., `logger.error("Error: %s", reason)`) for structured logging compatibility. See logging patterns below.
 
 #### Exception Handling Patterns
 
-#### Pattern 1: Try-Except with Specific Handling
+##### Pattern 1: Try-Except with Specific Handling
+
+```python
+async def decode_with_retry(data: bytes) -> ParsedPacket:
+    logger.debug("Decoding packet", extra={"data_length": len(data)})
+    try:
+        packet = protocol.decode_packet(data)
+        logger.debug("Decode successful", extra={"packet_type": packet.type})
+        return packet
+    except PacketDecodeError as e:
+        logger.error("Decode failed: %s", e.reason)
+        metrics.record_decode_error(e.reason)  # Handle gracefully
+        raise
+    except CyncProtocolError as e:
+        logger.error("Protocol error: %s", e)  # Catch-all for other protocol errors
+        raise
 ```
 
-try:
-packet = protocol.decode_packet(data)
-except PacketDecodeError as e:
-logger.error("Decode failed: %s", e.reason)
-metrics.record_decode_error(e.reason) # Handle gracefully
-except CyncProtocolError as e:
-logger.error("Protocol error: %s", e) # Catch-all for other protocol errors
+##### Pattern 2: Connection Retry Logic
 
-```markdown
-### Pattern 2: Connection Retry Logic
+```python
+async def send_with_retry(transport: ReliableTransport, payload: bytes, max_retries: int = 3) -> SendResult:
+    logger.debug("Sending payload with retries", extra={"max_retries": max_retries})
+    for attempt in range(max_retries):
+        try:
+            result = await transport.send_reliable(payload)
+            logger.debug("Send successful", extra={"attempt": attempt + 1})
+            return result
+        except ACKTimeoutError as e:
+            logger.warning("ACK timeout on attempt %d/%d", attempt + 1, max_retries)
+            if attempt < max_retries - 1:
+                backoff_delay = calculate_backoff(attempt)
+                await asyncio.sleep(backoff_delay)
+            else:
+                logger.error("Max retries exceeded")
+                raise
 ```
 
-for attempt in range(max_retries):
-try:
-await transport.send_reliable(payload)
-break
-except ACKTimeoutError as e:
-logger.warning("ACK timeout on attempt %d/%d", attempt+1, max_retries)
-if attempt < max_retries - 1:
-await asyncio.sleep(backoff_delay)
-else:
-logger.error("Max retries exceeded")
-raise
+##### Pattern 3: Duplicate Handling
 
-```markdown
-### Pattern 3: Duplicate Handling
+```python
+async def receive_with_dedup(transport: ReliableTransport) -> ParsedPacket:
+    logger.debug("Receiving packet with deduplication")
+    try:
+        packet = await transport.recv_reliable()
+        logger.debug("Packet received", extra={"packet_type": packet.type})
+        process_packet(packet)
+        return packet
+    except DuplicatePacketError as e:  # Normal during retries - log and continue
+        logger.debug("Duplicate packet: %s", e.dedup_key)
+        metrics.record_duplicate()  # Don't process, but don't fail either
+        raise
 ```
-
-try:
-packet = await transport.recv_reliable()
-process_packet(packet)
-except DuplicatePacketError as e: # Normal during retries - log and continue
-logger.debug("Duplicate packet: %s", e.dedup_key)
-metrics.record_duplicate() # Don't process, but don't fail either
-
-```markdown
 #### Quick Reference: Phase 1b Exceptions
 
 | Exception              | When Raised                | Typical Action          |
@@ -647,7 +686,7 @@ Phase 1b introduces three separate identifier systems for different purposes. Un
 
 #### Which identifier should I use?
 
-**Need to match ACK packet?** → Use `msg_id` (3-byte wire protocol identifier)
+**Need to match ACK packet?** → Use `msg_id` (2-byte wire protocol identifier)
 **Need to track event in logs?** → Use `correlation_id` (UUID v7 for observability)
 **Need to detect duplicates?** → Use `dedup_key` (Full Fingerprint hash)
 
@@ -659,13 +698,15 @@ Phase 1b introduces three separate identifier systems for different purposes. Un
 
 #### The Three Identifiers
 
-#### msg_id (3-byte wire protocol identifier)
+#### msg_id (2-byte wire protocol identifier)
 
 - **Purpose**: ACK matching over the network
-- **Type**: `bytes` (3 bytes)
-- **Generation**: Sequential counter (0x000000 → 0xFFFFFF, wraps at 0x1000000)
+- **Type**: `bytes` (2 bytes)
+- **Generation**: Sequential counter (0x0000 → 0xFFFF, wraps at 0x10000)
 - **Sent over wire**: YES (embedded in packet)
 - **Use for deduplication**: NO (use `dedup_key` instead)
+
+> **Note**: msg_id is 2 bytes (corrected from initial 3-byte assumption based on Phase 1a packet analysis)
 
 ### correlation_id (UUID v7 for observability)
 
@@ -1480,7 +1521,7 @@ class ConnectionManager:
 
                 except asyncio.TimeoutError:
                     # No packet received - check if heartbeat ACK overdue
-                    # heartbeat_ack_timeout = max(3 × ACK_timeout, 10s) = max(3×2s, 10s) = 10s
+                    # heartbeat_ack_timeout = max(3 × ACK_timeout, 10s) = max(3×0.128s, 10s) = 10s
                     if awaiting_heartbeat_ack and (time.time() - last_heartbeat_sent > 10):
                         # Recheck connection state before triggering reconnect (prevent race)
                         async with self._state_lock:
@@ -2008,7 +2049,7 @@ The state lock pattern prevents deadlock and race conditions between retry loops
 
 **Network I/O Separation** (Deadlock Prevention):
 
-- [ ] Network I/O (conn.send/recv) has separate timeout (2s), independent of lock
+- [ ] Network I/O (conn.send/recv) has separate timeout (128ms default), independent of lock
 - [ ] Lock released before `await conn.send(packet)` call
 - [ ] Lock released before `await conn.recv()` call
 - [ ] State check → encoding → release lock → network I/O pattern verified
@@ -2142,7 +2183,7 @@ async def test_lock_released_before_network_io():
 - [ ] Lock acquired BEFORE state check in send_reliable() retry loop
 - [ ] Lock released BEFORE await conn.send() call
 - [ ] Lock released BEFORE await conn.recv() call
-- [ ] Network I/O operations have separate timeout (2s), independent of lock
+- [ ] Network I/O operations have separate timeout (128ms default), independent of lock
 - [ ] Pattern verified: `async with lock: check + encode` → `release` → `await network_io()`
 
 **Verification commands**:
@@ -2765,46 +2806,119 @@ Client                DeviceOperations    ReliableTransport    Device
 
 ```python
 ## test_reliable_transport.py
+import pytest
+from unittest.mock import AsyncMock, MagicMock
+from transport.reliable_layer import ReliableTransport, SendResult
+from transport.deduplication import LRUCache
+from transport.exceptions import DuplicatePacketError, ACKTimeoutError
+from protocol.cync_protocol import CyncProtocol
+from transport.connection_manager import TCPConnection
 
-async def test_send_with_ack_success():
+@pytest.fixture
+def mock_connection() -> TCPConnection:
+    """Mock TCP connection for testing."""
+    conn = MagicMock(spec=TCPConnection)
+    conn.send = AsyncMock()
+    conn.recv = AsyncMock()
+    return conn
+
+@pytest.fixture
+def mock_protocol() -> CyncProtocol:
+    """Mock protocol codec for testing."""
+    protocol = MagicMock(spec=CyncProtocol)
+    protocol.encode_data_packet = MagicMock(return_value=b"encoded_packet")
+    protocol.decode_packet = MagicMock()
+    return protocol
+
+@pytest.fixture
+async def transport(mock_connection: TCPConnection, mock_protocol: CyncProtocol) -> ReliableTransport:
+    """Create ReliableTransport instance for testing."""
+    return ReliableTransport(
+        connection=mock_connection,
+        protocol=mock_protocol,
+        ack_timeout_seconds=0.128
+    )
+
+async def test_send_with_ack_success(transport: ReliableTransport):
     """Send message, receive ACK, return success."""
-    transport = ReliableTransport(mock_conn, mock_protocol)
-    result = await transport.send_reliable(b"test payload")
+    # Setup: Mock ACK response
+    transport.connection.recv = AsyncMock(return_value=b"\x7b\x00\x00\x00\x08...")  # DATA_ACK
+    transport.protocol.decode_packet.return_value.packet_type = 0x7B
+    transport.protocol.decode_packet.return_value.msg_id = b"\x00\x01"
+
+    # Execute
+    result: SendResult = await transport.send_reliable(b"test payload")
+
+    # Assert
     assert result.success is True
     assert result.retry_count == 0
 
-async def test_send_retry_on_timeout():
+async def test_send_retry_on_timeout(transport: ReliableTransport):
     """Send message, timeout, retry, then success."""
-    # Mock first send to timeout, second to succeed
-    result = await transport.send_reliable(b"test", max_retries=2)
+    # Setup: First attempt times out, second succeeds
+    call_count = 0
+    async def mock_recv():
+        nonlocal call_count
+        call_count += 1
+        if call_count == 1:
+            raise ACKTimeoutError("timeout")
+        return b"\x7b\x00\x00\x00\x08..."  # ACK on retry
+
+    transport.connection.recv = AsyncMock(side_effect=mock_recv)
+    transport.protocol.decode_packet.return_value.packet_type = 0x7B
+    transport.protocol.decode_packet.return_value.msg_id = b"\x00\x01"
+
+    # Execute
+    result: SendResult = await transport.send_reliable(b"test", max_retries=2)
+
+    # Assert
     assert result.success is True
     assert result.retry_count == 1
 
-async def test_send_max_retries_exceeded():
+async def test_send_max_retries_exceeded(transport: ReliableTransport):
     """All retries fail, return failure."""
-    # Mock all sends to timeout
-    result = await transport.send_reliable(b"test", max_retries=3)
+    # Setup: All attempts timeout
+    transport.connection.recv = AsyncMock(side_effect=ACKTimeoutError("timeout"))
+
+    # Execute
+    result: SendResult = await transport.send_reliable(b"test", max_retries=3)
+
+    # Assert
     assert result.success is False
     assert result.retry_count == 3
 
-async def test_recv_duplicate_dropped():
+async def test_recv_duplicate_dropped(transport: ReliableTransport):
     """Receive duplicate message, send ACK, raise DuplicatePacketError."""
-    # Add dedup_key to cache first (simulating already-seen message)
+    # Setup: Add dedup_key to cache first (simulating already-seen message)
     dedup_key = "73:3987c857:0a141e:a3f2b9c4d8e1f6a2"  # Full Fingerprint
-    await transport.dedup_cache.add(dedup_key, {"correlation_id": "01936d45-3c4e-7890-abcd-ef1234567890"})
-    # Receive same message (with same dedup_key)
+    await transport.dedup_cache.add(
+        dedup_key,
+        {"correlation_id": "01936d45-3c4e-7890-abcd-ef1234567890"}
+    )
+
+    # Setup: Mock incoming packet with same dedup_key
+    transport.connection.recv = AsyncMock(return_value=b"\x73\x00\x00\x00\x20...")
+    transport.protocol.decode_packet.return_value.dedup_key = dedup_key
+
+    # Execute & Assert: Should raise DuplicatePacketError
     with pytest.raises(DuplicatePacketError):
         packet = await transport.recv_reliable()
-    # Verify ACK still sent
+
+    # Verify ACK still sent despite duplicate
+    assert transport.connection.send.called
 
 async def test_dedup_cache_lru_eviction():
     """Cache evicts oldest when full."""
-    cache = LRUCache(max_size=3)
-    # Use dedup_key (Full Fingerprint) as cache keys
+    # Setup: Create cache with max_size=3
+    cache = LRUCache(max_size=3, ttl_seconds=300)
+
+    # Execute: Add 4 entries (should evict first)
     await cache.add("73:3987c857:000001:a1b2c3d4e5f6g7h8", {})
     await cache.add("73:3987c857:000002:a2b3c4d5e6f7g8h9", {})
     await cache.add("73:3987c857:000003:a3b4c5d6e7f8g9h0", {})
     await cache.add("73:3987c857:000004:a4b5c6d7e8f9g0h1", {})  # Should evict first
+
+    # Assert: First entry evicted, last entry present
     assert await cache.contains("73:3987c857:000001:a1b2c3d4e5f6g7h8") is False
     assert await cache.contains("73:3987c857:000004:a4b5c6d7e8f9g0h1") is True
 ```

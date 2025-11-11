@@ -28,9 +28,12 @@ Phase 0.5 validation completed 2025-11-07 with backpressure behavior analysis:
 
 **Preliminary Recommendations** (from Phase 0.5):
 
-- recv_queue size: **100 packets** (preliminary - validate in Phase 1d)
-  - Calculation: 100 packets ÷ 161 pkts/sec = ~620ms buffer at peak
-  - Conservative sizing for typical smart home usage patterns
+- recv_queue size: **100 packets minimum, 200 packets recommended** (validate in Phase 1d)
+  - Phase 0.5 recommended: 200 packets (200 ÷ 161 pkts/sec = 1.24s buffer)
+  - Phase 1c default: 100 packets (conservative start for typical usage)
+  - **Decision rationale**: Start conservative (100), monitor queue full events in Phase 1d
+  - **Re-evaluation criteria**: If queue full events >5% → increase to 200+ packets
+  - **Target**: Queue full rate <1% under normal load
 - recv_queue policy: **BLOCK** (preliminary - validate in Phase 1d)
   - Rationale: Devices tolerate backpressure (confirmed via analysis)
   - Prevents message loss while maintaining flow control
@@ -87,7 +90,7 @@ Phase 0.5 validation completed 2025-11-07 with backpressure behavior analysis:
 
 ### Features
 
-- [ ] Bounded receive queue (default: 100 messages)
+- [ ] Bounded receive queue (default: 100 messages minimum, 200 recommended)
 - [ ] Three overflow policies: BLOCK, DROP_OLDEST, REJECT
 - [ ] Queue depth tracking
 - [ ] Overflow event counting
@@ -396,8 +399,9 @@ if not result.success:
 
 - **Control commands** (user-triggered): BLOCK policy (must not lose)
   - Toggle, brightness, color, scene commands
-  - Queue size: 100 messages
+  - Queue size: 100 messages (minimum), 200 recommended (Phase 0.5 finding)
   - Example: `control_queue = BoundedQueue(100, QueuePolicy.BLOCK, "control")`
+  - Increase to 200 if queue full events >5% in Phase 1d monitoring
 - **Status updates** (device-triggered): DROP_OLDEST policy (latest matters)
   - Device status broadcasts, sensor readings, heartbeats
   - Queue size: 50 messages
@@ -621,7 +625,7 @@ Until re-evaluation trigger, **send_queue remains out of scope**.
 
 ```python
 recv_queue_policy=QueuePolicy.BLOCK  # Default for event-driven systems
-recv_queue_size=100  # Sufficient for typical smart home usage patterns
+recv_queue_size=100  # Conservative start; increase to 200 if queue full rate >5% (Phase 0.5 recommended 200)
 ```
 
 ### Rationale for BLOCK as Default
@@ -795,7 +799,7 @@ assert result.reason == "queue_full"
 
 ### Load Tests
 
-`````python
+````python
 
 ## test_queue_performance.py
 
@@ -817,8 +821,7 @@ async def consumer():
 
 await asyncio.gather(producer(), consumer())
 assert queue.qsize() < 100  # Should never overflow
-
-```sql
+```
 
 ---
 
@@ -828,70 +831,79 @@ assert queue.qsize() < 100  # Should never overflow
 
 ### Conservative (Low Memory, Reject Overload)
 
-```text
+```python
+from transport.reliable_layer import ReliableTransport
+from transport.queue_policy import QueuePolicy
+import asyncio
 
 transport = ReliableTransport(
-connection=conn,
-protocol=protocol,
-recv_queue_size=50,
-recv_queue_policy=QueuePolicy.REJECT,
+    connection=conn,
+    protocol=protocol,
+    recv_queue_size=50,
+    recv_queue_policy=QueuePolicy.REJECT,
 )
 
-## Bulk operations: use asyncio.gather() for parallelism
-
+# Bulk operations: use asyncio.gather() for parallelism
 tasks = [transport.send_reliable(cmd) for cmd in commands]
-results = await asyncio.gather(\*tasks, return_exceptions=True)
-
-```markdown
-### Aggressive (High Throughput, Drop Old Data)
+results = await asyncio.gather(*tasks, return_exceptions=True)
 ```
 
-transport = ReliableTransport(
-connection=conn,
-protocol=protocol,
-recv_queue_size=200,
-recv_queue_policy=QueuePolicy.DROP_OLDEST,
-)
-
-## Bulk operations: asyncio.gather() with timeout
-
-tasks = [transport.send_reliable(cmd, timeout=2.0) for cmd in commands]
-results = await asyncio.wait_for(
-asyncio.gather(\*tasks, return_exceptions=True),
-timeout=10.0
-)
+### Aggressive (High Throughput, Drop Old Data)
 
 ```python
+from transport.reliable_layer import ReliableTransport
+from transport.queue_policy import QueuePolicy
+import asyncio
+
+transport = ReliableTransport(
+    connection=conn,
+    protocol=protocol,
+    recv_queue_size=200,
+    recv_queue_policy=QueuePolicy.DROP_OLDEST,
+)
+
+# Bulk operations: asyncio.gather() with timeout
+tasks = [transport.send_reliable(cmd, timeout=2.0) for cmd in commands]
+results = await asyncio.wait_for(
+    asyncio.gather(*tasks, return_exceptions=True),
+    timeout=10.0
+)
+```
 
 ### Balanced (Default, Block on Overload)
 
-```
+```python
+from transport.reliable_layer import ReliableTransport
+from transport.queue_policy import QueuePolicy
 
 transport = ReliableTransport(
-connection=conn,
-protocol=protocol,
-recv_queue_size=100,
-recv_queue_policy=QueuePolicy.BLOCK, # Default: preserve event ordering
+    connection=conn,
+    protocol=protocol,
+    recv_queue_size=100,
+    recv_queue_policy=QueuePolicy.BLOCK,  # Default: preserve event ordering
 )
 
 ## Bulk operations: asyncio.gather() for group commands
 
-## Example: Turn on "Living Room" group (10 devices)
+**Example**: Turn on "Living Room" group (10 devices)
 
-devices = get_devices_in_group("living_room")
-tasks = [
-device.transport.send_reliable(encode_turn_on_command(device))
-for device in devices
-]
-results = await asyncio.gather(\*tasks, return_exceptions=True)
+```python
+async def send_group_command(group_name: str, command: bytes) -> List[SendResult]:
+    """Send command to all devices in a group."""
+    devices = get_devices_in_group(group_name)
+    logger.debug("Sending group command", extra={"group": group_name, "device_count": len(devices)})
+    tasks = [
+        device.transport.send_reliable(encode_turn_on_command(device))
+        for device in devices
+    ]
+    results = await asyncio.gather(*tasks, return_exceptions=True)
 
-## Check for failures
-
-failures = [r for r in results if isinstance(r, Exception) or not r.success]
-if failures:
-logger.warning("Group command had %d failures", len(failures))
-
-```text
+    # Check for failures
+    failures = [r for r in results if isinstance(r, Exception) or not r.success]
+    if failures:
+        logger.warning("Group command had %d failures", len(failures))
+    return results
+```
 
 ---
 
@@ -910,25 +922,22 @@ logger.warning("Group command had %d failures", len(failures))
 
 **Layer 1: Timeout on put()** (Phase 1c implementation)
 
-```
-
-result = await queue.put(item, timeout=10.0)
-if not result.success:
-logger.error("Queue full timeout - consumer may be stuck")
-
 ```python
+from transport.bounded_queue import BoundedQueue, QueueResult
+
+result: QueueResult = await queue.put(item, timeout=10.0)
+if not result.success:
+    logger.error("Queue full timeout - consumer may be stuck")
+```
 
 **Layer 2: Queue Full Alerts** (Phase 1c implementation)
 
-```
-
-## After 10 consecutive full events, escalate alert
-
+```python
+# After 10 consecutive full events, escalate alert
 if queue.full_events > 10:
-logger.error("Queue persistently full - system degraded")
-record_metric("tcp_comm_queue_degraded_total")
-
-````python
+    logger.error("Queue persistently full - system degraded")
+    record_metric("tcp_comm_queue_degraded_total")
+```
 
 **Layer 3: Automatic Policy Switch** (Phase 1c implementation - Technical Review Finding 5.1 - Resolved)
 
@@ -1068,8 +1077,7 @@ class AdaptiveQueue(BoundedQueue):
 
         # Check queue depth
         return self.qsize() < (self.queue.maxsize * 0.5)
-
-```text
+```
 
 **Implementation Decision (Updated - Technical Review Finding 5.1)**:
 
@@ -1114,4 +1122,4 @@ class AdaptiveQueue(BoundedQueue):
 - **Phase 1 Program**: `02-phase-1-spec.md` - Architecture
 - **Phase 1b**: `02c-phase-1b-reliable-transport.md` - Prerequisite
 - **Phase 1d**: `02e-phase-1d-simulator.md` - Next phase
-`````
+````
