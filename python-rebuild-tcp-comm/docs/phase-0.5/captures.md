@@ -145,7 +145,7 @@ python mitm/parse-capture.py --stats capture_*.txt
 ## Key Validation Results
 
 ✅ **Endpoint structure**: 5 bytes at bytes[5:10], no derivation needed
-✅ **msg_id position**: bytes[10:13] (clean boundary, no overlap)
+✅ **msg_id position**: bytes[10:12] (clean boundary, no overlap)
 ✅ **Hybrid ACK matching**: 0x7B has msg_id, others don't
 ✅ **Checksum algorithm**: 100% validated
 ✅ **Protocol stability**: 0 malformed packets in 24,960 analyzed

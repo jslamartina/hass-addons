@@ -20,7 +20,7 @@ Phase 0.5 validation completed 2025-11-07 with critical findings for Phase 1b ar
 
 **ACK Structure** (✅ Validated - HYBRID MATCHING REQUIRED):
 
-- 0x7B DATA_ACK: 3-byte msg_id present at bytes[10:13] (✅ parallel matching possible)
+- 0x7B DATA_ACK: 2-byte msg_id present at bytes[10:12] (✅ parallel matching possible)
 - 0x28 HELLO_ACK: NO msg_id (⚠️ requires FIFO queue)
 - 0x88 STATUS_ACK: NO msg_id (⚠️ requires FIFO queue)
 - 0xD8 HEARTBEAT_ACK: NO msg_id, minimal 5-byte packet (⚠️ requires FIFO queue)
@@ -745,7 +745,7 @@ if await self.dedup_cache.contains(dedup_key):  # Check for duplicate
 
 ## BAD - msg_id may change on retry (device behavior unknown)
 
-## Also, 3-byte msg_id has collision risk (16M values)
+## Also, 2-byte msg_id has collision risk (65K values)
 
 dedup_key = msg_id.hex()
 
@@ -765,7 +765,7 @@ dedup_key = f"{packet_type:02x}:{endpoint.hex()}:{msg_id.hex()}:{payload_hash}"
 
 | Identifier         | Purpose             | Type            | Sent Over Wire | Use for Dedup | Use for Logging    |
 | ------------------ | ------------------- | --------------- | -------------- | ------------- | ------------------ |
-| **msg_id**         | ACK matching        | `bytes` (3)     | YES            | ❌ NO         | ✅ Yes (secondary) |
+| **msg_id**         | ACK matching        | `bytes` (2)     | YES            | ❌ NO         | ✅ Yes (secondary) |
 | **correlation_id** | Event tracking      | `str` (UUID v7) | NO             | ❌ NO         | ✅ YES (primary)   |
 | **dedup_key**      | Duplicate detection | `str` (hash)    | NO             | ✅ YES        | ⚠️ Metadata only   |
 
@@ -773,7 +773,7 @@ dedup_key = f"{packet_type:02x}:{endpoint.hex()}:{msg_id.hex()}:{payload_hash}"
 
 **When sending**:
 
-- [ ] Generate `msg_id` for wire protocol (3 bytes)
+- [ ] Generate `msg_id` for wire protocol (2 bytes)
 - [ ] Generate `correlation_id` for logging (UUID v7)
 - [ ] Track mapping: `msg_id.hex()` → `correlation_id` for ACK matching
 - [ ] Log with `correlation_id` and `msg_id`
@@ -787,7 +787,7 @@ dedup_key = f"{packet_type:02x}:{endpoint.hex()}:{msg_id.hex()}:{payload_hash}"
 
 **When matching ACK**:
 
-- [ ] Extract `msg_id` from ACK packet (3 bytes from wire)
+- [ ] Extract `msg_id` from ACK packet (2 bytes from wire)
 - [ ] Reverse-lookup: `msg_id.hex()` → `correlation_id`
 - [ ] Find pending message: `pending_acks[correlation_id]`
 - [ ] Set ACK event to unblock sender
@@ -811,7 +811,7 @@ class TrackedPacket:
 @dataclass
 class PendingMessage:
     """Tracks message awaiting ACK."""
-    msg_id: bytes               # 3-byte wire protocol identifier
+    msg_id: bytes               # 2-byte wire protocol identifier
     correlation_id: str         # UUID v7 for observability and event tracing
     sent_at: float              # Timestamp for timeout calculation
     ack_event: asyncio.Event    # Set when ACK received
@@ -853,7 +853,7 @@ class ReliableTransport:
     async def send_reliable(
         self,
         payload: bytes,
-        msg_id: Optional[bytes] = None,  # 3 bytes
+        msg_id: Optional[bytes] = None,  # 2 bytes
         timeout: float = 2.0,
         max_retries: int = 3,
     ) -> SendResult:
@@ -866,7 +866,7 @@ class ReliableTransport:
         """
         # 1. Generate UUID v7 correlation_id for tracking
         correlation_id = str(uuid.uuid7())
-        # 2. Generate 3-byte msg_id if not provided (random or sequential)
+        # 2. Generate 2-byte msg_id if not provided (random or sequential)
         msg_id = msg_id or generate_msg_id()
 
         for attempt in range(max_retries):
@@ -981,7 +981,7 @@ class ReliableTransport:
 
     async def handle_ack(self, ack_packet: CyncPacket):
         """Handle native Cync ACK for pending message."""
-        # 1. Extract 3-byte msg_id from ACK packet (position varies by ACK type)
+        # 1. Extract 2-byte msg_id from ACK packet (position varies by ACK type)
         # 2. Convert to hex string: msg_id.hex()
         # 3. Reverse-lookup correlation_id: msg_id_to_correlation.get(msg_id.hex())
         # 4. Find in pending_acks using correlation_id
@@ -1071,7 +1071,7 @@ class ReliableTransport:
 | ACK Type | Packet Name   | msg_id Present? | Position      | Confidence | Sample Size | Notes                                        |
 | -------- | ------------- | --------------- | ------------- | ---------- | ----------- | -------------------------------------------- |
 | 0x28     | HELLO_ACK     | N/A             | N/A           | N/A        | 25 pairs    | Request (0x23) has no msg_id field           |
-| 0x7B     | DATA_ACK      | YES ✅           | bytes[10:13] | High       | 9 pairs     | 3-byte msg_id consistently at bytes[10:13] (9/9) |
+| 0x7B     | DATA_ACK      | YES ✅           | bytes[10:12] | High       | 9 pairs     | 2-byte msg_id consistently at bytes[10:12] (9/9) |
 | 0x88     | STATUS_ACK    | NO ❌            | N/A           | High       | 97 pairs    | msg_id NOT present in ACKs (0/97)            |
 | 0xD8     | HEARTBEAT_ACK | N/A             | N/A           | N/A        | 658 pairs   | Request (0xD3) has no msg_id field           |
 
@@ -1087,7 +1087,7 @@ class ReliableTransport:
 
 **Use Hybrid Approach**:
 
-- **0x7B (DATA_ACK)**: Parallel matching using 3-byte msg_id at bytes[10:13] (High confidence, 100% consistency)
+- **0x7B (DATA_ACK)**: Parallel matching using 2-byte msg_id at bytes[10:12] (High confidence, 100% consistency)
 - **0x28, 0x88, 0xD8**: Connection-level FIFO queue (no msg_id available)
 
 **Rationale**:
@@ -1105,8 +1105,8 @@ async def match_ack(self, ack_packet: bytes) -> Optional[PendingRequest]:
     ack_type = ack_packet[0]
 
     if ack_type == 0x7B:  # DATA_ACK - use msg_id matching
-        if len(ack_packet) >= 13:
-            msg_id = ack_packet[10:13]  # Extract 3-byte msg_id from validated position
+        if len(ack_packet) >= 12:
+            msg_id = ack_packet[10:12]  # Extract 2-byte msg_id from validated position
             return self.pending_requests_by_msgid.get(msg_id)
         else:
             # Malformed ACK, fall back to FIFO
@@ -1760,8 +1760,8 @@ class ReliableTransport:
         self._msg_id_counter: int = 0
 
     def generate_msg_id(self) -> bytes:
-        """Generate sequential 3-byte msg_id."""
-        msg_id = (self._msg_id_counter % 0x1000000).to_bytes(3, 'big')  # 2^24 for full 3-byte range
+        """Generate sequential 2-byte msg_id."""
+        msg_id = (self._msg_id_counter % 0x10000).to_bytes(2, 'big')  # 2^16 for full 2-byte range
         self._msg_id_counter += 1
         return msg_id
 
@@ -1769,7 +1769,7 @@ class ReliableTransport:
 
 **Deduplication Independence**:
 
-- **msg_id**: 3-byte wire protocol identifier for ACK matching
+- **msg_id**: 2-byte wire protocol identifier for ACK matching
 - **dedup_key**: Deterministic hash for collision-free deduplication (based on packet content)
 - **correlation_id**: UUID v7 for observability only (NOT used for deduplication)
 - Deduplication uses dedup_key (deterministic), NOT msg_id or correlation_id (see section below for details)
@@ -2164,7 +2164,7 @@ grep -A 5 "async with self._state_lock" src/transport/
 - Implement heartbeat loop (0xD3 → 0xD8)
 - Implement `send_reliable()` with native ACK wait
 - Implement `recv_reliable()` with auto-ACK
-- ACK matching with 3-byte msg_id
+- ACK matching with 2-byte msg_id
 - Unit tests for happy path
 
 ### Step 3: Retry Logic (continued)

@@ -378,16 +378,16 @@ To avoid confusion, this glossary defines key protocol terms:
 
   **Byte Boundaries** (✅ VALIDATED - NO OVERLAP):
   - endpoint: bytes 5-9 (packet[5:10])
-  - msg_id: bytes 10-12 (packet[10:13])
+  - msg_id: bytes 10-11 (packet[10:12])
   - **Clean boundaries**: No byte overlap between endpoint and msg_id
 
   **Phase 0.5 Validation Results**:
   - ✅ Confirmed 5-byte endpoint at bytes[5:10] in 0x23 handshake packet
   - ✅ Confirmed 5-byte endpoint at bytes[5:10] in 0x73/0x83 data packets
-  - ✅ Confirmed msg_id at bytes[10:13] in 0x73/0x83 data packets
+  - ✅ Confirmed msg_id at bytes[10:12] in 0x73/0x83 data packets
   - ✅ Confirmed NO overlap between endpoint and msg_id
 
-- **msg_id**: 3-byte message identifier in wire protocol (bytes[10:13] in data packets). Generated sequentially for ACK matching. Part of the composite dedup_key (along with packet_type, endpoint, and payload hash) but NOT sufficient alone for deduplication. The full fingerprint is required (see dedup_key in Phase 1b).
+- **msg_id**: 2-byte message identifier in wire protocol (bytes[10:12] in data packets). Generated sequentially for ACK matching. Part of the composite dedup_key (along with packet_type, endpoint, and payload hash) but NOT sufficient alone for deduplication. The full fingerprint is required (see dedup_key in Phase 1b).
 - **correlation_id**: UUID v7 for internal tracking and observability. Generated per-message for logs, metrics, and tracing. NOT sent over wire. NOT used for deduplication (see dedup_key in Phase 1b).
 - **dedup_key**: Deterministic hash of packet content used for duplicate detection. Generated from packet_type + endpoint + msg_id + payload hash. Same logical packet always produces same dedup_key (unlike correlation_id which is unique per reception). Uses Full Fingerprint strategy for maximum robustness.
 - **Packet Type**: First byte of every packet (0x23, 0x73, 0x83, etc.). Determines packet structure and handling.
@@ -571,7 +571,7 @@ Implements encoder/decoder for real Cync protocol with support for all major pac
 
 ### 2. Reliable Transport (Phase 1b)
 
-Provides reliable message delivery using native Cync ACK/response patterns. Handles connection lifecycle with handshake (0x23 → 0x28), automatic reconnection, periodic heartbeats (0xD3 → 0xD8), and exponential backoff retries. Uses triple-identifier strategy: 3-byte msg_id for wire protocol ACK matching, deterministic dedup_key (Full Fingerprint) for collision-resistant duplicate detection, and UUID v7 correlation_id for observability.
+Provides reliable message delivery using native Cync ACK/response patterns. Handles connection lifecycle with handshake (0x23 → 0x28), automatic reconnection, periodic heartbeats (0xD3 → 0xD8), and exponential backoff retries. Uses triple-identifier strategy: 2-byte msg_id for wire protocol ACK matching, deterministic dedup_key (Full Fingerprint) for collision-resistant duplicate detection, and UUID v7 correlation_id for observability.
 
 **Key Components**: `ReliableTransport`, `ConnectionManager`, `LRUCache`, `RetryPolicy`
 **Details**: See `02c-phase-1b-reliable-transport.md`
