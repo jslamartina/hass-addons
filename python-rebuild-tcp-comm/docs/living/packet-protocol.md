@@ -44,17 +44,17 @@ Device address extracted as bytes[5:10] in all packet types.
 endpoint = packet[5:10]  # All packet types - position is IDENTICAL
 ```
 
-**Note**: Position is IDENTICAL across all packet types (confirmed Phase 0.5)
+**Note**: Position is IDENTICAL across all packet types
 
-### Message ID (3 bytes)
+### Message ID (2 bytes)
 
-Position in 0x73/0x83 packets: bytes[10:13] (3 bytes)
+Position in 0x73/0x83 packets: bytes[10:11] (2 bytes)
 
 ```python
-msg_id = data_packet[10:13]  # 3 bytes
+msg_id = data_packet[10:11]  # 2 bytes
 ```
 
-**Validated**: ACK validation fixtures confirm 3-byte msg_id at bytes[10:13] (see `tests/fixtures/real_packets.py` line 203: ACK_VAL_0x7B_PAIR_01_ACK)
+**Note**: Corrected from earlier 3-byte assumption. See `src/protocol/cync_protocol.py` extract_endpoint_and_msg_id() for implementation.
 
 ### Device ID (2 bytes)
 
@@ -70,10 +70,17 @@ Framed packets (0x73, 0x83):
 
 ```python
 
-[header][endpoint][msg_id][0x7e][skip 6][data...][checksum][0x7e]
-0-4     5-9       10-12   13     14-19   20...    N-1       N
+[header][endpoint][msg_id][padding][0x7e][data...][checksum][0x7e]
+0-4     5-9       10-11   12       13     14...    N-1       N
 
 ```
+
+**Important**: 0x73 packets include padding byte at position 12, but 0x83 STATUS_BROADCAST packets do NOT:
+
+- **0x73 DATA_CHANNEL**: `[endpoint][msg_id][padding=0x00][0x7e][data...]`
+- **0x83 STATUS_BROADCAST**: `[endpoint][msg_id][0x7e][data...]` (no padding)
+
+See `src/protocol/cync_protocol.py` encode_status_broadcast() vs encode_data_packet() for implementation details.
 
 ## Checksum Algorithm
 
@@ -124,11 +131,63 @@ def handle_response(response: bytes) -> tuple[bool, dict]:
 | ACK Type             | msg_id Present | Position      | Strategy     |
 | -------------------- | -------------- | ------------- | ------------ |
 | 0x28 HELLO_ACK       | No             | N/A           | FIFO queue   |
-| 0x7B DATA_ACK        | Yes            | Bytes [10:13] | msg_id match |
+| 0x7B DATA_ACK        | Yes            | Bytes [10:11] | msg_id match |
 | 0x88 STATUS_ACK      | No             | N/A           | FIFO queue   |
 | 0xD8 HEARTBEAT_CLOUD | No             | N/A           | FIFO queue   |
 
 ```python
 def extract_ack_msg_id(ack_packet: bytes) -> bytes:
-    return ack_packet[10:13]  # 0x7B only - 3 bytes
+    return ack_packet[10:11]  # 0x7B only - 2 bytes
+```
+
+## Implementation
+
+### CyncProtocol Class
+
+Location: `src/protocol/cync_protocol.py`
+
+**Decoders:** All packet types (0x23, 0x43, 0x73, 0x7B, 0x83, 0xD3, etc.)
+**Encoders:** 0x23 (handshake), 0x73 (data), 0x83 (status broadcast), 0xD3 (heartbeat)
+
+### PacketFramer
+
+Location: `src/protocol/packet_framer.py`
+
+Handles TCP stream fragmentation:
+
+- Buffers incomplete packets
+- Extracts complete packets from stream
+- Per-connection state isolation
+- MAX_PACKET_SIZE: 4096 bytes
+
+### Custom Exceptions
+
+Location: `src/protocol/exceptions.py`
+
+```python
+CyncProtocolError          # Base exception
+├── PacketDecodeError      # Malformed packets, invalid checksums
+└── PacketFramingError     # Buffer overflow, oversized packets
+```
+
+All exceptions include:
+
+- `reason: str` - Machine-readable error code
+- `data_preview: bytes` - First 16 bytes of problematic data
+
+### CodecValidatorPlugin
+
+Location: `mitm/validation/codec_validator.py`
+
+MITM proxy plugin for live traffic validation:
+
+- Uses CyncProtocol + PacketFramer
+- Validates packets during capture
+- Per-connection framer isolation
+- Logs validation errors with context
+
+**Usage:**
+
+```bash
+./scripts/start-mitm-local.sh --enable-codec-validation
 ```

@@ -9,19 +9,19 @@ graph TD
         Client[Client Code]
     end
 
-    subgraph Backpressure["Backpressure Layer (Phase 1c)"]
+    subgraph Backpressure["Backpressure Layer"]
         RecvQueue[BoundedQueue - Receive<br/>Policy: BLOCK/DROP_OLDEST/REJECT<br/>Max: 100 messages]
         BulkSend[Bulk Send Operations<br/>Uses asyncio.gather&#40;&#41;<br/>No queue layer]:::conceptNode
     end
 
-    subgraph ReliableLayer["Reliable Transport Layer (Phase 1b)"]
+    subgraph ReliableLayer["Reliable Transport Layer"]
         ConnMgr[ConnectionManager<br/>- Handshake: 0x23 → 0x28<br/>- Heartbeat: 0xD3 → 0xD8<br/>- Reconnection with backoff<br/>- State machine]
         ReliableTransport[ReliableTransport<br/>- send_reliable with ACK wait<br/>- recv_reliable with auto-ACK<br/>- Pending message tracking<br/>- ACK matching by msg_id]
         LRUCache[LRUCache<br/>Deduplication<br/>1000 entries, 5min TTL<br/>Key: dedup_key &#40;Full Fingerprint&#41;]
         RetryPolicy[RetryPolicy<br/>Exponential backoff + jitter<br/>Max 3 retries]
     end
 
-    subgraph ProtocolLayer["Protocol Codec Layer (Phase 1a)"]
+    subgraph ProtocolLayer["Protocol Codec Layer"]
         Encoder[CyncProtocol.encode<br/>0x23, 0x73, 0x83, 0xD3, etc.<br/>Checksum calculation]
         Decoder[CyncProtocol.decode<br/>Packet type parsing<br/>Checksum validation]
         Framer[PacketFramer<br/>TCP stream buffering<br/>Header-based extraction<br/>Multi-packet handling]
@@ -32,9 +32,10 @@ graph TD
         TCPSocket[TCP Socket<br/>asyncio streams]
     end
 
-    subgraph Testing["Testing Infrastructure (Phase 1d)"]
+    subgraph Testing["Testing Infrastructure"]
         Chaos[ChaosConfig<br/>- Latency injection<br/>- Packet loss<br/>- Reordering<br/>- Duplicates<br/>- Corruption]:::wideNode
         Simulator[CyncDeviceSimulator<br/>Speaks real protocol<br/>ACK/response handling]:::wideNode
+        CodecValidator[CodecValidatorPlugin<br/>MITM validation plugin<br/>Live traffic validation]:::wideNode
     end
 
     %% Send Path
@@ -85,4 +86,4 @@ graph TD
     class ConnMgr,ReliableTransport,LRUCache,RetryPolicy reliableLayer
     class Encoder,Decoder,Framer,Checksum protocolLayer
     class TCPSocket networkLayer
-    class Simulator,Chaos testingLayer
+    class Simulator,Chaos,CodecValidator testingLayer

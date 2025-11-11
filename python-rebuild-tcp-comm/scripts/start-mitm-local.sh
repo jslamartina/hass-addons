@@ -95,6 +95,7 @@ nohup poetry run cync-mitm \
   --upstream-host "$UPSTREAM_HOST" \
   --upstream-port "$UPSTREAM_PORT" \
   --api-port "$API_PORT" \
+  --enable-codec-validation \
   > "$LOG_FILE" 2>&1 &
 
 # Save PID

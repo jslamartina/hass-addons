@@ -1,7 +1,5 @@
 # MITM Local Intercept Mode
 
-**Status**: ✅ Operational (2025-11-07)
-
 ## Overview
 
 The MITM proxy can intercept traffic between Cync devices and a **live cync-controller** instance (instead of the cloud). This enables capturing bidirectional packet flows when issuing commands from the production Home Assistant UI.
@@ -58,11 +56,13 @@ TODO: Update with mermaid link when it's back up
 cd /workspaces/hass-addons/python-rebuild-tcp-comm
 
 ## Replace 192.168.50.32 with your Home Assistant IP
+## Add --enable-codec-validation to validate packets in real-time
 python mitm/mitm-proxy.py \
   --listen-port 23779 \
   --upstream-host 192.168.50.32 \
   --upstream-port 23779 \
-  --api-port 8080
+  --api-port 8080 \
+  --enable-codec-validation
 ```
 
 **Important**: Use IP address (not `homeassistant.local`) if hostname doesn't resolve in devcontainer.
@@ -91,6 +91,32 @@ tail -f mitm/captures/capture_*.txt
    - Any supported action
 
 4. Observe capture file for bidirectional packets
+
+### Codec Validation
+
+Enable real-time packet validation using the codec:
+
+```bash
+## Start with codec validation enabled
+./scripts/start-mitm-local.sh --enable-codec-validation
+```
+
+**What it does:**
+
+- Validates every captured packet using CyncProtocol + PacketFramer
+- Logs validation errors with packet type, direction, connection ID
+- Does not modify or block traffic (transparent)
+- Zero performance impact (async validation)
+
+**Check validation logs:**
+
+```bash
+## Look for codec validation messages
+grep "codec validated" mitm/captures/mitm_*.log
+
+## Check for validation errors
+grep "validation failed" mitm/captures/mitm_*.log
+```
 
 ## Captured Traffic
 
@@ -258,5 +284,5 @@ python mitm/mitm-proxy.py --listen-port 23779 --upstream-host homeassistant.loca
 ## Related Documentation
 
 - MITM Proxy README: `mitm/README.md`
-- Phase 0.5 Protocol Validation: `docs/02a-phase-0.5-protocol-validation.md`
 - DNS Requirements: `hass-addons/.cursor/rules/dns-requirements.mdc`
+- Protocol Reference: `docs/living/packet-protocol.md`

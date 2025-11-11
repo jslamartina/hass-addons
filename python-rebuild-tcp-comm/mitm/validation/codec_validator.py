@@ -5,22 +5,22 @@ using Phase 1a codec components (CyncProtocol and PacketFramer).
 """
 
 import logging
+import sys
+from pathlib import Path
+
+# Ensure src is in path for protocol module imports
+_src_path = Path(__file__).parent.parent.parent / "src"
+if str(_src_path) not in sys.path:
+    sys.path.insert(0, str(_src_path))
 
 try:
     from mitm.interfaces.packet_observer import PacketDirection
-    from protocol.cync_protocol import CyncProtocol
-    from protocol.exceptions import PacketDecodeError, PacketFramingError
-    from protocol.packet_framer import PacketFramer
 except ModuleNotFoundError:  # pragma: no cover
-    # For direct execution as script (when mitm module not in path)
-    import sys
-    from pathlib import Path
+    from interfaces.packet_observer import PacketDirection  # type: ignore[import-not-found]
 
-    sys.path.insert(0, str(Path(__file__).parent.parent.parent))
-    from mitm.interfaces.packet_observer import PacketDirection  # noqa: F401, F811
-    from protocol.cync_protocol import CyncProtocol  # noqa: F401
-    from protocol.exceptions import PacketDecodeError, PacketFramingError  # noqa: F401
-    from protocol.packet_framer import PacketFramer  # noqa: F401
+from protocol.cync_protocol import CyncProtocol
+from protocol.exceptions import PacketDecodeError, PacketFramingError
+from protocol.packet_framer import PacketFramer
 
 logger = logging.getLogger(__name__)
 
