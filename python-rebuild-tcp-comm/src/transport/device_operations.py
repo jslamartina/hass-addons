@@ -164,11 +164,16 @@ class DeviceOperations:
             self.logger_prefix,
             correlation_id,
             parse,
+            extra={"correlation_id": correlation_id, "parse": parse},
         )
 
         # Validate primary device enforcement
         if not self.is_primary:
-            logger.warning("%s Non-primary device attempted mesh info request", self.logger_prefix)
+            logger.warning(
+                "%s Non-primary device attempted mesh info request",
+                self.logger_prefix,
+                extra={"is_primary": False},
+            )
             # METRIC: tcp_comm_primary_device_violations_total
             record_metric("tcp_comm_primary_device_violations_total")
             raise MeshInfoRequestError("not_primary", "Only primary device can request mesh info")
@@ -207,6 +212,11 @@ class DeviceOperations:
             correlation_id,
             refresh_id,
             inner_struct.hex(),
+            extra={
+                "correlation_id": correlation_id,
+                "refresh_id": refresh_id,
+                "bytes": inner_struct.hex(),
+            },
         )
 
         # Send via reliable transport
@@ -220,6 +230,7 @@ class DeviceOperations:
                 self.logger_prefix,
                 correlation_id,
                 e,
+                extra={"correlation_id": correlation_id, "error": str(e)},
             )
             # METRIC: tcp_comm_mesh_info_request_total
             record_metric("tcp_comm_mesh_info_request_total", outcome="send_failed")
@@ -231,6 +242,7 @@ class DeviceOperations:
                 self.logger_prefix,
                 correlation_id,
                 result.reason,
+                extra={"correlation_id": correlation_id, "reason": result.reason},
             )
             # METRIC: tcp_comm_mesh_info_request_total
             record_metric("tcp_comm_mesh_info_request_total", outcome="send_failed")
@@ -243,6 +255,7 @@ class DeviceOperations:
             self.logger_prefix,
             correlation_id,
             ack_latency_ms,
+            extra={"correlation_id": correlation_id, "ack_type": "0x7B", "latency_ms": ack_latency_ms},
         )
 
         # Listen for 0x83 status broadcasts
@@ -269,6 +282,7 @@ class DeviceOperations:
                             "%s Status broadcast received (0x83) | correlation_id=%s",
                             self.logger_prefix,
                             correlation_id,
+                            extra={"correlation_id": correlation_id, "packet_type": "0x83"},
                         )
 
                         if parse:
@@ -293,6 +307,11 @@ class DeviceOperations:
             correlation_id,
             len(responses),
             total_time_ms,
+            extra={
+                "correlation_id": correlation_id,
+                "device_count": len(responses),
+                "total_time_ms": total_time_ms,
+            },
         )
 
         # METRIC: tcp_comm_mesh_info_request_total
@@ -340,6 +359,11 @@ class DeviceOperations:
             correlation_id,
             device_id.hex(),
             timeout,
+            extra={
+                "correlation_id": correlation_id,
+                "device_id": device_id.hex(),
+                "timeout": timeout,
+            },
         )
 
         # Build device info request packet (0x73)
@@ -351,6 +375,7 @@ class DeviceOperations:
             self.logger_prefix,
             correlation_id,
             device_id.hex(),
+            extra={"correlation_id": correlation_id, "device_id": device_id.hex()},
         )
 
         # Send via reliable transport
@@ -362,6 +387,7 @@ class DeviceOperations:
                 self.logger_prefix,
                 correlation_id,
                 e,
+                extra={"correlation_id": correlation_id, "error": str(e)},
             )
             # METRIC: tcp_comm_device_info_request_total
             record_metric("tcp_comm_device_info_request_total", outcome="send_failed")
@@ -373,6 +399,7 @@ class DeviceOperations:
                 self.logger_prefix,
                 correlation_id,
                 result.reason,
+                extra={"correlation_id": correlation_id, "reason": result.reason},
             )
             # METRIC: tcp_comm_device_info_request_total
             record_metric("tcp_comm_device_info_request_total", outcome="send_failed")
@@ -398,6 +425,7 @@ class DeviceOperations:
                         self.logger_prefix,
                         correlation_id,
                         latency_ms,
+                        extra={"correlation_id": correlation_id, "packet_type": "0x43", "latency_ms": latency_ms},
                     )
 
                     # Parse device struct
@@ -412,6 +440,7 @@ class DeviceOperations:
                         self.logger_prefix,
                         correlation_id,
                         latency_ms,
+                        extra={"correlation_id": correlation_id, "latency_ms": latency_ms},
                     )
 
                     return device_info
@@ -425,6 +454,12 @@ class DeviceOperations:
                 device_id.hex(),
                 timeout,
                 latency_ms,
+                extra={
+                    "correlation_id": correlation_id,
+                    "device_id": device_id.hex(),
+                    "timeout": timeout,
+                    "latency_ms": latency_ms,
+                },
             )
             # METRIC: tcp_comm_device_info_request_total
             record_metric("tcp_comm_device_info_request_total", outcome="timeout")
@@ -438,6 +473,11 @@ class DeviceOperations:
             correlation_id,
             device_id.hex(),
             latency_ms,
+            extra={
+                "correlation_id": correlation_id,
+                "device_id": device_id.hex(),
+                "latency_ms": latency_ms,
+            },
         )
         return None
 
@@ -471,6 +511,7 @@ class DeviceOperations:
                     self.logger_prefix,
                     offset,
                     e,
+                    extra={"offset": offset, "error": str(e)},
                 )
                 break
 
@@ -548,6 +589,11 @@ class DeviceOperations:
             correlation_id,
             device_id.hex(),
             device_type,
+            extra={
+                "correlation_id": correlation_id,
+                "device_id": device_id.hex(),
+                "device_type": device_type,
+            },
         )
 
         return device_info
@@ -591,4 +637,9 @@ class DeviceOperations:
             >>> device_ops.set_primary(False)  # Release primary status
         """
         self.is_primary = is_primary
-        logger.info("%s Primary device status: %s", self.logger_prefix, is_primary)
+        logger.info(
+            "%s Primary device status: %s",
+            self.logger_prefix,
+            is_primary,
+            extra={"is_primary": is_primary},
+        )

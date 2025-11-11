@@ -52,6 +52,7 @@ class TCPConnection:
                 self.host,
                 self.port,
                 self.connect_timeout,
+                extra={"host": self.host, "port": self.port, "timeout": self.connect_timeout},
             )
             self.reader, self.writer = await asyncio.wait_for(
                 asyncio.open_connection(self.host, self.port),
@@ -64,6 +65,7 @@ class TCPConnection:
                 self.host,
                 self.port,
                 elapsed_ms,
+                extra={"host": self.host, "port": self.port, "elapsed_ms": elapsed_ms},
             )
             return True
         except asyncio.TimeoutError:
@@ -73,6 +75,7 @@ class TCPConnection:
                 self.host,
                 self.port,
                 elapsed_ms,
+                extra={"host": self.host, "port": self.port, "elapsed_ms": elapsed_ms, "error": "timeout"},
             )
             return False
         except OSError as e:
@@ -83,6 +86,7 @@ class TCPConnection:
                 self.port,
                 elapsed_ms,
                 e,
+                extra={"host": self.host, "port": self.port, "elapsed_ms": elapsed_ms, "error": str(e)},
             )
             return False
 
@@ -97,7 +101,10 @@ class TCPConnection:
             True if sent successfully, False otherwise
         """
         if not self._connected or not self.writer:
-            logger.error("Cannot send: not connected")
+            logger.error(
+                "Cannot send: not connected",
+                extra={"host": self.host, "port": self.port},
+            )
             return False
 
         start_time = time.perf_counter()
@@ -107,6 +114,7 @@ class TCPConnection:
                 len(data),
                 self.host,
                 self.port,
+                extra={"bytes": len(data), "host": self.host, "port": self.port},
             )
             self.writer.write(data)
             await asyncio.wait_for(self.writer.drain(), timeout=self.io_timeout)
@@ -117,6 +125,7 @@ class TCPConnection:
                 self.host,
                 self.port,
                 elapsed_ms,
+                extra={"bytes": len(data), "host": self.host, "port": self.port, "elapsed_ms": elapsed_ms},
             )
             return True
         except asyncio.TimeoutError:
@@ -126,6 +135,7 @@ class TCPConnection:
                 self.host,
                 self.port,
                 elapsed_ms,
+                extra={"host": self.host, "port": self.port, "elapsed_ms": elapsed_ms, "error": "timeout"},
             )
             return False
         except OSError as e:
@@ -136,6 +146,7 @@ class TCPConnection:
                 self.port,
                 elapsed_ms,
                 e,
+                extra={"host": self.host, "port": self.port, "elapsed_ms": elapsed_ms, "error": str(e)},
             )
             return False
 
@@ -150,7 +161,10 @@ class TCPConnection:
             Received bytes, or None on error/timeout
         """
         if not self._connected or not self.reader:
-            logger.error("Cannot receive: not connected")
+            logger.error(
+                "Cannot receive: not connected",
+                extra={"host": self.host, "port": self.port},
+            )
             return None
 
         if max_bytes is None:
@@ -163,6 +177,7 @@ class TCPConnection:
                 max_bytes,
                 self.host,
                 self.port,
+                extra={"max_bytes": max_bytes, "host": self.host, "port": self.port},
             )
             data = await asyncio.wait_for(
                 self.reader.read(max_bytes),
@@ -175,6 +190,7 @@ class TCPConnection:
                     self.host,
                     self.port,
                     elapsed_ms,
+                    extra={"host": self.host, "port": self.port, "elapsed_ms": elapsed_ms},
                 )
                 self._connected = False
                 return None
@@ -184,6 +200,7 @@ class TCPConnection:
                 self.host,
                 self.port,
                 elapsed_ms,
+                extra={"bytes": len(data), "host": self.host, "port": self.port, "elapsed_ms": elapsed_ms},
             )
             return data
         except asyncio.TimeoutError:
@@ -193,6 +210,7 @@ class TCPConnection:
                 self.host,
                 self.port,
                 elapsed_ms,
+                extra={"host": self.host, "port": self.port, "elapsed_ms": elapsed_ms, "error": "timeout"},
             )
             return None
         except OSError as e:
@@ -203,21 +221,36 @@ class TCPConnection:
                 self.port,
                 elapsed_ms,
                 e,
+                extra={"host": self.host, "port": self.port, "elapsed_ms": elapsed_ms, "error": str(e)},
             )
             return None
 
     async def close(self) -> None:
         """Close the connection."""
         if self.writer:
-            logger.info("Closing connection to %s:%d", self.host, self.port)
+            logger.info(
+                "Closing connection to %s:%d",
+                self.host,
+                self.port,
+                extra={"host": self.host, "port": self.port},
+            )
             try:
                 self.writer.close()
                 await self.writer.wait_closed()
             except (OSError, ConnectionError) as e:
-                logger.warning("Error closing connection: %s", e)
+                logger.warning(
+                    "Error closing connection: %s",
+                    e,
+                    extra={"host": self.host, "port": self.port, "error": str(e)},
+                )
             except Exception as e:
                 # Unexpected error - log but don't fail cleanup
-                logger.error("Unexpected error during connection close: %s", e, exc_info=True)
+                logger.error(
+                    "Unexpected error during connection close: %s",
+                    e,
+                    exc_info=True,
+                    extra={"host": self.host, "port": self.port, "error": str(e)},
+                )
             finally:
                 self._connected = False
                 self.writer = None
