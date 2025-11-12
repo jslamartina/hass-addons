@@ -44,5 +44,8 @@
     "terminal.integrated.allowChords": false,
     "terminal.integrated.sendKeybindingsToShell": true,
     "terminal.integrated.scrollback": 10000,
+
+    // Tasks: Allow automatic tasks to run on folder open
+    "task.allowAutomaticTasks": "on",
   },
 }

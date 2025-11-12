@@ -26,22 +26,21 @@ Maximum observed packet size: 395 bytes (well under 4KB MAX_PACKET_SIZE assumpti
 """
 
 from dataclasses import dataclass
-from typing import Dict
 
 __all__ = [
-    "PacketMetadata",
     "PACKET_METADATA",
-    "HANDSHAKE_0x23_DEV_TO_CLOUD",
-    "HELLO_ACK_0x28_CLOUD_TO_DEV",
-    "STATUS_BROADCAST_0x83_DEV_TO_CLOUD",
-    "STATUS_ACK_0x88_CLOUD_TO_DEV",
-    "HEARTBEAT_DEV_0xD3_DEV_TO_CLOUD",
-    "HEARTBEAT_CLOUD_0xD8_CLOUD_TO_DEV",
     "DEVICE_INFO_0x43_DEV_TO_CLOUD",
-    "INFO_ACK_0x48_CLOUD_TO_DEV",
     "DEVICE_INFO_0x43_FRAMED_1",
     "DEVICE_INFO_0x43_FRAMED_2",
     "DEVICE_INFO_0x43_FRAMED_3",
+    "HANDSHAKE_0x23_DEV_TO_CLOUD",
+    "HEARTBEAT_CLOUD_0xD8_CLOUD_TO_DEV",
+    "HEARTBEAT_DEV_0xD3_DEV_TO_CLOUD",
+    "HELLO_ACK_0x28_CLOUD_TO_DEV",
+    "INFO_ACK_0x48_CLOUD_TO_DEV",
+    "PacketMetadata",
+    "STATUS_ACK_0x88_CLOUD_TO_DEV",
+    "STATUS_BROADCAST_0x83_DEV_TO_CLOUD",
     "STATUS_BROADCAST_0x83_FRAMED_4",
     "STATUS_BROADCAST_0x83_FRAMED_5",
     "STATUS_BROADCAST_0x83_FRAMED_6",
@@ -1975,7 +1974,7 @@ MULTI_DEVICE_INFO_0x43_META: PacketMetadata = PacketMetadata(
 
 
 # Metadata registry for parameterized tests
-PACKET_METADATA: Dict[str, PacketMetadata] = {
+PACKET_METADATA: dict[str, PacketMetadata] = {
     # Original real packet captures
     "HANDSHAKE_0x23": HANDSHAKE_0x23_METADATA,
     "HELLO_ACK_0x28": HELLO_ACK_0x28_METADATA,

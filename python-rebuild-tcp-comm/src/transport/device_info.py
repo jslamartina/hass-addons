@@ -1,26 +1,34 @@
 """Device information dataclass for parsed device structs.
 
-This module provides the DeviceInfo dataclass for representing parsed 24-byte
+This module provides the DeviceInfo dataclass for representing parsed DEVICE_TYPE_LENGTH_BYTES-byte
 device structures from 0x83 (status broadcast) and 0x43 (device info) packets.
 
-The 24-byte device struct format is copied and adapted from legacy code
+The DEVICE_TYPE_LENGTH_BYTES-byte device struct format is copied and adapted from legacy code
 (cync-controller/src/cync_controller/structs.py).
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Dict
+from typing import Any
+
+# Protocol constants
+DEVICE_TYPE_LENGTH_BYTES = 24
+DEVICE_ID_LENGTH_BYTES = 4
+UUID_STRING_MIN_LENGTH = 36
+DEVICE_TYPE_BRIDGE = 0x01
+DEVICE_TYPE_BULB = 0x02
+DEVICE_TYPE_SWITCH = 0x03
 
 
 @dataclass
 class DeviceInfo:
-    """Parsed 24-byte device structure from mesh info response.
+    """Parsed DEVICE_TYPE_LENGTH_BYTES-byte device structure from mesh info response.
 
     This dataclass represents a single device's information extracted from
     0x83 status broadcast or 0x43 device info packets.
 
-    Struct Format (24 bytes total):
+    Struct Format (DEVICE_TYPE_LENGTH_BYTES bytes total):
         - Bytes 0-3: device_id (4 bytes) - Unique device identifier
         - Bytes 4-7: capabilities (4 bytes) - Device type and feature flags
         - Bytes 8-11: state data (4 bytes) - On/off, brightness, color, etc.
@@ -31,7 +39,7 @@ class DeviceInfo:
         device_type: Device type extracted from capabilities (bridge, bulb, switch, etc.)
         capabilities: Capabilities bitmask (device type, features, supported operations)
         state: Parsed state dictionary (on/off, brightness, color, etc.)
-        raw_bytes: Original 24-byte struct for debugging and analysis
+        raw_bytes: Original DEVICE_TYPE_LENGTH_BYTES-byte struct for debugging and analysis
         correlation_id: UUID v7 for tracking this device info through logs/metrics
 
     Example:
@@ -40,7 +48,7 @@ class DeviceInfo:
         ...     device_type=0x01,  # Bridge device
         ...     capabilities=0x01000000,
         ...     state={'on': True, 'brightness': 255},
-        ...     raw_bytes=b'...',  # 24 bytes
+        ...     raw_bytes=b'...',  # DEVICE_TYPE_LENGTH_BYTES bytes
         ...     correlation_id='01936d45-3c4e-7890-abcd-ef1234567890'
         ... )
 
@@ -52,23 +60,31 @@ class DeviceInfo:
     device_id: bytes  # 4 bytes - unique device identifier
     device_type: int  # Device type (bridge=0x01, bulb=0x02, switch=0x03, etc.)
     capabilities: int  # Capabilities bitmask (features, supported operations)
-    state: Dict[str, Any]  # Parsed state (on/off, brightness, color, etc.)
-    raw_bytes: bytes  # Original 24-byte struct for debugging
+    state: dict[str, Any]  # Parsed state (on/off, brightness, color, etc.)
+    raw_bytes: bytes  # Original DEVICE_TYPE_LENGTH_BYTES-byte struct for debugging
     correlation_id: str  # UUID v7 for tracking
 
     def __post_init__(self) -> None:
         """Validate device info fields after initialization."""
         # Validate device_id length
-        if len(self.device_id) != 4:
-            raise ValueError(f"device_id must be 4 bytes, got {len(self.device_id)}")
+        if len(self.device_id) != DEVICE_ID_LENGTH_BYTES:
+            error_msg = f"device_id must be 4 bytes, got {len(self.device_id)}"
+            raise ValueError(error_msg)
 
         # Validate raw_bytes length
-        if len(self.raw_bytes) != 24:
-            raise ValueError(f"raw_bytes must be 24 bytes, got {len(self.raw_bytes)}")
+        if len(self.raw_bytes) != DEVICE_TYPE_LENGTH_BYTES:
+            error_msg = (
+                f"raw_bytes must be DEVICE_TYPE_LENGTH_BYTES bytes, got {len(self.raw_bytes)}"
+            )
+            raise ValueError(error_msg)
 
         # Validate correlation_id format (UUID v7 string)
-        if not isinstance(self.correlation_id, str) or len(self.correlation_id) < 36:
-            raise ValueError(f"correlation_id must be UUID string, got {self.correlation_id}")
+        if (
+            not isinstance(self.correlation_id, str)
+            or len(self.correlation_id) < UUID_STRING_MIN_LENGTH
+        ):
+            error_msg = f"correlation_id must be UUID string, got {self.correlation_id}"
+            raise ValueError(error_msg)
 
     def device_id_hex(self) -> str:
         """Return device_id as hex string for display."""
@@ -76,15 +92,15 @@ class DeviceInfo:
 
     def is_bridge(self) -> bool:
         """Check if this device is a bridge/hub device."""
-        return self.device_type == 0x01
+        return self.device_type == DEVICE_TYPE_BRIDGE
 
     def is_bulb(self) -> bool:
         """Check if this device is a light bulb."""
-        return self.device_type == 0x02
+        return self.device_type == DEVICE_TYPE_BULB
 
     def is_switch(self) -> bool:
         """Check if this device is a switch."""
-        return self.device_type == 0x03
+        return self.device_type == DEVICE_TYPE_SWITCH
 
     def __repr__(self) -> str:
         """String representation for logging and debugging."""

@@ -154,7 +154,7 @@ Phase 0.5 captured 24,960 packets from 9 Cync devices, validating protocol struc
 ### Phase 1a (Protocol Codec)
 
 - Copy checksum algorithm (validated, don't import legacy)
-- Use byte positions: endpoint[5:10], msg_id[10:13]
+- Use byte positions: endpoint[5:10], msg_id[10:12]
 - Test against 13 validated fixtures
 - PacketFramer MAX_PACKET_SIZE=4096 (validated safe)
 

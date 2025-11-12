@@ -1,0 +1,505 @@
+---
+description: Standardized exception handling patterns for python-rebuild-tcp-comm
+appliesTo:
+  - "python-rebuild-tcp-comm/**/*.py"
+---
+
+# Exception Handling Patterns
+
+## CRITICAL: Exception handling must follow these patterns for consistency and debuggability
+
+## Exception Hierarchy
+
+### Protocol Layer Exceptions (`src/protocol/exceptions.py`)
+
+**Base Exception**:
+
+- `CyncProtocolError` - Base for all protocol-related errors
+
+**Specific Exceptions**:
+
+- `PacketDecodeError(CyncProtocolError)` - Packet can't be decoded (malformed data, invalid checksum, unknown type)
+- `PacketFramingError(CyncProtocolError)` - TCP stream framing error (invalid length, buffer overflow)
+
+### Transport Layer Exceptions (`src/transport/exceptions.py`)
+
+**Extends Protocol Exceptions**:
+
+- `CyncConnectionError(CyncProtocolError)` - Connection state error (not connected, handshake failed)
+- `HandshakeError(CyncProtocolError)` - Handshake failed (timeout, invalid response, auth failed)
+- `PacketReceiveError(CyncProtocolError)` - Error receiving packet (network failure, timeout)
+- `DuplicatePacketError(CyncProtocolError)` - Packet is duplicate (normal condition, may log and continue)
+- `ACKTimeoutError(CyncProtocolError)` - ACK not received within timeout
+
+### Device Operations Exceptions (`src/transport/device_info.py`)
+
+**Standard Exceptions** (not inheriting from CyncProtocolError):
+
+- `MeshInfoRequestError(Exception)` - Mesh info request failed (not_primary, send_failed, timeout)
+- `DeviceInfoRequestError(Exception)` - Device info request failed (send_failed, timeout)
+- `DeviceStructParseError(Exception)` - Device struct parsing failed
+
+### Standard Library Exceptions
+
+**Commonly Used**:
+
+- `ConnectionError` - Network connection errors
+- `TimeoutError` - Operation timeout
+- `OSError` - System-level errors (socket errors, file I/O)
+- `asyncio.CancelledError` - Task cancellation (should be re-raised, not caught)
+
+---
+
+## Handling Patterns
+
+### Pattern 1: Specific Exceptions First
+
+**ALWAYS catch specific exceptions before broad `Exception` catch**.
+
+```python
+try:
+    # Operation that may fail
+    result = await some_operation()
+except (HandshakeError, ConnectionError, TimeoutError) as e:
+    # Expected errors - handle specifically
+    logger.exception("Expected error occurred", extra={"error": str(e), "error_type": type(e).__name__})
+    # Handle or retry
+except Exception as e:
+    # Unexpected errors - log and re-raise
+    logger.exception("Unexpected error", extra={"error": str(e), "error_type": type(e).__name__})
+    raise
+```
+
+**Rationale**: Specific exceptions allow targeted handling. Broad catch should only be for truly unexpected errors.
+
+---
+
+### Pattern 2: Re-raise vs Continue
+
+**Decision Tree**:
+
+1. **Retry Loops**: Catch specific retryable errors, log, retry; catch unexpected, log, re-raise
+2. **Packet Processing**: Catch decode errors, log, continue; catch unexpected, log critical, continue
+3. **Main Event Loops**: Catch all, log critical, trigger recovery, re-raise
+4. **Cleanup Operations**: Catch all, log warning, continue (best-effort)
+
+---
+
+### Pattern 3: Retry Loops
+
+**Use Case**: Operations that should retry on transient failures (handshake, network operations)
+
+**Pattern**:
+
+```python
+max_retries = 3
+for attempt in range(max_retries):
+    try:
+        if await self._attempt_operation():
+            return True
+    except (HandshakeError, ConnectionError, TimeoutError, OSError) as e:
+        # Expected retryable errors - log and retry
+        logger.exception(
+            "Operation error on attempt %d/%d",
+            attempt + 1,
+            max_retries,
+            extra={
+                "attempt": attempt + 1,
+                "max_retries": max_retries,
+                "error": str(e),
+                "error_type": type(e).__name__,
+            },
+        )
+        # Cleanup if needed
+        if self.pending_requests:
+            self.pending_requests.popleft()
+    except Exception as e:
+        # Unexpected errors - log and re-raise (don't retry)
+        logger.exception(
+            "Unexpected error on attempt %d/%d",
+            attempt + 1,
+            max_retries,
+            extra={
+                "attempt": attempt + 1,
+                "max_retries": max_retries,
+                "error": str(e),
+                "error_type": type(e).__name__,
+            },
+        )
+        raise  # Re-raise unexpected errors to preserve exception context
+
+    # Retry with exponential backoff
+    if attempt < max_retries - 1:
+        delay = self.retry_policy.get_delay(attempt)
+        await asyncio.sleep(delay)
+
+# All retries exhausted
+return False
+```
+
+**Key Points**:
+
+- Catch specific retryable exceptions first
+- Catch unexpected exceptions separately and re-raise
+- Always log with structured context (`extra={}` dict)
+- Preserve exception context with `raise` (not `raise e`)
+
+**Example**: `connection_manager.py` lines 275-329 (handshake retry loop)
+
+---
+
+### Pattern 4: Packet Processing
+
+**Use Case**: Processing packets from network stream where one bad packet shouldn't crash the router
+
+**Pattern**:
+
+```python
+for packet_bytes in complete_packets:
+    try:
+        packet = self.protocol.decode_packet(packet_bytes)
+    except (PacketDecodeError, CyncProtocolError) as e:
+        # Expected decode errors - log and continue processing other packets
+        logger.exception(
+            "Packet decode failed",
+            extra={"error": str(e), "error_type": type(e).__name__},
+        )
+        continue  # Skip malformed packets, continue processing others
+    except Exception as e:
+        # Unexpected decode errors - this should not happen (bug in protocol implementation)
+        # Log as critical but continue processing to avoid crashing packet router
+        logger.critical(
+            "Unexpected packet decode error - this should not happen: %s",
+            e,
+            extra={"error": str(e), "error_type": type(e).__name__},
+        )
+        continue  # Skip malformed packets, continue processing others
+
+    # Process packet
+    try:
+        await self._handle_packet(packet)
+    except (CyncProtocolError, asyncio.CancelledError):
+        # Re-raise protocol errors and cancellations
+        raise
+    except Exception as e:
+        # Log unexpected errors from packet handlers but continue processing
+        logger.exception(
+            "Unexpected error handling packet type 0x%02x",
+            packet.packet_type,
+            extra={
+                "packet_type": packet.packet_type,
+                "error": str(e),
+                "error_type": type(e).__name__,
+            },
+        )
+        # Continue processing other packets
+```
+
+**Key Points**:
+
+- Catch decode errors specifically, log, continue
+- Catch unexpected errors, log as CRITICAL (indicates bug), continue
+- Re-raise protocol errors and cancellations from handlers
+- Continue processing other packets even if one fails
+
+**Example**: `connection_manager.py` lines 456-504 (packet router)
+
+---
+
+### Pattern 5: Main Event Loops
+
+**Use Case**: Main event loop that must not crash (packet router, connection manager)
+
+**Pattern**:
+
+```python
+try:
+    while True:
+        # Main loop logic
+        await self._process_packets()
+except asyncio.CancelledError:
+    # Clean cancellation from disconnect() - this is expected
+    logger.debug("Packet router cancelled (clean shutdown)")
+    raise
+except Exception as e:
+    # Unexpected error - trigger reconnect and re-raise
+    # Broad catch is intentional: packet router is the main event loop for connection.
+    # Any unhandled exception here would crash the connection, so we catch all exceptions,
+    # trigger reconnection, and re-raise to allow higher-level error handling.
+    device_id = self._get_device_id()
+    logger.exception(
+        "Packet router crashed",
+        extra={"error": str(e), "error_type": type(e).__name__},
+    )
+    registry.record_heartbeat(device_id, "crash")
+    self._trigger_reconnect("packet_router_crash")
+    raise  # Re-raise preserves exception context
+```
+
+**Key Points**:
+
+- Catch `asyncio.CancelledError` separately and re-raise (expected cancellation)
+- Catch all other exceptions, log as CRITICAL, trigger recovery, re-raise
+- Document why broad catch is intentional
+- Re-raise to allow higher-level error handling (shouldn't crash the main loop)
+
+**Example**: `connection_manager.py` lines 598-613 (packet router main loop)
+
+---
+
+### Pattern 6: Cleanup Operations
+
+**Use Case**: Best-effort cleanup that shouldn't fail (connection close, resource cleanup)
+
+**Pattern**:
+
+```python
+try:
+    # Cleanup operation
+    await self.writer.close()
+    await self.writer.wait_closed()
+except (OSError, ConnectionError) as e:
+    # Expected errors during cleanup - log warning
+    logger.warning(
+        "Error closing connection: %s",
+        e,
+        extra={"host": self.host, "port": self.port, "error": str(e)},
+    )
+except Exception as e:
+    # Cleanup operations should not fail - log but continue
+    # This is best-effort cleanup, so we don't re-raise unexpected errors.
+    # Broad catch is intentional: writer.close()/wait_closed() can raise various
+    # exceptions (OSError, RuntimeError, AttributeError) and we want to ensure
+    # cleanup completes even if close fails.
+    logger.warning(
+        "Unexpected error during connection close (non-fatal): %s",
+        e,
+        extra={
+            "host": self.host,
+            "port": self.port,
+            "error": str(e),
+            "error_type": type(e).__name__,
+        },
+    )
+    # Don't re-raise - cleanup is best-effort
+```
+
+**Key Points**:
+
+- Catch expected cleanup errors, log warning
+- Catch unexpected errors, log warning, continue (don't re-raise)
+- Document why broad catch is intentional
+- Cleanup should never fail the operation
+
+**Example**: `socket_abstraction.py` lines 280-299 (connection close)
+
+---
+
+### Pattern 7: Wrapping Exceptions
+
+**Use Case**: Converting unexpected exceptions to domain-specific exceptions for consistency
+
+**Pattern**:
+
+```python
+try:
+    # Operation that may raise various exceptions
+    result = await some_operation()
+except (ConnectionError, TimeoutError, OSError) as e:
+    # Expected errors - wrap in domain exception
+    error_code = "send_failed"
+    error_msg = f"Operation failed: {e}"
+    raise MeshInfoRequestError(error_code, error_msg) from e
+except Exception as e:
+    # Unexpected errors - wrap in domain exception with context
+    logger.exception(
+        "Unexpected exception",
+        extra={"error": str(e), "error_type": type(e).__name__},
+    )
+    error_code = "unexpected_error"
+    error_msg = f"Unexpected error: {e}"
+    raise MeshInfoRequestError(error_code, error_msg) from e
+```
+
+**Key Points**:
+
+- Use `raise ... from e` to preserve exception chain
+- Wrap in domain-specific exceptions for API consistency
+- Log unexpected exceptions before wrapping
+
+**Example**: `device_operations.py` lines 496-511 (mesh info request)
+
+---
+
+## Logging Requirements
+
+### Always Include
+
+1. **Error message**: Clear description of what failed
+2. **Error type**: `error_type: type(e).__name__` in `extra={}`
+3. **Error string**: `error: str(e)` in `extra={}`
+4. **Context**: Operation-specific context (attempt number, packet type, device_id, etc.)
+
+### Log Levels
+
+- **DEBUG**: Expected errors in retry loops (after logging exception)
+- **INFO**: Normal error handling (timeouts, retries)
+- **WARNING**: Recoverable errors (cleanup failures, expected network errors)
+- **ERROR**: Failures affecting functionality
+- **CRITICAL**: Unexpected errors indicating bugs (unexpected exception types)
+
+### Structured Logging
+
+**Always use structured logging with `extra={}` dict**:
+
+```python
+logger.exception(
+    "Operation failed",
+    extra={
+        "operation": "handshake",
+        "attempt": attempt + 1,
+        "max_retries": max_retries,
+        "error": str(e),
+        "error_type": type(e).__name__,
+        "device_id": device_id,
+    },
+)
+```
+
+---
+
+## Exception Chaining
+
+### When to Use `raise ... from e`
+
+**Use `from e` when**:
+
+- Wrapping exceptions in domain-specific exceptions
+- Converting exception types for API consistency
+- Preserving original exception context for debugging
+
+**Example**:
+
+```python
+except Exception as e:
+    raise MeshInfoRequestError("unexpected_error", f"Unexpected error: {e}") from e
+```
+
+### When to Use `raise` (bare)
+
+**Use bare `raise` when**:
+
+- Re-raising after logging
+- Preserving exception context without wrapping
+- In retry loops after logging
+
+**Example**:
+
+```python
+except Exception as e:
+    logger.exception("Unexpected error")
+    raise  # Re-raise preserves exception context
+```
+
+---
+
+## Anti-Patterns
+
+### ❌ DON'T: Catch Exception Without Re-raising (Unless Intentional)
+
+```python
+# WRONG: Swallows exceptions silently
+except Exception as e:
+    logger.exception("Error occurred")
+    # No re-raise - exception is lost!
+```
+
+**Fix**: Always re-raise unless continuing processing is intentional (document why).
+
+### ❌ DON'T: Catch Exception Just to Log
+
+```python
+# WRONG: Logs but doesn't handle
+except Exception as e:
+    logger.exception("Error occurred")
+    # No action taken - what happens next?
+```
+
+**Fix**: Either handle the error or re-raise.
+
+### ❌ DON'T: Catch Too Broadly Without Specific Catch First
+
+```python
+# WRONG: Catches everything, can't handle specifically
+except Exception as e:
+    # Can't distinguish between retryable and non-retryable errors
+    logger.exception("Error occurred")
+```
+
+**Fix**: Catch specific exceptions first, then broad catch for unexpected.
+
+### ❌ DON'T: Lose Exception Context
+
+```python
+# WRONG: Loses original exception
+except Exception as e:
+    raise ValueError("Operation failed")  # Original exception lost
+```
+
+**Fix**: Use `raise ... from e` to preserve context.
+
+---
+
+## Decision Tree
+
+```text
+Is this a retry loop?
+├─ Yes → Catch specific retryable errors, retry; catch unexpected, re-raise
+│
+├─ No → Is this packet processing?
+│   ├─ Yes → Catch decode errors, continue; catch unexpected, log critical, continue
+│   │
+│   └─ No → Is this main event loop?
+│       ├─ Yes → Catch all, log critical, trigger recovery, re-raise
+│       │
+│       └─ No → Is this cleanup?
+│           ├─ Yes → Catch all, log warning, continue (best-effort)
+│           │
+│           └─ No → Catch specific, handle, re-raise if unexpected
+```
+
+---
+
+## Reference Examples
+
+### Retry Loop
+
+- `connection_manager.py` lines 275-329 (handshake retry)
+
+### Packet Processing
+
+- `connection_manager.py` lines 456-504 (packet router decode and handling)
+
+### Main Event Loop
+
+- `connection_manager.py` lines 598-613 (packet router main loop)
+
+### Cleanup Operations
+
+- `socket_abstraction.py` lines 280-299 (connection close)
+
+### Exception Wrapping
+
+- `device_operations.py` lines 496-511 (mesh info request)
+
+### ACK Handler
+
+- `connection_manager.py` lines 375-387 (ACK handler safe wrapper)
+
+---
+
+## Related
+
+- See `logging-mandatory.mdc` for logging requirements
+- See `logging-patterns.mdc` for logging configuration
+- See `critical-state-management.mdc` for state update patterns

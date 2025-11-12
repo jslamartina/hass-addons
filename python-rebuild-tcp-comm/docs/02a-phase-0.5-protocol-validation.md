@@ -53,20 +53,22 @@
 
 ### 📦 Deliverables Status
 
-| #   | Deliverable                          | Status      | Location                                       | Notes                                                         |
-| --- | ------------------------------------ | ----------- | ---------------------------------------------- | ------------------------------------------------------------- |
-| 1   | MITM Proxy Tool                      | ✅ Complete | `mitm/mitm-proxy.py`                           | ~250 lines, operational on port 23779                         |
-| 2   | Protocol Capture Document            | ✅ Complete | `docs/phase-0.5/captures.md`                   | ACK validation + endpoint analysis complete                   |
-| 3   | Test Fixtures                        | ✅ Complete | `tests/fixtures/real_packets.py`               | Comprehensive fixtures for Phase 1a/1b/1c                     |
-| 4   | Checksum Validation Results          | ✅ Complete | `docs/phase-0.5/validation-results.md`         | 13/13 packets validated (100% match rate)                     |
-| 5   | Protocol Validation Report           | ✅ Complete | `docs/phase-0.5/validation-report.md`          | Comprehensive analysis complete (939 lines)                   |
-| 6   | Updated Protocol Documentation       | ✅ Complete | `docs/phase-0.5/packet-structure-validated.md` | Implementation reference for Phase 1                          |
-| 7   | Checksum Validation Script           | ✅ Complete | `mitm/validate-checksum-REFERENCE-ONLY.py`     | Validated 2/2 legacy fixtures                                 |
-| 8   | Full Fingerprint Field Verification  | ✅ Complete | `docs/phase-0.5/deduplication-strategy.md`     | msg_id is sequential counter; Payload Hash essential          |
-| 9   | Device Backpressure Behavior Testing | ✅ Complete | `docs/phase-0.5/backpressure-behavior.md`      | Manual tests executed; recv_queue=200, BLOCK policy confirmed |
-| 10  | Helper Scripts                       | ✅ Complete | `mitm/parse-capture.py`                        | Packet filtering and analysis utility                         |
-| 11A | ACK Latency Measurements             | ✅ Complete | `docs/phase-0.5/ack-latency-measurements.md`   | 24,960 pairs analyzed, all types meet 100+ samples            |
-| 11  | Group Operation Performance          | ❌ Deferred | N/A                                            | Moved to Phase 1d per spec line 1592                          |
+| #   | Deliverable                          | Status                                           | Location                                       | Notes                                                                                              |
+| --- | ------------------------------------ | ------------------------------------------------ | ---------------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| 1   | MITM Proxy Tool                      | ✅ Complete                                      | `mitm/mitm-proxy.py`                           | ~250 lines, operational on port 23779                                                              |
+| 2   | Protocol Capture Document            | ✅ Complete                                      | `docs/phase-0.5/captures.md`                   | ACK validation + endpoint analysis complete                                                        |
+| 3   | Test Fixtures                        | ✅ Complete                                      | `tests/fixtures/real_packets.py`               | Comprehensive fixtures for Phase 1a/1b/1c                                                          |
+| 4   | Checksum Validation Results          | ✅ Complete                                      | `docs/phase-0.5/validation-results.md`         | 13/13 packets validated (100% match rate)                                                          |
+| 5   | Protocol Validation Report           | ✅ Complete                                      | `docs/phase-0.5/validation-report.md`          | Comprehensive analysis complete (939 lines)                                                        |
+| 6   | Updated Protocol Documentation       | ✅ Complete                                      | `docs/phase-0.5/packet-structure-validated.md` | Implementation reference for Phase 1                                                               |
+| 7   | Checksum Validation Script           | ✅ Complete                                      | `mitm/validate-checksum-REFERENCE-ONLY.py`     | Validated 2/2 legacy fixtures                                                                      |
+| 8   | Full Fingerprint Field Verification  | ✅ Complete                                      | `docs/phase-0.5/deduplication-strategy.md`     | msg_id is sequential counter; Payload Hash essential                                               |
+| 9   | Device Backpressure Behavior Testing | ✅ Complete                                      | `docs/phase-0.5/backpressure-behavior.md`      | Manual tests executed; recv_queue=200, BLOCK policy confirmed                                      |
+| 10  | Helper Scripts                       | ✅ Complete                                      | `mitm/parse-capture.py`                        | Packet filtering and analysis utility                                                              |
+| 11A | ACK Latency Measurements             | ✅ Complete (preliminary - validate in Phase 1d) | `docs/phase-0.5/ack-latency-measurements.md`   | 24,960 pairs analyzed, all types meet 100+ samples; re-validate in Phase 1d production environment |
+| 11  | Group Operation Performance          | ❌ Deferred                                      | N/A                                            | Moved to Phase 1d per spec line 1592                                                               |
+
+**Validation Handoff**: See `docs/phase-0.5/phase-0.5-to-1d-validation-handoff.md` for which findings require Phase 1d re-validation.
 
 ### 🔍 Key Findings
 
@@ -215,7 +217,7 @@ Phase 0.5 validates and documents the real Cync device protocol through packet c
 
 - Varies by packet type
 - 0x23: Endpoint (4 bytes) at positions 5-8
-- 0x73: Queue ID (5 bytes) + msg_id (3 bytes) starting at position 5
+- 0x73: Queue ID (5 bytes) + msg_id (2 bytes) starting at position 5
 - 0x83: Similar structure to 0x73
 
 **Payload Framing**:
@@ -451,7 +453,7 @@ For each ACK type (0x28, 0x7B, 0x88, 0xD8), the validation must meet these stand
 ## Example for 0x73 → 0x7B validation
 for i in {1..10}; do
   # Send command with unique msg_id
-  msg_id=$(printf "%02x%02x%02x" $((i * 10)) $((i * 20)) $((i * 30)))
+  msg_id=$(printf "%02x%02x" $((i * 10)) $((i * 20)))
   echo "Sending command with msg_id: $msg_id"
   # Trigger via Home Assistant
   # Capture both 0x73 and 0x7B packets
@@ -464,8 +466,8 @@ done
 ```python
 ## For 0x73 data packet
 request_packet = captured_0x73
-msg_id = request_packet[10:13]  # Bytes 10-12 (known position)
-print(f"Request msg_id: {msg_id.hex()}")  # e.g., "0a 14 1e"
+msg_id = request_packet[10:12]  # Bytes 10-11 (known position)
+print(f"Request msg_id: {msg_id.hex()}")  # e.g., "0a 14"
 ```
 
 ### Step 3: Search ACK Packet for msg_id
@@ -790,7 +792,7 @@ Mesh info requests (0x73 with inner_struct `f8 52 06`) cannot be tested via pack
 - **Endpoint Validation** (Required for Phase 1a):
 - Capture 5+ handshake→data sequences (0x23 followed by 0x73/0x83)
 - Extract endpoint from bytes[5:10] in 0x23/0x73/0x83 packets
-- Extract msg_id and determine exact byte positions (bytes[10:13])
+- Extract msg_id and determine exact byte positions (bytes[10:12])
 - **CRITICAL**: Verify no byte overlap between endpoint and msg_id
 - Document byte positions with annotated examples
 - Provide clear guidance on byte extraction for Phase 1a implementation
@@ -802,7 +804,7 @@ Mesh info requests (0x73 with inner_struct `f8 52 06`) cannot be tested via pack
 **Phase 0.5 Validation Results**:
 
 - endpoint: bytes[5:10] (5 bytes)
-- msg_id: bytes[10:13] (3 bytes)
+- msg_id: bytes[10:12] (2 bytes)
 - **No overlap**: Clean byte boundaries confirmed
 - Phase 1a implementation: Simple array slicing, no special handling needed
 
@@ -1049,7 +1051,7 @@ Checksum = (AA + BB + CC) % 256 = 0x55
 **Key Findings**:
 
 - 100% checksum validation (13/13 packets)
-- Hybrid ACK matching strategy required (only 0x7B has 3-byte msg_id at bytes[10:13])
+- Hybrid ACK matching strategy required (only 0x7B has 2-byte msg_id at bytes[10:12])
 - Clean byte boundaries confirmed (no overlap between endpoint and msg_id)
 - Protocol stability excellent (zero malformed packets in 2,251 analyzed)
 - Performance well within acceptable ranges (median RTT 20-45ms)
@@ -1345,7 +1347,7 @@ Analysis script should:
 - Full Fingerprint required fields confirmed extractable: [YES/NO for each field]
   - packet_type (byte 0): [PRESENT/ABSENT] [STABLE/VARIES across retries]
   - endpoint (bytes[5:10] in ALL packet types - validated): [PRESENT/ABSENT] [STABLE/VARIES]
-  - msg_id (bytes[10:13]): [PRESENT/ABSENT] [STABLE/VARIES]
+  - msg_id (bytes[10:12]): [PRESENT/ABSENT] [STABLE/VARIES]
   - payload: [PRESENT/ABSENT] [STABLE/VARIES]
 - Fields provide sufficient diversity for deduplication: [YES/NO]
 

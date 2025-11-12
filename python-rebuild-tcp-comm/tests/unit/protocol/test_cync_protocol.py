@@ -34,6 +34,51 @@ from tests.fixtures.real_packets import (
     TOGGLE_ON_0x73_CLOUD_TO_DEV,
 )
 
+# Constants for test assertions
+PACKET_LENGTH_26 = 26
+PACKET_LENGTH_30 = 30
+PACKET_LENGTH_31 = 31
+PACKET_LENGTH_517 = 517  # Test value: 2 * 256 + 5
+PACKET_LENGTH_HELLO_ACK = 2
+PACKET_LENGTH_INFO_ACK = 3
+PACKET_LENGTH_DATA_ACK = 7
+PACKET_LENGTH_STATUS_BROADCAST = 37
+PACKET_LENGTH_EMPTY = 0
+PACKET_HEADER_LENGTH = 5
+PACKET_MIN_LENGTH = 7
+
+# Checksum constants
+EXPECTED_CHECKSUM_STATUS_BROADCAST = 0x37
+EXPECTED_CHECKSUM_TOGGLE_ON = 0x07
+
+# Frame marker constant
+FRAME_MARKER_0x7E = 0x7E
+
+# Reserved field constant
+RESERVED_FIELD_VALUE = 0x0000
+
+# Header byte constants
+HEADER_BYTE_HANDSHAKE_TYPE = 0x23
+HEADER_BYTE_RESERVED_0 = 0x00
+HEADER_BYTE_LENGTH_26_LOW = 0x1A
+HEADER_BYTE_DATA_CHANNEL_TYPE = 0x73
+HEADER_BYTE_MULTIPLIER_2 = 0x02
+HEADER_BYTE_BASE_5 = 0x05
+
+# Handshake packet structure constants
+HANDSHAKE_PREFIX_BYTE = 0x03
+HANDSHAKE_AUTH_CODE_LENGTH_INDICATOR = 0x10
+
+# Packet type constants for round-trip tests
+EXPECTED_PACKET_TYPE_HEARTBEAT_DEVICE = 0xD3
+
+# Status broadcast packet structure constants
+STATUS_BROADCAST_START_MARKER_POSITION = 12  # After header(5) + endpoint(5) + msg_id(2), no padding
+EXPECTED_MARKER_COUNT = 2  # Start and end markers
+
+# Payload size constants
+PAYLOAD_SIZE_MODULO_256 = 256
+
 # =============================================================================
 # Header Parsing Tests
 # =============================================================================
@@ -43,18 +88,18 @@ def test_parse_header_handshake() -> None:
     """Test parsing 0x23 handshake header."""
     packet_type, length, reserved = CyncProtocol.parse_header(HANDSHAKE_0x23_DEV_TO_CLOUD)
 
-    assert packet_type == 0x23
-    assert length == 26  # 0x00 * 256 + 0x1a
-    assert reserved == 0x0000
+    assert packet_type == PACKET_TYPE_HANDSHAKE
+    assert length == PACKET_LENGTH_26  # 0x00 * 256 + 0x1a
+    assert reserved == RESERVED_FIELD_VALUE
 
 
 def test_parse_header_data_channel() -> None:
     """Test parsing 0x73 data channel header."""
     packet_type, length, reserved = CyncProtocol.parse_header(TOGGLE_ON_0x73_CLOUD_TO_DEV)
 
-    assert packet_type == 0x73
-    assert length == 31  # 0x00 * 256 + 0x1f
-    assert reserved == 0x0000
+    assert packet_type == PACKET_TYPE_DATA_CHANNEL
+    assert length == PACKET_LENGTH_31  # 0x00 * 256 + 0x1f
+    assert reserved == RESERVED_FIELD_VALUE
 
 
 def test_parse_header_length_calculation() -> None:
@@ -63,9 +108,9 @@ def test_parse_header_length_calculation() -> None:
     test_packet = bytes([0x23, 0x00, 0x00, 0x02, 0x05])
     packet_type, length, reserved = CyncProtocol.parse_header(test_packet)
 
-    assert packet_type == 0x23
-    assert length == 517
-    assert reserved == 0x0000
+    assert packet_type == PACKET_TYPE_HANDSHAKE
+    assert length == PACKET_LENGTH_517
+    assert reserved == RESERVED_FIELD_VALUE
 
 
 def test_parse_header_large_packet() -> None:
@@ -73,9 +118,9 @@ def test_parse_header_large_packet() -> None:
     # Device info packet has length 30 (0x1e)
     packet_type, length, reserved = CyncProtocol.parse_header(DEVICE_INFO_0x43_DEV_TO_CLOUD)
 
-    assert packet_type == 0x43
-    assert length == 30
-    assert reserved == 0x0000
+    assert packet_type == PACKET_TYPE_DEVICE_INFO
+    assert length == PACKET_LENGTH_30
+    assert reserved == RESERVED_FIELD_VALUE
 
 
 # =============================================================================
@@ -85,19 +130,35 @@ def test_parse_header_large_packet() -> None:
 
 def test_encode_header_small_packet() -> None:
     """Test encoding header with length < 256 (multiplier=0)."""
-    header = CyncProtocol.encode_header(0x23, 26)
+    header = CyncProtocol.encode_header(PACKET_TYPE_HANDSHAKE, PACKET_LENGTH_26)
 
-    assert header == bytes([0x23, 0x00, 0x00, 0x00, 0x1A])
-    assert len(header) == 5
+    assert header == bytes(
+        [
+            HEADER_BYTE_HANDSHAKE_TYPE,
+            HEADER_BYTE_RESERVED_0,
+            HEADER_BYTE_RESERVED_0,
+            HEADER_BYTE_RESERVED_0,
+            HEADER_BYTE_LENGTH_26_LOW,
+        ]
+    )
+    assert len(header) == PACKET_HEADER_LENGTH
 
 
 def test_encode_header_large_packet() -> None:
     """Test encoding header with length > 255 (multiplier > 0)."""
     # Length 517 = 2 * 256 + 5
-    header = CyncProtocol.encode_header(0x73, 517)
+    header = CyncProtocol.encode_header(PACKET_TYPE_DATA_CHANNEL, PACKET_LENGTH_517)
 
-    assert header == bytes([0x73, 0x00, 0x00, 0x02, 0x05])
-    assert len(header) == 5
+    assert header == bytes(
+        [
+            HEADER_BYTE_DATA_CHANNEL_TYPE,
+            HEADER_BYTE_RESERVED_0,
+            HEADER_BYTE_RESERVED_0,
+            HEADER_BYTE_MULTIPLIER_2,
+            HEADER_BYTE_BASE_5,
+        ]
+    )
+    assert len(header) == PACKET_HEADER_LENGTH
 
 
 def test_encode_header_roundtrip() -> None:
@@ -121,104 +182,104 @@ def test_encode_header_roundtrip() -> None:
 # =============================================================================
 
 
-def test_decode_handshake_0x23() -> None:
+def test_decode_handshake_packet_type_0x23() -> None:
     """Decode real 0x23 handshake packet."""
     packet = CyncProtocol.decode_packet(HANDSHAKE_0x23_DEV_TO_CLOUD)
 
     assert isinstance(packet, CyncPacket)
     assert packet.packet_type == PACKET_TYPE_HANDSHAKE
-    assert packet.length == 26
-    assert len(packet.payload) == 26
+    assert packet.length == PACKET_LENGTH_26
+    assert len(packet.payload) == PACKET_LENGTH_26
     assert packet.raw == HANDSHAKE_0x23_DEV_TO_CLOUD
 
 
-def test_decode_hello_ack_0x28() -> None:
+def test_decode_hello_ack_packet_type_0x28() -> None:
     """Decode real 0x28 hello ACK packet."""
     packet = CyncProtocol.decode_packet(HELLO_ACK_0x28_CLOUD_TO_DEV)
 
     assert isinstance(packet, CyncPacket)
     assert packet.packet_type == PACKET_TYPE_HELLO_ACK
-    assert packet.length == 2
-    assert len(packet.payload) == 2
+    assert packet.length == PACKET_LENGTH_HELLO_ACK
+    assert len(packet.payload) == PACKET_LENGTH_HELLO_ACK
     assert packet.raw == HELLO_ACK_0x28_CLOUD_TO_DEV
 
 
-def test_decode_device_info_0x43() -> None:
+def test_decode_device_info_packet_type_0x43() -> None:
     """Decode real 0x43 device info packet."""
     packet = CyncProtocol.decode_packet(DEVICE_INFO_0x43_DEV_TO_CLOUD)
 
     assert isinstance(packet, CyncPacket)
     assert packet.packet_type == PACKET_TYPE_DEVICE_INFO
-    assert packet.length == 30
-    assert len(packet.payload) == 30
+    assert packet.length == PACKET_LENGTH_30
+    assert len(packet.payload) == PACKET_LENGTH_30
     assert packet.raw == DEVICE_INFO_0x43_DEV_TO_CLOUD
 
 
-def test_decode_info_ack_0x48() -> None:
+def test_decode_info_ack_packet_type_0x48() -> None:
     """Decode real 0x48 info ACK packet."""
     packet = CyncProtocol.decode_packet(INFO_ACK_0x48_CLOUD_TO_DEV)
 
     assert isinstance(packet, CyncPacket)
     assert packet.packet_type == PACKET_TYPE_INFO_ACK
-    assert packet.length == 3
-    assert len(packet.payload) == 3
+    assert packet.length == PACKET_LENGTH_INFO_ACK
+    assert len(packet.payload) == PACKET_LENGTH_INFO_ACK
     assert packet.raw == INFO_ACK_0x48_CLOUD_TO_DEV
 
 
-def test_decode_data_ack_0x7B() -> None:
+def test_decode_data_ack_packet_type_0x7b() -> None:
     """Decode real 0x7B data ACK packet."""
     packet = CyncProtocol.decode_packet(DATA_ACK_0x7B_DEV_TO_CLOUD)
 
     assert isinstance(packet, CyncPacket)
     assert packet.packet_type == PACKET_TYPE_DATA_ACK
-    assert packet.length == 7
-    assert len(packet.payload) == 7
+    assert packet.length == PACKET_LENGTH_DATA_ACK
+    assert len(packet.payload) == PACKET_LENGTH_DATA_ACK
     assert packet.raw == DATA_ACK_0x7B_DEV_TO_CLOUD
 
 
-def test_decode_status_broadcast_0x83() -> None:
+def test_decode_status_broadcast_packet_type_0x83() -> None:
     """Decode real 0x83 status broadcast packet."""
     packet = CyncProtocol.decode_packet(STATUS_BROADCAST_0x83_DEV_TO_CLOUD)
 
     assert isinstance(packet, CyncDataPacket)
     assert packet.packet_type == PACKET_TYPE_STATUS_BROADCAST
-    assert packet.length == 37
+    assert packet.length == PACKET_LENGTH_STATUS_BROADCAST
     assert packet.endpoint == bytes.fromhex("45 88 0f 3a 00")
     assert packet.msg_id == bytes.fromhex("09 00")  # 2 bytes - byte 12 is padding, not msg_id
-    assert packet.checksum == 0x37
+    assert packet.checksum == EXPECTED_CHECKSUM_STATUS_BROADCAST
     assert packet.checksum_valid is True
 
 
-def test_decode_status_ack_0x88() -> None:
+def test_decode_status_ack_packet_type_0x88() -> None:
     """Decode real 0x88 status ACK packet."""
     packet = CyncProtocol.decode_packet(STATUS_ACK_0x88_CLOUD_TO_DEV)
 
     assert isinstance(packet, CyncPacket)
     assert packet.packet_type == PACKET_TYPE_STATUS_ACK
-    assert packet.length == 3
-    assert len(packet.payload) == 3
+    assert packet.length == PACKET_LENGTH_INFO_ACK
+    assert len(packet.payload) == PACKET_LENGTH_INFO_ACK
     assert packet.raw == STATUS_ACK_0x88_CLOUD_TO_DEV
 
 
-def test_decode_heartbeat_device_0xD3() -> None:
+def test_decode_heartbeat_device_packet_type_0xd3() -> None:
     """Decode real 0xD3 device heartbeat packet."""
     packet = CyncProtocol.decode_packet(HEARTBEAT_DEV_0xD3_DEV_TO_CLOUD)
 
     assert isinstance(packet, CyncPacket)
     assert packet.packet_type == PACKET_TYPE_HEARTBEAT_DEVICE
-    assert packet.length == 0
-    assert len(packet.payload) == 0
+    assert packet.length == PACKET_LENGTH_EMPTY
+    assert len(packet.payload) == PACKET_LENGTH_EMPTY
     assert packet.raw == HEARTBEAT_DEV_0xD3_DEV_TO_CLOUD
 
 
-def test_decode_heartbeat_cloud_0xD8() -> None:
+def test_decode_heartbeat_cloud_packet_type_0xd8() -> None:
     """Decode real 0xD8 cloud heartbeat packet."""
     packet = CyncProtocol.decode_packet(HEARTBEAT_CLOUD_0xD8_CLOUD_TO_DEV)
 
     assert isinstance(packet, CyncPacket)
     assert packet.packet_type == PACKET_TYPE_HEARTBEAT_CLOUD
-    assert packet.length == 0
-    assert len(packet.payload) == 0
+    assert packet.length == PACKET_LENGTH_EMPTY
+    assert len(packet.payload) == PACKET_LENGTH_EMPTY
     assert packet.raw == HEARTBEAT_CLOUD_0xD8_CLOUD_TO_DEV
 
 
@@ -246,16 +307,16 @@ def test_decode_data_packet_with_framing() -> None:
     assert packet.packet_type == PACKET_TYPE_DATA_CHANNEL
 
     # Verify 0x7e markers in raw packet
-    assert 0x7E in packet.raw
-    assert packet.raw[0] != 0x7E  # Not at start
-    assert packet.raw[-1] == 0x7E  # At end
+    assert FRAME_MARKER_0x7E in packet.raw
+    assert packet.raw[0] != FRAME_MARKER_0x7E  # Not at start
+    assert packet.raw[-1] == FRAME_MARKER_0x7E  # At end
 
     # Verify endpoint and msg_id extraction
     assert packet.endpoint == bytes.fromhex("45 88 0f 3a 00")
     assert packet.msg_id == bytes.fromhex("10 00")
 
     # Verify checksum
-    assert packet.checksum == 0x07
+    assert packet.checksum == EXPECTED_CHECKSUM_TOGGLE_ON
     assert packet.checksum_valid is True
 
 
@@ -267,14 +328,14 @@ def test_decode_status_broadcast_framing() -> None:
     assert packet.packet_type == PACKET_TYPE_STATUS_BROADCAST
 
     # Verify 0x7e markers
-    assert 0x7E in packet.raw
-    assert packet.raw[-1] == 0x7E
+    assert FRAME_MARKER_0x7E in packet.raw
+    assert packet.raw[-1] == FRAME_MARKER_0x7E
 
     # Verify endpoint extraction
     assert packet.endpoint == bytes.fromhex("45 88 0f 3a 00")
 
     # Verify checksum
-    assert packet.checksum == 0x37
+    assert packet.checksum == EXPECTED_CHECKSUM_STATUS_BROADCAST
     assert packet.checksum_valid is True
 
 
@@ -286,7 +347,7 @@ def test_decode_toggle_off_data_packet() -> None:
     assert packet.packet_type == PACKET_TYPE_DATA_CHANNEL
     assert packet.endpoint == bytes.fromhex("45 88 0f 3a 00")
     assert packet.msg_id == bytes.fromhex("11 00")
-    assert packet.checksum == 0x07
+    assert packet.checksum == EXPECTED_CHECKSUM_TOGGLE_ON
     assert packet.checksum_valid is True
 
 
@@ -313,7 +374,7 @@ def test_decode_packet_length_mismatch() -> None:
 def test_parse_header_invalid_input() -> None:
     """Test empty bytes raises PacketDecodeError."""
     with pytest.raises(PacketDecodeError, match="too_short"):
-        CyncProtocol.parse_header(bytes())
+        CyncProtocol.parse_header(b"")
 
 
 def test_parse_header_partial_header() -> None:
@@ -358,7 +419,7 @@ def test_decode_data_packet_with_trailing_data() -> None:
     assert packet.packet_type == PACKET_TYPE_DATA_CHANNEL
     assert packet.endpoint == bytes.fromhex("45 88 0f 3a 00")
     assert packet.msg_id == bytes.fromhex("10 00")
-    assert packet.checksum == 0x07
+    assert packet.checksum == EXPECTED_CHECKSUM_TOGGLE_ON
     assert packet.checksum_valid is True
 
     # Verify we only processed the declared packet length
@@ -380,16 +441,16 @@ def test_encode_handshake_basic() -> None:
     packet = CyncProtocol.encode_handshake(endpoint, auth_code)
 
     # Verify packet type
-    assert packet[0] == 0x23
+    assert packet[0] == HEADER_BYTE_HANDSHAKE_TYPE
 
     # Verify length (26 bytes payload)
-    assert packet[3] == 0x00  # Multiplier
-    assert packet[4] == 0x1A  # Base (26)
+    assert packet[3] == HEADER_BYTE_RESERVED_0  # Multiplier
+    assert packet[4] == HEADER_BYTE_LENGTH_26_LOW  # Base (26)
 
     # Verify structure
-    assert packet[5] == 0x03  # Prefix
+    assert packet[5] == HANDSHAKE_PREFIX_BYTE  # Prefix
     assert packet[6:11] == endpoint  # Endpoint at bytes 6-10
-    assert packet[11] == 0x10  # Auth code length indicator
+    assert packet[11] == HANDSHAKE_AUTH_CODE_LENGTH_INDICATOR  # Auth code length indicator
     assert packet[12:28] == auth_code  # Auth code at bytes 12-27
 
 
@@ -431,8 +492,8 @@ def test_encode_handshake_roundtrip() -> None:
     decoded = CyncProtocol.decode_packet(encoded)
 
     # Verify round-trip
-    assert decoded.packet_type == 0x23
-    assert decoded.length == 26
+    assert decoded.packet_type == PACKET_TYPE_HANDSHAKE
+    assert decoded.length == PACKET_LENGTH_26
     assert decoded.raw == encoded
     # Verify endpoint embedded correctly
     assert encoded[6:11] == endpoint
@@ -467,16 +528,16 @@ def test_encode_data_packet_basic() -> None:
     packet = CyncProtocol.encode_data_packet(endpoint, msg_id, inner_payload)
 
     # Verify packet type
-    assert packet[0] == 0x73
+    assert packet[0] == HEADER_BYTE_DATA_CHANNEL_TYPE
 
     # Verify endpoint and msg_id in packet
     assert packet[5:10] == endpoint
     assert packet[10:12] == msg_id  # 2 bytes
-    assert packet[12] == 0x00  # Padding byte
+    assert packet[12] == HEADER_BYTE_RESERVED_0  # Padding byte
 
     # Verify 0x7e markers present
-    assert 0x7E in packet
-    assert packet[-1] == 0x7E  # End marker
+    assert FRAME_MARKER_0x7E in packet
+    assert packet[-1] == FRAME_MARKER_0x7E  # End marker
 
 
 def test_encode_data_packet_invalid_endpoint() -> None:
@@ -520,8 +581,8 @@ def test_encode_data_packet_with_framing() -> None:
     last_7e = len(packet) - 1 - packet[::-1].index(0x7E)
 
     # Verify markers found
-    assert packet[first_7e] == 0x7E
-    assert packet[last_7e] == 0x7E
+    assert packet[first_7e] == FRAME_MARKER_0x7E
+    assert packet[last_7e] == FRAME_MARKER_0x7E
     assert first_7e < last_7e
 
     # Verify data between markers
@@ -560,7 +621,7 @@ def test_encode_data_packet_roundtrip() -> None:
 
     # Verify all fields preserved
     assert isinstance(decoded, CyncDataPacket)
-    assert decoded.packet_type == 0x73
+    assert decoded.packet_type == PACKET_TYPE_DATA_CHANNEL
     assert decoded.endpoint == endpoint
     assert decoded.msg_id == msg_id
     assert decoded.data == inner_payload
@@ -596,15 +657,13 @@ def test_encode_heartbeat_basic() -> None:
     packet = CyncProtocol.encode_heartbeat()
 
     # Verify structure
-    assert len(packet) == 5
-    assert packet[0] == 0xD3  # Packet type
+    assert len(packet) == PACKET_HEADER_LENGTH
+    assert packet[0] == PACKET_TYPE_HEARTBEAT_DEVICE  # Packet type
     assert packet[1:] == bytes([0x00, 0x00, 0x00, 0x00])  # Reserved + length
 
 
 def test_encode_heartbeat_matches_fixture() -> None:
     """Compare encoded heartbeat with HEARTBEAT_DEV_0xD3_DEV_TO_CLOUD fixture."""
-    from tests.fixtures.real_packets import HEARTBEAT_DEV_0xD3_DEV_TO_CLOUD
-
     encoded = CyncProtocol.encode_heartbeat()
 
     # Should match fixture exactly
@@ -620,8 +679,8 @@ def test_encode_heartbeat_roundtrip() -> None:
     decoded = CyncProtocol.decode_packet(encoded)
 
     # Verify
-    assert decoded.packet_type == 0xD3
-    assert decoded.length == 0
+    assert decoded.packet_type == PACKET_TYPE_HEARTBEAT_DEVICE
+    assert decoded.length == PACKET_LENGTH_EMPTY
     assert len(decoded.payload) == 0
 
 
@@ -641,10 +700,12 @@ def test_encode_status_broadcast_basic() -> None:
     packet = CyncProtocol.encode_status_broadcast(endpoint, msg_id, inner_payload)
 
     # Verify structure
-    assert packet[0] == 0x83  # Packet type
+    assert packet[0] == PACKET_TYPE_STATUS_BROADCAST  # Packet type
     assert packet[5:10] == endpoint
     assert packet[10:12] == msg_id
-    assert packet[12] == 0x7E  # Start marker (no padding for 0x83)
+    assert (
+        packet[STATUS_BROADCAST_START_MARKER_POSITION] == FRAME_MARKER_0x7E
+    )  # Start marker (no padding for 0x83)
 
 
 def test_encode_status_broadcast_with_framing() -> None:
@@ -656,15 +717,17 @@ def test_encode_status_broadcast_with_framing() -> None:
     packet = CyncProtocol.encode_status_broadcast(endpoint, msg_id, inner_payload)
 
     # Find 0x7e markers
-    marker_positions = [i for i, b in enumerate(packet) if b == 0x7E]
+    marker_positions = [i for i, b in enumerate(packet) if b == FRAME_MARKER_0x7E]
 
     # Should have exactly 2 markers
-    assert len(marker_positions) == 2
+    assert len(marker_positions) == EXPECTED_MARKER_COUNT
     start_marker = marker_positions[0]
     end_marker = marker_positions[1]
 
     # Verify markers are in expected range
-    assert start_marker == 12  # After header(5) + endpoint(5) + msg_id(2), no padding for 0x83
+    assert (
+        start_marker == STATUS_BROADCAST_START_MARKER_POSITION
+    )  # After header(5) + endpoint(5) + msg_id(2), no padding for 0x83
     assert end_marker == len(packet) - 1  # Last byte
 
 
@@ -726,7 +789,7 @@ def test_encode_status_broadcast_roundtrip() -> None:
 
     # Verify all fields preserved
     assert isinstance(decoded, CyncDataPacket)
-    assert decoded.packet_type == 0x83
+    assert decoded.packet_type == PACKET_TYPE_STATUS_BROADCAST
     assert decoded.endpoint == endpoint
     assert decoded.msg_id == msg_id
     assert decoded.data == inner_payload
@@ -735,8 +798,6 @@ def test_encode_status_broadcast_roundtrip() -> None:
 
 def test_encode_status_broadcast_matches_fixture() -> None:
     """Compare encoded packet with STATUS_BROADCAST_0x83_DEV_TO_CLOUD fixture."""
-    from tests.fixtures.real_packets import STATUS_BROADCAST_0x83_DEV_TO_CLOUD
-
     # Extract parameters from fixture
     fixture = STATUS_BROADCAST_0x83_DEV_TO_CLOUD
     endpoint = fixture[5:10]  # Bytes 5-9
@@ -766,7 +827,7 @@ def test_roundtrip_all_packet_types() -> None:
     auth_code = bytes.fromhex("31 65 30 37 64 38 63 65 30 61 36 31 37 61 33 37")
     encoded_hs = CyncProtocol.encode_handshake(endpoint_hs, auth_code)
     decoded_hs = CyncProtocol.decode_packet(encoded_hs)
-    assert decoded_hs.packet_type == 0x23
+    assert decoded_hs.packet_type == PACKET_TYPE_HANDSHAKE
 
     # Test 0x73 Data Channel
     endpoint_dc = bytes.fromhex("45 88 0f 3a 00")
@@ -774,7 +835,7 @@ def test_roundtrip_all_packet_types() -> None:
     inner_payload_dc = bytes.fromhex("10 01 00 00 f8 8e 0c 00 10 01 00 00 00 50 00 f7 11 02 01 01")
     encoded_dc = CyncProtocol.encode_data_packet(endpoint_dc, msg_id_dc, inner_payload_dc)
     decoded_dc = CyncProtocol.decode_packet(encoded_dc)
-    assert decoded_dc.packet_type == 0x73
+    assert decoded_dc.packet_type == PACKET_TYPE_DATA_CHANNEL
     assert isinstance(decoded_dc, CyncDataPacket)
     assert decoded_dc.checksum_valid is True
 
@@ -786,14 +847,14 @@ def test_roundtrip_all_packet_types() -> None:
     )
     encoded_sb = CyncProtocol.encode_status_broadcast(endpoint_sb, msg_id_sb, inner_payload_sb)
     decoded_sb = CyncProtocol.decode_packet(encoded_sb)
-    assert decoded_sb.packet_type == 0x83
+    assert decoded_sb.packet_type == PACKET_TYPE_STATUS_BROADCAST
     assert isinstance(decoded_sb, CyncDataPacket)
     assert decoded_sb.checksum_valid is True
 
     # Test 0xD3 Heartbeat
     encoded_hb = CyncProtocol.encode_heartbeat()
     decoded_hb = CyncProtocol.decode_packet(encoded_hb)
-    assert decoded_hb.packet_type == 0xD3
+    assert decoded_hb.packet_type == PACKET_TYPE_HEARTBEAT_DEVICE
     assert decoded_hb.length == 0
 
 
@@ -827,8 +888,8 @@ def test_roundtrip_all_handshake_params() -> None:
         decoded = CyncProtocol.decode_packet(encoded)
 
         # Verify round-trip preserves data
-        assert decoded.packet_type == 0x23
-        assert decoded.length == 26
+        assert decoded.packet_type == PACKET_TYPE_HANDSHAKE
+        assert decoded.length == PACKET_LENGTH_26
         assert encoded[6:11] == endpoint
         assert encoded[12:28] == auth_code  # After 0x10 length indicator
 
@@ -844,7 +905,11 @@ def test_roundtrip_data_packet_various_payloads() -> None:
 
     for size in payload_sizes:
         # Create payload with pattern
-        inner_payload = bytes(range(size % 256)) if size < 256 else bytes(size)
+        inner_payload = (
+            bytes(range(size % PAYLOAD_SIZE_MODULO_256))
+            if size < PAYLOAD_SIZE_MODULO_256
+            else bytes(size)
+        )
 
         # Encode
         encoded = CyncProtocol.encode_data_packet(endpoint, msg_id, inner_payload)
@@ -867,10 +932,16 @@ def test_encode_decode_preserves_data() -> None:
     auth_code = bytes.fromhex("31 65 30 37 64 38 63 65 30 61 36 31 37 61 33 37")
     encoded_hs = CyncProtocol.encode_handshake(endpoint_hs, auth_code)
     decoded_hs = CyncProtocol.decode_packet(encoded_hs)
-    assert decoded_hs.packet_type == 0x23
+    assert decoded_hs.packet_type == PACKET_TYPE_HANDSHAKE
     assert decoded_hs.raw == encoded_hs
 
     # Test data packet
+    endpoint_dp = bytes.fromhex("45 88 0f 3a 00")
+    msg_id_dp = bytes.fromhex("10 00")
+    inner_payload_dp = bytes.fromhex("10 01 00 00 f8 8e 0c 00 10 01 00 00 00 50 00 f7 11 02 01 01")
+    encoded_dp = CyncProtocol.encode_data_packet(endpoint_dp, msg_id_dp, inner_payload_dp)
+    decoded_dp = CyncProtocol.decode_packet(encoded_dp)
+    assert decoded_dp.packet_type == PACKET_TYPE_DATA_CHANNEL
     endpoint_dp = bytes.fromhex("45 88 0f 3a 00")
     msg_id = bytes.fromhex("11 00")
     inner_payload = bytes.fromhex("11 01 00 00 f8 8e 0c 00 11 01 00 00 00 50 00 f7 11 02 00 01")
@@ -898,7 +969,7 @@ def test_roundtrip_toggle_off_packet() -> None:
 
     # Verify
     assert isinstance(decoded, CyncDataPacket)
-    assert decoded.packet_type == 0x73
+    assert decoded.packet_type == PACKET_TYPE_DATA_CHANNEL
     assert decoded.endpoint == endpoint
     assert decoded.msg_id == msg_id
     assert decoded.data == inner_payload

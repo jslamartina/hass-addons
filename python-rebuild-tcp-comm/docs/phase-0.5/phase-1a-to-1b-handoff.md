@@ -34,33 +34,34 @@ These findings are **validated against real packets** and are **authoritative** 
 
 ### 2.1 Critical Protocol Fields
 
-| Field | Length | Position | Validation Source |
-|-------|--------|----------|-------------------|
-| **msg_id** | **2 bytes** | **bytes[10:12]** | Phase 1a validation (corrected from initial 3-byte assumption) |
-| endpoint | 5 bytes | bytes[5:10] | Phase 0.5 + Phase 1a validation |
-| packet_type | 1 byte | byte[0] | Phase 0.5 + Phase 1a validation |
+| Field       | Length      | Position         | Validation Source                                              |
+| ----------- | ----------- | ---------------- | -------------------------------------------------------------- |
+| **msg_id**  | **2 bytes** | **bytes[10:12]** | Phase 1a validation (corrected from initial 3-byte assumption) |
+| endpoint    | 5 bytes     | bytes[5:10]      | Phase 0.5 + Phase 1a validation                                |
+| packet_type | 1 byte      | byte[0]          | Phase 0.5 + Phase 1a validation                                |
 
 **CRITICAL**: msg_id is **2 bytes at bytes[10:12]**, NOT 3 bytes. This was discovered during Phase 1a implementation (Step 6) and validated against real packet captures.
 
 **Evidence**: `phase-1a-validation-report.md` line 105 states:
+
 > "**Critical Fix**: Corrected msg_id from 3 bytes to 2 bytes based on packet analysis (Step 6 discovery)"
 
 ### 2.2 Supported Packet Types
 
 **Fully Implemented** (encode + decode + tests):
 
-| Type | Name | Direction | Framed | Purpose |
-|------|------|-----------|--------|---------|
-| 0x23 | HANDSHAKE | DEV→CLOUD | No | Connection establishment |
-| 0x28 | HELLO_ACK | CLOUD→DEV | No | Handshake acknowledgment |
-| 0x43 | DEVICE_INFO | DEV→CLOUD | No | Device information request |
-| 0x48 | INFO_ACK | CLOUD→DEV | No | Device info acknowledgment |
-| 0x73 | DATA_CHANNEL | Bidirectional | Yes | Data commands/responses |
-| 0x7B | DATA_ACK | DEV→CLOUD | No | Data acknowledgment |
-| 0x83 | STATUS_BROADCAST | DEV→CLOUD | Yes | Device status updates |
-| 0x88 | STATUS_ACK | CLOUD→DEV | No | Status acknowledgment |
-| 0xD3 | HEARTBEAT_DEV | DEV→CLOUD | No | Device keepalive |
-| 0xD8 | HEARTBEAT_CLOUD | CLOUD→DEV | No | Cloud keepalive response |
+| Type | Name             | Direction     | Framed | Purpose                    |
+| ---- | ---------------- | ------------- | ------ | -------------------------- |
+| 0x23 | HANDSHAKE        | DEV→CLOUD     | No     | Connection establishment   |
+| 0x28 | HELLO_ACK        | CLOUD→DEV     | No     | Handshake acknowledgment   |
+| 0x43 | DEVICE_INFO      | DEV→CLOUD     | No     | Device information request |
+| 0x48 | INFO_ACK         | CLOUD→DEV     | No     | Device info acknowledgment |
+| 0x73 | DATA_CHANNEL     | Bidirectional | Yes    | Data commands/responses    |
+| 0x7B | DATA_ACK         | DEV→CLOUD     | No     | Data acknowledgment        |
+| 0x83 | STATUS_BROADCAST | DEV→CLOUD     | Yes    | Device status updates      |
+| 0x88 | STATUS_ACK       | CLOUD→DEV     | No     | Status acknowledgment      |
+| 0xD3 | HEARTBEAT_DEV    | DEV→CLOUD     | No     | Device keepalive           |
+| 0xD8 | HEARTBEAT_CLOUD  | CLOUD→DEV     | No     | Cloud keepalive response   |
 
 **Framed packets** (0x73, 0x83): Have 0x7e markers and checksum validation
 
@@ -414,12 +415,12 @@ class ReliableTransport:
 
 **From Phase 0.5 Validation**:
 
-| ACK Type | msg_id Present? | Position | Matching Strategy |
-|----------|-----------------|----------|-------------------|
-| 0x7B DATA_ACK | ✅ YES | bytes[10:12] | Parallel (msg_id match) |
-| 0x28 HELLO_ACK | ❌ NO | N/A | FIFO queue |
-| 0x88 STATUS_ACK | ❌ NO | N/A | FIFO queue |
-| 0xD8 HEARTBEAT_ACK | ❌ NO | N/A | FIFO queue |
+| ACK Type           | msg_id Present? | Position     | Matching Strategy       |
+| ------------------ | --------------- | ------------ | ----------------------- |
+| 0x7B DATA_ACK      | ✅ YES          | bytes[10:12] | Parallel (msg_id match) |
+| 0x28 HELLO_ACK     | ❌ NO           | N/A          | FIFO queue              |
+| 0x88 STATUS_ACK    | ❌ NO           | N/A          | FIFO queue              |
+| 0xD8 HEARTBEAT_ACK | ❌ NO           | N/A          | FIFO queue              |
 
 **Implementation Guidance**:
 
@@ -472,12 +473,12 @@ Phase 1a has **zero known functional bugs** - all acceptance criteria met.
 
 ### 7.1 Measured ACK Latencies (Phase 0.5)
 
-| ACK Type | p50 | p95 | p99 | Sample Size |
-|----------|-----|-----|-----|-------------|
-| 0x28 HELLO_ACK | 45.9ms | 129.4ms | - | 25 |
-| 0x7B DATA_ACK | 21.4ms | 30.4ms | **51ms** | 9 |
-| 0x88 STATUS_ACK | 41.7ms | 47.7ms | - | 97 |
-| 0xD8 HEARTBEAT_ACK | 43.5ms | 50.9ms | 84.1ms | 21,441 |
+| ACK Type           | p50    | p95     | p99      | Sample Size |
+| ------------------ | ------ | ------- | -------- | ----------- |
+| 0x28 HELLO_ACK     | 45.9ms | 129.4ms | -        | 25          |
+| 0x7B DATA_ACK      | 21.4ms | 30.4ms  | **51ms** | 9           |
+| 0x88 STATUS_ACK    | 41.7ms | 47.7ms  | -        | 97          |
+| 0xD8 HEARTBEAT_ACK | 43.5ms | 50.9ms  | 84.1ms   | 21,441      |
 
 **Note**: DATA_ACK sample size is small (9 pairs). Phase 1d should validate timeout assumptions under load.
 
@@ -535,6 +536,7 @@ timeouts_adjusted = TimeoutConfig(measured_p99_ms=200.0)
 
 **Example**:
 
+- ACK timeout = 128ms (default) → Heartbeat = max(0.384s, 10s) = **10s**
 - ACK timeout = 2s → Heartbeat = max(6s, 10s) = **10s**
 - ACK timeout = 5s → Heartbeat = max(15s, 10s) = **15s**
 
@@ -661,13 +663,13 @@ grep "codec validated" mitm/captures/mitm_*.log
 
 ### File Locations
 
-| Component | File | Status |
-|-----------|------|--------|
-| Protocol Codec | `src/protocol/cync_protocol.py` | ✅ Complete |
-| Packet Framer | `src/protocol/packet_framer.py` | ✅ Complete |
-| Exceptions | `src/protocol/exceptions.py` | ✅ Complete |
-| Checksum | `src/protocol/checksum.py` | ✅ Complete |
-| Test Fixtures | `tests/fixtures/real_packets.py` | ✅ Complete |
+| Component      | File                                 | Status      |
+| -------------- | ------------------------------------ | ----------- |
+| Protocol Codec | `src/protocol/cync_protocol.py`      | ✅ Complete |
+| Packet Framer  | `src/protocol/packet_framer.py`      | ✅ Complete |
+| Exceptions     | `src/protocol/exceptions.py`         | ✅ Complete |
+| Checksum       | `src/protocol/checksum.py`           | ✅ Complete |
+| Test Fixtures  | `tests/fixtures/real_packets.py`     | ✅ Complete |
 | MITM Validator | `mitm/validation/codec_validator.py` | ✅ Complete |
 
 ### Key Constants

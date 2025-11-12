@@ -134,6 +134,49 @@ class DarkLaunchRouter(CanaryRouter):
 
 ---
 
+## Metric Label Migration: Phase 1 → Phase 2
+
+**Phase 2 adds `transport` label to all metrics via CanaryRouter**.
+
+### Phase 1 vs Phase 2 Metric Structure
+
+| Phase       | Metric Labels                          | Example                                   |
+| ----------- | -------------------------------------- | ----------------------------------------- |
+| **Phase 1** | `{outcome="success"}`                  | Single transport (new implementation)     |
+| **Phase 2** | `{transport="new", outcome="success"}` | Dual transport comparison (new vs legacy) |
+
+### Phase 1 Baseline Queries (No transport Label)
+
+**Before Phase 2 migration**, use these queries:
+
+```promql
+## Success rate (Phase 1)
+sum(rate(tcp_comm_packet_sent_total{outcome="success"}[5m]))
+/
+sum(rate(tcp_comm_packet_sent_total[5m]))
+
+## Error rate (Phase 1)
+sum(rate(tcp_comm_packet_sent_total{outcome!="success"}[5m]))
+/
+sum(rate(tcp_comm_packet_sent_total[5m]))
+
+## P99 latency (Phase 1)
+histogram_quantile(0.99,
+  rate(tcp_comm_command_latency_seconds_bucket[5m])
+)
+```
+
+### Phase 2 Migration Plan
+
+1. **CanaryRouter adds transport label** during routing (automatic)
+2. **Dashboards updated** to support both Phase 1 (no label) and Phase 2 (with label) queries
+3. **Grafana variables** added for transport selection (`new` vs `legacy`)
+4. **Backward compatibility**: Phase 1 metrics without `transport` label remain queryable
+
+**Note**: SLO calculations below use Phase 2 label structure (`transport="new"`). For Phase 1, omit the `transport` filter.
+
+---
+
 ## Service Level Objectives (SLOs)
 
 ### Definition
@@ -203,12 +246,17 @@ class ErrorBudget:
 **Success Rate (SLO)**:
 
 ```promql
-## 30-day success rate
+## 30-day success rate (Phase 2 with transport label)
+sum(rate(tcp_comm_packet_sent_total{transport="new",outcome="success"}[30d]))
+/
+sum(rate(tcp_comm_packet_sent_total{transport="new"}[30d]))
+
+## Phase 1 equivalent (no transport label)
 sum(rate(tcp_comm_packet_sent_total{outcome="success"}[30d]))
 /
 sum(rate(tcp_comm_packet_sent_total[30d]))
 
-## Per-transport comparison
+## Per-transport comparison (Phase 2 only)
 sum(rate(tcp_comm_packet_sent_total{transport="new",outcome="success"}[5m]))
 /
 sum(rate(tcp_comm_packet_sent_total{transport="new"}[5m]))
@@ -290,7 +338,7 @@ rate(tcp_comm_queue_full_total{transport="new"}[5m])
 
 ### 3. Dashboard JSON
 
-**File**: `monitoring/grafana-dashboard.json`
+**File**: `monitoring/grafana-dashboard.json` (to be created in Phase 2)
 
 ```json
 {

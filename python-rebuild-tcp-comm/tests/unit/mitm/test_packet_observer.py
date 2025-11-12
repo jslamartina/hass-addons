@@ -5,6 +5,9 @@ Tests the PacketDirection enum and PacketObserver Protocol interface.
 
 from mitm.interfaces.packet_observer import PacketDirection
 
+# Test constants
+EXPECTED_PACKET_DIRECTION_COUNT = 2  # DEVICE_TO_CLOUD and CLOUD_TO_DEVICE
+
 
 def test_packet_direction_enum_values() -> None:
     """Test PacketDirection enum has correct values."""
@@ -14,7 +17,7 @@ def test_packet_direction_enum_values() -> None:
 
 def test_packet_direction_enum_members() -> None:
     """Test PacketDirection enum has exactly two members."""
-    assert len(PacketDirection) == 2
+    assert len(PacketDirection) == EXPECTED_PACKET_DIRECTION_COUNT
     assert hasattr(PacketDirection, "DEVICE_TO_CLOUD")
     assert hasattr(PacketDirection, "CLOUD_TO_DEVICE")
 
@@ -32,15 +35,12 @@ def test_packet_observer_protocol_structural_subtyping() -> None:
             self, direction: PacketDirection, data: bytes, connection_id: int
         ) -> None:
             """Packet received handler."""
-            pass
 
         def on_connection_established(self, connection_id: int) -> None:
             """Connection established handler."""
-            pass
 
         def on_connection_closed(self, connection_id: int) -> None:
             """Connection closed handler."""
-            pass
 
     # Create instance and verify it can be used where PacketObserver is expected
     observer = ValidObserver()
@@ -62,11 +62,9 @@ def test_packet_observer_protocol_missing_method() -> None:
             self, direction: PacketDirection, data: bytes, connection_id: int
         ) -> None:
             """Packet received handler."""
-            pass
 
         def on_connection_established(self, connection_id: int) -> None:
             """Connection established handler."""
-            pass
 
         # Missing: on_connection_closed
 
@@ -89,15 +87,12 @@ def test_packet_observer_protocol_method_signatures() -> None:
             self, direction: PacketDirection, data: bytes, connection_id: int
         ) -> None:
             """Packet received handler."""
-            pass
 
         def on_connection_established(self, connection_id: int) -> None:
             """Connection established handler."""
-            pass
 
         def on_connection_closed(self, connection_id: int) -> None:
             """Connection closed handler."""
-            pass
 
     observer = TestObserver()
 
@@ -105,7 +100,6 @@ def test_packet_observer_protocol_method_signatures() -> None:
     assert callable(observer.on_packet_received)
     assert callable(observer.on_connection_established)
     assert callable(observer.on_connection_closed)
-
     # Test that methods can be called with correct arguments
     observer.on_packet_received(PacketDirection.DEVICE_TO_CLOUD, b"\x73\x00", 1)
     observer.on_connection_established(1)

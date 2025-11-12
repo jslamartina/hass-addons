@@ -4,7 +4,9 @@
 Provides detailed packet classification and analysis functions.
 """
 
-from typing import Dict, List
+# Validation thresholds
+MIN_PACKETS_FOR_VALIDATION = 100
+MAX_ERROR_RATE_PERCENT = 1.0
 
 
 def classify_packet_type(packet_type_hex: str) -> str:
@@ -31,7 +33,7 @@ def classify_packet_type(packet_type_hex: str) -> str:
     return packet_map.get(packet_type_hex.lower(), f"Unknown ({packet_type_hex})")
 
 
-def calculate_packet_distribution(packet_types: Dict[str, int]) -> Dict[str, float]:
+def calculate_packet_distribution(packet_types: dict[str, int]) -> dict[str, float]:
     """Calculate percentage distribution of packet types.
 
     Args:
@@ -48,7 +50,7 @@ def calculate_packet_distribution(packet_types: Dict[str, int]) -> Dict[str, flo
 
 
 def generate_statistics_table(
-    packet_types: Dict[str, int], direction_counts: Dict[str, int]
+    packet_types: dict[str, int], direction_counts: dict[str, int]
 ) -> str:
     """Generate formatted statistics table.
 
@@ -66,7 +68,7 @@ def generate_statistics_table(
 
     distribution = calculate_packet_distribution(packet_types)
 
-    for ptype in sorted(packet_types.keys()):
+    for ptype in sorted(packet_types):
         count = packet_types[ptype]
         pct = distribution.get(ptype, 0.0)
         classification = classify_packet_type(ptype)
@@ -83,7 +85,7 @@ def generate_statistics_table(
     return "\n".join(lines)
 
 
-def identify_missing_packet_types(observed_types: List[str]) -> List[str]:
+def identify_missing_packet_types(observed_types: list[str]) -> list[str]:
     """Identify which major packet types were not observed.
 
     Args:
@@ -95,12 +97,12 @@ def identify_missing_packet_types(observed_types: List[str]) -> List[str]:
     expected_major_types = {"0x23", "0x73", "0x83", "0xd3"}
     observed_normalized = {ptype.lower() for ptype in observed_types}
     missing = expected_major_types - observed_normalized
-    return sorted(list(missing))
+    return sorted(missing)
 
 
 def assess_validation_quality(
-    total_validated: int, total_failed: int, packet_types: Dict[str, int]
-) -> Dict[str, bool]:
+    total_validated: int, total_failed: int, packet_types: dict[str, int]
+) -> dict[str, bool]:
     """Assess validation quality against acceptance criteria.
 
     Args:
@@ -113,12 +115,12 @@ def assess_validation_quality(
     """
     error_rate = (total_failed / total_validated * 100) if total_validated > 0 else 100.0
 
-    observed_types = list(packet_types.keys())
+    observed_types = list(packet_types)
     missing_types = identify_missing_packet_types(observed_types)
 
     return {
-        "sufficient_packets": total_validated >= 100,
-        "low_error_rate": error_rate < 1.0,
+        "sufficient_packets": total_validated >= MIN_PACKETS_FOR_VALIDATION,
+        "low_error_rate": error_rate < MAX_ERROR_RATE_PERCENT,
         "all_major_types": len(missing_types) == 0,
         "has_handshake": any("0x23" in t.lower() for t in observed_types),
         "has_data_channel": any("0x73" in t.lower() for t in observed_types),
@@ -127,7 +129,7 @@ def assess_validation_quality(
     }
 
 
-def format_quality_assessment(assessment: Dict[str, bool]) -> str:
+def format_quality_assessment(assessment: dict[str, bool]) -> str:
     """Format quality assessment as checklist.
 
     Args:

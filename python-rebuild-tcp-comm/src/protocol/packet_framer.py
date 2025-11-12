@@ -5,7 +5,8 @@ handling partial packets, multi-packet reads, and protecting against buffer exha
 """
 
 import logging
-from typing import List
+
+from protocol.cync_protocol import PACKET_HEADER_LENGTH
 
 logger = logging.getLogger(__name__)
 
@@ -38,7 +39,7 @@ class PacketFramer:
 
     Recovery Loop Protection:
     - Scans up to min(buffer_size, 5000) bytes before clearing buffer
-    - Formula: MAX_RECOVERY_ATTEMPTS = min(1000, max(100, buffer_size // 5))
+    - Formula: max_recovery_attempts = min(1000, max(100, buffer_size // 5))
     - Time Complexity: O(n) where n = bytes scanned (max 5000)
     - Memory: O(1) additional (in-place buffer operations)
     - Example: 10KB corrupt buffer = 2048 attempts, scans 10KB, then clears
@@ -61,7 +62,7 @@ class PacketFramer:
         """Initialize packet framer with empty buffer."""
         self.buffer = bytearray()
 
-    def feed(self, data: bytes) -> List[bytes]:
+    def feed(self, data: bytes) -> list[bytes]:
         """Add data to buffer and return list of complete packets.
 
         Args:
@@ -73,7 +74,7 @@ class PacketFramer:
         self.buffer.extend(data)
         return self._extract_packets()
 
-    def _extract_packets(self) -> List[bytes]:
+    def _extract_packets(self) -> list[bytes]:
         """Extract all complete packets from buffer.
 
         Validates packet length against MAX_PACKET_SIZE to prevent buffer
@@ -90,22 +91,22 @@ class PacketFramer:
         Returns:
             List of complete packets; buffer retains incomplete data
         """
-        packets: List[bytes] = []
+        packets: list[bytes] = []
         recovery_attempts = 0
         # Recovery attempts proportional to buffer size (min 100, max 1000)
         # Formula: attempts = buffer_size // 5 (capped at 1000)
         # Examples: 500-byte buffer = 100 attempts; 5000-byte buffer = 1000 attempts
         # Each attempt scans 5 bytes, so max scanned = 5000 bytes worst case
-        MAX_RECOVERY_ATTEMPTS = min(1000, max(100, len(self.buffer) // 5))
+        max_recovery_attempts = min(1000, max(100, len(self.buffer) // PACKET_HEADER_LENGTH))
 
-        while len(self.buffer) >= 5:
+        while len(self.buffer) >= PACKET_HEADER_LENGTH:
             # Check recovery limit
             # Log once per buffer clear event, not per recovery attempt
-            if recovery_attempts > MAX_RECOVERY_ATTEMPTS:
+            if recovery_attempts > max_recovery_attempts:
                 logger.error(
                     "Buffer cleared after max recovery attempts",
                     extra={
-                        "max_attempts": MAX_RECOVERY_ATTEMPTS,
+                        "max_attempts": max_recovery_attempts,
                         "buffer_size": len(self.buffer),
                         "bytes_scanned": recovery_attempts * 5,
                     },
@@ -126,7 +127,7 @@ class PacketFramer:
                     packet_length,
                     self.MAX_PACKET_SIZE,
                     recovery_attempts + 1,
-                    MAX_RECOVERY_ATTEMPTS,
+                    max_recovery_attempts,
                     (recovery_attempts + 1) * 5,
                     extra={"buffer_size": len(self.buffer)},
                 )

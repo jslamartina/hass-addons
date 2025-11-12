@@ -59,14 +59,11 @@
         "ms-azuretools.vscode-docker",
         "cnshenj.vscode-task-manager",
         "docker.docker",
-        "bodil.file-browser",
         "ms-azuretools.vscode-containers",
-        "yzhang.markdown-all-in-one",
-        "shd101wyy.markdown-preview-enhanced",
         "ms-playwright.playwright",
-        "MermaidChart.vscode-mermaid-chart",
         "github.vscode-github-actions",
-        "DavidAnson.vscode-markdownlint"
+        "DavidAnson.vscode-markdownlint",
+        "bierner.markdown-mermaid"
       ],
       "settings": {
         "terminal.integrated.scrollback": 10000,

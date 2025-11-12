@@ -1,12 +1,14 @@
 """Tests for toggle harness."""
 
-import asyncio
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
 from harness.toggler import send_toggle_packet, toggle_device_with_retry
 from transport import TCPConnection
+
+# Test constants
+EXPECTED_MAX_ATTEMPTS = 2
 
 
 @pytest.mark.asyncio
@@ -34,7 +36,7 @@ async def test_tcp_connection_timeout() -> None:
 
     # Mock timeout
     with patch("asyncio.open_connection") as mock_open:
-        mock_open.side_effect = asyncio.TimeoutError()
+        mock_open.side_effect = TimeoutError()
 
         result = await conn.connect()
 
@@ -123,7 +125,7 @@ async def test_toggle_device_with_retry_success() -> None:
                 device_host="127.0.0.1",
                 device_port=9999,
                 state=True,
-                max_attempts=2,
+                max_attempts=EXPECTED_MAX_ATTEMPTS,
             )
 
             assert result is True
@@ -150,11 +152,11 @@ async def test_toggle_device_with_retry_failure_then_success() -> None:
                 device_host="127.0.0.1",
                 device_port=9999,
                 state=True,
-                max_attempts=2,
+                max_attempts=EXPECTED_MAX_ATTEMPTS,
             )
 
             assert result is True
-            assert mock_conn.connect.call_count == 2
+            assert mock_conn.connect.call_count == EXPECTED_MAX_ATTEMPTS
 
 
 @pytest.mark.asyncio
@@ -172,11 +174,11 @@ async def test_toggle_device_with_retry_all_attempts_fail() -> None:
                 device_host="127.0.0.1",
                 device_port=9999,
                 state=True,
-                max_attempts=2,
+                max_attempts=EXPECTED_MAX_ATTEMPTS,
             )
 
             assert result is False
-            assert mock_conn.connect.call_count == 2
+            assert mock_conn.connect.call_count == EXPECTED_MAX_ATTEMPTS
 
 
 @pytest.mark.asyncio
@@ -230,3 +232,45 @@ async def test_tcp_recv_connection_closed() -> None:
 
     assert result is None
     assert not conn.is_connected  # Should mark as disconnected
+
+
+class TestSocketAbstractionErrorPaths:
+    """Tests for error handling in socket abstraction."""
+
+    @pytest.mark.asyncio
+    async def test_send_timeout_returns_false(self):
+        """Test that send() returns False on TimeoutError."""
+        conn = TCPConnection("127.0.0.1", 9999, io_timeout=0.1)
+
+        # Mock connected state
+        conn._connected = True
+        mock_writer = MagicMock()
+        mock_drain = AsyncMock()
+        mock_drain.side_effect = TimeoutError("Send timeout")
+        mock_writer.drain = mock_drain
+        conn.writer = mock_writer
+
+        result = await conn.send(b"test data")
+
+        assert result is False
+        mock_writer.write.assert_called_once_with(b"test data")
+
+    @pytest.mark.asyncio
+    async def test_send_not_connected_returns_false(self):
+        """Test that send() returns False when not connected."""
+        conn = TCPConnection("127.0.0.1", 9999)
+        conn._connected = False
+
+        result = await conn.send(b"test data")
+
+        assert result is False
+
+    @pytest.mark.asyncio
+    async def test_recv_not_connected_returns_none(self):
+        """Test that recv() returns None when not connected."""
+        conn = TCPConnection("127.0.0.1", 9999)
+        conn._connected = False
+
+        result = await conn.recv(1024)
+
+        assert result is None

@@ -17,9 +17,29 @@ import sys
 import time
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 import requests
+
+# Import constants from transport module
+try:
+    from transport.device_info import DEVICE_ID_LENGTH_BYTES, DEVICE_TYPE_LENGTH_BYTES
+except ImportError:
+    # Fallback if import fails
+    DEVICE_ID_LENGTH_BYTES = 4
+    DEVICE_TYPE_LENGTH_BYTES = 24
+
+DEVICE_ID_BYTES = 2
+
+# Test constants
+TIMEOUT_MS = 100
+SLEEP_SHORT_SECONDS = 0.2
+SLEEP_LONG_SECONDS = 2.0
+
+# Packet parsing constants
+MSG_ID_POSITION_CHECK = 10  # Expected position for msg_id in hex bytes
+MIN_SAMPLES_FOR_P95 = 20  # Minimum samples needed for p95 percentile calculation
+MIN_MESH_INFO_PACKET_LENGTH = 50  # Minimum packet length to consider as mesh info
 
 
 def calculate_checksum_between_markers(packet: bytes, offset_after_start: int = 6) -> int:
@@ -43,7 +63,8 @@ def calculate_checksum_between_markers(packet: bytes, offset_after_start: int = 
     end = len(packet) - 1  # index of trailing 0x7E
 
     if end <= start + offset_after_start:
-        raise ValueError("Packet too short to compute checksum with given offset")
+        error_msg = "Packet too short to compute checksum with given offset"
+        raise ValueError(error_msg)
 
     # Exclude checksum byte at position end-1 and trailing 0x7E at position end
     data_to_sum = packet[start + offset_after_start : end - 1]
@@ -57,7 +78,7 @@ def craft_toggle_packet(endpoint: bytes, msg_id: int, device_id: int, state: boo
     Args:
         endpoint: 4-byte endpoint from handshake packet
         msg_id: Message ID (0x00-0xFF)
-        device_id: 2-byte device ID (0-65535)
+        device_id: DEVICE_ID_BYTES-byte device ID (0-65535)
         state: True=on, False=off
 
     Returns:
@@ -73,7 +94,7 @@ def craft_toggle_packet(endpoint: bytes, msg_id: int, device_id: int, state: boo
     msg_id_bytes = bytes([msg_id, 0x00, 0x00])
 
     # Device ID as 2-byte little-endian
-    device_id_bytes = device_id.to_bytes(2, byteorder="little")
+    device_id_bytes = device_id.to_bytes(DEVICE_ID_BYTES, byteorder="little")
 
     # State byte
     state_byte = 0x01 if state else 0x00
@@ -112,9 +133,7 @@ def craft_toggle_packet(endpoint: bytes, msg_id: int, device_id: int, state: boo
     inner_struct[-2] = checksum
 
     # Combine all parts
-    packet = header + queue_id + msg_id_bytes + bytes(inner_struct)
-
-    return packet
+    return header + queue_id + msg_id_bytes + bytes(inner_struct)
 
 
 def craft_mesh_info_request(endpoint: bytes) -> bytes:
@@ -164,12 +183,10 @@ def craft_mesh_info_request(endpoint: bytes) -> bytes:
     inner_struct[-2] = checksum
 
     # Combine all parts
-    packet = header + queue_id + msg_id_bytes + bytes(inner_struct)
-
-    return packet
+    return header + queue_id + msg_id_bytes + bytes(inner_struct)
 
 
-def inject_packet(api_url: str, packet: bytes, direction: str = "CLOUD→DEV") -> Dict[str, Any]:
+def inject_packet(api_url: str, packet: bytes, direction: str = "CLOUD→DEV") -> dict[str, Any]:
     """
     Inject packet via MITM proxy REST API.
 
@@ -189,9 +206,7 @@ def inject_packet(api_url: str, packet: bytes, direction: str = "CLOUD→DEV") -
     return response.json()
 
 
-def parse_capture_logs(
-    capture_file: Path, since_time: Optional[float] = None
-) -> List[Dict[str, Any]]:
+def parse_capture_logs(capture_file: Path, since_time: float | None = None) -> list[dict[str, Any]]:
     """
     Parse JSONL capture logs.
 
@@ -207,9 +222,10 @@ def parse_capture_logs(
     if not capture_file.exists():
         return packets
 
-    with open(capture_file) as f:
-        for line in f:
-            line = line.strip()
+    capture_path = Path(capture_file)
+    with capture_path.open() as f:
+        for raw_line in f:
+            line = raw_line.strip()
             if not line:
                 continue
 
@@ -230,8 +246,8 @@ def parse_capture_logs(
 
 
 def find_ack_for_msg_id(
-    packets: List[Dict[str, Any]], msg_id: int, ack_type: str = "7b"
-) -> Optional[Dict[str, Any]]:
+    packets: list[dict[str, Any]], msg_id: int, ack_type: str = "7b"
+) -> dict[str, Any] | None:
     """
     Find ACK packet matching msg_id.
 
@@ -254,13 +270,16 @@ def find_ack_for_msg_id(
 
         # Check for msg_id in expected positions (bytes 10-11 typically)
         hex_bytes = hex_data.split()
-        if len(hex_bytes) > 10 and hex_bytes[10] == msg_id_hex:
+        if (
+            len(hex_bytes) > MSG_ID_POSITION_CHECK
+            and hex_bytes[MSG_ID_POSITION_CHECK] == msg_id_hex
+        ):
             return packet
 
     return None
 
 
-def parse_mesh_info_response(hex_string: str) -> List[Dict[str, Any]]:
+def parse_mesh_info_response(hex_string: str) -> list[dict[str, Any]]:
     """
     Parse mesh info response into device structures.
 
@@ -288,11 +307,11 @@ def parse_mesh_info_response(hex_string: str) -> List[Dict[str, Any]]:
     if len(inner_struct) > device_data_start and inner_struct[device_data_start] == 0x00:
         device_data_start = 15
 
-    # Parse 24-byte device structures
+    # Parse DEVICE_TYPE_LENGTH_BYTES-byte device structures
     devices = []
-    for i in range(device_data_start, len(inner_struct) - 1, 24):
-        dev_struct = inner_struct[i : i + 24]
-        if len(dev_struct) < 24:
+    for i in range(device_data_start, len(inner_struct) - 1, DEVICE_TYPE_LENGTH_BYTES):
+        dev_struct = inner_struct[i : i + DEVICE_TYPE_LENGTH_BYTES]
+        if len(dev_struct) < DEVICE_TYPE_LENGTH_BYTES:
             break
 
         devices.append(
@@ -315,8 +334,8 @@ async def run_toggle_test(
     endpoint: bytes,
     device_id: int,
     iterations: int,
-    capture_file: Optional[Path] = None,
-) -> Dict[str, Any]:
+    capture_file: Path | None = None,
+) -> dict[str, Any]:
     """
     Run toggle packet injection test.
 
@@ -376,7 +395,7 @@ async def run_toggle_test(
 
             # Wait for ACK in capture logs
             if capture_file:
-                await asyncio.sleep(0.2)  # Give time for ACK
+                await asyncio.sleep(SLEEP_SHORT_SECONDS)  # Give time for ACK
 
                 packets = parse_capture_logs(capture_file, since_time=start_time)
                 ack = find_ack_for_msg_id(packets, msg_id)
@@ -413,9 +432,11 @@ async def run_toggle_test(
             "min": min(latencies),
             "max": max(latencies),
             "p50": latencies[len(latencies) // 2],
-            "p95": latencies[int(len(latencies) * 0.95)] if len(latencies) >= 20 else latencies[-1],
+            "p95": latencies[int(len(latencies) * 0.95)]
+            if len(latencies) >= MIN_SAMPLES_FOR_P95
+            else latencies[-1],
             "p99": latencies[int(len(latencies) * 0.99)]
-            if len(latencies) >= 100
+            if len(latencies) >= TIMEOUT_MS
             else latencies[-1],
         }
 
@@ -425,8 +446,8 @@ async def run_toggle_test(
 async def run_mesh_info_test(
     api_url: str,
     endpoint: bytes,
-    capture_file: Optional[Path] = None,
-) -> Dict[str, Any]:
+    capture_file: Path | None = None,
+) -> dict[str, Any]:
     """
     Run mesh info request test.
 
@@ -471,7 +492,7 @@ async def run_mesh_info_test(
         # Wait for responses
         if capture_file:
             print("Waiting for mesh info responses...")
-            await asyncio.sleep(2.0)  # Give more time for large responses
+            await asyncio.sleep(SLEEP_LONG_SECONDS)  # Give more time for large responses
 
             packets = parse_capture_logs(capture_file, since_time=start_time)
 
@@ -493,7 +514,7 @@ async def run_mesh_info_test(
                 if (
                     packet_data["direction"] == "DEV→CLOUD"
                     and hex_data.startswith("73")
-                    and packet_data["length"] > 50
+                    and packet_data["length"] > MIN_MESH_INFO_PACKET_LENGTH
                 ):
                     # Try to parse devices
                     devices = parse_mesh_info_response(hex_data)
@@ -564,7 +585,7 @@ def main():
 
     # Parse endpoint
     endpoint = bytes.fromhex(args.endpoint.replace(" ", ""))
-    if len(endpoint) != 4:
+    if len(endpoint) != DEVICE_ID_LENGTH_BYTES:
         print(f"Error: Endpoint must be 4 bytes, got {len(endpoint)}", file=sys.stderr)
         sys.exit(1)
 
@@ -588,7 +609,7 @@ def main():
         output_path = Path(args.output)
         output_path.parent.mkdir(parents=True, exist_ok=True)
 
-        with open(output_path, "w") as f:
+        with output_path.open("w") as f:
             json.dump(results, f, indent=2)
 
         print(f"\nResults saved to: {output_path}")

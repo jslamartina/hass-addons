@@ -37,7 +37,7 @@ All major packet types can be encoded:
 | 0x83 Status Broadcast | `encode_status_broadcast()` | ✅ Pass | 7 tests |
 | 0xD3 Heartbeat        | `encode_heartbeat()`        | ✅ Pass | 3 tests |
 
-**Evidence**: `test_roundtrip_all_packet_types()` validates encode/decode for all 4 types
+**Evidence**: `tests/unit/protocol/test_cync_protocol.py::test_roundtrip_all_packet_types()` validates encode/decode for all 4 types
 
 #### ✅ Decoder Coverage
 
@@ -59,7 +59,7 @@ All Phase 0.5 packet fixtures decoded successfully:
 
 **Total**: 11/11 fixtures (100%)
 
-**Evidence**: `test_decode_all_packet_types_from_fixtures()`
+**Evidence**: `tests/unit/protocol/test_cync_protocol.py::test_decode_all_packet_types_from_fixtures()`
 
 #### ✅ Checksum Validation
 

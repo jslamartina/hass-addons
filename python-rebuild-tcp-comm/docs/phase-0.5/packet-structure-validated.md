@@ -156,7 +156,7 @@ HEARTBEAT_CLOUD = 0xD8
 ### Phase 1a (Codec)
 
 - Copy checksum algorithm (validated)
-- Use byte positions: endpoint[5:10], msg_id[10:13]
+- Use byte positions: endpoint[5:10], msg_id[10:12]
 - Validate packet length < 4096 bytes
 - Test with fixtures from `tests/fixtures/real_packets.py`
 

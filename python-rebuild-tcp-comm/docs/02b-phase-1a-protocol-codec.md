@@ -74,7 +74,9 @@ Phase 0.5 protocol validation provides:
 
 ### File Structure
 
-**Visual Diagrams**: See `docs/phase-1a/architecture-comprehensive.mermaid` and `docs/phase-1a/data-flow.mermaid` for visual architecture and data flow diagrams.
+**Visual Diagrams**: See [architecture-comprehensive.mermaid](phase-1a/architecture-comprehensive.mermaid) and [data-flow.mermaid](phase-1a/data-flow.mermaid) for visual architecture and data flow diagrams.
+
+_Alt text: Architecture diagram showing protocol codec layers (CyncProtocol, PacketFramer, Checksum) and data flow from TCP stream to parsed packets._
 
 ```text
 src/protocol/
@@ -115,11 +117,17 @@ class CyncProtocolError(Exception):
 **Usage**:
 
 ```python
-try:
-    packet = protocol.decode_packet(data)
-except CyncProtocolError as e:
-    # Catch any protocol-related error
-    logger.error("Protocol error: %s", e)
+async def decode_packet_safe(data: bytes) -> ParsedPacket:
+    """Decode packet with error handling."""
+    logger.debug("Decoding packet", extra={"data_length": len(data)})
+    try:
+        packet = protocol.decode_packet(data)
+        logger.debug("Packet decoded successfully", extra={"packet_type": packet.type})
+        return packet
+    except CyncProtocolError as e:
+        # Catch any protocol-related error
+        logger.error("Protocol error: %s", e, exc_info=True)
+        raise
 ```
 
 #### PacketDecodeError
@@ -202,9 +210,12 @@ CyncProtocolError (Phase 1a - base)
 
 ```python
 import pytest
+from protocol.cync_protocol import CyncProtocol
+from protocol.exceptions import PacketDecodeError
 
-def test_packet_decode_error():
+def test_packet_decode_error() -> None:
     """Test decode error raised for invalid packet."""
+    protocol = CyncProtocol()
     with pytest.raises(PacketDecodeError, match="too_short"):
         protocol.decode_packet(b'\x23\x00')  # Too short
 ```
@@ -513,15 +524,23 @@ class CodecValidatorPlugin:
         self, direction: PacketDirection, data: bytes, connection_id: int
     ) -> None:
         """Validate packet with Phase 1a codec."""
+        logger.debug("Packet received", extra={
+            "direction": direction.value,
+            "data_length": len(data),
+            "connection_id": connection_id
+        })
         logger.info(
-            f"Packet received: {direction.value}, {len(data)} bytes, conn {connection_id}"
+            "Packet received: %s, %d bytes, conn %d",
+            direction.value, len(data), connection_id
         )
 
     def on_connection_established(self, connection_id: int) -> None:
-        logger.info(f"Connection established: {connection_id}")
+        logger.debug("Connection established", extra={"connection_id": connection_id})
+        logger.info("Connection established: %d", connection_id)
 
     def on_connection_closed(self, connection_id: int) -> None:
-        logger.info(f"Connection closed: {connection_id}")
+        logger.debug("Connection closed", extra={"connection_id": connection_id})
+        logger.info("Connection closed: %d", connection_id)
         self.framers.pop(connection_id, None)
 ```
 
@@ -587,7 +606,7 @@ Do not import from legacy `cync_controller` package. Copy algorithm implementati
 
 - Implement header parser (5 bytes)
 - Length calculation (multiplier \* 256 + base)
-- Use byte positions: endpoint bytes[5:10], msg_id bytes[10:13]
+- Use byte positions: endpoint bytes[5:10], msg_id bytes[10:12]
 - Unit tests for all packet types
 
 ### Step 4: Packet Encoders
@@ -618,10 +637,10 @@ Do not import from legacy `cync_controller` package. Copy algorithm implementati
 
 **Counter Wrap-Around Safety**:
 
-The 3-byte counter wraps at 16,777,216 (2^24). This is safe because:
+The 2-byte counter wraps at 65,536 (2^16). This is safe because:
 
-- ACK timeout (2s) clears old msg_ids before wrap-around possible
-- Typical connection: 10-1000 messages (16,777× to 1,677,721× margin)
+- ACK timeout (128ms default) clears old msg_ids before wrap-around possible
+- Typical connection: 10-1000 messages (65× to 6,553× margin)
 - Connection reset clears counter completely
 
 **Monitoring**: Log wrap events (`tcp_comm_msg_id_wraps_total` metric), alert on multiple wraps per day.
@@ -699,13 +718,13 @@ class ReliableTransport:
         # ... cleanup (implementation in Phase 1b)
 
     def generate_msg_id(self) -> bytes:
-        """Generate sequential 3-byte msg_id.
+        """Generate sequential 2-byte msg_id.
 
-        Counter wraps at 16,777,216 (2^24) to cover full 3-byte range (0x000000 to 0xFFFFFF).
+        Counter wraps at 65,536 (2^16) to cover full 2-byte range (0x0000 to 0xFFFF).
         Uses big-endian byte order.
         Random offset on init handles reboot edge case.
         """
-        msg_id = (self._msg_id_counter % 0x1000000).to_bytes(3, 'big')  # 2^24 for full 3-byte range
+        msg_id = (self._msg_id_counter % 0x10000).to_bytes(2, 'big')  # 2^16 for full 2-byte range
         self._msg_id_counter += 1
         return msg_id
 ```
@@ -764,7 +783,7 @@ class CodecValidatorPlugin:
                     }
                 )
         except (PacketDecodeError, PacketFramingError) as e:
-            logger.error(f"Phase 1a validation failed: {e}")
+            logger.error("Phase 1a validation failed: %s", e)
 
     def on_connection_established(self, connection_id: int) -> None:
         self.framers[connection_id] = PacketFramer()
@@ -860,15 +879,24 @@ tcp_comm_framing_errors_total{reason}  # Counter
 **Increment on decode error**:
 
 ```python
-try:
-    packet = decode_packet(data)
-except PacketDecodeError as e:
-    logger.error("Decode failed", extra={"reason": e.reason})
-    metrics.tcp_comm_decode_errors_total.labels(
-        reason=e.reason,
-        packet_type=f"0x{data[0]:02x}" if data else "unknown"
-    ).inc()
-    raise
+async def decode_with_metrics(data: bytes) -> ParsedPacket:
+    """Decode packet and record metrics on error."""
+    logger.debug("Decoding packet", extra={"data_length": len(data)})
+    try:
+        packet = decode_packet(data)
+        logger.debug("Decode successful", extra={"packet_type": packet.type})
+        return packet
+    except PacketDecodeError as e:
+        packet_type_hex = f"0x{data[0]:02x}" if data else "unknown"
+        logger.error("Decode failed: %s", e.reason, extra={
+            "reason": e.reason,
+            "packet_type": packet_type_hex
+        })
+        metrics.tcp_comm_decode_errors_total.labels(
+            reason=e.reason,
+            packet_type=packet_type_hex
+        ).inc()
+        raise
 ```
 
 **Increment on framing error**:
@@ -932,7 +960,7 @@ if packet_length > MAX_PACKET_SIZE:
 ### Integration
 
 - [ ] Can encode/decode packets successfully
-- [ ] 3-byte msg_id generation implemented (Sequential strategy - Step 5.5)
+- [ ] 2-byte msg_id generation implemented (Sequential strategy - Step 5.5)
 - [ ] MITM codec validation plugin successfully decodes 100+ live packets
 - [ ] MITM plugin detects and reports invalid checksums
 - [ ] MITM plugin handles all packet types (0x23, 0x73, 0x83, 0xD3)
@@ -946,20 +974,23 @@ if packet_length > MAX_PACKET_SIZE:
 
 ```python
 ## test_encoder.py
-def test_encode_handshake():
+import pytest
+from protocol.cync_protocol import CyncProtocol
+
+def test_encode_handshake() -> None:
     """Test 0x23 handshake encoding."""
-    endpoint = bytes.fromhex("39 87 c8 57")
-    auth_code = bytes.fromhex("31 65 30 37...")
-    packet = CyncProtocol.encode_handshake(endpoint, auth_code)
+    endpoint: bytes = bytes.fromhex("39 87 c8 57")
+    auth_code: bytes = bytes.fromhex("31 65 30 37...")
+    packet: bytes = CyncProtocol.encode_handshake(endpoint, auth_code)
     assert packet[0] == 0x23
     assert packet[5:9] == endpoint
 
-def test_encode_data_packet():
+def test_encode_data_packet() -> None:
     """Test 0x73 data packet encoding with 0x7e framing."""
-    endpoint = bytes.fromhex("1b dc da 3e 00")
-    msg_id = bytes.fromhex("13 00 00")
-    payload = bytes.fromhex("0d 01 00...")
-    packet = CyncProtocol.encode_data_packet(endpoint, msg_id, payload)
+    endpoint: bytes = bytes.fromhex("1b dc da 3e 00")
+    msg_id: bytes = bytes.fromhex("13 00")
+    payload: bytes = bytes.fromhex("0d 01 00...")
+    packet: bytes = CyncProtocol.encode_data_packet(endpoint, msg_id, payload)
     assert packet[0] == 0x73
     assert 0x7e in packet  # Has framing marker
 
@@ -968,11 +999,11 @@ def test_encode_data_packet():
     (456, bytes.fromhex("32 5d 53 17 00")),
     (789, bytes.fromhex("38 e8 cf 46 00")),
 ])
-def test_decode_handshake_parameterized(device_id, endpoint):
+def test_decode_handshake_parameterized(device_id: int, endpoint: bytes) -> None:
     """Test handshake decoding with various device IDs."""
     # Build handshake packet with parameterized endpoint
-    auth_code = bytes.fromhex("31 65 30 37 64 38 63 65 30 61 36 31 37 61 33 37")
-    packet = CyncProtocol.encode_handshake(endpoint, auth_code)
+    auth_code: bytes = bytes.fromhex("31 65 30 37 64 38 63 65 30 61 36 31 37 61 33 37")
+    packet: bytes = CyncProtocol.encode_handshake(endpoint, auth_code)
 
     decoded = CyncProtocol.decode_packet(packet)
     assert decoded.packet_type == 0x23

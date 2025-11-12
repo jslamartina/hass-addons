@@ -18,6 +18,8 @@
 
 ### Current Flow
 
+_Alt text: Flowchart showing device connecting to NCyncServer TLS, which parses packets to PacketHandler._
+
 ```mermaid
 flowchart LR
   subgraph LAN_Device

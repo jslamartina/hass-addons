@@ -9,10 +9,12 @@ import re
 import sys
 from collections import Counter
 from pathlib import Path
-from typing import Dict
+
+MIN_ARGS_REQUIRED = 2
+MIN_DECODED_PACKETS_REQUIRED = 100
 
 
-def parse_capture_file(filepath: Path) -> Dict[str, any]:
+def parse_capture_file(filepath: Path) -> dict[str, any]:
     """Parse MITM capture file and extract packet statistics.
 
     Args:
@@ -21,7 +23,7 @@ def parse_capture_file(filepath: Path) -> Dict[str, any]:
     Returns:
         Dictionary with packet statistics and validation results
     """
-    with open(filepath, "r") as f:
+    with filepath.open() as f:
         content = f.read()
 
     # Extract codec validation successes
@@ -48,7 +50,9 @@ def parse_capture_file(filepath: Path) -> Dict[str, any]:
         "total_validated": len(validated_matches),
         "total_failed": len(failed_matches),
         "error_rate": (
-            (len(failed_matches) / len(validated_matches) * 100) if validated_matches else 0.0
+            (len(failed_matches) / len(validated_matches) * MIN_DECODED_PACKETS_REQUIRED)
+            if validated_matches
+            else 0.0
         ),
         "packet_types": dict(packet_types),
         "direction_counts": dict(direction_counts),
@@ -60,7 +64,7 @@ def parse_capture_file(filepath: Path) -> Dict[str, any]:
     }
 
 
-def format_statistics_report(stats: Dict[str, any]) -> str:
+def format_statistics_report(stats: dict[str, any]) -> str:
     """Format statistics as human-readable report.
 
     Args:
@@ -101,10 +105,12 @@ def format_statistics_report(stats: Dict[str, any]) -> str:
 
     # Validation status
     report.append("Validation Status:")
-    if stats["total_validated"] >= 100:
-        report.append("  ✅ PASS: ≥100 packets decoded")
+    if stats["total_validated"] >= MIN_DECODED_PACKETS_REQUIRED:
+        report.append(f"  ✅ PASS: ≥{MIN_DECODED_PACKETS_REQUIRED} packets decoded")
     else:
-        report.append(f"  ❌ FAIL: Only {stats['total_validated']} packets (need ≥100)")
+        report.append(
+            f"  ❌ FAIL: Only {stats['total_validated']} packets (need ≥{MIN_DECODED_PACKETS_REQUIRED})"
+        )
 
     if stats["error_rate"] < 1.0:
         report.append(f"  ✅ PASS: Error rate {stats['error_rate']:.2f}% (<1%)")
@@ -113,7 +119,7 @@ def format_statistics_report(stats: Dict[str, any]) -> str:
 
     # Check for all major packet types
     expected_types = {"0x23", "0x73", "0x83", "0xd3"}
-    observed_types = set(ptype.lower() for ptype in stats["packet_types"].keys())
+    observed_types = {ptype.lower() for ptype in stats["packet_types"]}
     if expected_types.issubset(observed_types):
         report.append("  ✅ PASS: All major packet types observed")
     else:
@@ -131,7 +137,7 @@ def main() -> int:
     Returns:
         Exit code (0 = success, 1 = error)
     """
-    if len(sys.argv) < 2:
+    if len(sys.argv) < MIN_ARGS_REQUIRED:
         print("Usage: python analyze_capture.py <capture_file>")
         print("\nExample:")
         print("  python analyze_capture.py mitm/captures/capture_20251110_1234.txt")
@@ -151,7 +157,7 @@ def main() -> int:
     print(report)
 
     # Return 0 if validation passes, 1 if fails
-    passed = stats["total_validated"] >= 100 and stats["error_rate"] < 1.0
+    passed = stats["total_validated"] >= MIN_DECODED_PACKETS_REQUIRED and stats["error_rate"] < 1.0
     return 0 if passed else 1
 
 

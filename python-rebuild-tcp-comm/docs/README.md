@@ -1,6 +1,6 @@
 # TCP Communication Rebuild - Documentation Index
 
-**Program Status**: Phase 0 Complete ✓ | Phase 0.5-1d Planned (next) | Phase 2-3 Planned
+**Program Status**: Phase 0 [✓ Complete] | Phase 0.5-1d [Planned] | Phase 2-3 [Planned]
 **Last Updated**: 2025-11-02
 
 ---
@@ -25,17 +25,17 @@ This directory contains comprehensive documentation for the TCP communication la
 
 ### Implementation Phases
 
-#### [01-phase-0.md](01-phase-0.md)**- Phase 0: Toggle + Log Harness ✓**COMPLETE
+#### [01-phase-0.md](01-phase-0.md) - Phase 0: Toggle + Log Harness [✓ Complete]
 
 - Minimal toggler with JSON logging
 - Prometheus metrics endpoint
 - TCP transport abstraction
 - Acceptance criteria (all met)
-- **Status**: Delivered and validated
+- **Status**: [✓ Complete]
 
 **[02-phase-1-spec.md](02-phase-1-spec.md)** - Phase 1 Program: Reliable Transport Layer
 
-- **Status**: Split into focused sub-phases
+- **Status**: [Planned]
 - **Total Effort**: ~4 weeks (split into 5 increments)
 - **Sub-Phases**:
   - **[Phase 0.5](02a-phase-0.5-protocol-validation.md)**: Protocol Validation (3-5 days)
@@ -58,7 +58,7 @@ This directory contains comprehensive documentation for the TCP communication la
 - Error budget tracking
 - Automated rollback
 - Dark launch validation
-- **Status**: Specification complete
+- **Status**: [Planned]
 - **Effort**: ~3-4 weeks, 2 engineers + 1 SRE
 
 **[04-phase-3-spec.md](04-phase-3-spec.md)** - Phase 3: Full Migration
@@ -68,7 +68,7 @@ This directory contains comprehensive documentation for the TCP communication la
 - Operational handoff
 - 30-day validation period
 - Code cleanup
-- **Status**: Specification complete
+- **Status**: [Planned]
 - **Effort**: ~4-6 weeks, 2 engineers + 1 PM
 
 ---
@@ -77,16 +77,16 @@ This directory contains comprehensive documentation for the TCP communication la
 
 ### Phase Summary
 
-| Phase     | Status     | Effort    | Deliverables                                |
-| --------- | ---------- | --------- | ------------------------------------------- |
-| Phase 0   | ✓ Complete | 1-2 weeks | Toggler, metrics, tests, docs               |
-| Phase 0.5 | Planned    | 3-5 days  | Protocol validation, real packet captures   |
-| Phase 1a  | Planned    | 1 week    | Cync protocol codec                         |
-| Phase 1b  | Planned    | 1 week    | Reliable transport (ACK/NACK, retry, dedup) |
-| Phase 1c  | Planned    | 3-4 days  | Backpressure & queues                       |
-| Phase 1d  | Planned    | 1 week    | Device simulator, chaos tests               |
-| Phase 2   | Planned    | 3-4 weeks | Canary deployment, monitoring               |
-| Phase 3   | Planned    | 4-6 weeks | Full migration, deprecation                 |
+| Phase     | Status       | Effort    | Deliverables                                |
+| --------- | ------------ | --------- | ------------------------------------------- |
+| Phase 0   | [✓ Complete] | 1-2 weeks | Toggler, metrics, tests, docs               |
+| Phase 0.5 | [Planned]    | 3-5 days  | Protocol validation, real packet captures   |
+| Phase 1a  | [Planned]    | 1 week    | Cync protocol codec                         |
+| Phase 1b  | [Planned]    | 1 week    | Reliable transport (ACK/NACK, retry, dedup) |
+| Phase 1c  | [Planned]    | 3-4 days  | Backpressure & queues                       |
+| Phase 1d  | [Planned]    | 1 week    | Device simulator, chaos tests               |
+| Phase 2   | [Planned]    | 3-4 weeks | Canary deployment, monitoring               |
+| Phase 3   | [Planned]    | 4-6 weeks | Full migration, deprecation                 |
 
 **Total Program**: ~13-17 weeks (3.5-4.5 months)
 

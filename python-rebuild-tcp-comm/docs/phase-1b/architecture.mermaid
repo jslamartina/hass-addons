@@ -1,0 +1,118 @@
+---
+config:
+    layout: elk
+---
+graph TB
+    subgraph Application["Application Layer"]
+        DevOps[DeviceOperations<br/>---<br/>• ask_for_mesh_info<br/>• ask_for_device_info<br/>• Primary device enforcement<br/>• Device struct parsing]
+    end
+
+    subgraph Reliability["Reliability Layer"]
+        RT[ReliableTransport<br/>---<br/>• send_reliable<br/>• recv_reliable<br/>• ACK matching<br/>• Pending message tracking]
+        Dedup[LRU Deduplication Cache<br/>---<br/>• Full Fingerprint strategy<br/>• TTL: 300s<br/>• Size: 1000 entries]
+        RT -.-> Dedup
+    end
+
+    subgraph Connection["Connection Layer"]
+        CM[ConnectionManager<br/>---<br/>• connect/disconnect<br/>• reconnect with backoff<br/>• State machine<br/>• Packet router task<br/>• Heartbeat monitoring]
+        State[ConnectionState<br/>---<br/>DISCONNECTED<br/>CONNECTING<br/>CONNECTED<br/>RECONNECTING]
+        PR[Packet Router<br/>---<br/>• Routes ACKs to pending msgs<br/>• Monitors heartbeat<br/>• Triggers reconnect on failure]
+        CM --> State
+        CM --> PR
+    end
+
+    subgraph Protocol["Protocol Layer (Phase 1a)"]
+        Proto[CyncProtocol<br/>---<br/>• encode_packet<br/>• decode_packet<br/>• encode_handshake<br/>• Checksum validation]
+    end
+
+    subgraph Transport["Transport Layer (Phase 1a)"]
+        TCP[TCPConnection<br/>---<br/>• send<br/>• recv<br/>• Socket I/O<br/>• asyncio streams]
+    end
+
+    subgraph Support["Supporting Components"]
+        Retry[RetryPolicy<br/>---<br/>• Exponential backoff<br/>• Max retries: 5<br/>• Base delay: 1s<br/>• Max delay: 30s]
+        IDs[Identifier Systems<br/>---<br/>• msg_id: 2-byte wire ACK matching<br/>• correlation_id: UUID v7 logging<br/>• dedup_key: Full Fingerprint hash]
+        Metrics[Metrics Recording<br/>---<br/>• ACK latency<br/>• Retry counts<br/>• Duplicate detection<br/>• Connection state<br/>• Lock hold time]
+    end
+
+    subgraph Exceptions["Exception Hierarchy"]
+        BaseEx[CyncProtocolError<br/>Phase 1a base]
+        ConnEx[CyncConnectionError<br/>Connection state errors]
+        HSEx[HandshakeError<br/>0x23→0x28 failures]
+        RecvEx[PacketReceiveError<br/>Network failures]
+        DupEx[DuplicatePacketError<br/>Caught by dedup cache]
+        AckEx[ACKTimeoutError<br/>ACK not received]
+        BaseEx --> ConnEx
+        BaseEx --> HSEx
+        BaseEx --> RecvEx
+        BaseEx --> DupEx
+        BaseEx --> AckEx
+    end
+
+    %% Data Flow - Send Path
+    DevOps -->|send mesh/device request| RT
+    RT -->|check state + encode| CM
+    RT -.->|use retry policy| Retry
+    RT -.->|track with IDs| IDs
+    CM -->|encode packet| Proto
+    Proto -->|send bytes| TCP
+    TCP -.->|0x7B ACK| Proto
+    Proto -.->|decode ACK| CM
+    CM -.->|route ACK| PR
+    PR -.->|match msg_id| RT
+    RT -.->|unblock sender| DevOps
+
+    %% Data Flow - Receive Path
+    TCP -->|recv bytes| Proto
+    Proto -->|decode packet| CM
+    CM -->|packet router| PR
+    PR -->|check dedup_key| RT
+    RT -->|dedup check| Dedup
+    RT -->|deliver packet| DevOps
+
+    %% Connection Management
+    CM -.->|0x23 handshake| TCP
+    TCP -.->|0x28 ACK| CM
+    CM -.->|0xD3 heartbeat| TCP
+    TCP -.->|0xD8 ACK| CM
+    PR -.->|heartbeat timeout| CM
+    CM -.->|reconnect| TCP
+
+    %% Metrics and Monitoring
+    RT -.->|record metrics| Metrics
+    CM -.->|record metrics| Metrics
+    DevOps -.->|record metrics| Metrics
+
+    %% Exception Flow
+    TCP -.->|raises| RecvEx
+    CM -.->|raises| ConnEx
+    CM -.->|raises| HSEx
+    RT -.->|raises| AckEx
+    Dedup -.->|raises| DupEx
+
+    %% Styling - High contrast colors
+    classDef appLayer fill:#b3e5fc,stroke:#01579b,stroke-width:3px,color:#000
+    classDef reliabilityLayer fill:#e1bee7,stroke:#4a148c,stroke-width:3px,color:#000
+    classDef connLayer fill:#ffcc80,stroke:#e65100,stroke-width:3px,color:#000
+    classDef protocolLayer fill:#c8e6c9,stroke:#2e7d32,stroke-width:3px,color:#000
+    classDef transportLayer fill:#f8bbd0,stroke:#c2185b,stroke-width:3px,color:#000
+    classDef support fill:#dcedc8,stroke:#558b2f,stroke-width:3px,color:#000
+    classDef exceptions fill:#ffcdd2,stroke:#c62828,stroke-width:3px,color:#000
+
+    class DevOps appLayer
+    class RT,Dedup reliabilityLayer
+    class CM,State,PR connLayer
+    class Proto protocolLayer
+    class TCP transportLayer
+    class Retry,IDs,Metrics support
+    class BaseEx,ConnEx,HSEx,RecvEx,DupEx,AckEx exceptions
+
+    %% Notes
+    Note1[["Phase 1b End-State Architecture<br/>---<br/>Key Features:<br/>• Native Cync ACK handling (0x28, 0x7B, 0x88, 0xD8)<br/>• Hybrid ACK matching (parallel + FIFO)<br/>• Full Fingerprint deduplication<br/>• Exponential backoff retry<br/>• Connection state machine<br/>• Heartbeat monitoring (10s timeout)<br/>• Thread-safe with asyncio.Lock<br/>• Primary device enforcement<br/>• Comprehensive metrics"]]
+
+    Note1 -.-> Application
+    Note1 -.-> Reliability
+    Note1 -.-> Connection
+
+    style Note1 fill:#fff59d,stroke:#f57f17,stroke-width:3px,color:#000
+

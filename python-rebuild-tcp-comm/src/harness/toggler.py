@@ -8,8 +8,8 @@ import random
 import sys
 import time
 import uuid
+from dataclasses import dataclass
 from datetime import UTC, datetime
-from typing import Optional
 
 from metrics import (
     record_packet_latency,
@@ -59,26 +59,33 @@ def setup_logging(log_level: str) -> None:
     root_logger.addHandler(json_handler)
 
 
+@dataclass
+class PacketLogData:
+    """Data for packet logging."""
+
+    event: str
+    direction: str
+    msg_id: str
+    device_id: str
+    raw_packet_hex: str
+    elapsed_ms: float
+    outcome: str
+
+
 def log_packet(
-    event: str,
-    direction: str,
-    msg_id: str,
-    device_id: str,
-    raw_packet_hex: str,
-    elapsed_ms: float,
-    outcome: str,
+    packet_data: PacketLogData,
     **kwargs: object,
 ) -> None:
     """Log packet event with structured data."""
     logger = logging.getLogger(__name__)
     extra_fields = {
-        "event": event,
-        "direction": direction,
-        "msg_id": msg_id,
-        "device_id": device_id,
-        "raw_packet_hex": raw_packet_hex,
-        "elapsed_ms": round(elapsed_ms, 2),
-        "outcome": outcome,
+        "event": packet_data.event,
+        "direction": packet_data.direction,
+        "msg_id": packet_data.msg_id,
+        "device_id": packet_data.device_id,
+        "raw_packet_hex": packet_data.raw_packet_hex,
+        "elapsed_ms": round(packet_data.elapsed_ms, 2),
+        "outcome": packet_data.outcome,
         **kwargs,
     }
     # Create LogRecord with extra fields
@@ -87,11 +94,11 @@ def log_packet(
         logging.INFO,
         __name__,
         0,
-        f"Packet {event} {direction} {outcome}",
+        f"Packet {packet_data.event} {packet_data.direction} {packet_data.outcome}",
         (),
         None,
     )
-    setattr(record, "extra_fields", extra_fields)
+    record.extra_fields = extra_fields
     logger.handle(record)
 
 
@@ -100,7 +107,7 @@ async def send_toggle_packet(
     device_id: str,
     msg_id: str,
     state: bool,
-) -> Optional[bytes]:
+) -> bytes | None:
     """
     Send a toggle packet and wait for response.
 
@@ -144,26 +151,30 @@ async def send_toggle_packet(
     if not send_success:
         elapsed_ms = (time.perf_counter() - start_time) * 1000
         log_packet(
-            event="tcp_packet",
-            direction="send",
-            msg_id=msg_id,
-            device_id=device_id,
-            raw_packet_hex=packet_hex,
-            elapsed_ms=elapsed_ms,
-            outcome="error",
+            PacketLogData(
+                event="tcp_packet",
+                direction="send",
+                msg_id=msg_id,
+                device_id=device_id,
+                raw_packet_hex=packet_hex,
+                elapsed_ms=elapsed_ms,
+                outcome="error",
+            )
         )
         record_packet_sent(device_id, "error")
         return None
 
     send_elapsed_ms = (time.perf_counter() - start_time) * 1000
     log_packet(
-        event="tcp_packet",
-        direction="send",
-        msg_id=msg_id,
-        device_id=device_id,
-        raw_packet_hex=packet_hex,
-        elapsed_ms=send_elapsed_ms,
-        outcome="success",
+        PacketLogData(
+            event="tcp_packet",
+            direction="send",
+            msg_id=msg_id,
+            device_id=device_id,
+            raw_packet_hex=packet_hex,
+            elapsed_ms=send_elapsed_ms,
+            outcome="success",
+        )
     )
     record_packet_sent(device_id, "success")
 
@@ -173,13 +184,15 @@ async def send_toggle_packet(
 
     if response is None:
         log_packet(
-            event="tcp_packet",
-            direction="recv",
-            msg_id=msg_id,
-            device_id=device_id,
-            raw_packet_hex="",
-            elapsed_ms=total_elapsed_ms,
-            outcome="timeout",
+            PacketLogData(
+                event="tcp_packet",
+                direction="recv",
+                msg_id=msg_id,
+                device_id=device_id,
+                raw_packet_hex="",
+                elapsed_ms=total_elapsed_ms,
+                outcome="timeout",
+            )
         )
         record_packet_recv(device_id, "timeout")
         return None
@@ -188,13 +201,15 @@ async def send_toggle_packet(
     response_bytes: bytes = response
     response_hex = response_bytes.hex(" ")
     log_packet(
-        event="tcp_packet",
-        direction="recv",
-        msg_id=msg_id,
-        device_id=device_id,
-        raw_packet_hex=response_hex,
-        elapsed_ms=total_elapsed_ms,
-        outcome="success",
+        PacketLogData(
+            event="tcp_packet",
+            direction="recv",
+            msg_id=msg_id,
+            device_id=device_id,
+            raw_packet_hex=response_hex,
+            elapsed_ms=total_elapsed_ms,
+            outcome="success",
+        )
     )
     record_packet_recv(device_id, "success")
     record_packet_latency(device_id, total_elapsed_ms / 1000.0)
@@ -226,11 +241,13 @@ async def toggle_device_with_retry(
 
     correlation_id = uuid.uuid4().hex[:16]
     logger.info(
-        "→ Starting toggle device with retry | correlation_id=%s device_id=%s state=%s max_attempts=%d",
-        correlation_id,
-        device_id,
-        state,
-        max_attempts,
+        "→ Starting toggle device with retry",
+        extra={
+            "correlation_id": correlation_id,
+            "device_id": device_id,
+            "state": state,
+            "max_attempts": max_attempts,
+        },
     )
 
     for attempt in range(1, max_attempts + 1):
@@ -264,13 +281,15 @@ async def toggle_device_with_retry(
                 record_retransmit(device_id, "connection_failed")
                 await asyncio.sleep(delay)
                 continue
-            else:
-                logger.error(
-                    "✗ Toggle device with retry failed | correlation_id=%s device_id=%s reason=all_connection_attempts_failed",
-                    correlation_id,
-                    device_id,
-                )
-                return False
+            logger.error(
+                "✗ Toggle device with retry failed",
+                extra={
+                    "correlation_id": correlation_id,
+                    "device_id": device_id,
+                    "reason": "all_connection_attempts_failed",
+                },
+            )
+            return False
 
         # Send toggle
         response = await send_toggle_packet(conn, device_id, msg_id, state)
@@ -280,10 +299,12 @@ async def toggle_device_with_retry(
 
         if response is not None:
             logger.info(
-                "✓ Toggle device with retry complete | correlation_id=%s device_id=%s state=%s",
-                correlation_id,
-                device_id,
-                state,
+                "✓ Toggle device with retry complete",
+                extra={
+                    "correlation_id": correlation_id,
+                    "device_id": device_id,
+                    "state": state,
+                },
             )
             return True
 
@@ -302,9 +323,12 @@ async def toggle_device_with_retry(
             await asyncio.sleep(delay)
 
     logger.error(
-        "✗ Toggle device with retry failed | correlation_id=%s device_id=%s reason=all_toggle_attempts_failed",
-        correlation_id,
-        device_id,
+        "✗ Toggle device with retry failed",
+        extra={
+            "correlation_id": correlation_id,
+            "device_id": device_id,
+            "reason": "all_toggle_attempts_failed",
+        },
     )
     return False
 
@@ -316,10 +340,22 @@ async def main_async(args: argparse.Namespace) -> int:
     # Start metrics server
     try:
         start_metrics_server(args.metrics_port)
-        logger.info("Metrics server started on port %d", args.metrics_port)
-    except Exception as e:
-        logger.error("Failed to start metrics server: %s", e)
+        logger.info(
+            "Metrics server started",
+            extra={"port": args.metrics_port},
+        )
+    except (OSError, ValueError) as e:
+        logger.exception(
+            "Failed to start metrics server",
+            extra={"error": str(e), "error_type": type(e).__name__},
+        )
         return 1
+    except Exception as e:
+        logger.critical(
+            "Unexpected error starting metrics server",
+            extra={"error": str(e), "error_type": type(e).__name__},
+        )
+        raise  # Re-raise unexpected errors
 
     # Toggle device
     state = args.state.lower() in ("on", "true", "1")
@@ -334,9 +370,8 @@ async def main_async(args: argparse.Namespace) -> int:
     if success:
         logger.info("Device toggle completed successfully")
         return 0
-    else:
-        logger.error("Device toggle failed")
-        return 1
+    logger.error("Device toggle failed")
+    return 1
 
 
 def main() -> int:

@@ -5,6 +5,7 @@ and fixture accessibility.
 """
 
 import pytest
+
 from protocol.packet_types import (
     PACKET_TYPE_DATA_ACK,
     PACKET_TYPE_DATA_CHANNEL,
@@ -25,21 +26,32 @@ from tests.fixtures.real_packets import (
     PacketMetadata,
 )
 
+# Expected packet type values for testing
+EXPECTED_PACKET_TYPE_HELLO_ACK = 0x28
+EXPECTED_PACKET_TYPE_DEVICE_INFO = 0x43
+EXPECTED_PACKET_TYPE_INFO_ACK = 0x48
+EXPECTED_PACKET_TYPE_DATA_ACK = 0x7B
+EXPECTED_PACKET_TYPE_STATUS_BROADCAST = 0x83
+EXPECTED_PACKET_TYPE_STATUS_ACK = 0x88
+EXPECTED_PACKET_TYPE_HEARTBEAT_DEVICE = 0xD3
+EXPECTED_PACKET_TYPE_HEARTBEAT_CLOUD = 0xD8
+EXPECTED_PACKET_LENGTH_DATA_PACKET = 37  # Length for data packet test
+
 
 @pytest.mark.unit
 @pytest.mark.parametrize(
-    "constant_name,expected_value",
+    ("constant_name", "expected_value"),
     [
-        ("PACKET_TYPE_HANDSHAKE", 0x23),
-        ("PACKET_TYPE_HELLO_ACK", 0x28),
-        ("PACKET_TYPE_DEVICE_INFO", 0x43),
-        ("PACKET_TYPE_INFO_ACK", 0x48),
-        ("PACKET_TYPE_DATA_CHANNEL", 0x73),
-        ("PACKET_TYPE_DATA_ACK", 0x7B),
-        ("PACKET_TYPE_STATUS_BROADCAST", 0x83),
-        ("PACKET_TYPE_STATUS_ACK", 0x88),
-        ("PACKET_TYPE_HEARTBEAT_DEVICE", 0xD3),
-        ("PACKET_TYPE_HEARTBEAT_CLOUD", 0xD8),
+        ("PACKET_TYPE_HANDSHAKE", PACKET_TYPE_HANDSHAKE),
+        ("PACKET_TYPE_HELLO_ACK", EXPECTED_PACKET_TYPE_HELLO_ACK),
+        ("PACKET_TYPE_DEVICE_INFO", EXPECTED_PACKET_TYPE_DEVICE_INFO),
+        ("PACKET_TYPE_INFO_ACK", EXPECTED_PACKET_TYPE_INFO_ACK),
+        ("PACKET_TYPE_DATA_CHANNEL", PACKET_TYPE_DATA_CHANNEL),
+        ("PACKET_TYPE_DATA_ACK", EXPECTED_PACKET_TYPE_DATA_ACK),
+        ("PACKET_TYPE_STATUS_BROADCAST", EXPECTED_PACKET_TYPE_STATUS_BROADCAST),
+        ("PACKET_TYPE_STATUS_ACK", EXPECTED_PACKET_TYPE_STATUS_ACK),
+        ("PACKET_TYPE_HEARTBEAT_DEVICE", EXPECTED_PACKET_TYPE_HEARTBEAT_DEVICE),
+        ("PACKET_TYPE_HEARTBEAT_CLOUD", EXPECTED_PACKET_TYPE_HEARTBEAT_CLOUD),
     ],
 )
 def test_packet_type_constants(constant_name: str, expected_value: int) -> None:
@@ -51,22 +63,20 @@ def test_packet_type_constants(constant_name: str, expected_value: int) -> None:
 @pytest.mark.unit
 def test_packet_type_constants_values() -> None:
     """Test packet type constants have correct values."""
-    assert PACKET_TYPE_HANDSHAKE == 0x23
-    assert PACKET_TYPE_HELLO_ACK == 0x28
-    assert PACKET_TYPE_DEVICE_INFO == 0x43
-    assert PACKET_TYPE_INFO_ACK == 0x48
-    assert PACKET_TYPE_DATA_CHANNEL == 0x73
-    assert PACKET_TYPE_DATA_ACK == 0x7B
-    assert PACKET_TYPE_STATUS_BROADCAST == 0x83
-    assert PACKET_TYPE_STATUS_ACK == 0x88
-    assert PACKET_TYPE_HEARTBEAT_DEVICE == 0xD3
-    assert PACKET_TYPE_HEARTBEAT_CLOUD == 0xD8
+    assert PACKET_TYPE_HELLO_ACK == EXPECTED_PACKET_TYPE_HELLO_ACK
+    assert PACKET_TYPE_DEVICE_INFO == EXPECTED_PACKET_TYPE_DEVICE_INFO
+    assert PACKET_TYPE_INFO_ACK == EXPECTED_PACKET_TYPE_INFO_ACK
+    assert PACKET_TYPE_DATA_ACK == EXPECTED_PACKET_TYPE_DATA_ACK
+    assert PACKET_TYPE_STATUS_BROADCAST == EXPECTED_PACKET_TYPE_STATUS_BROADCAST
+    assert PACKET_TYPE_STATUS_ACK == EXPECTED_PACKET_TYPE_STATUS_ACK
+    assert PACKET_TYPE_HEARTBEAT_DEVICE == EXPECTED_PACKET_TYPE_HEARTBEAT_DEVICE
+    assert PACKET_TYPE_HEARTBEAT_CLOUD == EXPECTED_PACKET_TYPE_HEARTBEAT_CLOUD
 
 
 @pytest.mark.unit
 def test_cync_packet_instantiation() -> None:
     """Test CyncPacket dataclass can be instantiated with valid data."""
-    packet_type = 0x23
+    packet_type = PACKET_TYPE_HANDSHAKE
     length = 26
     payload = b"\x00" * 26
     raw = b"\x23\x00\x00\x00\x1a" + payload
@@ -83,7 +93,10 @@ def test_cync_packet_instantiation() -> None:
 def test_cync_packet_fields_accessible() -> None:
     """Test all CyncPacket fields are accessible."""
     packet = CyncPacket(
-        packet_type=0x23, length=10, payload=b"\x00" * 10, raw=b"\x23\x00\x00\x00\x0a"
+        packet_type=PACKET_TYPE_HANDSHAKE,
+        length=10,
+        payload=b"\x00" * 10,
+        raw=b"\x23\x00\x00\x00\x0a",
     )
 
     # Verify all fields exist and have correct types
@@ -103,7 +116,7 @@ def test_cync_data_packet_instantiation() -> None:
     checksum_valid = True
 
     packet = CyncDataPacket(
-        packet_type=0x73,
+        packet_type=PACKET_TYPE_DATA_CHANNEL,
         length=37,
         payload=b"\x00" * 37,
         raw=b"\x73\x00\x00\x00\x25",
@@ -129,7 +142,7 @@ def test_cync_data_packet_inheritance() -> None:
     data = b"\x00" * 10
 
     packet = CyncDataPacket(
-        packet_type=0x73,
+        packet_type=PACKET_TYPE_DATA_CHANNEL,
         length=37,
         payload=b"\x00" * 37,
         raw=b"\x73\x00\x00\x00\x25",
@@ -143,10 +156,9 @@ def test_cync_data_packet_inheritance() -> None:
     # Verify inheritance
     assert isinstance(packet, CyncDataPacket)
     assert isinstance(packet, CyncPacket)
-
     # Verify base class fields accessible
-    assert packet.packet_type == 0x73
-    assert packet.length == 37
+    assert packet.packet_type == PACKET_TYPE_DATA_CHANNEL
+    assert packet.length == EXPECTED_PACKET_LENGTH_DATA_PACKET
     assert isinstance(packet.payload, bytes)
     assert isinstance(packet.raw, bytes)
 
@@ -159,7 +171,7 @@ def test_cync_data_packet_all_fields_accessible() -> None:
     data = b"\x00" * 10
 
     packet = CyncDataPacket(
-        packet_type=0x73,
+        packet_type=PACKET_TYPE_DATA_CHANNEL,
         length=37,
         payload=b"\x00" * 37,
         raw=b"\x73\x00\x00\x00\x25",
@@ -185,11 +197,10 @@ def test_fixtures_import() -> None:
     assert HANDSHAKE_0x23_DEV_TO_CLOUD is not None
     assert HELLO_ACK_0x28_CLOUD_TO_DEV is not None
     assert PacketMetadata is not None
-
     # Verify fixture data
     assert isinstance(HANDSHAKE_0x23_DEV_TO_CLOUD, bytes)
     assert len(HANDSHAKE_0x23_DEV_TO_CLOUD) > 0
-    assert HANDSHAKE_0x23_DEV_TO_CLOUD[0] == 0x23  # First byte is packet type
+    assert HANDSHAKE_0x23_DEV_TO_CLOUD[0] == PACKET_TYPE_HANDSHAKE  # First byte is packet type
 
 
 @pytest.mark.unit
@@ -214,7 +225,7 @@ def test_packet_metadata_dataclass_accessible() -> None:
 
 @pytest.mark.unit
 @pytest.mark.parametrize(
-    "endpoint_hex,expected_length",
+    ("endpoint_hex", "expected_length"),
     [
         ("45 88 0f 3a 00", 5),
         ("32 5d 53 17 01", 5),
@@ -228,7 +239,7 @@ def test_cync_data_packet_endpoint_sizes(endpoint_hex: str, expected_length: int
     data = b"\x00" * 10
 
     packet = CyncDataPacket(
-        packet_type=0x73,
+        packet_type=PACKET_TYPE_DATA_CHANNEL,
         length=37,
         payload=b"\x00" * 37,
         raw=b"\x73\x00\x00\x00\x25",

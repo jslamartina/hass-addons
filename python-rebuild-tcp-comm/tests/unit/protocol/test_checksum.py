@@ -11,31 +11,34 @@ from src.protocol.checksum import (
 )
 from tests.fixtures.real_packets import (
     STATUS_BROADCAST_0x83_DEV_TO_CLOUD,
-    STATUS_BROADCAST_0x83_FRAMED_10,
-    STATUS_BROADCAST_0x83_FRAMED_11,
     STATUS_BROADCAST_0x83_FRAMED_4,
     STATUS_BROADCAST_0x83_FRAMED_5,
     STATUS_BROADCAST_0x83_FRAMED_6,
     STATUS_BROADCAST_0x83_FRAMED_7,
     STATUS_BROADCAST_0x83_FRAMED_8,
     STATUS_BROADCAST_0x83_FRAMED_9,
+    STATUS_BROADCAST_0x83_FRAMED_10,
+    STATUS_BROADCAST_0x83_FRAMED_11,
     TOGGLE_OFF_0x73_CLOUD_TO_DEV,
     TOGGLE_ON_0x73_CLOUD_TO_DEV,
 )
+
+# Checksum constants from packet captures
+EXPECTED_CHECKSUM_STATUS_BROADCAST_0x83 = 0x37  # From STATUS_BROADCAST_0x83_DEV_TO_CLOUD
 
 
 @pytest.mark.unit
 def test_checksum_status_broadcast() -> None:
     """Test checksum calculation against real status broadcast packet."""
     packet = STATUS_BROADCAST_0x83_DEV_TO_CLOUD
-    expected_checksum = 0x37  # From packet capture
+    expected_checksum = EXPECTED_CHECKSUM_STATUS_BROADCAST_0x83  # From packet capture
     calculated = calculate_checksum_between_markers(packet)
     assert calculated == expected_checksum
 
 
 @pytest.mark.unit
 @pytest.mark.parametrize(
-    "packet,expected_checksum",
+    ("packet", "expected_checksum"),
     [
         (STATUS_BROADCAST_0x83_FRAMED_4, 0x8C),
         (STATUS_BROADCAST_0x83_FRAMED_5, 0x49),
@@ -55,7 +58,7 @@ def test_checksum_validation_fixtures(packet: bytes, expected_checksum: int) -> 
 
 @pytest.mark.unit
 @pytest.mark.parametrize(
-    "packet,expected_checksum",
+    ("packet", "expected_checksum"),
     [
         (TOGGLE_ON_0x73_CLOUD_TO_DEV, 0x07),
         (TOGGLE_OFF_0x73_CLOUD_TO_DEV, 0x07),
@@ -106,7 +109,7 @@ def test_insert_checksum_in_place() -> None:
     packet[-2] = 0xFF
     # Recalculate and insert
     insert_checksum_in_place(packet, len(packet) - 2)
-    assert packet[-2] == 0x37  # Should restore correct checksum
+    assert packet[-2] == EXPECTED_CHECKSUM_STATUS_BROADCAST_0x83  # Should restore correct checksum
 
 
 @pytest.mark.unit
@@ -145,6 +148,6 @@ def test_insert_checksum_preserves_other_bytes() -> None:
     # Verify only checksum byte changed
     for i in range(len(packet)):
         if i == len(packet) - 2:
-            assert packet[i] == 0x37  # Checksum restored
+            assert packet[i] == EXPECTED_CHECKSUM_STATUS_BROADCAST_0x83  # Checksum restored
         else:
             assert packet[i] == original_bytes[i]  # All other bytes unchanged

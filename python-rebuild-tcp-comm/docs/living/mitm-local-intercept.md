@@ -8,8 +8,9 @@ The MITM proxy can intercept traffic between Cync devices and a **live cync-cont
 
 ### Network Flow
 
-**Diagram**: /workspaces/hass-addons/python-rebuild-tcp-comm/docs/living/mitm-local-intercept-architecture.mermaid
-TODO: Update with mermaid link when it's back up
+**Diagram**: See [mitm-local-intercept-architecture.mermaid](living/mitm-local-intercept-architecture.mermaid) for network flow diagram.
+
+_Alt text: Network flow diagram showing Cync devices connecting through MITM proxy to Home Assistant controller, with bidirectional packet capture._
 
 **Flow Details**:
 

@@ -2,7 +2,15 @@
 
 from __future__ import annotations
 
+import pytest
+
 from protocol.exceptions import CyncProtocolError, PacketDecodeError, PacketFramingError
+
+# Test constants
+DATA_PREVIEW_TRUNCATE_LENGTH = 16  # Maximum bytes stored in error preview
+SHORT_DATA_LENGTH = 3  # Short test data length
+TEST_BUFFER_SIZE_LARGE = 5000  # Large buffer size for testing
+TEST_BUFFER_SIZE_MEDIUM = 1000  # Medium buffer size for testing
 
 
 def test_packet_decode_error_has_reason() -> None:
@@ -21,8 +29,8 @@ def test_packet_decode_error_truncates_data() -> None:
     error = PacketDecodeError("invalid_checksum", large_data)
 
     # Should only store first 16 bytes
-    assert len(error.data_preview) == 16
-    assert error.data_preview == large_data[:16]
+    assert len(error.data_preview) == DATA_PREVIEW_TRUNCATE_LENGTH
+    assert error.data_preview == large_data[:DATA_PREVIEW_TRUNCATE_LENGTH]
 
 
 def test_packet_decode_error_empty_data() -> None:
@@ -41,15 +49,15 @@ def test_packet_decode_error_short_data() -> None:
 
     # Should store all available bytes (not pad to 16)
     assert error.data_preview == short_data
-    assert len(error.data_preview) == 3
+    assert len(error.data_preview) == SHORT_DATA_LENGTH
 
 
 def test_packet_framing_error_has_buffer_size() -> None:
     """Test PacketFramingError has buffer_size attribute."""
-    error = PacketFramingError("packet_too_large", buffer_size=5000)
+    error = PacketFramingError("packet_too_large", buffer_size=TEST_BUFFER_SIZE_LARGE)
 
     assert error.reason == "packet_too_large"
-    assert error.buffer_size == 5000
+    assert error.buffer_size == TEST_BUFFER_SIZE_LARGE
     assert "packet_too_large" in str(error)
 
 
@@ -74,17 +82,16 @@ def test_exceptions_inherit_from_base() -> None:
 
 def test_cync_protocol_error_catch_all() -> None:
     """Test CyncProtocolError can catch all protocol exceptions."""
-    try:
-        raise PacketDecodeError("test_reason")
-    except CyncProtocolError as e:
-        assert isinstance(e, PacketDecodeError)
-        assert "test_reason" in str(e)
-
-    try:
-        raise PacketFramingError("test_framing")
-    except CyncProtocolError as e:
-        assert isinstance(e, PacketFramingError)
-        assert "test_framing" in str(e)
+    error_reason = "test_reason"
+    with pytest.raises(CyncProtocolError) as exc_info:
+        raise PacketDecodeError(error_reason)
+    assert isinstance(exc_info.value, PacketDecodeError)
+    assert "test_reason" in str(exc_info.value)
+    error_framing = "test_framing"
+    with pytest.raises(CyncProtocolError) as exc_info:
+        raise PacketFramingError(error_framing)
+    assert isinstance(exc_info.value, PacketFramingError)
+    assert "test_framing" in str(exc_info.value)
 
 
 def test_packet_decode_error_all_reasons() -> None:
@@ -108,7 +115,7 @@ def test_packet_framing_error_all_reasons() -> None:
     reasons = ["packet_too_large", "invalid_length", "buffer_overflow"]
 
     for reason in reasons:
-        error = PacketFramingError(reason, buffer_size=1000)
+        error = PacketFramingError(reason, buffer_size=TEST_BUFFER_SIZE_MEDIUM)
         assert error.reason == reason
         assert reason in str(error)
-        assert error.buffer_size == 1000
+        assert error.buffer_size == TEST_BUFFER_SIZE_MEDIUM

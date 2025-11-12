@@ -20,14 +20,19 @@ import argparse
 import re
 from collections import Counter, defaultdict
 from datetime import datetime
-from typing import Dict, List, Tuple
+from pathlib import Path
+
+# Display constants
+FIRST_PACKETS_TO_SHOW = 10
+LAST_PACKETS_TO_SHOW = 5
 
 
-def parse_capture_file(filepath: str) -> List[dict]:
+def parse_capture_file(filepath: str) -> list[dict]:
     """Parse MITM capture file and extract packets."""
     packets = []
 
-    with open(filepath, "r") as f:
+    file_path = Path(filepath)
+    with file_path.open() as f:
         lines = f.readlines()
 
     i = 0
@@ -61,12 +66,12 @@ def parse_capture_file(filepath: str) -> List[dict]:
     return packets
 
 
-def filter_packets(packets: List[dict], packet_type: str) -> List[dict]:
+def filter_packets(packets: list[dict], packet_type: str) -> list[dict]:
     """Filter packets by type."""
     return [p for p in packets if p["packet_type"] == packet_type.lower().replace("0x", "")]
 
 
-def show_statistics(packets: List[dict]):
+def show_statistics(packets: list[dict]):
     """Show packet statistics."""
     total = len(packets)
     type_counts = Counter(p["packet_type"] for p in packets)
@@ -88,7 +93,7 @@ def show_statistics(packets: List[dict]):
         print(f"  {direction:10}: {count:6,} ({pct:5.1f}%)")
 
 
-def extract_ack_pairs(packets: List[dict]) -> Dict[str, List[Tuple]]:
+def extract_ack_pairs(packets: list[dict]) -> dict[str, list[tuple]]:
     """Extract request → ACK pairs."""
     pairs = defaultdict(list)
 
@@ -130,7 +135,7 @@ def extract_ack_pairs(packets: List[dict]) -> Dict[str, List[Tuple]]:
     return pairs
 
 
-def show_ack_pairs(pairs: Dict[str, List[Tuple]]):
+def show_ack_pairs(pairs: dict[str, list[tuple]]):
     """Display ACK pair statistics."""
     print("=== ACK Pair Statistics ===")
 
@@ -193,9 +198,11 @@ def main():
         print(
             f"{ts} {packet['direction']:10} 0x{packet['packet_type'].upper():2} ({packet['length']:3} bytes)"
         )
-        if i < 10 or i >= limit - 5:  # Show first 10 and last 5
+        if (
+            i < FIRST_PACKETS_TO_SHOW or i >= limit - LAST_PACKETS_TO_SHOW
+        ):  # Show first N and last M
             print(f"  {packet['hex_bytes']}")
-        elif i == 10:
+        elif i == FIRST_PACKETS_TO_SHOW:
             print("  ...")
 
 

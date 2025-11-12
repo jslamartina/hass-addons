@@ -1,0 +1,633 @@
+---
+alwaysApply: true
+description: Markdownlint formatting conventions and default rules for writing properly formatted markdown files
+---
+
+# Markdownlint Formatting Conventions
+
+## Overview
+
+This document outlines default markdownlint formatting conventions to help write properly formatted markdown files from the start. This guide covers the most commonly used rules and project-specific configurations. These rules ensure consistency, readability, and compatibility across different markdown parsers.
+
+## Core Conventions by Category
+
+### Headings
+
+#### MD001 - Heading Increment
+
+Heading levels should only increment by one level at a time.
+
+**Correct:**
+
+```markdown
+# Header 1
+
+## Header 2
+
+### Header 3
+```
+
+**Incorrect (skips from h1 to h3):**
+
+```markdown
+# Header 1
+
+### Header 3
+```
+
+#### MD002 - First Heading
+
+First heading should be a top-level (h1) heading.
+
+**Correct:**
+
+```markdown
+# Document Title
+
+Content starts here.
+
+## Section 1
+```
+
+**Incorrect:**
+
+```markdown
+Some introductory text.
+
+## Section Title
+
+Content starts here.
+```
+
+#### MD003 - Heading Style
+
+Use consistent heading style throughout the document. **ATX style** uses `#` symbols (e.g., `# Header`, `## Header`), while **setext style** uses underlines (e.g., `Header\n---` for h2, `Header\n===` for h1). Default is atx style.
+
+**Note**: This rule is **disabled** in this project (`MD003: false`) to allow mixing styles if needed. However, the default behavior is documented here for reference.
+
+**Correct (atx style):**
+
+```markdown
+# Header 1
+
+## Header 2
+```
+
+**Incorrect (mixing styles):**
+
+```markdown
+# Header 1
+
+## Header 2
+```
+
+#### MD022 - Blank Lines Around Headings
+
+Headings should be surrounded by blank lines.
+
+**Correct:**
+
+```markdown
+Some text
+
+## Heading
+
+More text
+```
+
+**Incorrect (no blank lines):**
+
+```markdown
+Some text
+
+## Heading
+
+More text
+```
+
+#### MD024 - Duplicate Headings
+
+Duplicate headings should be avoided, but this project allows duplicates if they're siblings. **Siblings** are headings at the same level in different parent sections (e.g., two `## Section A` headings under different parent sections).
+
+This project configures: `"MD024": { "siblings_only": true }`
+
+**Correct (siblings_only allows this):**
+
+```markdown
+## Section A
+
+### Subsection
+
+## Section A
+
+### Subsection
+```
+
+**Incorrect (duplicate in same section):**
+
+```markdown
+## Section A
+
+## Section A
+```
+
+#### MD025 - Single Top-Level Heading
+
+Document should have only one top-level heading.
+
+**Correct:**
+
+```markdown
+# Document Title
+
+## Section 1
+
+## Section 2
+```
+
+**Incorrect:**
+
+```markdown
+# Document Title
+
+# Another Top-Level Heading
+```
+
+#### MD026 - Trailing Punctuation
+
+Headings should not end with punctuation (default: `.,;:!。，；：！`).
+
+**Correct:**
+
+```markdown
+# Heading
+```
+
+**Incorrect:**
+
+```markdown
+# Heading.
+```
+
+### Lists
+
+#### MD004 - Unordered List Style
+
+Use consistent marker (`*`, `+`, or `-`) for all unordered list items.
+
+**Correct:**
+
+```markdown
+- Item 1
+- Item 2
+- Item 3
+```
+
+**Incorrect (mixing markers):**
+
+```markdown
+- Item 1
+
+* Item 2
+
+- Item 3
+```
+
+#### MD005 - List Indentation
+
+List items at the same level must have consistent indentation. Related to [MD007](#md007---unordered-list-indentation) which specifies nested list indentation.
+
+**Correct:**
+
+```markdown
+- Item 1
+- Item 2
+  - Nested item
+```
+
+**Incorrect (inconsistent indentation):**
+
+```markdown
+- Item 1
+  - Item 2
+- Item 3
+```
+
+#### MD007 - Unordered List Indentation
+
+Nested unordered list items should be indented by 2 spaces relative to their parent list item (default). Each nested level adds 2 spaces of indentation. Related to [MD005](#md005---list-indentation) which ensures consistent indentation at the same level.
+
+**Correct:**
+
+```markdown
+- Item
+  - Nested item
+    - Deep nested item
+```
+
+**Incorrect (wrong indentation):**
+
+```markdown
+- Item
+- Nested item
+```
+
+#### MD029 - Ordered List Numbering
+
+Ordered lists should use consistent numbering style (default: sequential `1, 2, 3...`).
+
+**Correct:**
+
+```markdown
+1. First item
+2. Second item
+3. Third item
+```
+
+**Incorrect (all ones):**
+
+```markdown
+1. First item
+1. Second item
+1. Third item
+```
+
+#### MD030 - Spaces After List Markers
+
+Exactly 1 space after list marker (default).
+
+**Correct:**
+
+```markdown
+- Item
+
+* Item
+
+1. Item
+```
+
+**Incorrect (multiple spaces):**
+
+```markdown
+- Item
+
+* Item
+
+1.  Item
+```
+
+### Code Blocks
+
+#### MD031 - Fenced Code Blocks
+
+**Fenced code blocks** use triple backticks (```) instead of indentation. They should be surrounded by blank lines.
+
+<!-- markdownlint-disable MD025 MD040 -->
+
+**Correct:**
+
+````markdown
+Some text
+
+```python
+code here
+```
+
+More text
+````
+
+**Incorrect (no blank lines):**
+
+````markdown
+Some text
+
+```python
+code here
+```
+
+More text
+````
+
+<!-- markdownlint-enable MD025 MD040 -->
+
+#### MD040 - Fenced Code Language
+
+All fenced code blocks should specify a language.
+
+<!-- markdownlint-disable MD025 MD040 MD031 -->
+
+**Correct examples:**
+
+````markdown
+```python
+print("Hello")
+```
+
+```bash
+echo "Hello"
+```
+
+```text
+Plain text
+```
+````
+
+**Incorrect (no language specified):**
+
+````markdown
+```
+code here
+```
+````
+
+<!-- markdownlint-enable MD025 MD040 MD031 -->
+
+#### MD014 - Dollar Signs
+
+Checks for dollar signs at the start of lines in code blocks (common shell prompt pattern). Typically triggers when `$` appears at the start of a line in bash/shell code blocks. This rule may flag dollar signs in shell command examples, which is often a false positive. The rule is context-dependent and may not always trigger.
+
+<!-- markdownlint-disable MD025 MD040 MD031 -->
+
+**Example (may trigger MD014):**
+
+````markdown
+```bash
+$ command --flag
+```
+````
+
+**Example (won't trigger):**
+
+````markdown
+```python
+price = $100
+```
+````
+
+<!-- markdownlint-enable MD025 MD040 MD031 -->
+
+### Links and Images
+
+#### MD034 - Bare URLs
+
+Bare URLs should be wrapped in angle brackets or formatted as links.
+
+**Correct:**
+
+```markdown
+<https://example.com>
+[Link text](https://example.com)
+```
+
+**Incorrect:**
+
+```markdown
+https://example.com
+```
+
+#### MD039 - Link Text
+
+Link text should not be empty.
+
+**Correct:**
+
+```markdown
+[Link text](https://example.com)
+```
+
+**Incorrect:**
+
+```markdown
+[](https://example.com)
+```
+
+#### MD042 - Empty Links
+
+No empty links.
+
+**Correct:**
+
+```markdown
+[Link text](https://example.com)
+```
+
+**Incorrect:**
+
+```markdown
+[Link text]()
+```
+
+#### MD051 - Link Fragments
+
+**Link fragments** (also called anchors) are the `#section-name` part of URLs that link to headings within the document (e.g., `[Link](#section-name)`). They should be properly formatted.
+
+**Note**: This rule is **disabled** in this project (`MD051: false`) for flexibility with internal links and anchors. However, the default behavior is documented here for reference.
+
+**Correct:**
+
+```markdown
+[Link to section](#section-name)
+[Link to heading](#heading-name)
+```
+
+**Incorrect (malformed fragments):**
+
+```markdown
+[Link](#section name) # Spaces in fragment
+[Link](#section-name) # May trigger if fragment doesn't exist
+```
+
+### Spacing and Whitespace
+
+#### MD009 - Trailing Spaces
+
+Lines should not end with whitespace. **Trailing spaces** are spaces at the end of a line after the last visible character. They are invisible in rendered markdown but can be detected by markdownlint.
+
+**Correct:**
+
+```markdown
+Line of text
+```
+
+**Incorrect (has trailing spaces):**
+
+```markdown
+Line of text
+```
+
+#### MD010 - Hard Tabs
+
+Hard tab characters should be replaced with spaces. **Hard tabs** are the Tab character (ASCII 9), not multiple space characters. Tabs appear similar to spaces in rendered markdown but are different characters. Use spaces (typically 4 spaces = 1 tab) instead of tab characters for consistency.
+
+**Correct (spaces):**
+
+```markdown
+    Indented text
+```
+
+**Incorrect (tabs):**
+
+```markdown
+    Indented text
+```
+
+#### MD012 - Multiple Blank Lines
+
+Multiple consecutive blank lines should be avoided (default: max 1).
+
+**Correct:**
+
+```markdown
+Paragraph 1
+
+Paragraph 2
+```
+
+**Incorrect (multiple blank lines):**
+
+```markdown
+Paragraph 1
+
+Paragraph 2
+```
+
+#### MD013 - Line Length
+
+Lines should be 80 characters or less (default). Tables and long URLs without internal whitespace are exempt because breaking them would reduce readability.
+
+**Note**: This rule is **disabled** in this project (`MD013: false`) to allow flexibility with longer lines (URLs, code examples, tables). However, the default behavior is documented here for reference.
+
+**Correct (short lines):**
+
+```markdown
+This is a line that stays within the 80 character limit.
+```
+
+**Incorrect (long lines):**
+
+```markdown
+This is a very long line that exceeds the recommended 80 character limit and should be broken up.
+```
+
+### Other Common Rules
+
+#### MD033 - HTML Elements
+
+HTML elements are allowed but should be limited. Common allowed elements include `br`, `details`, and `summary`. Use markdown syntax when possible instead of HTML equivalents.
+
+**Correct (allowed HTML):**
+
+```markdown
+<details>
+<summary>Click to expand</summary>
+Content here
+</details>
+```
+
+**Use markdown when possible:**
+
+```markdown
+**Bold text** instead of <strong>Bold text</strong>
+```
+
+#### MD036 - Emphasis as Heading
+
+Emphasis (bold/italic) should not be used instead of headings. For example, using `**Bold Text**` as a section header instead of `## Bold Text`.
+
+**Correct:**
+
+```markdown
+## Section Title
+```
+
+**Incorrect:**
+
+```markdown
+**Section Title**
+```
+
+#### MD041 - First Line Heading
+
+First line should be a top-level heading (if document has headings).
+
+**Correct:**
+
+```markdown
+# Document Title
+
+Content here
+```
+
+**Incorrect:**
+
+```markdown
+Some introductory text
+
+# Document Title
+```
+
+## Project-Specific Configuration
+
+This project uses custom markdownlint configuration (`.markdownlint.json`):
+
+```jsonc
+{
+  "MD013": false,
+  "MD024": {
+    "siblings_only": true,
+  },
+  "MD051": false,
+  "MD003": false,
+}
+```
+
+**Note**: This configuration uses JSONC syntax (JSON with comments and trailing commas), which works in `.markdownlint.json` files.
+
+**Why these overrides?**
+
+- **MD013 (line length)**: Disabled to allow longer lines when needed (e.g., URLs, code examples, tables)
+- **MD024 (duplicate headings)**: Set to `siblings_only: true` to allow duplicate headings in different sections
+- **MD051 (link fragments)**: Disabled for flexibility with internal links and anchors
+- **MD003 (heading style)**: Disabled to allow mixing atx and setext styles if needed
+
+## Quick Reference
+
+### Common Mistakes to Avoid
+
+1. Skipping heading levels (h1 → h3)
+2. Missing language tags in code blocks
+3. Inconsistent list markers (`*`, `+`, `-`)
+4. Trailing spaces at end of lines
+5. Missing blank lines around headings and code blocks
+6. Using hard tabs instead of spaces
+7. Bare URLs without angle brackets or link formatting
+8. Malformed link fragments (spaces in anchors like `#section name`)
+
+### Auto-Fixing
+
+Run markdownlint with auto-fix:
+
+```bash
+npm run lint:markdown:fix
+```
+
+This will automatically fix many formatting issues. For manual formatting:
+
+```bash
+npx prettier --write "**/*.md"
+```
+
+### Verification
+
+After editing markdown files:
+
+1. Format with Prettier: `npx prettier --write <file.md>`
+2. Lint with markdownlint: `npm run lint:markdown:fix`
+3. Check for remaining issues: `npm run lint:markdown`
+
+## References
+
+- [Official markdownlint rules](https://github.com/DavidAnson/markdownlint/blob/main/doc/Rules.md) - Complete rule reference
+- [VS Code markdownlint extension](https://marketplace.visualstudio.com/items?itemName=DavidAnson.vscode-markdownlint) - Editor integration
+- Project configuration: `.markdownlint.json`
+- Development workflow: See [development-workflow.mdc](mdc:.cursor/rules/development-workflow.mdc) for markdown formatting workflow

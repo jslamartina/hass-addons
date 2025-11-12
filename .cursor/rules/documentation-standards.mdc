@@ -8,13 +8,20 @@ alwaysApply: true
 
 ## Living Documents
 
-1. Documents under a /living folder represent the *current* status of the architecture.
-2. They should NEVER contain status updates, timelines, histories, references to any project milestones or Phases, etc.
+1. Documents under a /living folder represent the _current_ status of the architecture.
+2. They should NEVER contain:
+   - Status updates (for example, "planned," "complete," "in progress")
+   - Timelines, histories, or dates
+   - References to project milestones or Phases
+   - TODO markers or incomplete placeholders
+   - Any project management context
 3. These documents are to be completely independent and decoupled from project management.
-4. Documents the HOW & WHAT of the application *right now*.
-   1. NOT WHY it is the way it is.
-   2. NOT how it *USED TO BE*
-   3. NOT how it *WILL BE*
+4. Documents the HOW & WHAT of the application _right now_.
+   1. NOT WHY it's the way it is.
+   2. NOT how it _USED TO BE_
+   3. NOT how it _WILL BE_
+
+**Note**: Spec files (outside `/living/`) MAY contain TODOs, status indicators, timelines, and phase references. Only `/living/` docs have these restrictions.
 
 ## User Approval Workflow
 

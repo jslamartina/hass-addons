@@ -596,6 +596,10 @@ Mock Cync device for integration and chaos testing. Speaks real protocol with co
 
 The following diagram illustrates the complete Phase 1 end-state architecture showing all layers, components, and data flow paths:
 
+**Note**: See [architecture.mermaid](living/architecture.mermaid) for the standalone diagram file. Requires Mermaid-compatible viewer (GitHub, VS Code with Mermaid extension, or online Mermaid Live Editor).
+
+_Alt text: Phase 1 architecture diagram showing application layer, backpressure layer (BoundedQueue), reliable transport layer (ConnectionManager, ReliableTransport, LRUCache, RetryPolicy), protocol codec layer (Encoder, Decoder, Framer, Checksum), network layer (TCP Socket), and testing infrastructure (ChaosConfig, CyncDeviceSimulator, CodecValidatorPlugin)._
+
 <!-- [MermaidChart: 8e7a2f78-9ec7-4400-b3dd-24ca4030593e] -->
 
 ```mermaid
@@ -697,7 +701,7 @@ graph TD
 
 **Triple Identifier Strategy**:
 
-- **msg_id** (3 bytes): Wire protocol identifier for ACK matching over the network
+- **msg_id** (2 bytes): Wire protocol identifier for ACK matching over the network
 - **dedup_key** (Full Fingerprint): Deterministic hash for collision-resistant duplicate detection (packet_type + endpoint + msg_id + payload hash)
 - **correlation_id** (UUID v7): Internal identifier for observability and event tracing (NOT used for deduplication)
 

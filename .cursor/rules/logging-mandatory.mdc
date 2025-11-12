@@ -38,24 +38,90 @@ logger = get_logger(__name__)
 
 ## Log Format
 
+**CRITICAL**: Always use structured logging with `extra={}` dict. Never use `%` formatting or `| key=value` in message strings.
+
+### Standardized Format
+
 ```python
-## Simple messages
+## Simple messages (no context needed)
 logger.info("→ Starting operation")
 logger.info("✓ Operation completed")
 logger.error("✗ Operation failed")
 
-## Structured context
-logger.info("Device state changed", extra={
-    "device_id": device_id,
-    "old_state": "OFF",
-    "new_state": "ON",
-})
+## Structured context (ALWAYS use extra={} dict)
+logger.info(
+    "Device state changed",
+    extra={
+        "device_id": device_id,
+        "old_state": "OFF",
+        "new_state": "ON",
+    },
+)
+
+## With formatted values (put in extra={}, not message)
+logger.debug(
+    "Queued packet type 0x%02x",
+    packet.packet_type,
+    extra={"packet_type": packet.packet_type},
+)
+
+## Error logging with context
+logger.exception(
+    "Operation failed",
+    extra={
+        "operation": "handshake",
+        "attempt": attempt + 1,
+        "max_retries": max_retries,
+        "error": str(e),
+        "error_type": type(e).__name__,
+    },
+)
 
 ## Performance timing
 @timed_async("mqtt_publish")
 async def publish_message(topic, payload):
     await client.publish(topic, payload)
 ```
+
+### Anti-Patterns
+
+```python
+## ❌ WRONG: Using % formatting in message
+logger.debug("Queued packet type 0x%02x", packet.packet_type)
+
+## ✅ CORRECT: Put value in extra={}
+logger.debug(
+    "Queued packet type 0x%02x",
+    packet.packet_type,
+    extra={"packet_type": packet.packet_type},
+)
+
+## ❌ WRONG: Using | key=value format in message
+logger.info("Triggering reconnection | reason=%s", reason, extra={"reason": reason})
+
+## ✅ CORRECT: Clean message, context in extra={}
+logger.info(
+    "Triggering reconnection",
+    extra={"reason": reason},
+)
+
+## ❌ WRONG: Mixing formats
+logger.warning("Heartbeat ACK timeout (%.1fs)", heartbeat_timeout)
+
+## ✅ CORRECT: Structured logging
+logger.warning(
+    "Heartbeat ACK timeout (%.1fs)",
+    heartbeat_timeout,
+    extra={"device_id": device_id, "heartbeat_timeout": heartbeat_timeout},
+)
+```
+
+### Key Principles
+
+1. **Message strings**: Keep clean and descriptive, use visual prefixes (`→`, `✓`, `✗`, `⚠️`)
+2. **Context data**: Always put in `extra={}` dict, never in message string
+3. **Formatted values**: If you need `%` formatting for display, include both in message AND `extra={}`
+4. **Consistency**: All logs should follow this pattern for easy parsing and filtering
 
 ## Log Levels
 

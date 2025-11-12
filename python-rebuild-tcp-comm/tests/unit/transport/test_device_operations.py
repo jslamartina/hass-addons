@@ -3,7 +3,7 @@
 Tests for mesh info and device info request/response handling with:
 - Primary device enforcement
 - Packet/ACK analysis
-- 24-byte device struct parsing
+- DEVICE_TYPE_LENGTH-byte device struct parsing
 - Error handling and metrics
 
 Test data uses fixtures from Phase 0.5 packet captures where available.
@@ -11,17 +11,27 @@ Test data uses fixtures from Phase 0.5 packet captures where available.
 
 from __future__ import annotations
 
-import asyncio
+import uuid
 from unittest.mock import AsyncMock, Mock
 
 import pytest
 
+from protocol import PACKET_TYPE_STATUS_BROADCAST
 from src.transport.device_info import (
+    DEVICE_TYPE_BULB,
     DeviceInfo,
+    DeviceInfoRequestError,
     DeviceStructParseError,
     MeshInfoRequestError,
 )
 from src.transport.device_operations import DeviceOperations
+
+EXPECTED_DEVICE_COUNT = 2
+
+# Test constants
+MAX_BRIGHTNESS = 255
+DEVICE_TYPE_LENGTH = 24
+EXPECTED_RECV_CALL_COUNT = 2  # One for timeout, one for actual packet
 
 
 class MockCyncPacket:
@@ -59,8 +69,7 @@ def mock_transport():
 @pytest.fixture
 def mock_protocol():
     """Create mock CyncProtocol."""
-    protocol = Mock()
-    return protocol
+    return Mock()
 
 
 @pytest.fixture
@@ -79,21 +88,21 @@ async def test_ask_for_mesh_info_success(device_ops, mock_transport):
     # Mock 0x83 status broadcast response
     response_packet = MockCyncPacket(
         packet_type=0x83,
-        payload=bytes(24),  # 24-byte device struct
+        payload=bytes(DEVICE_TYPE_LENGTH),  # DEVICE_TYPE_LENGTH-byte device struct
     )
     tracked_packet = MockTrackedPacket(response_packet)
 
     # Return packet once, then timeout
-    mock_transport.recv_reliable.side_effect = [tracked_packet, asyncio.TimeoutError()]
+    mock_transport.recv_reliable.side_effect = [tracked_packet, TimeoutError()]
 
     # Execute
     responses = await device_ops.ask_for_mesh_info(parse=False)
 
     # Assert
     assert len(responses) == 1
-    assert responses[0].packet_type == 0x83
+    assert responses[0].packet_type == PACKET_TYPE_STATUS_BROADCAST
     mock_transport.send_reliable.assert_called_once()
-    assert mock_transport.recv_reliable.call_count == 2
+    assert mock_transport.recv_reliable.call_count == EXPECTED_RECV_CALL_COUNT
 
 
 @pytest.mark.asyncio
@@ -103,7 +112,7 @@ async def test_ask_for_mesh_info_parse(device_ops, mock_transport):
     device_ops.set_primary(True)
     mock_transport.send_reliable.return_value = MockSendResult(success=True)
 
-    # Mock 0x83 packet with 24-byte device struct
+    # Mock 0x83 packet with DEVICE_TYPE_LENGTH-byte device struct
     device_struct = bytes(
         [
             0x39,
@@ -117,7 +126,7 @@ async def test_ask_for_mesh_info_parse(device_ops, mock_transport):
             0x01,
             0xFF,
             0x00,
-            0x00,  # state (on=True, brightness=255)
+            0x00,  # state (on=True, brightness=MAX_BRIGHTNESS)
             0x00,
             0x00,
             0x00,
@@ -136,7 +145,7 @@ async def test_ask_for_mesh_info_parse(device_ops, mock_transport):
     tracked_packet = MockTrackedPacket(response_packet)
 
     # Return packet once, then timeout
-    mock_transport.recv_reliable.side_effect = [tracked_packet, asyncio.TimeoutError()]
+    mock_transport.recv_reliable.side_effect = [tracked_packet, TimeoutError()]
 
     # Execute
     responses = await device_ops.ask_for_mesh_info(parse=True)
@@ -225,7 +234,7 @@ async def test_request_device_info(device_ops, mock_transport):
     # Assert
     assert device_info is not None
     assert device_info.device_id == device_id
-    assert device_info.device_type == 0x02
+    assert device_info.device_type == DEVICE_TYPE_BULB
     assert device_info.state["on"] is True
 
 
@@ -235,7 +244,7 @@ async def test_request_device_info_timeout(device_ops, mock_transport):
     # Setup
     device_id = bytes([0x39, 0x87, 0xC8, 0x57])
     mock_transport.send_reliable.return_value = MockSendResult(success=True)
-    mock_transport.recv_reliable.side_effect = asyncio.TimeoutError()
+    mock_transport.recv_reliable.side_effect = TimeoutError()
 
     # Execute
     device_info = await device_ops.request_device_info(device_id, timeout=1.0)
@@ -244,8 +253,9 @@ async def test_request_device_info_timeout(device_ops, mock_transport):
     assert device_info is None
 
 
-def test_device_struct_parsing(device_ops):
-    """Test parsing of 24-byte device struct."""
+@pytest.mark.asyncio
+async def test_device_struct_parsing(device_ops):
+    """Test parsing of DEVICE_TYPE_LENGTH-byte device struct."""
     # Setup - device struct from Phase 0.5 captures
     device_struct = bytes(
         [
@@ -260,7 +270,7 @@ def test_device_struct_parsing(device_ops):
             0x01,
             0xFF,
             0x00,
-            0x00,  # state (on=True, brightness=255)
+            0x00,  # state (on=True, brightness=MAX_BRIGHTNESS)
             0x00,
             0x00,
             0x00,
@@ -277,7 +287,7 @@ def test_device_struct_parsing(device_ops):
     )
 
     # Execute
-    device_info = device_ops._parse_device_struct(
+    device_info = await device_ops._parse_device_struct(
         device_struct, correlation_id="12345678-1234-1234-1234-123456789abc"
     )
 
@@ -285,18 +295,19 @@ def test_device_struct_parsing(device_ops):
     assert device_info.device_id == bytes([0x39, 0x87, 0xC8, 0x57])
     assert device_info.device_type == 0x01
     assert device_info.state["on"] is True
-    assert device_info.state["brightness"] == 255
-    assert len(device_info.raw_bytes) == 24
+    assert device_info.state["brightness"] == MAX_BRIGHTNESS
+    assert len(device_info.raw_bytes) == DEVICE_TYPE_LENGTH
 
 
-def test_device_struct_parsing_invalid_length(device_ops):
+@pytest.mark.asyncio
+async def test_device_struct_parsing_invalid_length(device_ops):
     """Test device struct parsing with invalid length."""
     # Setup - struct with wrong length
     invalid_struct = bytes([0x01, 0x02, 0x03])  # Only 3 bytes
 
     # Execute & Assert
     with pytest.raises(DeviceStructParseError) as exc_info:
-        device_ops._parse_device_struct(
+        await device_ops._parse_device_struct(
             invalid_struct, correlation_id="12345678-1234-1234-1234-123456789abc"
         )
 
@@ -307,11 +318,9 @@ def test_set_primary(device_ops):
     """Test setting primary device status."""
     # Initial state
     assert device_ops.is_primary is False
-
     # Set to primary
     device_ops.set_primary(True)
     assert device_ops.is_primary is True
-
     # Unset primary
     device_ops.set_primary(False)
     assert device_ops.is_primary is False
@@ -363,7 +372,7 @@ def test_device_cache(device_ops):
 @pytest.mark.asyncio
 async def test_parse_0x83_packet_multiple_devices(device_ops):
     """Test parsing 0x83 packet with multiple device structs."""
-    # Setup - two 24-byte device structs concatenated
+    # Setup - two DEVICE_TYPE_LENGTH-byte device structs concatenated
     device1 = bytes(
         [
             0x39,
@@ -425,11 +434,267 @@ async def test_parse_0x83_packet_multiple_devices(device_ops):
     packet = MockCyncPacket(packet_type=0x83, payload=payload)
 
     # Execute
-    devices = device_ops._parse_0x83_packet(
+    devices = await device_ops._parse_0x83_packet(
         packet, correlation_id="12345678-1234-1234-1234-123456789abc"
     )
 
     # Assert
-    assert len(devices) == 2
+    assert len(devices) == EXPECTED_DEVICE_COUNT
     assert devices[0].device_id == bytes([0x39, 0x87, 0xC8, 0x57])
     assert devices[1].device_id == bytes([0x60, 0xB1, 0x12, 0x34])
+
+
+class TestDeviceOperationsErrorPaths:
+    """Tests for error handling in DeviceOperations."""
+
+    @pytest.mark.asyncio
+    async def test_request_device_info_invalid_device_id_length(self, device_ops):
+        """Test that invalid device_id length raises ValueError."""
+        # Setup - device_id with wrong length
+        invalid_device_id = bytes([0x39, 0x87, 0xC8])  # Only 3 bytes, should be 4
+
+        # Execute & Assert
+        with pytest.raises(ValueError) as exc_info:
+            await device_ops.request_device_info(invalid_device_id)
+
+        assert "must be 4 bytes" in str(exc_info.value)
+
+    @pytest.mark.asyncio
+    async def test_ask_for_mesh_info_exception_logs_and_raises(self, device_ops, mock_transport):
+        """Test that exceptions in ask_for_mesh_info are logged and re-raised."""
+        # Setup
+        device_ops.set_primary(True)
+        mock_transport.send_reliable.side_effect = ConnectionError("Connection lost")
+
+        # Execute & Assert
+        with pytest.raises(MeshInfoRequestError) as exc_info:
+            await device_ops.ask_for_mesh_info()
+
+        assert exc_info.value.reason == "send_failed"
+
+    @pytest.mark.asyncio
+    async def test_ask_for_mesh_info_unexpected_exception_wrapped(self, device_ops, mock_transport):
+        """Test that unexpected exceptions are wrapped in MeshInfoRequestError with exception chaining."""
+        # Setup
+        device_ops.set_primary(True)
+        # Mock transport to raise unexpected exception (not ConnectionError, TimeoutError, or OSError)
+        mock_transport.send_reliable.side_effect = ValueError("Unexpected error")
+
+        # Execute & Assert
+        with pytest.raises(MeshInfoRequestError) as exc_info:
+            await device_ops.ask_for_mesh_info()
+
+        # Verify exception is wrapped
+        assert exc_info.value.reason == "unexpected_error"
+        assert "Unexpected error during mesh info request" in str(exc_info.value)
+        assert "correlation_id" in str(exc_info.value)
+
+        # Verify exception chain preserved (__cause__ should be the original ValueError)
+        assert exc_info.value.__cause__ is not None
+        assert isinstance(exc_info.value.__cause__, ValueError)
+        assert "Unexpected error" in str(exc_info.value.__cause__)
+
+    @pytest.mark.asyncio
+    async def test_request_device_info_send_exception(self, device_ops, mock_transport):
+        """Test that send exceptions are caught and re-raised as DeviceInfoRequestError."""
+        # Setup
+        device_id = bytes([0x39, 0x87, 0xC8, 0x57])
+        mock_transport.send_reliable.side_effect = TimeoutError("Send timeout")
+
+        # Execute & Assert
+        with pytest.raises(DeviceInfoRequestError) as exc_info:
+            await device_ops.request_device_info(device_id)
+
+        assert exc_info.value.reason == "send_failed"
+
+    @pytest.mark.asyncio
+    async def test_request_device_info_empty_device_id(self, device_ops):
+        """Test that empty device_id raises ValueError."""
+        # Setup - empty device_id
+        empty_device_id = bytes()
+
+        # Execute & Assert
+        with pytest.raises(ValueError) as exc_info:
+            await device_ops.request_device_info(empty_device_id)
+
+        assert "cannot be empty" in str(exc_info.value)
+
+    @pytest.mark.asyncio
+    async def test_request_device_info_invalid_timeout_negative(self, device_ops):
+        """Test that negative timeout raises ValueError."""
+        # Setup
+        device_id = bytes([0x39, 0x87, 0xC8, 0x57])
+        negative_timeout = -1.0
+
+        # Execute & Assert
+        with pytest.raises(ValueError) as exc_info:
+            await device_ops.request_device_info(device_id, timeout=negative_timeout)
+
+        assert "must be positive" in str(exc_info.value)
+
+    @pytest.mark.asyncio
+    async def test_request_device_info_invalid_timeout_zero(self, device_ops):
+        """Test that zero timeout raises ValueError."""
+        # Setup
+        device_id = bytes([0x39, 0x87, 0xC8, 0x57])
+        zero_timeout = 0.0
+
+        # Execute & Assert
+        with pytest.raises(ValueError) as exc_info:
+            await device_ops.request_device_info(device_id, timeout=zero_timeout)
+
+        assert "must be positive" in str(exc_info.value)
+
+    @pytest.mark.asyncio
+    async def test_request_device_info_send_failure_not_success(self, device_ops, mock_transport):
+        """Test DeviceInfoRequestError when send_reliable returns success=False."""
+        # Setup
+        device_id = bytes([0x39, 0x87, 0xC8, 0x57])
+        mock_transport.send_reliable.return_value = MockSendResult(
+            success=False, reason="connection_lost"
+        )
+
+        # Execute & Assert
+        with pytest.raises(DeviceInfoRequestError) as exc_info:
+            await device_ops.request_device_info(device_id)
+
+        assert exc_info.value.reason == "connection_lost"
+
+    @pytest.mark.asyncio
+    async def test_request_device_info_oserror_exception(self, device_ops, mock_transport):
+        """Test that OSError exceptions are caught and re-raised as DeviceInfoRequestError."""
+        # Setup
+        device_id = bytes([0x39, 0x87, 0xC8, 0x57])
+        mock_transport.send_reliable.side_effect = OSError("Network unreachable")
+
+        # Execute & Assert
+        with pytest.raises(DeviceInfoRequestError) as exc_info:
+            await device_ops.request_device_info(device_id)
+
+        assert exc_info.value.reason == "send_failed"
+
+    @pytest.mark.asyncio
+    async def test_request_device_info_invalid_struct_parse_error(self, device_ops, mock_transport):
+        """Test DeviceStructParseError when receiving 0x43 packet with invalid struct."""
+        # Setup
+        device_id = bytes([0x39, 0x87, 0xC8, 0x57])
+        mock_transport.send_reliable.return_value = MockSendResult(success=True)
+
+        # Mock 0x43 packet with invalid struct (too short)
+        invalid_struct = bytes([0x01, 0x02, 0x03])  # Only 3 bytes, should be 24
+        response_packet = MockCyncPacket(packet_type=0x43, payload=invalid_struct)
+        tracked_packet = MockTrackedPacket(response_packet)
+
+        mock_transport.recv_reliable.return_value = tracked_packet
+
+        # Execute & Assert
+        with pytest.raises(DeviceStructParseError) as exc_info:
+            await device_ops.request_device_info(device_id)
+
+        assert "Invalid device struct length" in str(exc_info.value)
+
+    @pytest.mark.asyncio
+    async def test_request_device_info_wrong_packet_type_timeout(self, device_ops, mock_transport):
+        """Test timeout when receiving wrong packet types (not 0x43)."""
+        # Setup
+        device_id = bytes([0x39, 0x87, 0xC8, 0x57])
+        mock_transport.send_reliable.return_value = MockSendResult(success=True)
+
+        # Mock wrong packet type (0x83 instead of 0x43)
+        wrong_packet = MockCyncPacket(
+            packet_type=0x83, payload=bytes(DEVICE_TYPE_LENGTH)
+        )
+        tracked_packet = MockTrackedPacket(wrong_packet)
+
+        # Return wrong packet, then timeout
+        mock_transport.recv_reliable.side_effect = [tracked_packet, TimeoutError()]
+
+        # Execute - should timeout because we never receive 0x43
+        device_info = await device_ops.request_device_info(device_id, timeout=0.1)
+
+        # Assert - should return None due to timeout
+        assert device_info is None
+        assert mock_transport.recv_reliable.call_count >= 2  # At least wrong packet + timeout
+
+    @pytest.mark.asyncio
+    async def test_request_device_info_connection_error_exception(self, device_ops, mock_transport):
+        """Test that ConnectionError exceptions are caught and re-raised as DeviceInfoRequestError."""
+        # Setup
+        device_id = bytes([0x39, 0x87, 0xC8, 0x57])
+        mock_transport.send_reliable.side_effect = ConnectionError("Connection refused")
+
+        # Execute & Assert
+        with pytest.raises(DeviceInfoRequestError) as exc_info:
+            await device_ops.request_device_info(device_id)
+
+        assert exc_info.value.reason == "send_failed"
+
+
+class TestDeviceOperationsCache:
+    """Tests for device cache management."""
+
+    @pytest.mark.asyncio
+    async def test_cache_eviction_lru(self, device_ops):
+        """Test that cache evicts oldest entries when over limit."""
+        # Temporarily reduce cache size for testing
+        original_max = device_ops.MAX_CACHE_SIZE
+        device_ops.MAX_CACHE_SIZE = 3  # Small cache for testing
+
+        try:
+            # Create 4 device structs (one more than cache limit)
+            device_ids = []
+            for i in range(4):
+                device_id = bytes([0x39, 0x87, 0xC8, i])
+                device_struct = device_id + bytes([0] * 20)  # 24 bytes total
+                correlation_id = str(uuid.uuid4())
+                device_info = await device_ops._parse_device_struct(
+                    device_struct, correlation_id=correlation_id
+                )
+                device_ids.append(device_id.hex())
+
+            # First 3 should be in cache
+            assert len(device_ops.device_cache) == 3
+            # First device should be evicted (oldest)
+            assert device_ids[0] not in device_ops.device_cache
+            # Last 3 devices should be in cache
+            assert device_ids[1] in device_ops.device_cache
+            assert device_ids[2] in device_ops.device_cache
+            assert device_ids[3] in device_ops.device_cache
+        finally:
+            # Restore original cache size
+            device_ops.MAX_CACHE_SIZE = original_max
+
+    @pytest.mark.asyncio
+    async def test_cache_lru_update_on_access(self, device_ops):
+        """Test that accessing cached device moves it to end (most recent)."""
+        # Temporarily reduce cache size for testing
+        original_max = device_ops.MAX_CACHE_SIZE
+        device_ops.MAX_CACHE_SIZE = 2
+
+        try:
+            # Add 2 devices
+            device_id1 = bytes([0x39, 0x87, 0xC8, 0x01])
+            device_id2 = bytes([0x39, 0x87, 0xC8, 0x02])
+            device_struct1 = device_id1 + bytes([0] * 20)
+            device_struct2 = device_id2 + bytes([0] * 20)
+
+            await device_ops._parse_device_struct(device_struct1, correlation_id=str(uuid.uuid4()))
+            await device_ops._parse_device_struct(device_struct2, correlation_id=str(uuid.uuid4()))
+
+            # Both should be in cache
+            assert len(device_ops.device_cache) == 2
+
+            # Access first device through _add_to_cache (should move to end via move_to_end)
+            device_info1 = device_ops.device_cache[device_id1.hex()]
+            await device_ops._add_to_cache(device_id1.hex(), device_info1)
+
+            # Add third device - should evict device2 (oldest), not device1
+            device_id3 = bytes([0x39, 0x87, 0xC8, 0x03])
+            device_struct3 = device_id3 + bytes([0] * 20)
+            await device_ops._parse_device_struct(device_struct3, correlation_id=str(uuid.uuid4()))
+
+            assert device_id1.hex() in device_ops.device_cache  # Should still be there
+            assert device_id2.hex() not in device_ops.device_cache  # Should be evicted
+            assert device_id3.hex() in device_ops.device_cache  # Should be there
+        finally:
+            device_ops.MAX_CACHE_SIZE = original_max

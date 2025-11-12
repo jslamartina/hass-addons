@@ -3,7 +3,6 @@
 import asyncio
 import logging
 import time
-from typing import Optional
 
 logger = logging.getLogger(__name__)
 
@@ -34,8 +33,8 @@ class TCPConnection:
         self.connect_timeout = connect_timeout
         self.io_timeout = io_timeout
         self.max_read_size = max_read_size
-        self.reader: Optional[asyncio.StreamReader] = None
-        self.writer: Optional[asyncio.StreamWriter] = None
+        self.reader: asyncio.StreamReader | None = None
+        self.writer: asyncio.StreamWriter | None = None
         self._connected = False
 
     async def connect(self) -> bool:
@@ -67,28 +66,38 @@ class TCPConnection:
                 elapsed_ms,
                 extra={"host": self.host, "port": self.port, "elapsed_ms": elapsed_ms},
             )
-            return True
-        except asyncio.TimeoutError:
+        except TimeoutError:
             elapsed_ms = (time.perf_counter() - start_time) * 1000
-            logger.error(
+            logger.exception(
                 "Connection to %s:%d timed out after %.1fms",
                 self.host,
                 self.port,
                 elapsed_ms,
-                extra={"host": self.host, "port": self.port, "elapsed_ms": elapsed_ms, "error": "timeout"},
+                extra={
+                    "host": self.host,
+                    "port": self.port,
+                    "elapsed_ms": elapsed_ms,
+                    "error": "timeout",
+                },
             )
             return False
         except OSError as e:
             elapsed_ms = (time.perf_counter() - start_time) * 1000
-            logger.error(
-                "Connection to %s:%d failed after %.1fms: %s",
+            logger.exception(
+                "Connection to %s:%d failed after %.1fms",
                 self.host,
                 self.port,
                 elapsed_ms,
-                e,
-                extra={"host": self.host, "port": self.port, "elapsed_ms": elapsed_ms, "error": str(e)},
+                extra={
+                    "host": self.host,
+                    "port": self.port,
+                    "elapsed_ms": elapsed_ms,
+                    "error": str(e),
+                },
             )
             return False
+        else:
+            return True
 
     async def send(self, data: bytes) -> bool:
         """
@@ -125,32 +134,47 @@ class TCPConnection:
                 self.host,
                 self.port,
                 elapsed_ms,
-                extra={"bytes": len(data), "host": self.host, "port": self.port, "elapsed_ms": elapsed_ms},
+                extra={
+                    "bytes": len(data),
+                    "host": self.host,
+                    "port": self.port,
+                    "elapsed_ms": elapsed_ms,
+                },
             )
-            return True
-        except asyncio.TimeoutError:
+        except TimeoutError:
             elapsed_ms = (time.perf_counter() - start_time) * 1000
-            logger.error(
+            logger.exception(
                 "Send to %s:%d timed out after %.1fms",
                 self.host,
                 self.port,
                 elapsed_ms,
-                extra={"host": self.host, "port": self.port, "elapsed_ms": elapsed_ms, "error": "timeout"},
+                extra={
+                    "host": self.host,
+                    "port": self.port,
+                    "elapsed_ms": elapsed_ms,
+                    "error": "timeout",
+                },
             )
             return False
         except OSError as e:
             elapsed_ms = (time.perf_counter() - start_time) * 1000
-            logger.error(
-                "Send to %s:%d failed after %.1fms: %s",
+            logger.exception(
+                "Send to %s:%d failed after %.1fms",
                 self.host,
                 self.port,
                 elapsed_ms,
-                e,
-                extra={"host": self.host, "port": self.port, "elapsed_ms": elapsed_ms, "error": str(e)},
+                extra={
+                    "host": self.host,
+                    "port": self.port,
+                    "elapsed_ms": elapsed_ms,
+                    "error": str(e),
+                },
             )
             return False
+        else:
+            return True
 
-    async def recv(self, max_bytes: Optional[int] = None) -> Optional[bytes]:
+    async def recv(self, max_bytes: int | None = None) -> bytes | None:
         """
         Receive data with timeout.
 
@@ -200,30 +224,45 @@ class TCPConnection:
                 self.host,
                 self.port,
                 elapsed_ms,
-                extra={"bytes": len(data), "host": self.host, "port": self.port, "elapsed_ms": elapsed_ms},
+                extra={
+                    "bytes": len(data),
+                    "host": self.host,
+                    "port": self.port,
+                    "elapsed_ms": elapsed_ms,
+                },
             )
-            return data
-        except asyncio.TimeoutError:
+        except TimeoutError:
             elapsed_ms = (time.perf_counter() - start_time) * 1000
-            logger.error(
+            logger.exception(
                 "Receive from %s:%d timed out after %.1fms",
                 self.host,
                 self.port,
                 elapsed_ms,
-                extra={"host": self.host, "port": self.port, "elapsed_ms": elapsed_ms, "error": "timeout"},
+                extra={
+                    "host": self.host,
+                    "port": self.port,
+                    "elapsed_ms": elapsed_ms,
+                    "error": "timeout",
+                },
             )
             return None
         except OSError as e:
             elapsed_ms = (time.perf_counter() - start_time) * 1000
-            logger.error(
-                "Receive from %s:%d failed after %.1fms: %s",
+            logger.exception(
+                "Receive from %s:%d failed after %.1fms",
                 self.host,
                 self.port,
                 elapsed_ms,
-                e,
-                extra={"host": self.host, "port": self.port, "elapsed_ms": elapsed_ms, "error": str(e)},
+                extra={
+                    "host": self.host,
+                    "port": self.port,
+                    "elapsed_ms": elapsed_ms,
+                    "error": str(e),
+                },
             )
             return None
+        else:
+            return data
 
     async def close(self) -> None:
         """Close the connection."""
@@ -241,15 +280,28 @@ class TCPConnection:
                 logger.warning(
                     "Error closing connection: %s",
                     e,
-                    extra={"host": self.host, "port": self.port, "error": str(e)},
+                    extra={
+                        "host": self.host,
+                        "port": self.port,
+                        "error": str(e),
+                        "error_type": type(e).__name__,
+                    },
                 )
             except Exception as e:
-                # Unexpected error - log but don't fail cleanup
-                logger.error(
-                    "Unexpected error during connection close: %s",
+                # Cleanup operations should not fail - log but continue
+                # This is best-effort cleanup, so we don't re-raise unexpected errors.
+                # Broad catch is intentional: writer.close()/wait_closed() can raise various
+                # exceptions (OSError, RuntimeError, AttributeError) and we want to ensure
+                # cleanup completes even if close fails.
+                logger.warning(
+                    "Unexpected error during connection close (non-fatal): %s",
                     e,
-                    exc_info=True,
-                    extra={"host": self.host, "port": self.port, "error": str(e)},
+                    extra={
+                        "host": self.host,
+                        "port": self.port,
+                        "error": str(e),
+                        "error_type": type(e).__name__,
+                    },
                 )
             finally:
                 self._connected = False

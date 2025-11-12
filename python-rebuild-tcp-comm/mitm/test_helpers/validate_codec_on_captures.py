@@ -9,7 +9,6 @@ import re
 import sys
 from collections import Counter
 from pathlib import Path
-from typing import Dict, List, Tuple
 
 # Add src to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent.parent / "src"))
@@ -17,8 +16,13 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent / "src"))
 from protocol.cync_protocol import CyncProtocol
 from protocol.exceptions import PacketDecodeError
 
+# Constants for validation criteria
+MIN_DECODED_PACKETS_REQUIRED = 100
+MIN_ARGS_REQUIRED = 2
+MAX_ERROR_RATE = 1.0
 
-def parse_capture_packets(filepath: Path) -> List[Tuple[str, str, bytes]]:
+
+def parse_capture_packets(filepath: Path) -> list[tuple[str, str, bytes]]:
     """Parse capture file and extract raw packet hex.
 
     Args:
@@ -27,7 +31,7 @@ def parse_capture_packets(filepath: Path) -> List[Tuple[str, str, bytes]]:
     Returns:
         List of (timestamp, direction, packet_bytes) tuples
     """
-    with open(filepath, "r") as f:
+    with filepath.open() as f:
         lines = f.readlines()
 
     packets = []
@@ -57,14 +61,14 @@ def parse_capture_packets(filepath: Path) -> List[Tuple[str, str, bytes]]:
                         # Invalid hex, skip
                         pass
 
-            i += 2  # Skip to next packet
+            i += 2  # Skip header line and hex line to next packet
         else:
             i += 1
 
     return packets
 
 
-def validate_packets(packets: List[Tuple[str, str, bytes]], limit: int = None) -> Dict:
+def validate_packets(packets: list[tuple[str, str, bytes]], limit: int | None = None) -> dict:
     """Decode packets using Phase 1a codec and collect statistics.
 
     Args:
@@ -121,7 +125,92 @@ def validate_packets(packets: List[Tuple[str, str, bytes]], limit: int = None) -
     return stats
 
 
-def format_validation_report(stats: Dict, capture_file: str) -> str:
+def _format_overall_statistics(stats: dict) -> list[str]:
+    """Format overall statistics section."""
+    lines = []
+    lines.append("Overall Statistics:")
+    lines.append(f"  Total Packets Processed: {stats['total_packets']:,}")
+    lines.append(f"  Successfully Decoded: {stats['decoded_successfully']:,}")
+    lines.append(f"  Decode Errors: {stats['decode_errors']:,}")
+    lines.append(f"  Error Rate: {stats['error_rate']:.3f}%")
+    lines.append("")
+    return lines
+
+
+def _format_traffic_direction(stats: dict) -> list[str]:
+    """Format traffic direction section."""
+    lines = []
+    lines.append("Traffic Direction:")
+    for direction, count in stats["direction_counts"].items():
+        lines.append(f"  {direction}: {count:,} packets")
+    lines.append("")
+    return lines
+
+
+def _format_packet_types(stats: dict) -> list[str]:
+    """Format packet types section."""
+    lines = []
+    if stats["packet_types"]:
+        lines.append("Packet Types Decoded:")
+        for ptype, count in sorted(stats["packet_types"].items()):
+            pct = (
+                (count / stats["decoded_successfully"] * 100)
+                if stats["decoded_successfully"] > 0
+                else 0
+            )
+            lines.append(f"  {ptype}: {count:,} packets ({pct:.1f}%)")
+        lines.append("")
+    return lines
+
+
+def _format_error_reasons(stats: dict) -> list[str]:
+    """Format error reasons section."""
+    lines = []
+    if stats["error_reasons"]:
+        lines.append("Error Reasons:")
+        for reason, count in stats["error_reasons"].most_common():
+            lines.append(f"  {reason}: {count:,} occurrences")
+        lines.append("")
+    return lines
+
+
+def _format_acceptance_criteria(stats: dict) -> tuple[list[str], bool]:
+    """Format acceptance criteria section. Returns (lines, overall_pass)."""
+    lines = []
+    lines.append("Phase 1a Acceptance Criteria:")
+
+    decoded_pass = stats["decoded_successfully"] >= MIN_DECODED_PACKETS_REQUIRED
+    if decoded_pass:
+        lines.append(
+            f"  ✅ PASS: Decoded {stats['decoded_successfully']:,} packets (≥MIN_DECODED_PACKETS_REQUIRED required)"
+        )
+    else:
+        lines.append(
+            f"  ❌ FAIL: Only {stats['decoded_successfully']} packets (need ≥MIN_DECODED_PACKETS_REQUIRED)"
+        )
+
+    error_rate_pass = stats["error_rate"] < MAX_ERROR_RATE
+    if error_rate_pass:
+        lines.append(f"  ✅ PASS: Error rate {stats['error_rate']:.3f}% (<1% required)")
+    else:
+        lines.append(f"  ❌ FAIL: Error rate {stats['error_rate']:.3f}% (≥1%)")
+
+    # Check for all major packet types
+    expected_types = ["0x23", "0x73", "0x83", "0xd3"]
+    observed = [pt.lower() for pt in stats["packet_types"]]
+    has_all = all(et in observed for et in expected_types)
+
+    if has_all:
+        lines.append("  ✅ PASS: All major packet types observed (0x23, 0x73, 0x83, 0xD3)")
+    else:
+        missing = [et for et in expected_types if et not in observed]
+        lines.append(f"  ⚠️  WARNING: Missing types: {missing}")
+
+    overall_pass = decoded_pass and error_rate_pass and has_all
+    return lines, overall_pass
+
+
+def format_validation_report(stats: dict, capture_file: str) -> str:
     """Format validation results as report.
 
     Args:
@@ -138,67 +227,18 @@ def format_validation_report(stats: Dict, capture_file: str) -> str:
     lines.append(f"Capture File: {capture_file}")
     lines.append("")
 
-    lines.append("Overall Statistics:")
-    lines.append(f"  Total Packets Processed: {stats['total_packets']:,}")
-    lines.append(f"  Successfully Decoded: {stats['decoded_successfully']:,}")
-    lines.append(f"  Decode Errors: {stats['decode_errors']:,}")
-    lines.append(f"  Error Rate: {stats['error_rate']:.3f}%")
-    lines.append("")
+    lines.extend(_format_overall_statistics(stats))
+    lines.extend(_format_traffic_direction(stats))
+    lines.extend(_format_packet_types(stats))
+    lines.extend(_format_error_reasons(stats))
 
-    lines.append("Traffic Direction:")
-    for direction, count in stats["direction_counts"].items():
-        lines.append(f"  {direction}: {count:,} packets")
-    lines.append("")
-
-    if stats["packet_types"]:
-        lines.append("Packet Types Decoded:")
-        for ptype, count in sorted(stats["packet_types"].items()):
-            pct = (
-                (count / stats["decoded_successfully"] * 100)
-                if stats["decoded_successfully"] > 0
-                else 0
-            )
-            lines.append(f"  {ptype}: {count:,} packets ({pct:.1f}%)")
-        lines.append("")
-
-    if stats["error_reasons"]:
-        lines.append("Error Reasons:")
-        for reason, count in stats["error_reasons"].most_common():
-            lines.append(f"  {reason}: {count:,} occurrences")
-        lines.append("")
-
-    # Validation criteria
-    lines.append("Phase 1a Acceptance Criteria:")
-
-    if stats["decoded_successfully"] >= 100:
-        lines.append(
-            f"  ✅ PASS: Decoded {stats['decoded_successfully']:,} packets (≥100 required)"
-        )
-    else:
-        lines.append(f"  ❌ FAIL: Only {stats['decoded_successfully']} packets (need ≥100)")
-
-    if stats["error_rate"] < 1.0:
-        lines.append(f"  ✅ PASS: Error rate {stats['error_rate']:.3f}% (<1% required)")
-    else:
-        lines.append(f"  ❌ FAIL: Error rate {stats['error_rate']:.3f}% (≥1%)")
-
-    # Check for all major packet types
-    expected_types = ["0x23", "0x73", "0x83", "0xd3"]
-    observed = [pt.lower() for pt in stats["packet_types"].keys()]
-    has_all = all(et in observed for et in expected_types)
-
-    if has_all:
-        lines.append("  ✅ PASS: All major packet types observed (0x23, 0x73, 0x83, 0xD3)")
-    else:
-        missing = [et for et in expected_types if et not in observed]
-        lines.append(f"  ⚠️  WARNING: Missing types: {missing}")
+    criteria_lines, overall_pass = _format_acceptance_criteria(stats)
+    lines.extend(criteria_lines)
 
     lines.append("")
     lines.append("=" * 80)
 
     # Overall result
-    overall_pass = stats["decoded_successfully"] >= 100 and stats["error_rate"] < 1.0 and has_all
-
     if overall_pass:
         lines.append("✅ VALIDATION PASSED - Phase 1a codec ready for production")
     else:
@@ -215,7 +255,7 @@ def main() -> int:
     Returns:
         Exit code (0 = pass, 1 = fail)
     """
-    if len(sys.argv) < 2:
+    if len(sys.argv) < MIN_ARGS_REQUIRED:
         print("Usage: python validate_codec_on_captures.py <capture_file> [packet_limit]")
         print("\nExample:")
         print(
@@ -225,7 +265,7 @@ def main() -> int:
         return 1
 
     filepath = Path(sys.argv[1])
-    limit = int(sys.argv[2]) if len(sys.argv) > 2 else None
+    limit = int(sys.argv[MIN_ARGS_REQUIRED]) if len(sys.argv) > MIN_ARGS_REQUIRED else None
 
     if not filepath.exists():
         print(f"Error: Capture file not found: {filepath}")
@@ -250,10 +290,10 @@ def main() -> int:
 
     # Return 0 if passed, 1 if failed
     passed = (
-        stats["decoded_successfully"] >= 100
-        and stats["error_rate"] < 1.0
+        stats["decoded_successfully"] >= MIN_DECODED_PACKETS_REQUIRED
+        and stats["error_rate"] < MAX_ERROR_RATE
         and all(
-            ptype in [pt.lower() for pt in stats["packet_types"].keys()]
+            ptype in [pt.lower() for pt in stats["packet_types"]]
             for ptype in ["0x23", "0x73", "0x83", "0xd3"]
         )
     )

@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import logging
 
-from protocol.checksum import calculate_checksum_between_markers
+from protocol.checksum import calculate_checksum_between_markers, insert_checksum_in_place
 from protocol.exceptions import PacketDecodeError
 from protocol.packet_types import (
     PACKET_TYPE_DATA_CHANNEL,
@@ -16,6 +16,13 @@ from protocol.packet_types import (
     CyncDataPacket,
     CyncPacket,
 )
+
+# Protocol constants
+ENDPOINT_LENGTH_BYTES = 5
+AUTH_CODE_LENGTH_BYTES = 16
+MSG_ID_LENGTH_BYTES = 2
+PACKET_HEADER_LENGTH = 5  # Magic (2) + Reserved (2) + Type (1)
+MIN_PAYLOAD_LENGTH = 7  # Minimum payload length for data packets
 
 logger = logging.getLogger(__name__)
 
@@ -48,15 +55,17 @@ class CyncProtocol:
             PacketDecodeError: If data is too short to parse header
 
         Example:
-            >>> header = bytes([0x73, 0x00, 0x00, 0x00, 0x10])  # type=0x73, length=16
+            >>> from protocol.packet_types import PACKET_TYPE_DATA_CHANNEL
+            >>> header = bytes([PACKET_TYPE_DATA_CHANNEL, 0x00, 0x00, 0x00, 0x10])  # type=PACKET_TYPE_DATA_CHANNEL (0x73), length=16
             >>> packet_type, length, reserved = CyncProtocol.parse_header(header)
-            >>> packet_type == 0x73
+            >>> packet_type == PACKET_TYPE_DATA_CHANNEL
             True
             >>> length == 16
             True
         """
-        if len(data) < 5:
-            raise PacketDecodeError("too_short", data)
+        if len(data) < PACKET_HEADER_LENGTH:
+            error_reason = "too_short"
+            raise PacketDecodeError(error_reason, data)
 
         packet_type = data[0]
         reserved = (data[1] << 8) | data[2]  # Bytes 1-2 combined
@@ -83,17 +92,18 @@ class CyncProtocol:
         Returns bytes: [packet_type, 0x00, 0x00, multiplier, base]
 
         Args:
-            packet_type: Packet type byte (0x23, 0x73, etc.)
+            packet_type: Packet type byte (PACKET_TYPE_HANDSHAKE=0x23, PACKET_TYPE_DATA_CHANNEL=0x73, etc.)
             length: Payload length in bytes
 
         Returns:
             5-byte header
 
         Example:
-            >>> header = CyncProtocol.encode_header(0x73, 16)
+            >>> from protocol.packet_types import PACKET_TYPE_DATA_CHANNEL
+            >>> header = CyncProtocol.encode_header(PACKET_TYPE_DATA_CHANNEL, 16)
             >>> len(header) == 5
             True
-            >>> header[0] == 0x73
+            >>> header[0] == PACKET_TYPE_DATA_CHANNEL
             True
         """
         multiplier = length // 256
@@ -132,13 +142,14 @@ class CyncProtocol:
         Example:
             >>> payload = bytes([0x01, 0x02, 0x03, 0x04, 0x05, 0x13, 0x00])
             >>> endpoint, msg_id = CyncProtocol.extract_endpoint_and_msg_id(payload)
-            >>> len(endpoint) == 5
+            >>> len(endpoint) == ENDPOINT_LENGTH_BYTES
             True
-            >>> len(msg_id) == 2
+            >>> len(msg_id) == MSG_ID_LENGTH_BYTES
             True
         """
-        if len(payload) < 7:
-            raise PacketDecodeError("too_short", payload)
+        if len(payload) < MIN_PAYLOAD_LENGTH:
+            error_reason = "too_short"
+            raise PacketDecodeError(error_reason, payload)
 
         endpoint = payload[0:5]  # 5 bytes
         msg_id = payload[5:7]  # 2 bytes (NOT 3 - byte 7 is padding)
@@ -180,7 +191,7 @@ class CyncProtocol:
             >>> packet.packet_type == 0x73
             True
         """
-        logger.debug("Decoding packet: %d bytes", len(data))
+        logger.debug("Decoding packet", extra={"bytes": len(data)})
 
         # Parse header
         packet_type, length, _ = CyncProtocol.parse_header(data)
@@ -188,7 +199,8 @@ class CyncProtocol:
         # Validate packet length matches header
         expected_total = 5 + length
         if len(data) < expected_total:
-            raise PacketDecodeError("invalid_length", data)
+            error_reason = "invalid_length"
+            raise PacketDecodeError(error_reason, data)
 
         # Extract payload
         payload = data[5 : 5 + length]
@@ -234,11 +246,13 @@ class CyncProtocol:
             start_marker_idx = packet_bytes.index(0x7E)
             end_marker_idx = len(packet_bytes) - 1 - packet_bytes[::-1].index(0x7E)
         except ValueError as e:
-            raise PacketDecodeError("missing_0x7e_markers", raw) from e
+            error_reason = "missing_0x7e_markers"
+            raise PacketDecodeError(error_reason, raw) from e
 
         # Extract framed data (between markers)
         if end_marker_idx <= start_marker_idx:
-            raise PacketDecodeError("missing_0x7e_markers", packet_bytes)
+            error_reason = "missing_0x7e_markers"
+            raise PacketDecodeError(error_reason, packet_bytes)
 
         # Data is between markers, excluding markers and checksum
         data_start = start_marker_idx + 1
@@ -298,10 +312,12 @@ class CyncProtocol:
             ValueError: If endpoint not 5 bytes or auth_code not 16 bytes
         """
         # Validate inputs
-        if len(endpoint) != 5:
-            raise ValueError(f"Endpoint must be 5 bytes, got {len(endpoint)}")
-        if len(auth_code) != 16:
-            raise ValueError(f"Auth code must be 16 bytes, got {len(auth_code)}")
+        if len(endpoint) != ENDPOINT_LENGTH_BYTES:
+            error_msg = f"Endpoint must be {ENDPOINT_LENGTH_BYTES} bytes, got {len(endpoint)}"
+            raise ValueError(error_msg)
+        if len(auth_code) != AUTH_CODE_LENGTH_BYTES:
+            error_msg = f"Auth code must be {AUTH_CODE_LENGTH_BYTES} bytes, got {len(auth_code)}"
+            raise ValueError(error_msg)
 
         # Build payload: prefix + endpoint + length_indicator + auth_code + suffix
         payload = bytearray([0x03])  # Constant prefix from captures
@@ -349,10 +365,12 @@ class CyncProtocol:
             ValueError: If endpoint not 5 bytes or msg_id not 2 bytes
         """
         # Validate inputs
-        if len(endpoint) != 5:
-            raise ValueError(f"Endpoint must be 5 bytes, got {len(endpoint)}")
-        if len(msg_id) != 2:
-            raise ValueError(f"msg_id must be 2 bytes, got {len(msg_id)}")
+        if len(endpoint) != ENDPOINT_LENGTH_BYTES:
+            error_msg = f"Endpoint must be {ENDPOINT_LENGTH_BYTES} bytes, got {len(endpoint)}"
+            raise ValueError(error_msg)
+        if len(msg_id) != MSG_ID_LENGTH_BYTES:
+            error_msg = f"msg_id must be {MSG_ID_LENGTH_BYTES} bytes, got {len(msg_id)}"
+            raise ValueError(error_msg)
 
         # Build outer payload: endpoint + msg_id + padding
         packet_payload = bytearray()
@@ -375,8 +393,6 @@ class CyncProtocol:
         full_packet.extend(packet_payload)
 
         # Calculate and insert checksum
-        from protocol.checksum import insert_checksum_in_place
-
         insert_checksum_in_place(full_packet, 5 + checksum_idx)
 
         logger.debug(
@@ -430,10 +446,12 @@ class CyncProtocol:
             ValueError: If endpoint not 5 bytes or msg_id not 2 bytes
         """
         # Validate inputs
-        if len(endpoint) != 5:
-            raise ValueError(f"Endpoint must be 5 bytes, got {len(endpoint)}")
-        if len(msg_id) != 2:
-            raise ValueError(f"msg_id must be 2 bytes, got {len(msg_id)}")
+        if len(endpoint) != ENDPOINT_LENGTH_BYTES:
+            error_msg = f"Endpoint must be {ENDPOINT_LENGTH_BYTES} bytes, got {len(endpoint)}"
+            raise ValueError(error_msg)
+        if len(msg_id) != MSG_ID_LENGTH_BYTES:
+            error_msg = f"msg_id must be {MSG_ID_LENGTH_BYTES} bytes, got {len(msg_id)}"
+            raise ValueError(error_msg)
 
         # Build outer payload: endpoint + msg_id (NO padding for 0x83)
         packet_payload = bytearray()
@@ -455,8 +473,6 @@ class CyncProtocol:
         full_packet.extend(packet_payload)
 
         # Calculate and insert checksum
-        from protocol.checksum import insert_checksum_in_place
-
         insert_checksum_in_place(full_packet, 5 + checksum_idx)
 
         logger.debug(

@@ -733,15 +733,15 @@ Phase 1d baseline tests measure ACK latency to validate timeout configuration (s
 2. **Calculate percentiles** (p50, p95, p99, max) for each ACK type
 
 3. **Validate timeout configuration**:
-   - Current ACK timeout: 2s (based on assumption of p99 = 800ms)
-   - If measured p99 > 800ms: Consider adjusting ACK timeout using formula: `timeout = p99 × 2.5`
+   - Current ACK timeout: 128ms (based on Phase 0.5 measured p99 = 51ms)
+   - If measured p99 in production differs significantly: Consider adjusting ACK timeout using formula: `timeout = measured_p99 × 2.5`
    - Example: If measured p99 = 1200ms, recommended timeout = 1200ms × 2.5 = 3000ms (3s)
    - Document findings in `docs/decisions/phase-1d-ack-latency-validation.md`
 
 4. **Decision criteria**:
-   - If measured p99 ≤ 800ms: Current 2s timeout validated, no changes needed
-   - If measured p99 > 800ms AND < 1600ms: Timeout may be too aggressive, consider adjustment
-   - If measured p99 > 1600ms: Timeout too low, adjust and re-test
+   - If measured p99 ≤ 51ms: Current 128ms timeout validated, no changes needed
+   - If measured p99 > 51ms AND < 100ms: Consider minor adjustment (may still be acceptable)
+   - If measured p99 > 100ms: Timeout may need adjustment, re-test with timeout = measured_p99 × 2.5
 
 **Group Operation Validation**:
 
@@ -818,9 +818,21 @@ Phase 1d baseline tests validate the "no send_queue" architectural decision (aut
 
 ### Memory Leak Detection (Technical Review Finding 5.4 - Added)
 
+**Test Execution**:
+
+- **When to run**: Manually before Phase 1d completion (not in CI due to 9-hour duration)
+- **Command**: `pytest tests/integration/test_memory_leak.py::test_no_memory_leak_9_hour -v --timeout=36000`
+- **Expected duration**: 9 hours (1-hour warmup + 8-hour monitoring)
+- **Resource requirements**: Isolated test environment, 4GB RAM minimum
+- **Pass criteria**: Memory growth < 5% from baseline to end
+- **Failure handling**: If growth ≥5%, investigate with `tracemalloc.take_snapshot()` before proceeding to Phase 2
+
+**Acceptance Criteria**:
+
 - [ ] Memory leak test executed for 9 hours minimum
 - [ ] Memory growth < 5% over 8-hour window (after 1-hour warmup)
 - [ ] No unbounded cache/dict growth observed
+- [ ] Test passes before Phase 1d marked complete
 - [ ] Measurement method:
   - **Tool**: Python `tracemalloc` module
   - **Baseline**: Measure memory after 1 hour steady-state (warmup complete)

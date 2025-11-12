@@ -26,7 +26,6 @@ sys.path.insert(0, str(legacy_path))
 # Import from legacy codebase (reference only - for validation)
 from cync_controller.packet_checksum import calculate_checksum_between_markers  # noqa: E402
 
-
 # Legacy test fixtures from cync-controller (known-good checksums)
 LEGACY_FIXTURES = {
     "SIMPLE_PACKET": bytes(
@@ -109,7 +108,8 @@ def extract_checksum_from_packet(packet: bytes) -> int:
     """Extract the checksum byte from packet (second-to-last byte before 0x7E)."""
     end_marker_pos = packet.rfind(0x7E)
     if end_marker_pos < 2:
-        raise ValueError("No trailing 0x7E marker found")
+        error_msg = "No trailing 0x7E marker found"
+        raise ValueError(error_msg)
     return packet[end_marker_pos - 1]
 
 

@@ -10,6 +10,9 @@ import pytest
 from mitm.interfaces.packet_observer import PacketDirection, PacketObserver
 from mitm.mitm_proxy import MITMProxy
 
+# Test constants
+EXPECTED_OBSERVER_COUNT_MULTIPLE = 3  # Number of observers for multiple registration test
+
 
 @pytest.fixture
 def proxy() -> MITMProxy:
@@ -59,7 +62,7 @@ def test_register_multiple_observers(proxy: MITMProxy) -> None:
     proxy.register_observer(observer2)
     proxy.register_observer(observer3)
 
-    assert len(proxy.observers) == 3
+    assert len(proxy.observers) == EXPECTED_OBSERVER_COUNT_MULTIPLE
     assert observer1 in proxy.observers
     assert observer2 in proxy.observers
     assert observer3 in proxy.observers
@@ -247,7 +250,7 @@ def test_observer_list_order_preserved(proxy: MITMProxy) -> None:
     def create_ordered_observer(order_id: int) -> MagicMock:
         observer = MagicMock(spec=PacketObserver)
 
-        def track_call(*args: object, **kwargs: object) -> None:
+        def track_call(*_args: object, **_kwargs: object) -> None:
             call_order.append(order_id)
 
         observer.on_packet_received = track_call

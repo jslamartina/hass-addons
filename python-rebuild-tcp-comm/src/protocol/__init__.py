@@ -31,26 +31,21 @@ from protocol.packet_types import (
 )
 
 __all__ = [
-    # Protocol encoder/decoder
+    "PACKET_TYPE_DATA_ACK",
+    "PACKET_TYPE_DATA_CHANNEL",
+    "PACKET_TYPE_DEVICE_INFO",
+    "PACKET_TYPE_HANDSHAKE",
+    "PACKET_TYPE_HEARTBEAT_CLOUD",
+    "PACKET_TYPE_HEARTBEAT_DEVICE",
+    "PACKET_TYPE_HELLO_ACK",
+    "PACKET_TYPE_INFO_ACK",
+    "PACKET_TYPE_STATUS_ACK",
+    "PACKET_TYPE_STATUS_BROADCAST",
+    "CyncDataPacket",
+    "CyncPacket",
     "CyncProtocol",
-    # TCP stream framer
-    "PacketFramer",
-    # Exception types
     "CyncProtocolError",
     "PacketDecodeError",
+    "PacketFramer",
     "PacketFramingError",
-    # Packet type constants
-    "PACKET_TYPE_HANDSHAKE",
-    "PACKET_TYPE_HELLO_ACK",
-    "PACKET_TYPE_DEVICE_INFO",
-    "PACKET_TYPE_INFO_ACK",
-    "PACKET_TYPE_DATA_CHANNEL",
-    "PACKET_TYPE_DATA_ACK",
-    "PACKET_TYPE_STATUS_BROADCAST",
-    "PACKET_TYPE_STATUS_ACK",
-    "PACKET_TYPE_HEARTBEAT_DEVICE",
-    "PACKET_TYPE_HEARTBEAT_CLOUD",
-    # Dataclasses
-    "CyncPacket",
-    "CyncDataPacket",
 ]

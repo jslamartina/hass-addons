@@ -18,9 +18,9 @@ try:
 except ModuleNotFoundError:  # pragma: no cover
     from interfaces.packet_observer import PacketDirection  # type: ignore[import-not-found]
 
-from protocol.cync_protocol import CyncProtocol
-from protocol.exceptions import PacketDecodeError, PacketFramingError
-from protocol.packet_framer import PacketFramer
+from protocol.cync_protocol import CyncProtocol  # noqa: E402
+from protocol.exceptions import PacketDecodeError, PacketFramingError  # noqa: E402
+from protocol.packet_framer import PacketFramer  # noqa: E402
 
 logger = logging.getLogger(__name__)
 
@@ -69,8 +69,8 @@ class CodecValidatorPlugin:
                     },
                 )
         except (PacketDecodeError, PacketFramingError) as e:
-            logger.error(
-                f"Phase 1a validation failed: {e}",
+            logger.exception(
+                "Phase 1a validation failed: %s",
                 extra={
                     "direction": direction.value,
                     "connection_id": connection_id,
@@ -85,7 +85,7 @@ class CodecValidatorPlugin:
             connection_id: Connection identifier
         """
         self.framers[connection_id] = PacketFramer()
-        logger.info(f"Codec validator ready for connection {connection_id}")
+        logger.info("Codec validator ready for connection %d", connection_id)
 
     def on_connection_closed(self, connection_id: int) -> None:
         """Called when connection closed.
@@ -93,6 +93,6 @@ class CodecValidatorPlugin:
         Args:
             connection_id: Connection identifier
         """
-        logger.info(f"Connection closed: {connection_id}")
+        logger.info("Connection closed: %d", connection_id)
         # Clean up framers for this connection
         self.framers.pop(connection_id, None)

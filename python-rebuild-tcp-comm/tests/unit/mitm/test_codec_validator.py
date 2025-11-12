@@ -45,7 +45,6 @@ class TestConnectionLifecycle:
         # Establish connection
         plugin.on_connection_established(connection_id)
         assert connection_id in plugin.framers
-
         # Close connection
         plugin.on_connection_closed(connection_id)
         assert connection_id not in plugin.framers
@@ -171,7 +170,6 @@ class TestMultiConnectionIsolation:
         assert conn1 in plugin.framers
         assert conn2 in plugin.framers
         assert plugin.framers[conn1] is not plugin.framers[conn2]
-
         # Send partial packet to conn1
         packet = HANDSHAKE_0x23_DEV_TO_CLOUD
         plugin.on_packet_received(PacketDirection.DEVICE_TO_CLOUD, packet[:10], conn1)

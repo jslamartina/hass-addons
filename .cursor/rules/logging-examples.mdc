@@ -9,20 +9,65 @@ appliesTo:
 ## Basic Patterns
 
 ```python
-## Function entry with context
-logger.info("Processing device %s (IP: %s)", device_id, device_ip)
+## Function entry with context (structured logging)
+logger.info(
+    "→ Processing device",
+    extra={
+        "device_id": device_id,
+        "device_ip": device_ip,
+    },
+)
 
-## State changes
-logger.info("Device %s state: %s → %s", device_id, old_state, new_state)
+## State changes (structured logging)
+logger.info(
+    "Device state changed",
+    extra={
+        "device_id": device_id,
+        "old_state": old_state,
+        "new_state": new_state,
+    },
+)
 
-## Success
-logger.info("✓ Command sent successfully to %s", device_id)
+## Success (simple message)
+logger.info("✓ Command sent successfully")
 
-## Error with context
-logger.error("✗ Failed to send command to %s: %s", device_id, error_msg)
+## Success with context (structured logging)
+logger.info(
+    "✓ Command sent successfully",
+    extra={"device_id": device_id},
+)
 
-## Debug for protocol details
-logger.debug("Received packet: %s", packet.hex())
+## Error with context (structured logging)
+logger.error(
+    "✗ Failed to send command",
+    extra={
+        "device_id": device_id,
+        "error": error_msg,
+    },
+)
+
+## Exception logging (structured logging)
+logger.exception(
+    "✗ Failed to send command",
+    extra={
+        "device_id": device_id,
+        "error": str(e),
+        "error_type": type(e).__name__,
+    },
+)
+
+## Debug for protocol details (structured logging)
+logger.debug(
+    "Received packet",
+    extra={"packet_hex": packet.hex(), "packet_length": len(packet)},
+)
+
+## Formatted display values (include in both message and extra={})
+logger.debug(
+    "Queued packet type 0x%02x",
+    packet.packet_type,
+    extra={"packet_type": packet.packet_type},
+)
 ```
 
 ## Anti-Patterns

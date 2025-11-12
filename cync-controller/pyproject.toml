@@ -48,7 +48,7 @@ Issues = "https://github.com/jslamartina/hass-addons/issues"
 # Enable project-wide linting
 target-version = "py313"
 line-length = 120
-src = ["src"]
+# src = ["src"]  # Commented out to scan all Python files (respect-gitignore handles exclusions)
 extend-exclude = ["__pycache__"]
 force-exclude = true
 respect-gitignore = true

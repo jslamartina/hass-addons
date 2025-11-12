@@ -16,8 +16,6 @@ class CyncProtocolError(Exception):
     specific exception types for detailed handling.
     """
 
-    pass
-
 
 class PacketDecodeError(CyncProtocolError):
     """Packet cannot be decoded.

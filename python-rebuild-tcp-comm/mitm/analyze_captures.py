@@ -11,7 +11,7 @@ def analyze_jsonl_captures(jsonl_file: Path) -> dict:
     """Analyze JSONL packet capture file."""
     packets = []
 
-    with open(jsonl_file) as f:
+    with jsonl_file.open() as f:
         for line in f:
             if line.strip():
                 packets.append(json.loads(line))
@@ -59,7 +59,7 @@ def main():
     print("Phase 0.5 Deliverable Status")
     print(f"{'=' * 60}\n")
 
-    types_found = set(t for t, _ in analysis["packet_types"].keys())
+    types_found = {t for t, _ in analysis["packet_types"]}
 
     flows = {
         "Handshake (0x23→0x28)": ("23" in types_found and "28" in types_found),

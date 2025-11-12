@@ -92,6 +92,97 @@ class MockTCPServer:
         """Reject the next connection attempt."""
         self._should_accept_connection = False
 
+    async def _handle_connection_rejection(self, writer: asyncio.StreamWriter) -> bool:
+        """Handle connection rejection/disconnect modes. Returns True if connection handled."""
+        if self.response_mode == ResponseMode.REJECT or not self._should_accept_connection:
+            logger.info("Rejecting connection (mode: %s)", self.response_mode)
+            writer.close()
+            await writer.wait_closed()
+            self._should_accept_connection = True  # Reset for next connection
+            return True
+
+        if self.response_mode == ResponseMode.DISCONNECT:
+            logger.info("Accepting then disconnecting")
+            writer.close()
+            await writer.wait_closed()
+            return True
+
+        return False
+
+    async def _read_packet_header(
+        self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter
+    ) -> tuple[bytes, int, int] | None:
+        """Read and parse packet header. Returns (magic, version, payload_length) or None."""
+        header_length = 7  # magic (2) + version (1) + length (4)
+        header = await asyncio.wait_for(reader.read(header_length), timeout=2.0)
+        if len(header) < header_length:
+            logger.error("Incomplete header received: %d bytes", len(header))
+            writer.close()
+            await writer.wait_closed()
+            return None
+
+        magic = header[0:2]
+        version = header[2]
+        payload_length = int.from_bytes(header[3:7], "big")
+
+        logger.info(
+            "Received header: magic=%s, version=0x%02x, length=%d",
+            magic.hex(),
+            version,
+            payload_length,
+        )
+        return (magic, version, payload_length)
+
+    async def _read_packet_payload(
+        self,
+        reader: asyncio.StreamReader,
+        writer: asyncio.StreamWriter,
+        payload_length: int,
+    ) -> tuple[bytes, dict[str, Any]] | None:
+        """Read and parse packet payload. Returns (payload_bytes, payload_dict) or None."""
+        payload_bytes = await asyncio.wait_for(
+            reader.read(payload_length),
+            timeout=2.0,
+        )
+        if len(payload_bytes) < payload_length:
+            logger.error(
+                "Incomplete payload: expected %d, got %d",
+                payload_length,
+                len(payload_bytes),
+            )
+            writer.close()
+            await writer.wait_closed()
+            return None
+
+        try:
+            payload_dict = json.loads(payload_bytes.decode("utf-8"))
+            logger.info("Parsed payload: %s", payload_dict)
+        except json.JSONDecodeError:
+            logger.exception("Failed to parse JSON payload")
+            writer.close()
+            await writer.wait_closed()
+            return None
+
+        return (payload_bytes, payload_dict)
+
+    async def _send_response(self, writer: asyncio.StreamWriter) -> None:
+        """Send response based on response mode."""
+        if self.response_mode == ResponseMode.SUCCESS:
+            response = b"ACK"
+            writer.write(response)
+            await writer.drain()
+            logger.info("Sent ACK response")
+        elif self.response_mode == ResponseMode.DELAY:
+            logger.info("Delaying response by %.2fs", self.response_delay)
+            await asyncio.sleep(self.response_delay)
+            response = b"ACK"
+            writer.write(response)
+            await writer.drain()
+            logger.info("Sent delayed ACK response")
+        elif self.response_mode == ResponseMode.TIMEOUT:
+            logger.info("Timeout mode - not responding")
+            await asyncio.sleep(5.0)  # Long enough to trigger client timeout
+
     async def _handle_client(
         self,
         reader: asyncio.StreamReader,
@@ -102,67 +193,25 @@ class MockTCPServer:
         addr = writer.get_extra_info("peername")
         logger.info("Connection #%d from %s", self.connection_count, addr)
 
-        # REJECT mode: close immediately
-        if self.response_mode == ResponseMode.REJECT or not self._should_accept_connection:
-            logger.info("Rejecting connection (mode: %s)", self.response_mode)
-            writer.close()
-            await writer.wait_closed()
-            self._should_accept_connection = True  # Reset for next connection
-            return
-
-        # DISCONNECT mode: close after accepting
-        if self.response_mode == ResponseMode.DISCONNECT:
-            logger.info("Accepting then disconnecting")
-            writer.close()
-            await writer.wait_closed()
+        # Handle rejection/disconnect modes
+        if await self._handle_connection_rejection(writer):
             return
 
         try:
-            # Read packet header: magic (2) + version (1) + length (4)
-            header = await asyncio.wait_for(reader.read(7), timeout=2.0)
-            if len(header) < 7:
-                logger.error("Incomplete header received: %d bytes", len(header))
-                writer.close()
-                await writer.wait_closed()
+            # Read packet header
+            header_result = await self._read_packet_header(reader, writer)
+            if header_result is None:
                 return
+            magic, version, payload_length = header_result
 
-            magic = header[0:2]
-            version = header[2]
-            payload_length = int.from_bytes(header[3:7], "big")
-
-            logger.info(
-                "Received header: magic=%s, version=0x%02x, length=%d",
-                magic.hex(),
-                version,
-                payload_length,
-            )
-
-            # Read payload
-            payload_bytes = await asyncio.wait_for(
-                reader.read(payload_length),
-                timeout=2.0,
-            )
-            if len(payload_bytes) < payload_length:
-                logger.error(
-                    "Incomplete payload: expected %d, got %d",
-                    payload_length,
-                    len(payload_bytes),
-                )
-                writer.close()
-                await writer.wait_closed()
+            # Read packet payload
+            payload_result = await self._read_packet_payload(reader, writer, payload_length)
+            if payload_result is None:
                 return
-
-            # Parse JSON payload
-            try:
-                payload_dict = json.loads(payload_bytes.decode("utf-8"))
-                logger.info("Parsed payload: %s", payload_dict)
-            except json.JSONDecodeError as e:
-                logger.error("Failed to parse JSON payload: %s", e)
-                writer.close()
-                await writer.wait_closed()
-                return
+            payload_bytes, payload_dict = payload_result
 
             # Store received packet
+            header = magic + bytes([version]) + payload_length.to_bytes(4, "big")
             packet = ReceivedPacket(
                 magic=magic,
                 version=version,
@@ -172,32 +221,13 @@ class MockTCPServer:
             )
             self.received_packets.append(packet)
 
-            # Handle response based on mode
-            if self.response_mode == ResponseMode.SUCCESS:
-                # Immediate ACK response
-                response = b"ACK"
-                writer.write(response)
-                await writer.drain()
-                logger.info("Sent ACK response")
+            # Send response based on mode
+            await self._send_response(writer)
 
-            elif self.response_mode == ResponseMode.DELAY:
-                # Delayed response
-                logger.info("Delaying response by %.2fs", self.response_delay)
-                await asyncio.sleep(self.response_delay)
-                response = b"ACK"
-                writer.write(response)
-                await writer.drain()
-                logger.info("Sent delayed ACK response")
-
-            elif self.response_mode == ResponseMode.TIMEOUT:
-                # Never respond - just wait
-                logger.info("Timeout mode - not responding")
-                await asyncio.sleep(5.0)  # Long enough to trigger client timeout
-
-        except asyncio.TimeoutError:
+        except TimeoutError:
             logger.warning("Timeout reading from client")
-        except Exception as e:
-            logger.error("Error handling client: %s", e)
+        except Exception:
+            logger.exception("Error handling client")
         finally:
             try:
                 writer.close()
@@ -207,7 +237,7 @@ class MockTCPServer:
 
 
 @pytest.fixture
-async def mock_tcp_server() -> AsyncGenerator[MockTCPServer, None]:
+async def mock_tcp_server() -> AsyncGenerator[MockTCPServer]:
     """Fixture providing a mock TCP server."""
     server = MockTCPServer()
     await server.start()
@@ -216,7 +246,7 @@ async def mock_tcp_server() -> AsyncGenerator[MockTCPServer, None]:
 
 
 @pytest.fixture
-async def mock_tcp_server_with_delay() -> AsyncGenerator[MockTCPServer, None]:
+async def mock_tcp_server_with_delay() -> AsyncGenerator[MockTCPServer]:
     """Fixture providing a mock TCP server with delayed responses."""
     server = MockTCPServer(response_mode=ResponseMode.DELAY, response_delay=2.0)
     await server.start()
@@ -225,7 +255,7 @@ async def mock_tcp_server_with_delay() -> AsyncGenerator[MockTCPServer, None]:
 
 
 @pytest.fixture
-async def mock_tcp_server_timeout() -> AsyncGenerator[MockTCPServer, None]:
+async def mock_tcp_server_timeout() -> AsyncGenerator[MockTCPServer]:
     """Fixture providing a mock TCP server that never responds."""
     server = MockTCPServer(response_mode=ResponseMode.TIMEOUT)
     await server.start()
@@ -265,7 +295,7 @@ def performance_tracker() -> PerformanceTracker:
     return PerformanceTracker()
 
 
-def pytest_terminal_summary(terminalreporter: Any, exitstatus: int, config: Any) -> None:
+def pytest_terminal_summary(terminalreporter: Any, exitstatus: int, config: Any) -> None:  # noqa: ARG001
     """Hook to display performance report at end of test session."""
     # Get the performance tracker from the session
     tracker = config._performance_tracker if hasattr(config, "_performance_tracker") else None
