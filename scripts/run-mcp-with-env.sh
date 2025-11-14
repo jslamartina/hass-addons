@@ -1,8 +1,9 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # MCP Server Environment Wrapper
 # This script loads secrets from .mcp-secrets.env and runs MCP servers
 
-set -euo pipefail
+set -Eeuo pipefail
+IFS=$'\n\t'
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/shell-common/common-output.sh"
