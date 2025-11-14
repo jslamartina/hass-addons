@@ -61,7 +61,7 @@ Content starts here.
 
 #### MD003 - Heading Style
 
-Use consistent heading style throughout the document. **ATX style** uses `#` symbols (e.g., `# Header`, `## Header`), while **setext style** uses underlines (e.g., `Header\n---` for h2, `Header\n===` for h1). Default is atx style.
+Use consistent heading style throughout the document. **ATX style** uses `#` symbols (for example, `# Header`, `## Header`), while **setext style** uses underlines (for example, `Header\n---` for h2, `Header\n===` for h1). Default is atx style.
 
 **Note**: This rule is **disabled** in this project (`MD003: false`) to allow mixing styles if needed. However, the default behavior is documented here for reference.
 
@@ -107,7 +107,7 @@ More text
 
 #### MD024 - Duplicate Headings
 
-Duplicate headings should be avoided, but this project allows duplicates if they're siblings. **Siblings** are headings at the same level in different parent sections (e.g., two `## Section A` headings under different parent sections).
+Duplicate headings should be avoided, but this project allows duplicates if they're siblings. **Siblings** are headings at the same level in different parent sections (for example, two `## Section A` headings under different parent sections).
 
 This project configures: `"MD024": { "siblings_only": true }`
 
@@ -155,7 +155,7 @@ Document should have only one top-level heading.
 
 #### MD026 - Trailing Punctuation
 
-Headings should not end with punctuation (default: `.,;:!。，；：！`).
+Headings shouldn't end with punctuation (default: `.,;:!。，；：！`).
 
 **Correct:**
 
@@ -419,7 +419,7 @@ No empty links.
 
 #### MD051 - Link Fragments
 
-**Link fragments** (also called anchors) are the `#section-name` part of URLs that link to headings within the document (e.g., `[Link](#section-name)`). They should be properly formatted.
+**Link fragments** (also called anchors) are the `#section-name` part of URLs that link to headings within the document (for example, `[Link](#section-name)`). They should be properly formatted.
 
 **Note**: This rule is **disabled** in this project (`MD051: false`) for flexibility with internal links and anchors. However, the default behavior is documented here for reference.
 
@@ -441,7 +441,7 @@ No empty links.
 
 #### MD009 - Trailing Spaces
 
-Lines should not end with whitespace. **Trailing spaces** are spaces at the end of a line after the last visible character. They are invisible in rendered markdown but can be detected by markdownlint.
+Lines shouldn't end with whitespace. **Trailing spaces** are spaces at the end of a line after the last visible character. They are invisible in rendered markdown but can be detected by markdownlint.
 
 **Correct:**
 
@@ -532,7 +532,7 @@ Content here
 
 #### MD036 - Emphasis as Heading
 
-Emphasis (bold/italic) should not be used instead of headings. For example, using `**Bold Text**` as a section header instead of `## Bold Text`.
+Emphasis (bold/italic) shouldn't be used instead of headings. For example, using `**Bold Text**` as a section header instead of `## Bold Text`.
 
 **Correct:**
 
@@ -585,7 +585,7 @@ This project uses custom markdownlint configuration (`.markdownlint.json`):
 
 **Why these overrides?**
 
-- **MD013 (line length)**: Disabled to allow longer lines when needed (e.g., URLs, code examples, tables)
+- **MD013 (line length)**: Disabled to allow longer lines when needed (for example, URLs, code examples, tables)
 - **MD024 (duplicate headings)**: Set to `siblings_only: true` to allow duplicate headings in different sections
 - **MD051 (link fragments)**: Disabled for flexibility with internal links and anchors
 - **MD003 (heading style)**: Disabled to allow mixing atx and setext styles if needed
@@ -603,9 +603,9 @@ This project uses custom markdownlint configuration (`.markdownlint.json`):
 7. Bare URLs without angle brackets or link formatting
 8. Malformed link fragments (spaces in anchors like `#section name`)
 
-### Auto-Fixing
+### Auto fixing
 
-Run markdownlint with auto-fix:
+Run markdownlint with auto fix:
 
 ```bash
 npm run lint:markdown:fix

@@ -3,9 +3,9 @@ alwaysApply: true
 description: Optimized rules prefix with 4-tier hierarchy
 ---
 
-===============================================================================
-TIER 0: INSTANT RECOGNITION
-===============================================================================
+# CRITICAL RULES
+
+## TIER 0: INSTANT RECOGNITION
 
 **Context**: hass-addons (parent) + python-rebuild-tcp-comm (child)
 **Inheritance**: See `inheritance-model.mdc` for parent-child precedence rules
@@ -13,7 +13,7 @@ TIER 0: INSTANT RECOGNITION
 
 **Top Anti-Patterns - Quick Check**:
 
-- ❌ **TOUCHING ANY IGNORE FILE?** → **ABSOLUTELY FORBIDDEN** (Rule 14: NEVER modify ignore files)
+- ❌ **TOUCHING ANY IGNORE FILES OR SETTINGS?** → **ABSOLUTELY FORBIDDEN** (Rule 14: NEVER modify ignore files OR settings)
 - ❌ Using built-in web_search? → Wrong (Rule 11: use Brave Search MCP)
 - ❌ Tool returns error/500/timeout? → STOP (Rule 1: report to user, don't continue)
 - ❌ Creating/editing code without entry/exit logs? → Wrong (Rule 4: Logging-First)
@@ -31,13 +31,14 @@ TIER 0: INSTANT RECOGNITION
 
 ---
 
-TIER 1: ALWAYS APPLY - EXECUTIVE RULES
+## TIER 1: ALWAYS APPLY - EXECUTIVE RULES
 
 **14 CRITICAL RULES (Must Follow)**:
 
 0. **NEVER TOUCH IGNORE FILES**: **ABSOLUTELY FORBIDDEN** to modify, create, or edit ANY ignore file (`.gitignore`, `.markdownlintignore`, `.markdownlint-cli2.jsonc`, `.prettierignore`, `.eslintignore`, `.dockerignore`, or ANY file with "ignore" in the name). If linting errors exist in ignored directories/files, FIX THE ERRORS, NOT THE IGNORE FILES. Ask user before even considering touching ignore files.
 
-1. **Development Loop**: Edit → Rebuild → Verify with Unit Tests and `npm run lint`. STOP if: env error, broken tooling, tool returns error/500/timeout, stale docs, misunderstood requirement. **DON'T WORK AROUND ISSUES** - raise to user immediately.
+1. **Development Loop**: Plan → Edit → Rebuild → Verify with Unit Tests and `npm run lint`. STOP if: env error, broken tooling, tool returns error/500/timeout, stale docs, misunderstood requirement. **DON'T WORK AROUND ISSUES** - raise to user immediately.
+   - **Key Strategy**: _**AGGRESIVELY**_ ground your Plans and Proposals with the Brave Web Search and Brave AI Grounding tools. See [Brave AI Grounding](/.cursor/rules/brave-ai-grounding-cli.mdc) and [](/.cursor/rules/web-search-brave.mdc) for full details.
 
 2. **Todo Discipline**: WHEN task has 3+ steps → create todos, keep 1 in_progress, update after each step.
 
@@ -98,7 +99,7 @@ TIER 1: ALWAYS APPLY - EXECUTIVE RULES
 
 ---
 
-TIER 2: PROJECT-SPECIFIC CRITICAL RULES
+## TIER 2: PROJECT-SPECIFIC CRITICAL RULES
 
 **HASS-ADDONS Project** (when in /workspaces/hass-addons):
 
@@ -126,9 +127,9 @@ TIER 2: PROJECT-SPECIFIC CRITICAL RULES
 
 ---
 
-TIER 3: AVAILABLE REFERENCES (On Demand)
+## TIER 3: AVAILABLE REFERENCES (On Demand)
 
-## Available via agent_requestable_workspace_rules - reference as needed
+### Available via agent_requestable_workspace_rules - reference as needed
 
 **Critical Guardrails**:
 
@@ -184,5 +185,3 @@ TIER 3: AVAILABLE REFERENCES (On Demand)
 - shell-scripting.mdc: Shell script standards
 - mqtt-integration.mdc: MQTT discovery patterns
 - debugging-with-logs.mdc: Debugging and log inspection techniques
-
-===============================================================================

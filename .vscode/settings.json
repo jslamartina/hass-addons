@@ -1,5 +1,19 @@
 {
   "python.defaultInterpreterPath": "/usr/local/python/current/bin/python3",
   "prettier.prettierPath": "./node_modules/prettier",
-  "deno.enable": false
+  "deno.enable": false,
+  "cursorpyright.analysis.typeCheckingMode": "strict",
+  "cursorpyright.analysis.useLibraryCodeForTypes": true,
+  "cursorpyright.analysis.autoImportCompletions": true,
+  "cursorpyright.analysis.diagnosticSeverityOverrides": {
+    "reportUntypedFunctionDecorator": "error",
+    "reportUntypedClassDecorator": "error",
+    "reportUntypedBaseClass": "error",
+    "reportUntypedNamedTuple": "error",
+    "reportPrivateUsage": "warning",
+    "reportConstantRedefinition": "error",
+    "reportIncompatibleMethodOverride": "error",
+    "reportIncompatibleVariableOverride": "error",
+    "reportImplicitStringConcatenation": "none"
+  }
 }

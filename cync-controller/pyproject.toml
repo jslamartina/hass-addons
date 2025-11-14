@@ -49,7 +49,7 @@ Issues = "https://github.com/jslamartina/hass-addons/issues"
 target-version = "py313"
 line-length = 120
 # src = ["src"]  # Commented out to scan all Python files (respect-gitignore handles exclusions)
-extend-exclude = ["__pycache__"]
+extend-exclude = ["__pycache__", ".venv"]
 force-exclude = true
 respect-gitignore = true
 

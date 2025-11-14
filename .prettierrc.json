@@ -1,11 +1,3 @@
 {
-  "plugins": ["prettier-plugin-sh"],
-  "overrides": [
-    {
-      "files": "*.mdc",
-      "options": {
-        "parser": "markdown"
-      }
-    }
-  ]
+  "plugins": ["prettier-plugin-sh"]
 }

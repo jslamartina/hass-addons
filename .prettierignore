@@ -10,3 +10,6 @@ docs/archive/
 .vale/
 .venv/
 htmlcov/
+
+# Python files - formatted by Ruff
+**/*.py

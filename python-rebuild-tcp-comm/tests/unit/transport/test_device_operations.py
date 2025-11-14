@@ -454,7 +454,7 @@ class TestDeviceOperationsErrorPaths:
         invalid_device_id = bytes([0x39, 0x87, 0xC8])  # Only 3 bytes, should be 4
 
         # Execute & Assert
-        with pytest.raises(ValueError) as exc_info:
+        with pytest.raises(ValueError, match="must be 4 bytes") as exc_info:
             await device_ops.request_device_info(invalid_device_id)
 
         assert "must be 4 bytes" in str(exc_info.value)
@@ -511,10 +511,10 @@ class TestDeviceOperationsErrorPaths:
     async def test_request_device_info_empty_device_id(self, device_ops):
         """Test that empty device_id raises ValueError."""
         # Setup - empty device_id
-        empty_device_id = bytes()
+        empty_device_id = b""
 
         # Execute & Assert
-        with pytest.raises(ValueError) as exc_info:
+        with pytest.raises(ValueError, match="cannot be empty") as exc_info:
             await device_ops.request_device_info(empty_device_id)
 
         assert "cannot be empty" in str(exc_info.value)
@@ -527,7 +527,7 @@ class TestDeviceOperationsErrorPaths:
         negative_timeout = -1.0
 
         # Execute & Assert
-        with pytest.raises(ValueError) as exc_info:
+        with pytest.raises(ValueError, match="must be positive") as exc_info:
             await device_ops.request_device_info(device_id, timeout=negative_timeout)
 
         assert "must be positive" in str(exc_info.value)
@@ -540,7 +540,7 @@ class TestDeviceOperationsErrorPaths:
         zero_timeout = 0.0
 
         # Execute & Assert
-        with pytest.raises(ValueError) as exc_info:
+        with pytest.raises(ValueError, match="must be positive") as exc_info:
             await device_ops.request_device_info(device_id, timeout=zero_timeout)
 
         assert "must be positive" in str(exc_info.value)
@@ -601,9 +601,7 @@ class TestDeviceOperationsErrorPaths:
         mock_transport.send_reliable.return_value = MockSendResult(success=True)
 
         # Mock wrong packet type (0x83 instead of 0x43)
-        wrong_packet = MockCyncPacket(
-            packet_type=0x83, payload=bytes(DEVICE_TYPE_LENGTH)
-        )
+        wrong_packet = MockCyncPacket(packet_type=0x83, payload=bytes(DEVICE_TYPE_LENGTH))
         tracked_packet = MockTrackedPacket(wrong_packet)
 
         # Return wrong packet, then timeout
@@ -614,7 +612,8 @@ class TestDeviceOperationsErrorPaths:
 
         # Assert - should return None due to timeout
         assert device_info is None
-        assert mock_transport.recv_reliable.call_count >= 2  # At least wrong packet + timeout
+        min_call_count = 2  # At least wrong packet + timeout
+        assert mock_transport.recv_reliable.call_count >= min_call_count
 
     @pytest.mark.asyncio
     async def test_request_device_info_connection_error_exception(self, device_ops, mock_transport):
@@ -647,13 +646,12 @@ class TestDeviceOperationsCache:
                 device_id = bytes([0x39, 0x87, 0xC8, i])
                 device_struct = device_id + bytes([0] * 20)  # 24 bytes total
                 correlation_id = str(uuid.uuid4())
-                device_info = await device_ops._parse_device_struct(
-                    device_struct, correlation_id=correlation_id
-                )
+                await device_ops._parse_device_struct(device_struct, correlation_id=correlation_id)
                 device_ids.append(device_id.hex())
 
             # First 3 should be in cache
-            assert len(device_ops.device_cache) == 3
+            expected_cache_size = 3
+            assert len(device_ops.device_cache) == expected_cache_size
             # First device should be evicted (oldest)
             assert device_ids[0] not in device_ops.device_cache
             # Last 3 devices should be in cache
@@ -682,7 +680,8 @@ class TestDeviceOperationsCache:
             await device_ops._parse_device_struct(device_struct2, correlation_id=str(uuid.uuid4()))
 
             # Both should be in cache
-            assert len(device_ops.device_cache) == 2
+            expected_cache_size = 2
+            assert len(device_ops.device_cache) == expected_cache_size
 
             # Access first device through _add_to_cache (should move to end via move_to_end)
             device_info1 = device_ops.device_cache[device_id1.hex()]

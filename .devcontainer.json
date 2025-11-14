@@ -50,20 +50,19 @@
   "customizations": {
     "vscode": {
       "extensions": [
-        "timonwong.shellcheck",
-        "esbenp.prettier-vscode",
         "ms-python.python",
-        "ms-python.vscode-pylance",
+        "anysphere.cursorpyright",
         "charliermarsh.ruff",
         "redhat.vscode-yaml",
         "ms-azuretools.vscode-docker",
-        "cnshenj.vscode-task-manager",
-        "docker.docker",
         "ms-azuretools.vscode-containers",
         "ms-playwright.playwright",
         "github.vscode-github-actions",
-        "DavidAnson.vscode-markdownlint",
-        "bierner.markdown-mermaid"
+        "timonwong.shellcheck",
+        "esbenp.prettier-vscode",
+        "bierner.markdown-mermaid",
+        "dbaeumer.vscode-eslint",
+        "vale.valeCLI"
       ],
       "settings": {
         "terminal.integrated.scrollback": 10000,
@@ -90,24 +89,18 @@
             "source.organizeImports": "explicit"
           }
         },
-        "[markdown]": {
-          "editor.defaultFormatter": "yzhang.markdown-all-in-one"
-        },
-        "[markdown-math]": {
-          "editor.defaultFormatter": "yzhang.markdown-all-in-one"
-        },
-        "[markdown_latex_combined]": {
-          "editor.defaultFormatter": "yzhang.markdown-all-in-one"
-        },
         "prettier.prettierPath": "${containerWorkspaceFolder}/node_modules/prettier",
         "prettier.requireConfig": false,
         "prettier.documentSelectors": ["**/*.sh"],
         "prettier.enable": true,
         "python.defaultInterpreterPath": "/usr/local/python/current/bin/python",
-        "python.analysis.extraPaths": ["${containerWorkspaceFolder}"],
-        "python.analysis.typeCheckingMode": "basic",
         "python.linting.enabled": true,
-        "python.linting.pylintEnabled": false
+        "python.linting.pylintEnabled": false,
+        "cursorpyright.analysis.typeCheckingMode": "strict",
+        "cursorpyright.analysis.useLibraryCodeForTypes": true,
+        "cursorpyright.analysis.autoImportCompletions": true,
+        "vale.valeCLI.config": "/workspaces/hass-addons/.vale.ini",
+        "vale.valeCLI.path": "/usr/local/bin/vale"
       }
     }
   }

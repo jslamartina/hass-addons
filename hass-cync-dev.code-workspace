@@ -7,8 +7,6 @@
   ],
   "settings": {
     "editor.formatOnSave": false,
-
-    // Formatters
     "[python]": {
       "editor.defaultFormatter": "charliermarsh.ruff",
       "editor.codeActionsOnSave": {
@@ -17,35 +15,35 @@
       },
     },
     "[shellscript]": { "editor.defaultFormatter": "esbenp.prettier-vscode" },
-    "[markdown]": { "editor.defaultFormatter": "yzhang.markdown-all-in-one" },
-    "[markdown-math]": {
-      "editor.defaultFormatter": "yzhang.markdown-all-in-one",
-    },
-    "[markdown_latex_combined]": {
-      "editor.defaultFormatter": "yzhang.markdown-all-in-one",
-    },
-
-    // VS Code/Cursor housekeeping
     "files.exclude": {
       "**/node_modules": true,
       "**/__pycache__": true,
       "**/.pytest_cache": true,
-      "**/.mypy_cache": true,
       "**/.git": false,
     },
     "search.exclude": {
       "**/node_modules": true,
       "**/__pycache__": true,
       "**/.pytest_cache": true,
-      "**/.mypy_cache": true,
     },
-
-    // Terminal
     "terminal.integrated.allowChords": false,
     "terminal.integrated.sendKeybindingsToShell": true,
     "terminal.integrated.scrollback": 10000,
-
-    // Tasks: Allow automatic tasks to run on folder open
     "task.allowAutomaticTasks": "on",
+    "markdownlint.config": {
+      "default": true,
+      "MD013": false,
+      "MD024": {
+        "siblings_only": true,
+      },
+      "MD051": false,
+    },
+    "ruff.lint.extendSelect": ["ALL"],
+    "ruff.lint.enable": true,
+    "ruff.lint.select": ["ALL"],
+    "ruff.nativeServer": "on",
+    "prettier.documentSelectors": ["**/*.sh"],
+    "prettier.prettierPath": "/workspaces/hass-addons/node_modules/prettier",
+    "prettier.requireConfig": true,
   },
 }

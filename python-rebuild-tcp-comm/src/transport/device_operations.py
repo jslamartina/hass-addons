@@ -23,6 +23,7 @@ from typing import TYPE_CHECKING, Protocol
 
 from uuid_extensions import uuid7  # type: ignore[import-untyped]
 
+from metrics import registry
 from protocol import PACKET_TYPE_DEVICE_INFO, PACKET_TYPE_STATUS_BROADCAST
 from protocol.packet_types import PACKET_TYPE_DATA_ACK
 
@@ -84,9 +85,6 @@ def record_metric(metric_name: str, **labels: str) -> None:
     Note: Phase 1b implementation - metrics registry is available and functional.
     DeviceOperations operates on multiple devices, so device_id defaults to "unknown" if not provided.
     """
-    # Import here to avoid circular dependencies
-    from metrics import registry
-
     # Extract device_id from labels or use default
     device_id = labels.get("device_id", "unknown")
     outcome = labels.get("outcome", "unknown")
@@ -408,8 +406,6 @@ class DeviceOperations:
         )
 
         # METRIC: tcp_comm_mesh_info_collection_duration_seconds
-        from metrics import registry
-
         registry.record_mesh_info_collection_duration(collection_duration)
 
         return responses
@@ -724,8 +720,6 @@ class DeviceOperations:
                     )
 
                     # METRIC: tcp_comm_device_info_request_latency_seconds
-                    from metrics import registry
-
                     registry.record_device_info_request_latency(device_id.hex(), latency_seconds)
 
                     return device_info

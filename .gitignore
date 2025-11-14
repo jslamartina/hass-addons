@@ -224,6 +224,3 @@ working-files/**
 **/__pycache__/
 .mypy_cache/
 .pytest_cache/
-
-# Vale prose linter
-.vale/

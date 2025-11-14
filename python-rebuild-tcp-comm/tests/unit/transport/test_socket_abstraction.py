@@ -46,7 +46,7 @@ async def test_connect_timeout(tcp_connection):
     """Test connection timeout."""
     with patch("asyncio.open_connection") as mock_open:
         # Simulate timeout by making open_connection hang
-        async def slow_connect(*args, **kwargs):
+        async def slow_connect(*_args, **_kwargs):
             await asyncio.sleep(1.0)  # Longer than timeout
             return (AsyncMock(), AsyncMock())
 
@@ -160,7 +160,7 @@ async def test_recv_timeout(tcp_connection):
     """Test receive timeout."""
     mock_reader = AsyncMock()
 
-    async def slow_read(*args, **kwargs):
+    async def slow_read(*_args, **_kwargs):
         await asyncio.sleep(1.0)  # Longer than timeout
         return b"data"
 

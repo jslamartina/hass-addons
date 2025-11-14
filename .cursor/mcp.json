@@ -13,24 +13,6 @@
         "/usr/local/bin/python3"
       ]
     },
-    "python-local": {
-      "command": "uv",
-      "args": [
-        "run",
-        "--with",
-        "mcp-python-interpreter",
-        "mcp-python-interpreter"
-      ]
-    },
-    "sequential-thinking": {
-      "command": "uv",
-      "args": [
-        "run",
-        "--with",
-        "mcp-sequential-thinking-server",
-        "mcp-sequential-thinking-server"
-      ]
-    },
     "brave-search": {
       "command": "/workspaces/hass-addons/scripts/start-brave-search-mcp.sh",
       "args": []

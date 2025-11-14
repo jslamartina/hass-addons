@@ -22,14 +22,12 @@ sudo tee "${VSCODE_CONFIG_DIR}/settings.json" > /dev/null << EOF
   "files.exclude": {
     "**/node_modules": true,
     "**/__pycache__": true,
-    "**/.pytest_cache": true,
-    "**/.mypy_cache": true
+    "**/.pytest_cache": true
   },
   "search.exclude": {
     "**/node_modules": true,
     "**/__pycache__": true,
-    "**/.pytest_cache": true,
-    "**/.mypy_cache": true
+    "**/.pytest_cache": true
   },
   "editor.formatOnSave": true,
   "editor.codeActionsOnSave": {

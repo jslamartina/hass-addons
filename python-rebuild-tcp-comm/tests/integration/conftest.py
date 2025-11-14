@@ -298,7 +298,10 @@ def performance_tracker() -> PerformanceTracker:
 def pytest_terminal_summary(terminalreporter: Any, exitstatus: int, config: Any) -> None:  # noqa: ARG001
     """Hook to display performance report at end of test session."""
     # Get the performance tracker from the session
-    tracker = config._performance_tracker if hasattr(config, "_performance_tracker") else None
+    tracker = config._performance_tcker if hasattr(config, "_performance_tracker") else None
+
+
+
 
     if tracker is None or not tracker.samples:
         return

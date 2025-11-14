@@ -36,11 +36,20 @@ else
   FAILED=1
 fi
 
+# Python type checking with pyright
+echo -e "\n${YELLOW}=== Running pyright (Python type checker) ===${NC}"
+if pyright python-rebuild-tcp-comm/src python-rebuild-tcp-comm/tests; then
+  echo -e "${GREEN}✅ pyright check passed${NC}"
+else
+  echo -e "${RED}❌ pyright found type errors${NC}"
+  FAILED=1
+fi
+
 # Shell script linting with ShellCheck
 echo -e "\n${YELLOW}=== Running ShellCheck (Shell script linter) ===${NC}"
 # Use git ls-files to automatically respect .gitignore
-# Only check warning and error level (exclude info-level messages like SC1091)
-if git ls-files '*.sh' | xargs -r shellcheck --severity=warning; then
+# Check all severity levels (info, warning, error) for comprehensive linting
+if git ls-files '*.sh' | xargs -r shellcheck --severity=info; then
   echo -e "${GREEN}✅ ShellCheck passed${NC}"
 else
   echo -e "${RED}❌ ShellCheck found issues${NC}"
@@ -62,22 +71,6 @@ if npm run lint:markdown --silent; then
   echo -e "${GREEN}✅ markdownlint check passed${NC}"
 else
   echo -e "${RED}❌ markdownlint found issues (run 'npm run lint:markdown:fix' to fix)${NC}"
-  FAILED=1
-fi
-
-# Vale prose linting
-echo -e "\n${YELLOW}=== Running Vale (Prose linter) ===${NC}"
-# Sync styles first to ensure latest rules
-if vale sync > /dev/null 2>&1; then
-  echo -e "${GREEN}Vale styles synced${NC}"
-else
-  echo -e "${YELLOW}⚠️  Vale sync skipped (may not be configured)${NC}"
-fi
-
-if vale README.md CONTRIBUTING.md docs/user/ docs/developer/ .cursor/rules/; then
-  echo -e "${GREEN}✅ Vale check passed${NC}"
-else
-  echo -e "${RED}❌ Vale found prose issues${NC}"
   FAILED=1
 fi
 

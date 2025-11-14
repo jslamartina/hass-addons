@@ -166,7 +166,9 @@ def test_notify_observers_connection_closed(proxy: MITMProxy, mock_observer: Mag
 
 @patch("sys.stderr")
 def test_observer_exception_doesnt_break_proxy(
-    mock_stderr: MagicMock, proxy: MITMProxy, mock_observer: MagicMock
+    _mock_stderr: MagicMock,  # noqa: PT019
+    proxy: MITMProxy,
+    mock_observer: MagicMock,
 ) -> None:
     """Test that observer failures don't break proxy operation."""
     # Make first observer raise exception

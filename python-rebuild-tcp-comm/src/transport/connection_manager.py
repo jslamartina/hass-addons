@@ -265,6 +265,174 @@ class ConnectionManager:
         else:
             return True
 
+    def _handle_network_error(
+        self, error: Exception, attempt: int, max_retries: int, _device_id: str
+    ) -> None:
+        """Handle network errors during handshake (retryable).
+
+        Args:
+            error: The network error that occurred
+            attempt: Current attempt number (0-indexed)
+            max_retries: Maximum number of retries
+            device_id: Device identifier for logging
+        """
+        logger.exception(
+            "Handshake error on attempt %d/%d",
+            attempt + 1,
+            max_retries,
+            extra={
+                "attempt": attempt + 1,
+                "max_retries": max_retries,
+                "error": str(error),
+                "error_type": type(error).__name__,
+            },
+        )
+        if self.pending_requests:
+            self.pending_requests.popleft()  # Remove pending on error
+
+    def _handle_handshake_error(
+        self, error: HandshakeError, attempt: int, max_retries: int, _device_id: str
+    ) -> bool:
+        """Handle handshake errors during connection (may be retryable).
+
+        Args:
+            error: The handshake error that occurred
+            attempt: Current attempt number (0-indexed)
+            max_retries: Maximum number of retries
+            device_id: Device identifier for logging
+
+        Returns:
+            True if error should be re-raised (non-retryable), False otherwise
+        """
+        # Auth failures are not retryable
+        if hasattr(error, "reason") and "auth" in error.reason.lower():
+            logger.exception(
+                "Handshake auth failure on attempt %d/%d",
+                attempt + 1,
+                max_retries,
+                extra={
+                    "attempt": attempt + 1,
+                    "max_retries": max_retries,
+                    "error": str(error),
+                    "error_type": type(error).__name__,
+                    "reason": error.reason,
+                },
+            )
+            if self.pending_requests:
+                self.pending_requests.popleft()
+            return True  # Re-raise auth failures
+
+        # Other protocol errors - retryable
+        logger.exception(
+            "Handshake protocol error on attempt %d/%d",
+            attempt + 1,
+            max_retries,
+            extra={
+                "attempt": attempt + 1,
+                "max_retries": max_retries,
+                "error": str(error),
+                "error_type": type(error).__name__,
+                "reason": error.reason if hasattr(error, "reason") else None,
+            },
+        )
+        if self.pending_requests:
+            self.pending_requests.popleft()  # Remove pending on error
+        return False  # Don't re-raise, allow retry
+
+    def _handle_protocol_error(
+        self, error: CyncProtocolError, attempt: int, max_retries: int, _device_id: str
+    ) -> None:
+        """Handle protocol errors during handshake (retryable).
+
+        Args:
+            error: The protocol error that occurred
+            attempt: Current attempt number (0-indexed)
+            max_retries: Maximum number of retries
+            device_id: Device identifier for logging
+        """
+        logger.exception(
+            "Handshake protocol error on attempt %d/%d",
+            attempt + 1,
+            max_retries,
+            extra={
+                "attempt": attempt + 1,
+                "max_retries": max_retries,
+                "error": str(error),
+                "error_type": type(error).__name__,
+            },
+        )
+        if self.pending_requests:
+            self.pending_requests.popleft()  # Remove pending on error
+
+    def _handle_unexpected_error(
+        self, error: Exception, attempt: int, max_retries: int, _device_id: str
+    ) -> None:
+        """Handle unexpected errors during handshake (non-retryable).
+
+        Args:
+            error: The unexpected error that occurred
+            attempt: Current attempt number (0-indexed)
+            max_retries: Maximum number of retries
+            device_id: Device identifier for logging
+        """
+        logger.exception(
+            "Unexpected handshake error on attempt %d/%d",
+            attempt + 1,
+            max_retries,
+            extra={
+                "attempt": attempt + 1,
+                "max_retries": max_retries,
+                "error": str(error),
+                "error_type": type(error).__name__,
+            },
+        )
+        if self.pending_requests:
+            self.pending_requests.popleft()  # Remove pending on error
+
+    async def _attempt_connection_with_retry(self, device_id: str, max_retries: int) -> bool:
+        """Attempt connection with retry logic.
+
+        Args:
+            device_id: Device identifier for logging
+            max_retries: Maximum number of retries
+
+        Returns:
+            True if connection successful, False otherwise
+        """
+        for attempt in range(max_retries):
+            try:
+                if await self._attempt_handshake(attempt, max_retries):
+                    logger.info(
+                        "✓ Connection handshake successful",
+                        extra={"endpoint": device_id},
+                    )
+                    return True
+            except (OSError, ConnectionError, TimeoutError) as e:
+                # Network errors - always retryable
+                self._handle_network_error(e, attempt, max_retries, device_id)
+            except HandshakeError as e:
+                # Protocol errors - check if retryable
+                if self._handle_handshake_error(e, attempt, max_retries, device_id):
+                    raise  # Don't retry auth failures
+            except CyncProtocolError as e:
+                # Other protocol errors - retryable
+                self._handle_protocol_error(e, attempt, max_retries, device_id)
+            except Exception as e:
+                # Unexpected errors - re-raise
+                self._handle_unexpected_error(e, attempt, max_retries, device_id)
+                raise  # Re-raise unexpected errors to preserve exception context
+
+            # Retry with exponential backoff
+            if attempt < max_retries - 1:
+                delay = self.retry_policy.get_delay(attempt)
+                logger.debug(
+                    "Retrying handshake",
+                    extra={"delay": delay, "attempt": attempt + 1},
+                )
+                await asyncio.sleep(delay)
+
+        return False
+
     async def connect(self, endpoint: bytes, auth_code: bytes) -> bool:
         """Perform handshake using raw TCP (bypass ReliableTransport).
 
@@ -296,103 +464,8 @@ class ConnectionManager:
             registry.record_connection_state(device_id, self.state.value)
 
         max_retries = 3
-        for attempt in range(max_retries):
-            try:
-                if await self._attempt_handshake(attempt, max_retries):
-                    logger.info(
-                        "✓ Connection handshake successful",
-                        extra={"endpoint": device_id},
-                    )
-                    return True
-            except (OSError, ConnectionError, TimeoutError) as e:
-                # Network errors - always retryable
-                logger.exception(
-                    "Handshake error on attempt %d/%d",
-                    attempt + 1,
-                    max_retries,
-                    extra={
-                        "attempt": attempt + 1,
-                        "max_retries": max_retries,
-                        "error": str(e),
-                        "error_type": type(e).__name__,
-                    },
-                )
-                if self.pending_requests:
-                    self.pending_requests.popleft()  # Remove pending on error
-            except HandshakeError as e:
-                # Protocol errors - check if retryable
-                # Auth failures and other non-retryable errors should not be retried
-                if hasattr(e, "reason") and "auth" in e.reason.lower():
-                    # Auth failures are not retryable
-                    logger.exception(
-                        "Handshake auth failure on attempt %d/%d",
-                        attempt + 1,
-                        max_retries,
-                        extra={
-                            "attempt": attempt + 1,
-                            "max_retries": max_retries,
-                            "error": str(e),
-                            "error_type": type(e).__name__,
-                            "reason": e.reason,
-                        },
-                    )
-                    if self.pending_requests:
-                        self.pending_requests.popleft()
-                    raise  # Don't retry auth failures
-                # Other protocol errors - retryable
-                logger.exception(
-                    "Handshake protocol error on attempt %d/%d",
-                    attempt + 1,
-                    max_retries,
-                    extra={
-                        "attempt": attempt + 1,
-                        "max_retries": max_retries,
-                        "error": str(e),
-                        "error_type": type(e).__name__,
-                        "reason": e.reason if hasattr(e, "reason") else None,
-                    },
-                )
-                if self.pending_requests:
-                    self.pending_requests.popleft()  # Remove pending on error
-            except CyncProtocolError as e:
-                # Other protocol errors - retryable
-                logger.exception(
-                    "Handshake protocol error on attempt %d/%d",
-                    attempt + 1,
-                    max_retries,
-                    extra={
-                        "attempt": attempt + 1,
-                        "max_retries": max_retries,
-                        "error": str(e),
-                        "error_type": type(e).__name__,
-                    },
-                )
-                if self.pending_requests:
-                    self.pending_requests.popleft()  # Remove pending on error
-            except Exception as e:
-                logger.exception(
-                    "Unexpected handshake error on attempt %d/%d",
-                    attempt + 1,
-                    max_retries,
-                    extra={
-                        "attempt": attempt + 1,
-                        "max_retries": max_retries,
-                        "error": str(e),
-                        "error_type": type(e).__name__,
-                    },
-                )
-                if self.pending_requests:
-                    self.pending_requests.popleft()  # Remove pending on error
-                raise  # Re-raise unexpected errors to preserve exception context
-
-            # Retry with exponential backoff
-            if attempt < max_retries - 1:
-                delay = self.retry_policy.get_delay(attempt)
-                logger.debug(
-                    "Retrying handshake",
-                    extra={"delay": delay, "attempt": attempt + 1},
-                )
-                await asyncio.sleep(delay)
+        if await self._attempt_connection_with_retry(device_id, max_retries):
+            return True
 
         async with self._state_lock:
             self.state = ConnectionState.DISCONNECTED

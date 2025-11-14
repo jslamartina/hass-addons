@@ -24,6 +24,8 @@ from transport import TCPConnection
 class JSONFormatter(logging.Formatter):
     """JSON log formatter for structured logging."""
 
+
+
     def format(self, record: logging.LogRecord) -> str:
         """Format log record as JSON."""
         log_data = {
