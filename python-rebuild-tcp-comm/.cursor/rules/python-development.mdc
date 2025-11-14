@@ -97,7 +97,7 @@ from metrics.registry import get_metrics_registry
 
 ## Type Hints (Strict)
 
-### Full Mypy Compliance
+### Full Pyright Compliance
 
 All functions require type hints:
 

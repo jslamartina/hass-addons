@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-set -e
+set -Eeuo pipefail
+IFS=$'\n\t'
 
 # Load common output functions
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

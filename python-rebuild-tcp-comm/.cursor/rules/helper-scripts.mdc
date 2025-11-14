@@ -138,7 +138,7 @@ Equivalent to `./scripts/run.sh --debug`
 **Steps**:
 
 1. Lint with ruff
-2. Type check with mypy
+2. Type check with pyright
 3. Run all tests
 4. Verify coverage ≥ 90%
 
@@ -160,7 +160,7 @@ Equivalent to `./scripts/run.sh --debug`
 
 - `__pycache__/` directories
 - `.pytest_cache/`
-- `.mypy_cache/`
+- `.pyright_cache/`
 - `.ruff_cache/`
 - `.coverage` file
 - `htmlcov/` directory
@@ -266,7 +266,7 @@ All scripts use Poetry:
 ## Run commands through Poetry
 poetry run pytest
 poetry run ruff check .
-poetry run mypy src tests
+pyright python-rebuild-tcp-comm/src python-rebuild-tcp-comm/tests
 ```
 
 **Do not use system Python or pip.** Always use Poetry.
@@ -290,6 +290,6 @@ chmod +x scripts/*.sh
 ```bash
 ## Run exact CI commands
 poetry run ruff check .
-poetry run mypy src tests
+pyright python-rebuild-tcp-comm/src python-rebuild-tcp-comm/tests
 poetry run pytest --cov --cov-fail-under=90
 ```

@@ -12,7 +12,7 @@ TIER 1: PROJECT-SPECIFIC CRITICAL RULES
 **Development Workflow**:
 
 1. Edit: Make changes in `src/` modules
-2. Quality: `poetry run ruff check .` && `poetry run mypy src tests`
+2. Quality: `poetry run ruff check .` && `pyright python-rebuild-tcp-comm/src python-rebuild-tcp-comm/tests`
 3. Test: `./scripts/test-all.sh` or `./scripts/test-unit.sh`
 4. Verify: Coverage ≥90% threshold
 
@@ -20,9 +20,9 @@ TIER 1: PROJECT-SPECIFIC CRITICAL RULES
 
 - Package manager: Poetry 1.8.3
 - Architecture: Async/await (asyncio) required for all I/O
-- Type hints: Full mypy strict compliance mandatory
+- Type hints: Full pyright strict compliance mandatory
 - Imports: Absolute from package root (`from transport import ...`)
-- Quality gates: Ruff + mypy + 90% coverage enforced in CI
+- Quality gates: Ruff + pyright + 90% coverage enforced in CI
 
 **Module Structure**:
 
