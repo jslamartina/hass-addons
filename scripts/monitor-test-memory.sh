@@ -6,6 +6,7 @@ set -Eeuo pipefail
 IFS=$'\n\t'
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=./shell-common/common-output.sh
 source "$SCRIPT_DIR/shell-common/common-output.sh"
 
 # shellcheck disable=SC2034  # LP used by common-output.sh log functions
@@ -19,7 +20,8 @@ MAX_MEMORY=0
 TEST_PID=0
 EXIT_CODE=0
 
-# Cleanup function
+# Cleanup function (invoked via trap)
+# shellcheck disable=SC2329  # Function is invoked via trap statement
 cleanup() {
   trap - EXIT ERR
   # Kill test process if still running
@@ -29,7 +31,8 @@ cleanup() {
   fi
 }
 
-# Error handler
+# Error handler (invoked via trap)
+# shellcheck disable=SC2329  # Function is invoked via trap statement
 on_error() {
   echo -e "${RED}Error on line $1${NC}" >&2
   cleanup

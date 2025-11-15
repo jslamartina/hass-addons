@@ -167,30 +167,24 @@ class MITMProxy:
         for observer in self.observers:
             try:
                 observer.on_packet_received(direction, data, connection_id)
-            except Exception as e:
-                logger.exception(
-                    "Observer error (%s): %s", observer.__class__.__name__, e
-                )
+            except Exception:
+                logger.exception("Observer error (%s)", observer.__class__.__name__)
 
     def _notify_observers_connection_established(self, connection_id: int) -> None:
         """Notify all observers of connection established event."""
         for observer in self.observers:
             try:
                 observer.on_connection_established(connection_id)
-            except Exception as e:
-                logger.exception(
-                    "Observer error (%s): %s", observer.__class__.__name__, e
-                )
+            except Exception:
+                logger.exception("Observer error (%s)", observer.__class__.__name__)
 
     def _notify_observers_connection_closed(self, connection_id: int) -> None:
         """Notify all observers of connection closed event."""
         for observer in self.observers:
             try:
                 observer.on_connection_closed(connection_id)
-            except Exception as e:
-                logger.exception(
-                    "Observer error (%s): %s", observer.__class__.__name__, e
-                )
+            except Exception:
+                logger.exception("Observer error (%s)", observer.__class__.__name__)
 
     def _is_ack_packet(self, data: bytes) -> bool:
         """Detect if packet is an ACK (0x28, 0x7B, 0x88, 0xD8)."""
@@ -254,18 +248,18 @@ class MITMProxy:
                 cloud_reader, cloud_writer = await asyncio.open_connection(
                     self.upstream_host, self.upstream_port, ssl=self.ssl_context
                 )
-            except ssl.SSLError as e:
-                logger.exception("SSL connection failed: %s", e)
+            except ssl.SSLError:
+                logger.exception("SSL connection failed")
                 raise
             except ConnectionRefusedError:
-                logger.error(
+                logger.exception(
                     "Cloud connection refused (check host/port: %s:%d)",
                     self.upstream_host,
                     self.upstream_port,
                 )
                 raise
             except TimeoutError:
-                logger.error("Cloud connection timeout (check network)")
+                logger.exception("Cloud connection timeout (check network)")
                 raise
 
             logger.info(
@@ -289,8 +283,8 @@ class MITMProxy:
                 return_exceptions=True,
             )
 
-        except Exception as e:
-            logger.exception("Connection error: %s", e)
+        except Exception:
+            logger.exception("Connection error")
         finally:
             # Clean up connection tracking
             if connection_id is not None:
@@ -417,8 +411,8 @@ class MITMProxy:
 
             except asyncio.CancelledError:
                 break
-            except Exception as e:
-                logger.exception("Forward error (%s): %s", direction, e)
+            except Exception:
+                logger.exception("Forward error (%s)", direction)
                 break
 
     def _log_packet(self, data: bytes, direction: str) -> None:

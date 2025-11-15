@@ -54,6 +54,7 @@ class PacketFramer:
         # Second read: remaining bytes
         packets = framer.feed(b'\\x39\\x87\\xc8\\x57...')
         assert len(packets) == 1  # Now complete
+
     """
 
     MAX_PACKET_SIZE = 4096  # 4KB max (observed max: 395 bytes)
@@ -70,6 +71,7 @@ class PacketFramer:
 
         Returns:
             List of complete packet bytes (may be empty if no complete packets)
+
         """
         self.buffer.extend(data)
         return self._extract_packets()
@@ -90,6 +92,7 @@ class PacketFramer:
 
         Returns:
             List of complete packets; buffer retains incomplete data
+
         """
         packets: list[bytes] = []
         recovery_attempts = 0
@@ -123,7 +126,8 @@ class PacketFramer:
             # Rate-limited: logs once per invalid length found, not per attempt
             if packet_length > self.MAX_PACKET_SIZE:
                 logger.warning(
-                    "Invalid packet length: %d (max %d), advancing 5 bytes to next potential header (attempt %d/%d, scanned %d bytes)",
+                    "Invalid packet length: %d (max %d), advancing 5 bytes to next "
+                    "potential header (attempt %d/%d, scanned %d bytes)",
                     packet_length,
                     self.MAX_PACKET_SIZE,
                     recovery_attempts + 1,

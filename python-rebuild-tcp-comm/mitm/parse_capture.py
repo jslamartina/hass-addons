@@ -85,13 +85,13 @@ def show_statistics(packets: list[dict]):
 
     logger.info("=== Capture Statistics ===")
     logger.info("Total packets: %d", total)
-    logger.info("")
+    print()  # noqa: T201  # Blank line for formatting
 
     logger.info("Packet Types:")
     for ptype, count in sorted(type_counts.items()):
         pct = (count / total * 100) if total > 0 else 0
         logger.info("  0x%2s: %6d (%5.1f%%)", ptype.upper(), count, pct)
-    logger.info("")
+    print()  # noqa: T201  # Blank line for formatting
 
     logger.info("Directions:")
     for direction, count in direction_counts.items():
@@ -178,13 +178,13 @@ def main():
         all_packets.extend(packets)
 
     logger.info("Loaded %d packets from %d file(s)", len(all_packets), len(args.files))
-    logger.info("")
+    print()  # noqa: T201  # Blank line for formatting
 
     # Apply filter
     if args.filter:
         all_packets = filter_packets(all_packets, args.filter)
         logger.info("Filtered to %d packets of type %s", len(all_packets), args.filter)
-        logger.info("")
+        print()  # noqa: T201  # Blank line for formatting
 
     # Show statistics
     if args.stats:

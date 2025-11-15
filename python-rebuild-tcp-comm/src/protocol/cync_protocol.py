@@ -56,12 +56,14 @@ class CyncProtocol:
 
         Example:
             >>> from protocol.packet_types import PACKET_TYPE_DATA_CHANNEL
-            >>> header = bytes([PACKET_TYPE_DATA_CHANNEL, 0x00, 0x00, 0x00, 0x10])  # type=PACKET_TYPE_DATA_CHANNEL (0x73), length=16
+            >>> # type=PACKET_TYPE_DATA_CHANNEL (0x73), length=16
+            >>> header = bytes([PACKET_TYPE_DATA_CHANNEL, 0x00, 0x00, 0x00, 0x10])
             >>> packet_type, length, reserved = CyncProtocol.parse_header(header)
             >>> packet_type == PACKET_TYPE_DATA_CHANNEL
             True
             >>> length == 16
             True
+
         """
         if len(data) < PACKET_HEADER_LENGTH:
             error_reason = "too_short"
@@ -92,7 +94,8 @@ class CyncProtocol:
         Returns bytes: [packet_type, 0x00, 0x00, multiplier, base]
 
         Args:
-            packet_type: Packet type byte (PACKET_TYPE_HANDSHAKE=0x23, PACKET_TYPE_DATA_CHANNEL=0x73, etc.)
+            packet_type: Packet type byte (PACKET_TYPE_HANDSHAKE=0x23,
+                PACKET_TYPE_DATA_CHANNEL=0x73, etc.)
             length: Payload length in bytes
 
         Returns:
@@ -105,6 +108,7 @@ class CyncProtocol:
             True
             >>> header[0] == PACKET_TYPE_DATA_CHANNEL
             True
+
         """
         multiplier = length // 256
         base = length % 256
@@ -146,6 +150,7 @@ class CyncProtocol:
             True
             >>> len(msg_id) == MSG_ID_LENGTH_BYTES
             True
+
         """
         if len(payload) < MIN_PAYLOAD_LENGTH:
             error_reason = "too_short"
@@ -190,6 +195,7 @@ class CyncProtocol:
             >>> packet = CyncProtocol.decode_packet(packet_bytes)
             >>> packet.packet_type == 0x73
             True
+
         """
         logger.debug("Decoding packet", extra={"bytes": len(data)})
 
@@ -215,7 +221,7 @@ class CyncProtocol:
 
     @staticmethod
     def _decode_data_packet(
-        packet_type: int, length: int, payload: bytes, raw: bytes
+        packet_type: int, length: int, payload: bytes, raw: bytes,
     ) -> CyncDataPacket:
         """Decode data packet with 0x7e framing (0x73, 0x83).
 
@@ -230,6 +236,7 @@ class CyncProtocol:
 
         Raises:
             PacketDecodeError: If 0x7e markers not found or checksum invalid
+
         """
         # Extract endpoint and msg_id
         endpoint, msg_id = CyncProtocol.extract_endpoint_and_msg_id(payload)
@@ -310,6 +317,7 @@ class CyncProtocol:
 
         Raises:
             ValueError: If endpoint not 5 bytes or auth_code not 16 bytes
+
         """
         # Validate inputs
         if len(endpoint) != ENDPOINT_LENGTH_BYTES:
@@ -363,6 +371,7 @@ class CyncProtocol:
 
         Raises:
             ValueError: If endpoint not 5 bytes or msg_id not 2 bytes
+
         """
         # Validate inputs
         if len(endpoint) != ENDPOINT_LENGTH_BYTES:
@@ -413,6 +422,7 @@ class CyncProtocol:
 
         Returns:
             Complete 0xD3 heartbeat packet (5 bytes)
+
         """
         return bytes([0xD3, 0x00, 0x00, 0x00, 0x00])
 
@@ -444,6 +454,7 @@ class CyncProtocol:
 
         Raises:
             ValueError: If endpoint not 5 bytes or msg_id not 2 bytes
+
         """
         # Validate inputs
         if len(endpoint) != ENDPOINT_LENGTH_BYTES:

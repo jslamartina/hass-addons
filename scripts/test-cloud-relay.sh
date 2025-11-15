@@ -4,6 +4,7 @@
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=./shell-common/common-output.sh
 source "$SCRIPT_DIR/shell-common/common-output.sh"
 
 LP="[$(basename "$0")]"

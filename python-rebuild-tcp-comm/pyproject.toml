@@ -77,6 +77,12 @@ ignore = [
 
 ]
 
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*.py" = ["S101"]  # Allow assert statements in test files (standard pytest practice)
+"mitm/test_helpers/**/*.py" = ["T201"]  # Allow print statements in test helper scripts (user-facing output)
+"mitm/test_*.py" = ["T201"]  # Allow print statements in test scripts (user-facing output)
+"mitm/validate-checksum-REFERENCE-ONLY.py" = ["T201"]  # Reference-only file
+
 [tool.ruff.lint.mccabe]
 max-complexity = 10
 

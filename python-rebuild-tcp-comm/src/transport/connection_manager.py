@@ -70,7 +70,8 @@ class ConnectionManager:
     performed while holding the lock. State checks in send_reliable() also acquire the
     lock to ensure consistent reads.
 
-    **Performance Monitoring**: Lock hold time is instrumented and monitored with three-tier thresholds:
+    **Performance Monitoring**: Lock hold time is instrumented and monitored with
+    three-tier thresholds:
     - **Target**: < 1ms (typical state check + encoding operations)
     - **Warning**: > 10ms (logged as warning, investigate potential bottleneck)
     - **Critical**: > 100ms (indicates deadlock risk, escalate immediately)
@@ -91,6 +92,7 @@ class ConnectionManager:
             protocol: Cync protocol encoder/decoder
             timeout_config: Timeout configuration (defaults to TimeoutConfig() if None)
             ack_handler: Optional callback for ACK packets (called by _packet_router)
+
         """
         self.conn = connection
         self.protocol = protocol
@@ -133,6 +135,7 @@ class ConnectionManager:
 
         Raises:
             CyncConnectionError: If state is not CONNECTED
+
         """
         lock_start = time.perf_counter()
         async with self._state_lock:
@@ -200,6 +203,7 @@ class ConnectionManager:
 
         Returns:
             True if handshake successful, False otherwise
+
         """
         device_id = self.endpoint.hex()[:10] if self.endpoint else "unknown"
         logger.debug(
@@ -266,7 +270,7 @@ class ConnectionManager:
             return True
 
     def _handle_network_error(
-        self, error: Exception, attempt: int, max_retries: int, _device_id: str
+        self, error: Exception, attempt: int, max_retries: int, _device_id: str,
     ) -> None:
         """Handle network errors during handshake (retryable).
 
@@ -275,6 +279,7 @@ class ConnectionManager:
             attempt: Current attempt number (0-indexed)
             max_retries: Maximum number of retries
             device_id: Device identifier for logging
+
         """
         logger.exception(
             "Handshake error on attempt %d/%d",
@@ -291,7 +296,7 @@ class ConnectionManager:
             self.pending_requests.popleft()  # Remove pending on error
 
     def _handle_handshake_error(
-        self, error: HandshakeError, attempt: int, max_retries: int, _device_id: str
+        self, error: HandshakeError, attempt: int, max_retries: int, _device_id: str,
     ) -> bool:
         """Handle handshake errors during connection (may be retryable).
 
@@ -303,6 +308,7 @@ class ConnectionManager:
 
         Returns:
             True if error should be re-raised (non-retryable), False otherwise
+
         """
         # Auth failures are not retryable
         if hasattr(error, "reason") and "auth" in error.reason.lower():
@@ -340,7 +346,7 @@ class ConnectionManager:
         return False  # Don't re-raise, allow retry
 
     def _handle_protocol_error(
-        self, error: CyncProtocolError, attempt: int, max_retries: int, _device_id: str
+        self, error: CyncProtocolError, attempt: int, max_retries: int, _device_id: str,
     ) -> None:
         """Handle protocol errors during handshake (retryable).
 
@@ -349,6 +355,7 @@ class ConnectionManager:
             attempt: Current attempt number (0-indexed)
             max_retries: Maximum number of retries
             device_id: Device identifier for logging
+
         """
         logger.exception(
             "Handshake protocol error on attempt %d/%d",
@@ -365,7 +372,7 @@ class ConnectionManager:
             self.pending_requests.popleft()  # Remove pending on error
 
     def _handle_unexpected_error(
-        self, error: Exception, attempt: int, max_retries: int, _device_id: str
+        self, error: Exception, attempt: int, max_retries: int, _device_id: str,
     ) -> None:
         """Handle unexpected errors during handshake (non-retryable).
 
@@ -374,6 +381,7 @@ class ConnectionManager:
             attempt: Current attempt number (0-indexed)
             max_retries: Maximum number of retries
             device_id: Device identifier for logging
+
         """
         logger.exception(
             "Unexpected handshake error on attempt %d/%d",
@@ -398,6 +406,7 @@ class ConnectionManager:
 
         Returns:
             True if connection successful, False otherwise
+
         """
         for attempt in range(max_retries):
             try:
@@ -447,6 +456,7 @@ class ConnectionManager:
 
         Returns:
             True if handshake successful, False otherwise
+
         """
         # Derive device_id from endpoint for metrics
         device_id = endpoint.hex()[:10] if endpoint else "unknown"
@@ -495,6 +505,7 @@ class ConnectionManager:
             CyncProtocolError: Protocol-related errors from handler
             asyncio.CancelledError: Task cancellation
             Exception: Any other unexpected errors from handler
+
         """
         if not self.ack_handler:
             return
@@ -503,7 +514,7 @@ class ConnectionManager:
             await self.ack_handler(packet)
         except (CyncProtocolError, asyncio.CancelledError) as e:
             logger.exception(
-                "ACK handler error", extra={"error": str(e), "error_type": type(e).__name__}
+                "ACK handler error", extra={"error": str(e), "error_type": type(e).__name__},
             )
             raise  # Re-raise protocol errors and cancellations
         except Exception as e:
@@ -588,14 +599,14 @@ class ConnectionManager:
                 packet = self.protocol.decode_packet(packet_bytes)
             except (PacketDecodeError, CyncProtocolError) as e:
                 logger.exception(
-                    "Packet decode failed", extra={"error": str(e), "error_type": type(e).__name__}
+                    "Packet decode failed", extra={"error": str(e), "error_type": type(e).__name__},
                 )
                 continue  # Skip malformed packets, continue processing others
             except Exception as e:
-                # Unexpected decode errors should not happen (protocol.decode_packet should only raise
-                # PacketDecodeError or CyncProtocolError). If we get here, it's a bug in the protocol
-                # implementation. Log as critical but continue processing other packets to avoid
-                # crashing the packet router.
+                # Unexpected decode errors should not happen (protocol.decode_packet
+                # should only raise PacketDecodeError or CyncProtocolError). If we get
+                # here, it's a bug in the protocol implementation. Log as critical but
+                # continue processing other packets to avoid crashing the packet router.
                 logger.critical(
                     "Unexpected packet decode error - this should not happen: %s",
                     e,
@@ -637,12 +648,13 @@ class ConnectionManager:
                 continue
 
     async def _check_heartbeat_timeout(
-        self, awaiting_heartbeat_ack: bool, last_heartbeat_sent: float, heartbeat_timeout: float
+        self, awaiting_heartbeat_ack: bool, last_heartbeat_sent: float, heartbeat_timeout: float,
     ) -> bool:
         """Check if heartbeat ACK is overdue and trigger reconnect if needed.
 
         Returns:
             True if reconnect was triggered (should break loop), False otherwise
+
         """
         if awaiting_heartbeat_ack and (time.time() - last_heartbeat_sent > heartbeat_timeout):
             async with self._state_lock:
@@ -723,7 +735,7 @@ class ConnectionManager:
                 except TimeoutError:
                     # No packet received - check if heartbeat ACK overdue
                     if await self._check_heartbeat_timeout(
-                        awaiting_heartbeat_ack, last_heartbeat_sent, heartbeat_timeout
+                        awaiting_heartbeat_ack, last_heartbeat_sent, heartbeat_timeout,
                     ):
                         break
                     # Continue loop (allows heartbeat send check)
@@ -740,7 +752,7 @@ class ConnectionManager:
             # trigger reconnection, and re-raise to allow higher-level error handling.
             device_id = self._get_device_id()
             logger.exception(
-                "Packet router crashed", extra={"error": str(e), "error_type": type(e).__name__}
+                "Packet router crashed", extra={"error": str(e), "error_type": type(e).__name__},
             )
             registry.record_heartbeat(device_id, "crash")
             self._trigger_reconnect("packet_router_crash")
@@ -754,6 +766,7 @@ class ConnectionManager:
 
         Args:
             reason: Reason for reconnection
+
         """
         if self.reconnect_task is None or self.reconnect_task.done():
             logger.info(
@@ -781,6 +794,7 @@ class ConnectionManager:
 
         Raises:
             CyncConnectionError: If credentials not available (connect() never called)
+
         """
         # Validate credentials exist (set during initial connect())
         if not self.endpoint or not self.auth_code:
@@ -886,5 +900,6 @@ class ConnectionManager:
 
         Returns:
             True if state is CONNECTED, False otherwise
+
         """
         return self.state == ConnectionState.CONNECTED

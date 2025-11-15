@@ -26,6 +26,7 @@ class TimeoutConfig:
             measured_p99_ms: Measured p99 ACK latency from Phase 0.5 (milliseconds)
                            Default: 51ms (Phase 0.5 measured for 0x7B DATA_ACK)
                            Note: Based on small sample (9 pairs), monitor in Phase 1d
+
         """
         self.measured_p99_ms = measured_p99_ms
 
@@ -68,6 +69,7 @@ class RetryPolicy:
             base_delay_seconds: Base delay for first retry (default: 0.1s)
             max_delay_seconds: Maximum delay cap (default: 5.0s)
             jitter_factor: Jitter as fraction of delay (default: 0.1 = 10%)
+
         """
         self.base_delay_seconds = base_delay_seconds
         self.max_delay_seconds = max_delay_seconds
@@ -84,6 +86,7 @@ class RetryPolicy:
 
         Returns:
             Delay in seconds (capped at max_delay_seconds)
+
         """
         # Exponential backoff: base * 2^attempt
         delay = self.base_delay_seconds * (2**attempt)
@@ -91,8 +94,8 @@ class RetryPolicy:
         # Cap at maximum delay
         delay = min(delay, self.max_delay_seconds)
 
-        # Add jitter: random value between 0 and delay * jitter_factor
-        jitter = random.uniform(0, delay * self.jitter_factor)
+        # Add jitter: random value between 0 and delay * jitter_factor (non-crypto use)
+        jitter = random.uniform(0, delay * self.jitter_factor)  # noqa: S311
         return delay + jitter
 
     def __repr__(self) -> str:

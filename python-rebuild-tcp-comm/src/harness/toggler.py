@@ -24,8 +24,6 @@ from transport import TCPConnection
 class JSONFormatter(logging.Formatter):
     """JSON log formatter for structured logging."""
 
-
-
     def format(self, record: logging.LogRecord) -> str:
         """Format log record as JSON."""
         log_data = {
@@ -110,8 +108,7 @@ async def send_toggle_packet(
     msg_id: str,
     state: bool,
 ) -> bytes | None:
-    """
-    Send a toggle packet and wait for response.
+    """Send a toggle packet and wait for response.
 
     Args:
         conn: TCP connection
@@ -121,6 +118,7 @@ async def send_toggle_packet(
 
     Returns:
         Response bytes or None on failure
+
     """
     # For Phase 0, we create a minimal packet:
     # Magic: 0xF0 0x0D
@@ -161,7 +159,7 @@ async def send_toggle_packet(
                 raw_packet_hex=packet_hex,
                 elapsed_ms=elapsed_ms,
                 outcome="error",
-            )
+            ),
         )
         record_packet_sent(device_id, "error")
         return None
@@ -176,7 +174,7 @@ async def send_toggle_packet(
             raw_packet_hex=packet_hex,
             elapsed_ms=send_elapsed_ms,
             outcome="success",
-        )
+        ),
     )
     record_packet_sent(device_id, "success")
 
@@ -194,7 +192,7 @@ async def send_toggle_packet(
                 raw_packet_hex="",
                 elapsed_ms=total_elapsed_ms,
                 outcome="timeout",
-            )
+            ),
         )
         record_packet_recv(device_id, "timeout")
         return None
@@ -211,7 +209,7 @@ async def send_toggle_packet(
             raw_packet_hex=response_hex,
             elapsed_ms=total_elapsed_ms,
             outcome="success",
-        )
+        ),
     )
     record_packet_recv(device_id, "success")
     record_packet_latency(device_id, total_elapsed_ms / 1000.0)
@@ -226,8 +224,7 @@ async def toggle_device_with_retry(
     state: bool,
     max_attempts: int = 2,
 ) -> bool:
-    """
-    Toggle device with exponential backoff retry.
+    """Toggle device with exponential backoff retry.
 
     Args:
         device_id: Device identifier
@@ -238,6 +235,7 @@ async def toggle_device_with_retry(
 
     Returns:
         True if successful, False otherwise
+
     """
     logger = logging.getLogger(__name__)
 
@@ -270,9 +268,9 @@ async def toggle_device_with_retry(
         if not await conn.connect():
             await conn.close()
             if attempt < max_attempts:
-                # Exponential backoff with jitter
+                # Exponential backoff with jitter (non-crypto use)
                 backoff_base = 0.25 * (2 ** (attempt - 1))
-                jitter = random.uniform(0, 0.1)
+                jitter = random.uniform(0, 0.1)  # noqa: S311
                 delay = backoff_base + jitter
                 logger.warning(
                     "Connection failed, retrying in %.2fs (attempt %d/%d)",
@@ -379,7 +377,7 @@ async def main_async(args: argparse.Namespace) -> int:
 def main() -> int:
     """Main entry point."""
     parser = argparse.ArgumentParser(
-        description="Toggle a Cync device with structured logging and metrics"
+        description="Toggle a Cync device with structured logging and metrics",
     )
     parser.add_argument(
         "--device-id",

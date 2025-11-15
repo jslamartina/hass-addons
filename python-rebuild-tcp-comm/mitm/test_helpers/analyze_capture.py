@@ -115,7 +115,8 @@ def format_statistics_report(stats: dict[str, any]) -> str:
         report.append(f"  ✅ PASS: ≥{MIN_DECODED_PACKETS_REQUIRED} packets decoded")
     else:
         report.append(
-            f"  ❌ FAIL: Only {stats['total_validated']} packets (need ≥{MIN_DECODED_PACKETS_REQUIRED})"
+            f"  ❌ FAIL: Only {stats['total_validated']} packets "
+            f"(need ≥{MIN_DECODED_PACKETS_REQUIRED})"
         )
 
     if stats["error_rate"] < 1.0:
