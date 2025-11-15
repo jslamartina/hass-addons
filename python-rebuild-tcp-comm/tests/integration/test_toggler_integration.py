@@ -312,7 +312,7 @@ async def test_metrics_endpoint_accessible(
     metrics_url = f"http://localhost:{unique_metrics_port}/metrics"
 
     try:
-        with urllib.request.urlopen(metrics_url, timeout=5) as response:
+        with urllib.request.urlopen(metrics_url, timeout=5) as response:  # noqa: S310
             metrics_text = response.read().decode("utf-8")
     except Exception as e:
         pytest.fail(f"Failed to access metrics endpoint: {e}")

@@ -182,11 +182,13 @@ def _format_acceptance_criteria(stats: dict) -> tuple[list[str], bool]:
     decoded_pass = stats["decoded_successfully"] >= MIN_DECODED_PACKETS_REQUIRED
     if decoded_pass:
         lines.append(
-            f"  ✅ PASS: Decoded {stats['decoded_successfully']:,} packets (≥MIN_DECODED_PACKETS_REQUIRED required)"
+            f"  ✅ PASS: Decoded {stats['decoded_successfully']:,} packets "
+            f"(≥MIN_DECODED_PACKETS_REQUIRED required)"
         )
     else:
         lines.append(
-            f"  ❌ FAIL: Only {stats['decoded_successfully']} packets (need ≥MIN_DECODED_PACKETS_REQUIRED)"
+            f"  ❌ FAIL: Only {stats['decoded_successfully']} packets "
+            f"(need ≥MIN_DECODED_PACKETS_REQUIRED)"
         )
 
     error_rate_pass = stats["error_rate"] < MAX_ERROR_RATE

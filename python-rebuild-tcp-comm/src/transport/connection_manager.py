@@ -270,7 +270,11 @@ class ConnectionManager:
             return True
 
     def _handle_network_error(
-        self, error: Exception, attempt: int, max_retries: int, _device_id: str,
+        self,
+        error: Exception,
+        attempt: int,
+        max_retries: int,
+        _device_id: str,
     ) -> None:
         """Handle network errors during handshake (retryable).
 
@@ -296,7 +300,11 @@ class ConnectionManager:
             self.pending_requests.popleft()  # Remove pending on error
 
     def _handle_handshake_error(
-        self, error: HandshakeError, attempt: int, max_retries: int, _device_id: str,
+        self,
+        error: HandshakeError,
+        attempt: int,
+        max_retries: int,
+        _device_id: str,
     ) -> bool:
         """Handle handshake errors during connection (may be retryable).
 
@@ -346,7 +354,11 @@ class ConnectionManager:
         return False  # Don't re-raise, allow retry
 
     def _handle_protocol_error(
-        self, error: CyncProtocolError, attempt: int, max_retries: int, _device_id: str,
+        self,
+        error: CyncProtocolError,
+        attempt: int,
+        max_retries: int,
+        _device_id: str,
     ) -> None:
         """Handle protocol errors during handshake (retryable).
 
@@ -372,7 +384,11 @@ class ConnectionManager:
             self.pending_requests.popleft()  # Remove pending on error
 
     def _handle_unexpected_error(
-        self, error: Exception, attempt: int, max_retries: int, _device_id: str,
+        self,
+        error: Exception,
+        attempt: int,
+        max_retries: int,
+        _device_id: str,
     ) -> None:
         """Handle unexpected errors during handshake (non-retryable).
 
@@ -514,7 +530,8 @@ class ConnectionManager:
             await self.ack_handler(packet)
         except (CyncProtocolError, asyncio.CancelledError) as e:
             logger.exception(
-                "ACK handler error", extra={"error": str(e), "error_type": type(e).__name__},
+                "ACK handler error",
+                extra={"error": str(e), "error_type": type(e).__name__},
             )
             raise  # Re-raise protocol errors and cancellations
         except Exception as e:
@@ -599,7 +616,8 @@ class ConnectionManager:
                 packet = self.protocol.decode_packet(packet_bytes)
             except (PacketDecodeError, CyncProtocolError) as e:
                 logger.exception(
-                    "Packet decode failed", extra={"error": str(e), "error_type": type(e).__name__},
+                    "Packet decode failed",
+                    extra={"error": str(e), "error_type": type(e).__name__},
                 )
                 continue  # Skip malformed packets, continue processing others
             except Exception as e:
@@ -648,7 +666,10 @@ class ConnectionManager:
                 continue
 
     async def _check_heartbeat_timeout(
-        self, awaiting_heartbeat_ack: bool, last_heartbeat_sent: float, heartbeat_timeout: float,
+        self,
+        awaiting_heartbeat_ack: bool,
+        last_heartbeat_sent: float,
+        heartbeat_timeout: float,
     ) -> bool:
         """Check if heartbeat ACK is overdue and trigger reconnect if needed.
 
@@ -735,7 +756,9 @@ class ConnectionManager:
                 except TimeoutError:
                     # No packet received - check if heartbeat ACK overdue
                     if await self._check_heartbeat_timeout(
-                        awaiting_heartbeat_ack, last_heartbeat_sent, heartbeat_timeout,
+                        awaiting_heartbeat_ack,
+                        last_heartbeat_sent,
+                        heartbeat_timeout,
                     ):
                         break
                     # Continue loop (allows heartbeat send check)
@@ -752,7 +775,8 @@ class ConnectionManager:
             # trigger reconnection, and re-raise to allow higher-level error handling.
             device_id = self._get_device_id()
             logger.exception(
-                "Packet router crashed", extra={"error": str(e), "error_type": type(e).__name__},
+                "Packet router crashed",
+                extra={"error": str(e), "error_type": type(e).__name__},
             )
             registry.record_heartbeat(device_id, "crash")
             self._trigger_reconnect("packet_router_crash")

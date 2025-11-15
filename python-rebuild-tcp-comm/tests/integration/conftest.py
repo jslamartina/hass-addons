@@ -300,9 +300,6 @@ def pytest_terminal_summary(terminalreporter: Any, exitstatus: int, config: Any)
     # Get the performance tracker from the session
     tracker = config._performance_tcker if hasattr(config, "_performance_tracker") else None
 
-
-
-
     if tracker is None or not tracker.samples:
         return
 

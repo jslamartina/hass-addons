@@ -370,7 +370,8 @@ async def run_toggle_test(
         state = (i % 2) == 0  # Alternate ON/OFF
 
         print(
-            f"[{i + 1}/{iterations}] Injecting {'ON' if state else 'OFF'} command (msg_id=0x{msg_id:02x})..."
+            f"[{i + 1}/{iterations}] Injecting {'ON' if state else 'OFF'} command "
+            f"(msg_id=0x{msg_id:02x})..."
         )
 
         # Craft packet
@@ -525,7 +526,8 @@ async def run_mesh_info_test(
                         print(f"✓ Mesh info data received ({len(devices)} devices in this packet)")
                         for dev in devices:
                             print(
-                                f"  Device {dev['device_id']:3d}: state={dev['state']}, brightness={dev['brightness']}"
+                                f"  Device {dev['device_id']:3d}: "
+                                f"state={dev['state']}, brightness={dev['brightness']}"
                             )
 
             if results["devices_found"] > 0:

@@ -221,7 +221,10 @@ class CyncProtocol:
 
     @staticmethod
     def _decode_data_packet(
-        packet_type: int, length: int, payload: bytes, raw: bytes,
+        packet_type: int,
+        length: int,
+        payload: bytes,
+        raw: bytes,
     ) -> CyncDataPacket:
         """Decode data packet with 0x7e framing (0x73, 0x83).
 

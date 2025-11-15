@@ -288,7 +288,10 @@ class DeviceOperations:
         return result
 
     async def _send_mesh_info_request(
-        self, inner_struct: bytes, correlation_id: str, refresh_id: str | None,
+        self,
+        inner_struct: bytes,
+        correlation_id: str,
+        refresh_id: str | None,
     ) -> None:
         """Send mesh info request via reliable transport, raise on failure."""
         logger.info(
@@ -304,7 +307,8 @@ class DeviceOperations:
         # Send via reliable transport
         try:
             result = await self.transport.send_reliable(
-                payload=inner_struct, timeout=self.MESH_INFO_SEND_TIMEOUT,
+                payload=inner_struct,
+                timeout=self.MESH_INFO_SEND_TIMEOUT,
             )
         except (ConnectionError, TimeoutError, OSError) as e:
             logger.exception(
@@ -345,7 +349,9 @@ class DeviceOperations:
         )
 
     async def _collect_mesh_info_responses(
-        self, correlation_id: str, parse: bool,
+        self,
+        correlation_id: str,
+        parse: bool,
     ) -> list[CyncPacket | DeviceInfo]:
         """Collect 0x83 status broadcast responses."""
         logger.info(
@@ -372,7 +378,8 @@ class DeviceOperations:
                         break
 
                     packet = await asyncio.wait_for(
-                        self.transport.recv_reliable(), timeout=remaining_timeout,
+                        self.transport.recv_reliable(),
+                        timeout=remaining_timeout,
                     )
 
                     # Check if this is a PACKET_TYPE_STATUS_BROADCAST (0x83) status broadcast
@@ -389,7 +396,8 @@ class DeviceOperations:
                         if parse:
                             # Parse device structs from PACKET_TYPE_STATUS_BROADCAST packet
                             device_infos = await self._parse_0x83_packet(
-                                packet.packet, correlation_id,
+                                packet.packet,
+                                correlation_id,
                             )
                             responses.extend(device_infos)
                         else:
@@ -420,7 +428,9 @@ class DeviceOperations:
         return responses
 
     async def ask_for_mesh_info(
-        self, parse: bool = False, refresh_id: str | None = None,
+        self,
+        parse: bool = False,
+        refresh_id: str | None = None,
     ) -> list[CyncPacket | DeviceInfo]:
         """Request mesh info from connected device.
 
@@ -431,8 +441,10 @@ class DeviceOperations:
         Implementation based on legacy tcp_device.py lines 213-273.
 
         Packet Flow:
-            1. Send PACKET_TYPE_DATA_CHANNEL (0x73) mesh info request → receive PACKET_TYPE_DATA_ACK (0x7B) ACK
-            2. Wait for PACKET_TYPE_STATUS_BROADCAST (0x83) status broadcasts (asynchronous responses)
+            1. Send PACKET_TYPE_DATA_CHANNEL (0x73) mesh info request →
+               receive PACKET_TYPE_DATA_ACK (0x7B) ACK
+            2. Wait for PACKET_TYPE_STATUS_BROADCAST (0x83) status broadcasts
+               (asynchronous responses)
             3. Parse device structs if requested
 
         Primary Device Enforcement:
@@ -539,8 +551,7 @@ class DeviceOperations:
             # Wrap unexpected exceptions in MeshInfoRequestError for consistency
             error_code = "unexpected_error"
             error_msg = (
-                f"Unexpected error during mesh info request "
-                f"(correlation_id={correlation_id}): {e}"
+                f"Unexpected error during mesh info request (correlation_id={correlation_id}): {e}"
             )
             raise MeshInfoRequestError(error_code, error_msg) from e
         else:
@@ -598,7 +609,9 @@ class DeviceOperations:
         return validated_timeout
 
     async def request_device_info(
-        self, device_id: bytes, timeout: float | None = None,
+        self,
+        device_id: bytes,
+        timeout: float | None = None,
     ) -> DeviceInfo | None:
         """Request info for specific device.
 
@@ -606,7 +619,8 @@ class DeviceOperations:
         PACKET_TYPE_DEVICE_INFO (0x43) response.
 
         Packet Flow:
-            1. Send PACKET_TYPE_DATA_CHANNEL (0x73) device info request → receive PACKET_TYPE_DATA_ACK (0x7B) ACK
+            1. Send PACKET_TYPE_DATA_CHANNEL (0x73) device info request →
+               receive PACKET_TYPE_DATA_ACK (0x7B) ACK
             2. Wait for PACKET_TYPE_DEVICE_INFO (0x43) device info response
             3. Parse DEVICE_TYPE_LENGTH_BYTES-byte device struct
 
@@ -644,7 +658,8 @@ class DeviceOperations:
         )
 
         # Build device info request packet (0x73)
-        # TODO(phase-1a-complete): Enhance packet structure from legacy code for individual device query
+        # TODO(phase-1a-complete): Enhance packet structure from legacy code
+        # for individual device query
         # Phase 1a is complete - this is an enhancement to support individual device queries
         # Legacy reference: cync-controller/src/cync_controller/devices/tcp_device.py
         inner_struct = self._build_device_info_request(device_id)
@@ -700,7 +715,8 @@ class DeviceOperations:
                     break
 
                 packet = await asyncio.wait_for(
-                    self.transport.recv_reliable(), timeout=remaining_timeout,
+                    self.transport.recv_reliable(),
+                    timeout=remaining_timeout,
                 )
 
                 # Check if this is a PACKET_TYPE_DEVICE_INFO (0x43) device info packet
@@ -718,7 +734,8 @@ class DeviceOperations:
 
                     # Parse device struct
                     device_info = await self._parse_device_struct(
-                        packet.packet.payload, correlation_id,
+                        packet.packet.payload,
+                        correlation_id,
                     )
 
                     # METRIC: tcp_comm_device_info_request_total
@@ -832,7 +849,8 @@ class DeviceOperations:
             DeviceStructParseError: If struct is invalid
 
         Example:
-            >>> raw_bytes = bytes([0x39, 0x87, 0xC8, 0x57] + [0] * 20)  # DEVICE_TYPE_LENGTH_BYTES bytes
+            >>> raw_bytes = bytes([0x39, 0x87, 0xC8, 0x57] + [0] * 20)
+            ...  # DEVICE_TYPE_LENGTH_BYTES bytes
             >>> device_info = device_ops._parse_device_struct(raw_bytes, "correlation-123")
             >>> print(device_info.device_id_hex())
             '3987c857'
@@ -922,7 +940,8 @@ class DeviceOperations:
         # TODO(phase-1a-complete): Enhance from legacy code for individual device query
         # Phase 1a is complete - this is an enhancement for individual device queries
         # Legacy reference: cync-controller/src/cync_controller/devices/tcp_device.py
-        # Current implementation is simplified but functional - needs validation against real protocol
+        # Current implementation is simplified but functional -
+        # needs validation against real protocol
         return bytes([0x7E]) + device_id + bytes([0x7E])
 
     def set_primary(self, is_primary: bool) -> None:

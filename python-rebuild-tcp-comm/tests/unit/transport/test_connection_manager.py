@@ -191,7 +191,8 @@ class TestConnectionManagerPacketRouter:
         protocol = MagicMock(spec=CyncProtocol)
 
         # Mock decoded packet
-        # Valid packet format: type=0x73, reserved=0x00 0x00, length=0x00 0x04 (4 bytes), payload='test' (4 bytes)
+        # Valid packet format: type=0x73, reserved=0x00 0x00,
+        # length=0x00 0x04 (4 bytes), payload='test' (4 bytes)
         packet_bytes = b"\x73\x00\x00\x00\x04test"
         data_packet = CyncPacket(
             packet_type=PACKET_TYPE_DATA_CHANNEL,
@@ -301,7 +302,8 @@ class TestConnectionManagerPacketRouter:
         protocol = MagicMock(spec=CyncProtocol)
 
         # Simulate partial packet (header only)
-        # Valid packet: type=0x73, reserved=0x00 0x00, length=0x00 0x09 (9 bytes), payload='test_data' (9 bytes)
+        # Valid packet: type=0x73, reserved=0x00 0x00,
+        # length=0x00 0x09 (9 bytes), payload='test_data' (9 bytes)
         partial_header = b"\x73\x00\x00\x00\x09"
         # Then complete packet
         complete_packet_bytes = partial_header + b"test_data"
