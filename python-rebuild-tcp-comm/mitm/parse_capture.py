@@ -17,10 +17,16 @@ Usage:
 """
 
 import argparse
+import logging
 import re
 from collections import Counter, defaultdict
 from datetime import datetime
 from pathlib import Path
+
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+)
+logger = logging.getLogger(__name__)
 
 # Display constants
 FIRST_PACKETS_TO_SHOW = 10
@@ -77,20 +83,20 @@ def show_statistics(packets: list[dict]):
     type_counts = Counter(p["packet_type"] for p in packets)
     direction_counts = Counter(p["direction"] for p in packets)
 
-    print("=== Capture Statistics ===")
-    print(f"Total packets: {total:,}")
-    print()
+    logger.info("=== Capture Statistics ===")
+    logger.info("Total packets: %d", total)
+    logger.info("")
 
-    print("Packet Types:")
+    logger.info("Packet Types:")
     for ptype, count in sorted(type_counts.items()):
         pct = (count / total * 100) if total > 0 else 0
-        print(f"  0x{ptype.upper():2}: {count:6,} ({pct:5.1f}%)")
-    print()
+        logger.info("  0x%2s: %6d (%5.1f%%)", ptype.upper(), count, pct)
+    logger.info("")
 
-    print("Directions:")
+    logger.info("Directions:")
     for direction, count in direction_counts.items():
         pct = (count / total * 100) if total > 0 else 0
-        print(f"  {direction:10}: {count:6,} ({pct:5.1f}%)")
+        logger.info("  %-10s: %6d (%5.1f%%)", direction, count, pct)
 
 
 def extract_ack_pairs(packets: list[dict]) -> dict[str, list[tuple]]:
@@ -137,7 +143,7 @@ def extract_ack_pairs(packets: list[dict]) -> dict[str, list[tuple]]:
 
 def show_ack_pairs(pairs: dict[str, list[tuple]]):
     """Display ACK pair statistics."""
-    print("=== ACK Pair Statistics ===")
+    logger.info("=== ACK Pair Statistics ===")
 
     for ack_type in ["0x28", "0x7B", "0x88", "0xD8"]:
         pair_list = pairs[ack_type]
@@ -146,13 +152,13 @@ def show_ack_pairs(pairs: dict[str, list[tuple]]):
             sorted_lats = sorted(latencies)
             n = len(sorted_lats)
 
-            print(f"\n{ack_type} ACK:")
-            print(f"  Pairs: {n:,}")
-            print(f"  Min latency: {min(latencies):.1f}ms")
-            print(f"  p50 latency: {sorted_lats[n // 2]:.1f}ms")
-            print(f"  p95 latency: {sorted_lats[int(n * 0.95)]:.1f}ms")
-            print(f"  p99 latency: {sorted_lats[int(n * 0.99)]:.1f}ms")
-            print(f"  Max latency: {max(latencies):.1f}ms")
+            logger.info("\n%s ACK:", ack_type)
+            logger.info("  Pairs: %d", n)
+            logger.info("  Min latency: %.1fms", min(latencies))
+            logger.info("  p50 latency: %.1fms", sorted_lats[n // 2])
+            logger.info("  p95 latency: %.1fms", sorted_lats[int(n * 0.95)])
+            logger.info("  p99 latency: %.1fms", sorted_lats[int(n * 0.99)])
+            logger.info("  Max latency: %.1fms", max(latencies))
 
 
 def main():
@@ -171,14 +177,14 @@ def main():
         packets = parse_capture_file(filepath)
         all_packets.extend(packets)
 
-    print(f"Loaded {len(all_packets):,} packets from {len(args.files)} file(s)")
-    print()
+    logger.info("Loaded %d packets from %d file(s)", len(all_packets), len(args.files))
+    logger.info("")
 
     # Apply filter
     if args.filter:
         all_packets = filter_packets(all_packets, args.filter)
-        print(f"Filtered to {len(all_packets):,} packets of type {args.filter}")
-        print()
+        logger.info("Filtered to %d packets of type %s", len(all_packets), args.filter)
+        logger.info("")
 
     # Show statistics
     if args.stats:
@@ -195,15 +201,19 @@ def main():
     limit = args.limit if args.limit else len(all_packets)
     for i, packet in enumerate(all_packets[:limit]):
         ts = packet["timestamp"].strftime("%H:%M:%S.%f")[:-3]
-        print(
-            f"{ts} {packet['direction']:10} 0x{packet['packet_type'].upper():2} ({packet['length']:3} bytes)"
+        logger.info(
+            "%s %-10s 0x%2s (%3d bytes)",
+            ts,
+            packet["direction"],
+            packet["packet_type"].upper(),
+            packet["length"],
         )
         if (
             i < FIRST_PACKETS_TO_SHOW or i >= limit - LAST_PACKETS_TO_SHOW
         ):  # Show first N and last M
-            print(f"  {packet['hex_bytes']}")
+            logger.info("  %s", packet["hex_bytes"])
         elif i == FIRST_PACKETS_TO_SHOW:
-            print("  ...")
+            logger.info("  ...")
 
 
 if __name__ == "__main__":

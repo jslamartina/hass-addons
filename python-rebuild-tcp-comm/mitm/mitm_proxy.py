@@ -3,28 +3,43 @@
 Minimal MITM proxy for Cync protocol packet capture.
 
 Usage:
-    python mitm/mitm-proxy.py --listen-port 23779 --upstream-host homeassistant.local --upstream-port 23779
+    python mitm/mitm-proxy.py \\
+        --listen-port 23779 \\
+        --upstream-host homeassistant.local \\
+        --upstream-port 23779
 
     # Or forward to real cloud for protocol research:
-    python mitm/mitm-proxy.py --listen-port 23779 --upstream-host 35.196.85.236 --upstream-port 23779
+    python mitm/mitm-proxy.py \\
+        --listen-port 23779 \\
+        --upstream-host 35.196.85.236 \\
+        --upstream-port 23779
 
     # Or forward to localhost cloud relay for testing:
-    python mitm/mitm-proxy.py --listen-port 23779 --upstream-host localhost --upstream-port 23780 --no-ssl
+    python mitm/mitm-proxy.py \\
+        --listen-port 23779 \\
+        --upstream-host localhost \\
+        --upstream-port 23780 \\
+        --no-ssl
 """
 
 import argparse
 import asyncio
 import json
+import logging
 import random
 import signal
 import ssl
-import sys
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
 from aiohttp import web
+
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+)
+logger = logging.getLogger(__name__)
 
 try:
     from mitm.interfaces.packet_observer import PacketDirection, PacketObserver
@@ -140,7 +155,7 @@ class MITMProxy:
             observer: Plugin implementing PacketObserver Protocol
         """
         self.observers.append(observer)
-        print(f"Registered observer: {observer.__class__.__name__}", file=sys.stderr)
+        logger.info("Registered observer: %s", observer.__class__.__name__)
 
     def _notify_observers_packet(
         self, direction: PacketDirection, data: bytes, connection_id: int
@@ -153,7 +168,9 @@ class MITMProxy:
             try:
                 observer.on_packet_received(direction, data, connection_id)
             except Exception as e:
-                print(f"Observer error ({observer.__class__.__name__}): {e}", file=sys.stderr)
+                logger.exception(
+                    "Observer error (%s): %s", observer.__class__.__name__, e
+                )
 
     def _notify_observers_connection_established(self, connection_id: int) -> None:
         """Notify all observers of connection established event."""
@@ -161,7 +178,9 @@ class MITMProxy:
             try:
                 observer.on_connection_established(connection_id)
             except Exception as e:
-                print(f"Observer error ({observer.__class__.__name__}): {e}", file=sys.stderr)
+                logger.exception(
+                    "Observer error (%s): %s", observer.__class__.__name__, e
+                )
 
     def _notify_observers_connection_closed(self, connection_id: int) -> None:
         """Notify all observers of connection closed event."""
@@ -169,7 +188,9 @@ class MITMProxy:
             try:
                 observer.on_connection_closed(connection_id)
             except Exception as e:
-                print(f"Observer error ({observer.__class__.__name__}): {e}", file=sys.stderr)
+                logger.exception(
+                    "Observer error (%s): %s", observer.__class__.__name__, e
+                )
 
     def _is_ack_packet(self, data: bytes) -> bool:
         """Detect if packet is an ACK (0x28, 0x7B, 0x88, 0xD8)."""
@@ -185,32 +206,35 @@ class MITMProxy:
 
         self.server = await asyncio.start_server(
             self.handle_device,
-            "0.0.0.0",
+            "0.0.0.0",  # noqa: S104  # Binding to all interfaces is intentional for MITM proxy
             self.listen_port,
             ssl=device_ssl_context,  # Enable TLS termination
         )
 
-        print(f"MITM Proxy listening on port {self.listen_port} (TLS)", file=sys.stderr)
-        print(
-            f"Forwarding to {self.upstream_host}:{self.upstream_port}",
-            file=sys.stderr,
+        logger.info("MITM Proxy listening on port %d (TLS)", self.listen_port)
+        logger.info(
+            "Forwarding to %s:%d",
+            self.upstream_host,
+            self.upstream_port,
         )
-        print(f"Upstream SSL: {'enabled' if self.ssl_context else 'disabled'}", file=sys.stderr)
-        print(f"Captures will be saved to {self.capture_file}", file=sys.stderr)
-        print(f"Backpressure mode: {self.backpressure_config.mode}", file=sys.stderr)
+        logger.info(
+            "Upstream SSL: %s", "enabled" if self.ssl_context else "disabled"
+        )
+        logger.info("Captures will be saved to %s", self.capture_file)
+        logger.info("Backpressure mode: %s", self.backpressure_config.mode)
         if self.backpressure_config.mode == "slow_consumer":
-            print(
-                f"  Slow consumer delay: {self.backpressure_config.slow_consumer_delay}s",
-                file=sys.stderr,
+            logger.info(
+                "  Slow consumer delay: %ss",
+                self.backpressure_config.slow_consumer_delay,
             )
         elif self.backpressure_config.mode == "buffer_fill":
-            print(
-                f"  Buffer fill packet limit: {self.backpressure_config.buffer_fill_packet_limit}",
-                file=sys.stderr,
+            logger.info(
+                "  Buffer fill packet limit: %d",
+                self.backpressure_config.buffer_fill_packet_limit,
             )
         elif self.backpressure_config.mode == "ack_delay":
-            print(f"  ACK delay: {self.backpressure_config.ack_delay}s", file=sys.stderr)
-        print("=" * 60, file=sys.stderr)
+            logger.info("  ACK delay: %ss", self.backpressure_config.ack_delay)
+        logger.info("=" * 60)
 
         async with self.server:
             await self.server.serve_forever()
@@ -220,7 +244,7 @@ class MITMProxy:
     ) -> None:
         """Handle device connection and forward to upstream."""
         device_addr = writer.get_extra_info("peername")
-        print(f"Device connected: {device_addr}", file=sys.stderr)
+        logger.info("Device connected: %s", device_addr)
 
         cloud_writer = None
         connection_id = None
@@ -231,21 +255,23 @@ class MITMProxy:
                     self.upstream_host, self.upstream_port, ssl=self.ssl_context
                 )
             except ssl.SSLError as e:
-                print(f"SSL connection failed: {e}", file=sys.stderr)
+                logger.exception("SSL connection failed: %s", e)
                 raise
             except ConnectionRefusedError:
-                print(
-                    f"Cloud connection refused (check host/port: {self.upstream_host}:{self.upstream_port})",
-                    file=sys.stderr,
+                logger.error(
+                    "Cloud connection refused (check host/port: %s:%d)",
+                    self.upstream_host,
+                    self.upstream_port,
                 )
                 raise
             except TimeoutError:
-                print("Cloud connection timeout (check network)", file=sys.stderr)
+                logger.error("Cloud connection timeout (check network)")
                 raise
 
-            print(
-                f"Connected to upstream: {self.upstream_host}:{self.upstream_port}",
-                file=sys.stderr,
+            logger.info(
+                "Connected to upstream: %s:%d",
+                self.upstream_host,
+                self.upstream_port,
             )
 
             # Track active connection with writers for injection
@@ -264,7 +290,7 @@ class MITMProxy:
             )
 
         except Exception as e:
-            print(f"Connection error: {e}", file=sys.stderr)
+            logger.exception("Connection error: %s", e)
         finally:
             # Clean up connection tracking
             if connection_id is not None:
@@ -273,7 +299,8 @@ class MITMProxy:
                         del self.active_connections[connection_id]
                     self.metrics["disconnects"] += 1
 
-                # Notify observers of connection closure (outside lock for symmetry with establishment)
+                # Notify observers of connection closure
+                # (outside lock for symmetry with establishment)
                 self._notify_observers_connection_closed(connection_id)
 
             writer.close()
@@ -283,8 +310,8 @@ class MITMProxy:
                 cloud_writer.close()
                 await cloud_writer.wait_closed()
 
-            print(f"Device disconnected: {device_addr}", file=sys.stderr)
-            print(f"Metrics: {json.dumps(self.metrics)}", file=sys.stderr)
+            logger.info("Device disconnected: %s", device_addr)
+            logger.info("Metrics: %s", json.dumps(self.metrics))
 
     def _update_packet_metrics(self, data: bytes, direction: str) -> None:
         """Update metrics for a forwarded packet."""
@@ -304,10 +331,10 @@ class MITMProxy:
         ):
             if not self.metrics["buffer_fill_reached"]:
                 self.metrics["buffer_fill_reached"] = True
-                print(
-                    f"[BACKPRESSURE] Buffer fill limit reached ({self.backpressure_config.buffer_fill_packet_limit} packets). "
-                    f"Stopping reads from device. TCP buffer will fill.",
-                    file=sys.stderr,
+                logger.warning(
+                    "[BACKPRESSURE] Buffer fill limit reached (%d packets). "
+                    "Stopping reads from device. TCP buffer will fill.",
+                    self.backpressure_config.buffer_fill_packet_limit,
                 )
             # Stop reading - this will cause TCP buffer to fill
             await asyncio.sleep(3600)  # Sleep for 1 hour (effectively forever)
@@ -322,9 +349,10 @@ class MITMProxy:
             and self._is_ack_packet(data)
         ):
             self.metrics["ack_delays_applied"] += 1
-            print(
-                f"[BACKPRESSURE] Delaying ACK packet (type 0x{data[0]:02x}) by {self.backpressure_config.ack_delay}s",
-                file=sys.stderr,
+            logger.debug(
+                "[BACKPRESSURE] Delaying ACK packet (type 0x%02x) by %ss",
+                data[0],
+                self.backpressure_config.ack_delay,
             )
             await asyncio.sleep(self.backpressure_config.ack_delay)
 
@@ -390,7 +418,7 @@ class MITMProxy:
             except asyncio.CancelledError:
                 break
             except Exception as e:
-                print(f"Forward error ({direction}): {e}", file=sys.stderr)
+                logger.exception("Forward error (%s): %s", direction, e)
                 break
 
     def _log_packet(self, data: bytes, direction: str) -> None:
@@ -402,15 +430,17 @@ class MITMProxy:
             "hex": data.hex(" "),
             "annotation": self.current_annotation,
         }
-        print(json.dumps(log_entry))
+        # Print to stdout for structured logging (not using logger to avoid double formatting)
+        print(json.dumps(log_entry), flush=True)  # noqa: T201  # Intentional stdout for structured logs
 
     def _save_capture(self, data: bytes, direction: str, connection_id: int | None = None) -> None:
         """Save raw capture to file with connection tracking."""
         with self.capture_file.open("a") as f:
             annotation_str = f" [{self.current_annotation}]" if self.current_annotation else ""
             conn_str = f" [conn:{connection_id}]" if connection_id else ""
+            timestamp = datetime.now(UTC).isoformat()
             f.write(
-                f"{datetime.now(UTC).isoformat()} {direction}{annotation_str}{conn_str} ({len(data)} bytes)\n"
+                f"{timestamp} {direction}{annotation_str}{conn_str} ({len(data)} bytes)\n"
             )
             f.write(data.hex(" ") + "\n\n")
 
@@ -422,7 +452,8 @@ class MITMProxy:
         Args:
             hex_string: Hex-encoded packet (e.g., "73 00 00 00 1e ...")
             direction: "CLOUD→DEV" or "DEV→CLOUD"
-            broadcast: If True, inject to all connections; if False (default), inject to one random connection
+            broadcast: If True, inject to all connections; if False (default),
+                inject to one random connection
 
         Returns:
             dict with status, timestamp, direction, length, connections, target_connections
@@ -439,8 +470,8 @@ class MITMProxy:
             if broadcast:
                 target_connections = list(self.active_connections.items())
             else:
-                # Pick ONE random connection
-                conn_id = random.choice(list(self.active_connections.keys()))
+                # Pick ONE random connection (non-crypto use)
+                conn_id = random.choice(list(self.active_connections.keys()))  # noqa: S311
                 target_connections = [(conn_id, self.active_connections[conn_id])]
 
             # Inject into target connections
@@ -562,26 +593,28 @@ class MITMProxy:
 
         runner = web.AppRunner(app)
         await runner.setup()
-        site = web.TCPSite(runner, "0.0.0.0", api_port)
+        site = web.TCPSite(
+            runner, "0.0.0.0", api_port  # noqa: S104  # Intentional for REST API server
+        )
         _site_task = await site.start()
         _ = _site_task  # Store reference for RUF006
 
-        print(f"REST API server listening on port {api_port}", file=sys.stderr)
-        print("  POST /inject - Inject packet", file=sys.stderr)
-        print("  POST /annotate - Set annotation label", file=sys.stderr)
-        print("  GET /status - Check status", file=sys.stderr)
-        print("  GET /metrics - Retrieve backpressure metrics", file=sys.stderr)
+        logger.info("REST API server listening on port %d", api_port)
+        logger.info("  POST /inject - Inject packet")
+        logger.info("  POST /annotate - Set annotation label")
+        logger.info("  GET /status - Check status")
+        logger.info("  GET /metrics - Retrieve backpressure metrics")
 
     async def shutdown(self) -> None:
         """Gracefully shutdown the proxy."""
-        print("\nShutting down proxy...", file=sys.stderr)
+        logger.info("\nShutting down proxy...")
 
         if self.server:
             self.server.close()
             await self.server.wait_closed()
 
-        print(f"Capture saved to: {self.capture_file}", file=sys.stderr)
-        print("Proxy stopped.", file=sys.stderr)
+        logger.info("Capture saved to: %s", self.capture_file)
+        logger.info("Proxy stopped.")
 
 
 async def main() -> None:
@@ -669,7 +702,7 @@ async def main() -> None:
     # Register codec validation plugin if enabled
     if args.enable_codec_validation:
         if CodecValidatorPlugin is None:
-            print("Warning: CodecValidatorPlugin not available", file=sys.stderr)
+            logger.warning("CodecValidatorPlugin not available")
         else:
             proxy.register_observer(CodecValidatorPlugin())
 
@@ -677,7 +710,7 @@ async def main() -> None:
     loop = asyncio.get_running_loop()
 
     def signal_handler() -> None:
-        print("\nReceived shutdown signal", file=sys.stderr)
+        logger.info("\nReceived shutdown signal")
         _shutdown_task = asyncio.create_task(proxy.shutdown())
         _ = _shutdown_task  # Store reference for RUF006
         loop.stop()

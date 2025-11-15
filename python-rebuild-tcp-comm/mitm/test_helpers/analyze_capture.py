@@ -5,10 +5,16 @@ This script parses MITM capture files to extract packet statistics,
 validate codec performance, and identify any decode errors.
 """
 
+import logging
 import re
 import sys
 from collections import Counter
 from pathlib import Path
+
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+)
+logger = logging.getLogger(__name__)
 
 MIN_ARGS_REQUIRED = 2
 MIN_DECODED_PACKETS_REQUIRED = 100
@@ -138,15 +144,15 @@ def main() -> int:
         Exit code (0 = success, 1 = error)
     """
     if len(sys.argv) < MIN_ARGS_REQUIRED:
-        print("Usage: python analyze_capture.py <capture_file>")
-        print("\nExample:")
-        print("  python analyze_capture.py mitm/captures/capture_20251110_1234.txt")
+        logger.error("Usage: python analyze_capture.py <capture_file>")
+        logger.error("\nExample:")
+        logger.error("  python analyze_capture.py mitm/captures/capture_20251110_1234.txt")
         return 1
 
     filepath = Path(sys.argv[1])
 
     if not filepath.exists():
-        print(f"Error: Capture file not found: {filepath}")
+        logger.error("Error: Capture file not found: %s", filepath)
         return 1
 
     # Parse and analyze
@@ -154,10 +160,13 @@ def main() -> int:
 
     # Print report
     report = format_statistics_report(stats)
-    print(report)
+    logger.info("%s", report)
 
     # Return 0 if validation passes, 1 if fails
-    passed = stats["total_validated"] >= MIN_DECODED_PACKETS_REQUIRED and stats["error_rate"] < 1.0
+    passed = (
+        stats["total_validated"] >= MIN_DECODED_PACKETS_REQUIRED
+        and stats["error_rate"] < 1.0
+    )
     return 0 if passed else 1
 
 
