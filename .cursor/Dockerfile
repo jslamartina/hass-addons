@@ -21,41 +21,38 @@ ENV DEBIAN_FRONTEND=noninteractive \
   NODE_VERSION=20
 
 # Install system dependencies
-RUN apt-get update && apt-get install -y --no-install-recommends
-# Essential build tools
+# Essential build tools, shell linting, Playwright dependencies, and utilities
+RUN apt-get update && apt-get install -y --no-install-recommends \
 build-essential \
-  git \
-  curl \
-  wget \
-  ca-certificates \
-  gnupg \
-  sudo
-# Shell linting
-shellcheck
-# Playwright dependencies (for E2E tests)
+git \
+curl \
+wget \
+ca-certificates \
+gnupg \
+sudo \
+shellcheck \
 libnss3 \
-  libnspr4 \
-  libatk1.0-0 \
-  libatk-bridge2.0-0 \
-  libcups2 \
-  libdrm2 \
-  libdbus-1-3 \
-  libxkbcommon0 \
-  libxcomposite1 \
-  libxdamage1 \
-  libxfixes3 \
-  libxrandr2 \
-  libgbm1 \
-  libpango-1.0-0 \
-  libcairo2 \
-  libasound2 \
-  libatspi2.0-0
-# Additional utilities
+libnspr4 \
+libatk1.0-0 \
+libatk-bridge2.0-0 \
+libcups2 \
+libdrm2 \
+libdbus-1-3 \
+libxkbcommon0 \
+libxcomposite1 \
+libxdamage1 \
+libxfixes3 \
+libxrandr2 \
+libgbm1 \
+libpango-1.0-0 \
+libcairo2 \
+libasound2 \
+libatspi2.0-0 \
 vim \
-  nano \
-  less \
-  procps \
-  && rm -rf /var/lib/apt/lists/*
+nano \
+less \
+procps \
+&& rm -rf /var/lib/apt/lists/*
 
 # Install Node.js 20.x (for npm scripts, TypeScript, Playwright)
 RUN curl -fsSL https://deb.nodesource.com/setup_${NODE_VERSION}.x | bash - \
