@@ -4,7 +4,7 @@
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-# shellcheck source=./shell-common/common-output.sh
+# shellcheck disable=SC1091  # Source path is dynamic via $SCRIPT_DIR
 source "$SCRIPT_DIR/shell-common/common-output.sh"
 
 LP="[$(basename "$0")]"

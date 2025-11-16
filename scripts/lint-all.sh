@@ -4,7 +4,7 @@ IFS=$'\n\t'
 
 # Load common output functions
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-# shellcheck source=./shell-common/common-output.sh
+# shellcheck disable=SC1091  # Source path is dynamic via $SCRIPT_DIR
 source "$SCRIPT_DIR/shell-common/common-output.sh"
 
 # shellcheck disable=SC2034  # LP used by common-output.sh log functions
@@ -51,7 +51,8 @@ fi
 echo -e "\n${YELLOW}=== Running ShellCheck (Shell script linter) ===${NC}"
 # Use git ls-files to automatically respect .gitignore
 # Check all severity levels (info, warning, error) for comprehensive linting
-if git ls-files '*.sh' | xargs -r shellcheck --severity=info; then
+# Use -x flag to allow following sourced files (shell-common/common-output.sh)
+if git ls-files '*.sh' | xargs -r shellcheck --severity=info --external-sources; then
   echo -e "${GREEN}✅ ShellCheck passed${NC}"
 else
   echo -e "${RED}❌ ShellCheck found issues${NC}"

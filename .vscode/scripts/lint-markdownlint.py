@@ -43,7 +43,7 @@ def transform_markdownlint_line(line: str, workspace_folder: str) -> str | None:
     if not match:
         return None
 
-    file_path, line_num, column_num, code, rule, message = match.groups()
+    file_path, line_num, column_num, code, _rule, message = match.groups()
 
     # Default column to 0 if not present
     column = column_num if column_num else '0'
