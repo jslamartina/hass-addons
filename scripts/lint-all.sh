@@ -40,7 +40,7 @@ fi
 
 # Python type checking with pyright
 echo -e "\n${YELLOW}=== Running pyright (Python type checker) ===${NC}"
-if pyright python-rebuild-tcp-comm/src python-rebuild-tcp-comm/tests; then
+if (cd python-rebuild-tcp-comm && pyright src tests); then
   echo -e "${GREEN}✅ pyright check passed${NC}"
 else
   echo -e "${RED}❌ pyright found type errors${NC}"

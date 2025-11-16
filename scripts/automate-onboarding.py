@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-"""
-Home Assistant Onboarding Automation Script
+"""Home Assistant Onboarding Automation Script
 
 Based on reverse-engineered protocol analysis.
 Uses HTTP REST API to complete onboarding steps.
@@ -14,14 +13,13 @@ import os
 import sys
 import time
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
 from urllib.parse import urljoin
 
 try:
     import requests
 except ImportError:
     print(
-        "Error: requests library required. Install with: pip install -r scripts/requirements.txt"
+        "Error: requests library required. Install with: pip install -r scripts/requirements.txt",
     )
     sys.exit(1)
 
@@ -60,7 +58,7 @@ ONBOARDING_TIME_ZONE = os.getenv("ONBOARDING_TIME_ZONE", "America/Chicago")
 ONBOARDING_ANALYTICS = os.getenv("ONBOARDING_ANALYTICS", "false").lower() == "true"
 
 # Load credentials from file if available
-AUTH_TOKEN: Optional[str] = None
+AUTH_TOKEN: str | None = None
 credentials_file = REPO_ROOT / "hass-credentials.env"
 if credentials_file.exists():
     for line in credentials_file.read_text().splitlines():
@@ -75,13 +73,11 @@ AUTH_TOKEN = os.getenv("LONG_LIVED_ACCESS_TOKEN") or os.getenv("ONBOARDING_TOKEN
 class OnboardingError(Exception):
     """Base exception for onboarding errors"""
 
-    pass
-
 
 class OnboardingClient:
     """Client for Home Assistant onboarding API"""
 
-    def __init__(self, base_url: str, auth_token: Optional[str] = None):
+    def __init__(self, base_url: str, auth_token: str | None = None):
         self.base_url = base_url.rstrip("/")
         self.auth_token = auth_token
         self.session = requests.Session()
@@ -102,12 +98,12 @@ class OnboardingClient:
     def _log_error(self, message: str):
         print(f"{Fore.RED}[onboarding] ❌{Style.RESET_ALL} {message}")
 
-    def get_onboarding_status(self, require_auth: bool = False) -> Optional[List[Dict]]:
-        """
-        Get current onboarding status
+    def get_onboarding_status(self, require_auth: bool = False) -> list[dict] | None:
+        """Get current onboarding status
 
         Args:
             require_auth: If False, try without auth first (for initial state)
+
         """
         self._log_info("Checking onboarding status...")
 
@@ -119,19 +115,19 @@ class OnboardingClient:
                     response = requests.get(url, timeout=10)
                     if response.status_code == 200:
                         return response.json()
-                    elif response.status_code == 404:
+                    if response.status_code == 404:
                         # 404 means either: (1) no owner user yet, or (2) already complete
                         # Attempt user creation to disambiguate (idempotent operation)
                         self._log_info(
-                            "Onboarding endpoint returns 404 (not available)"
+                            "Onboarding endpoint returns 404 (not available)",
                         )
                         return None
-                    elif response.status_code == 401:
+                    if response.status_code == 401:
                         # 401 without auth token means auth is required
                         # This doesn't necessarily mean onboarding is complete
                         # We need auth to check the actual status
                         self._log_info(
-                            "Auth required to check onboarding status (HTTP 401)"
+                            "Auth required to check onboarding status (HTTP 401)",
                         )
                         # Return None to indicate we need auth - caller should get auth and retry
                         # We'll distinguish this case from "complete" by checking if we have auth
@@ -144,12 +140,12 @@ class OnboardingClient:
             response = self.session.get(url, timeout=10)
             if response.status_code == 200:
                 return response.json()
-            elif response.status_code == 404:
+            if response.status_code == 404:
                 # 404 means either: (1) no owner user yet, or (2) already complete
                 # Attempt user creation to disambiguate (idempotent operation)
                 self._log_info("Onboarding endpoint returns 404 (not available)")
                 return None
-            elif response.status_code == 401:
+            if response.status_code == 401:
                 # 401 with auth token means invalid/expired token - NOT complete
                 # Need to refresh token and retry
                 self._log_warn("Unauthorized (401) - token may be invalid or expired")
@@ -157,9 +153,8 @@ class OnboardingClient:
                 # Return a special marker to indicate 401 (not None, which means complete)
                 # Caller should refresh token and retry
                 raise ValueError("401_UNAUTHORIZED")
-            else:
-                self._log_warn(f"Unexpected status code: {response.status_code}")
-                return None
+            self._log_warn(f"Unexpected status code: {response.status_code}")
+            return None
         except ValueError as e:
             # Re-raise 401 errors so caller can handle token refresh
             if "401_UNAUTHORIZED" in str(e):
@@ -169,7 +164,7 @@ class OnboardingClient:
             self._log_warn(f"Failed to get onboarding status: {e}")
             return None
 
-    def discover_incomplete_steps(self) -> List[str]:
+    def discover_incomplete_steps(self) -> list[str]:
         """Discover incomplete onboarding steps"""
         try:
             status = self.get_onboarding_status()
@@ -188,16 +183,16 @@ class OnboardingClient:
 
     def complete_user(
         self,
-        name: Optional[str] = None,
-        username: Optional[str] = None,
-        password: Optional[str] = None,
+        name: str | None = None,
+        username: str | None = None,
+        password: str | None = None,
         language: str = "en",
-    ) -> Tuple[bool, Optional[int]]:
-        """
-        Complete user step (create first user)
+    ) -> tuple[bool, int | None]:
+        """Complete user step (create first user)
 
         Returns:
             Tuple[success: bool, restart_needed: Optional[int]]
+
         """
         self._log_info("Completing user step (creating first user)...")
 
@@ -255,23 +250,23 @@ class OnboardingClient:
                                 content += f"\nONBOARDING_TOKEN={new_token}\n"
                             credentials_file.write_text(content)
                             self._log_info(
-                                "Updated credentials file with onboarding token (ONBOARDING_TOKEN)"
+                                "Updated credentials file with onboarding token (ONBOARDING_TOKEN)",
                             )
                         else:
                             # Create file if it doesn't exist
                             credentials_file.write_text(
-                                f"ONBOARDING_TOKEN={new_token}\n"
+                                f"ONBOARDING_TOKEN={new_token}\n",
                             )
                             self._log_info(
-                                "Created credentials file with onboarding token (ONBOARDING_TOKEN)"
+                                "Created credentials file with onboarding token (ONBOARDING_TOKEN)",
                             )
 
                         # Immediately create a long-lived token from the onboarding token
                         self._log_info(
-                            "Creating long-lived token from onboarding token..."
+                            "Creating long-lived token from onboarding token...",
                         )
                         long_lived_token = create_long_lived_token_from_existing(
-                            new_token
+                            new_token,
                         )
                         if long_lived_token:
                             self._log_success("Successfully created long-lived token")
@@ -282,31 +277,29 @@ class OnboardingClient:
                             )
                         else:
                             self._log_warn(
-                                "Failed to create long-lived token, using onboarding token"
+                                "Failed to create long-lived token, using onboarding token",
                             )
                             # Continue with onboarding token - fallback script will try later
                 except Exception as e:
                     # Token extraction is optional
                     self._log_warn(f"Error processing token: {e}")
-                    pass
                 return True, None
-            elif http_code == 403:
+            if http_code == 403:
                 self._log_info("User step already completed (user exists)")
                 return True, None
-            elif http_code == 400:
+            if http_code == 400:
                 self._log_warn(
-                    "HTTP 400 - may need HA restart or wait for initialization"
+                    "HTTP 400 - may need HA restart or wait for initialization",
                 )
                 self._log_warn("RESTART_NEEDED: restart_code=2")
                 self._log_info(f"Response: {response.text}")
                 self._log_info(
-                    "💡 Consider restarting Home Assistant Core: ha core restart"
+                    "💡 Consider restarting Home Assistant Core: ha core restart",
                 )
                 return False, 2
-            else:
-                self._log_error(f"Failed to complete user step (HTTP {http_code})")
-                self._log_info(f"Response: {response.text}")
-                return False, None
+            self._log_error(f"Failed to complete user step (HTTP {http_code})")
+            self._log_info(f"Response: {response.text}")
+            return False, None
 
         except requests.exceptions.ConnectionError as e:
             self._log_error(f"Connection failed: {e}")
@@ -328,13 +321,13 @@ class OnboardingClient:
         unit_system: str = ONBOARDING_UNIT_SYSTEM,
         time_zone: str = ONBOARDING_TIME_ZONE,
         refresh_token_fn=None,
-    ) -> Tuple[bool, Optional[int]]:
-        """
-        Complete core_config step (location configuration)
+    ) -> tuple[bool, int | None]:
+        """Complete core_config step (location configuration)
 
         Returns:
             Tuple[success: bool, restart_needed: Optional[int]]
             restart_needed: 2 if restart needed, None otherwise
+
         """
         # Note: Onboarding endpoints may work without auth for initial setup
         # But authenticated requests are preferred
@@ -342,7 +335,7 @@ class OnboardingClient:
         self._log_info("Completing core_config step (location configuration)...")
         self._log_info(
             f"Using location: lat={latitude}, lon={longitude}, "
-            f"elev={elevation}, units={unit_system}, tz={time_zone}"
+            f"elev={elevation}, units={unit_system}, tz={time_zone}",
         )
 
         payload = {
@@ -362,20 +355,20 @@ class OnboardingClient:
             if http_code in (200, 201):
                 self._log_success("Core config step completed successfully")
                 return True, None
-            elif http_code == 403:
+            if http_code == 403:
                 self._log_info("Core config step already completed")
                 return True, None
-            elif http_code == 400:
+            if http_code == 400:
                 self._log_warn(
-                    "HTTP 400 - may need HA restart or wait for initialization"
+                    "HTTP 400 - may need HA restart or wait for initialization",
                 )
                 self._log_warn("RESTART_NEEDED: restart_code=2")
                 self._log_info(f"Response: {response.text}")
                 self._log_info(
-                    "💡 Consider restarting Home Assistant Core: ha core restart"
+                    "💡 Consider restarting Home Assistant Core: ha core restart",
                 )
                 return False, 2
-            elif http_code == 401:
+            if http_code == 401:
                 self._log_error("Unauthorized - invalid token")
                 # Try refreshing token and retry
                 if refresh_token_fn:
@@ -388,18 +381,17 @@ class OnboardingClient:
                             response = self.session.post(url, json=payload, timeout=30)
                             if response.status_code in (200, 201, 403):
                                 self._log_success(
-                                    "Core config step completed successfully"
+                                    "Core config step completed successfully",
                                 )
                                 return True, None
                         except Exception:
                             pass
                 return False, None
-            else:
-                self._log_error(
-                    f"Failed to complete core_config step (HTTP {http_code})"
-                )
-                self._log_info(f"Response: {response.text}")
-                return False, None
+            self._log_error(
+                f"Failed to complete core_config step (HTTP {http_code})",
+            )
+            self._log_info(f"Response: {response.text}")
+            return False, None
 
         except requests.exceptions.ConnectionError as e:
             self._log_error(f"Connection failed: {e}")
@@ -414,13 +406,15 @@ class OnboardingClient:
             return False, None
 
     def complete_analytics(
-        self, analytics_enabled: bool = ONBOARDING_ANALYTICS, refresh_token_fn=None
-    ) -> Tuple[bool, Optional[int]]:
-        """
-        Complete analytics step
+        self,
+        analytics_enabled: bool = ONBOARDING_ANALYTICS,
+        refresh_token_fn=None,
+    ) -> tuple[bool, int | None]:
+        """Complete analytics step
 
         Returns:
             Tuple[success: bool, restart_needed: Optional[int]]
+
         """
         if not self.auth_token:
             self._log_error("Authentication token required for analytics step")
@@ -439,20 +433,20 @@ class OnboardingClient:
             if http_code in (200, 201):
                 self._log_success("Analytics step completed successfully")
                 return True, None
-            elif http_code == 403:
+            if http_code == 403:
                 self._log_info("Analytics step already completed")
                 return True, None
-            elif http_code == 400:
+            if http_code == 400:
                 self._log_warn(
-                    "HTTP 400 - may need HA restart or wait for initialization"
+                    "HTTP 400 - may need HA restart or wait for initialization",
                 )
                 self._log_warn("RESTART_NEEDED: restart_code=2")
                 self._log_info(f"Response: {response.text}")
                 self._log_info(
-                    "💡 Consider restarting Home Assistant Core: ha core restart"
+                    "💡 Consider restarting Home Assistant Core: ha core restart",
                 )
                 return False, 2
-            elif http_code == 401:
+            if http_code == 401:
                 self._log_error("Unauthorized - invalid token")
                 # Try refreshing token and retry
                 if refresh_token_fn:
@@ -465,16 +459,15 @@ class OnboardingClient:
                             response = self.session.post(url, json=payload, timeout=30)
                             if response.status_code in (200, 201, 403):
                                 self._log_success(
-                                    "Analytics step completed successfully"
+                                    "Analytics step completed successfully",
                                 )
                                 return True, None
                         except Exception:
                             pass
                 return False, None
-            else:
-                self._log_error(f"Failed to complete analytics step (HTTP {http_code})")
-                self._log_info(f"Response: {response.text}")
-                return False, None
+            self._log_error(f"Failed to complete analytics step (HTTP {http_code})")
+            self._log_info(f"Response: {response.text}")
+            return False, None
 
         except requests.exceptions.ConnectionError as e:
             self._log_error(f"Connection failed: {e}")
@@ -489,13 +482,15 @@ class OnboardingClient:
             return False, None
 
     def complete_integration(
-        self, payload: Optional[Dict] = None, refresh_token_fn=None
-    ) -> Tuple[bool, Optional[int]]:
-        """
-        Complete integration step (if applicable)
+        self,
+        payload: dict | None = None,
+        refresh_token_fn=None,
+    ) -> tuple[bool, int | None]:
+        """Complete integration step (if applicable)
 
         Returns:
             Tuple[success: bool, restart_needed: Optional[int]]
+
         """
         if not self.auth_token:
             self._log_error("Authentication token required for integration step")
@@ -519,38 +514,37 @@ class OnboardingClient:
             if http_code in (200, 201):
                 self._log_success("Integration step completed successfully")
                 return True, None
-            elif http_code == 403:
+            if http_code == 403:
                 self._log_info("Integration step already completed")
                 return True, None
-            elif http_code == 400:
+            if http_code == 400:
                 self._log_warn(
-                    "HTTP 400 - may need HA restart or wait for initialization"
+                    "HTTP 400 - may need HA restart or wait for initialization",
                 )
                 self._log_info(f"Response: {response.text}")
                 return False, 2
-            elif http_code == 401:
+            if http_code == 401:
                 self._log_error("Unauthorized - invalid token")
                 return False, None
-            else:
-                self._log_error(
-                    f"Failed to complete integration step (HTTP {http_code})"
-                )
-                self._log_info(f"Response: {response.text}")
-                return False, None
+            self._log_error(
+                f"Failed to complete integration step (HTTP {http_code})",
+            )
+            self._log_info(f"Response: {response.text}")
+            return False, None
 
         except requests.exceptions.RequestException as e:
             self._log_error(f"Request failed: {e}")
             return False, None
 
 
-def create_long_lived_token_from_existing(existing_token: str) -> Optional[str]:
+def create_long_lived_token_from_existing(existing_token: str) -> str | None:
     """Create a long-lived access token from an existing token (e.g., onboarding token)"""
     print("[onboarding] Creating long-lived token from existing token...")
 
     token_script = REPO_ROOT / "scripts" / "create-token-from-existing.js"
     if not token_script.exists():
         print(
-            "[onboarding] ⚠️  Token bootstrap script not found, skipping long-lived token creation"
+            "[onboarding] ⚠️  Token bootstrap script not found, skipping long-lived token creation",
         )
         return None
 
@@ -567,6 +561,7 @@ def create_long_lived_token_from_existing(existing_token: str) -> Optional[str]:
     try:
         result = subprocess.run(
             ["node", str(token_script)],
+            check=False,
             env=env,
             capture_output=True,
             text=True,
@@ -581,7 +576,8 @@ def create_long_lived_token_from_existing(existing_token: str) -> Optional[str]:
         if not token_match:
             # Fallback to any JWT pattern
             token_match = re.search(
-                r"(eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+)", result.stdout
+                r"(eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+)",
+                result.stdout,
             )
 
         if token_match:
@@ -613,13 +609,12 @@ def create_long_lived_token_from_existing(existing_token: str) -> Optional[str]:
                 print("[onboarding] ✅ Created credentials file with long-lived token")
 
             return token
-        else:
-            print(
-                "[onboarding] ⚠️  Failed to extract long-lived token from script output"
-            )
-            if result.stderr:
-                print(f"[onboarding] Error: {result.stderr}")
-            return None
+        print(
+            "[onboarding] ⚠️  Failed to extract long-lived token from script output",
+        )
+        if result.stderr:
+            print(f"[onboarding] Error: {result.stderr}")
+        return None
 
     except subprocess.TimeoutExpired:
         print("[onboarding] ⚠️  Token creation script timed out")
@@ -629,7 +624,7 @@ def create_long_lived_token_from_existing(existing_token: str) -> Optional[str]:
         return None
 
 
-def get_auth_token(force_refresh: bool = False) -> Optional[str]:
+def get_auth_token(force_refresh: bool = False) -> str | None:
     """Get authentication token from environment or create one"""
     if AUTH_TOKEN and not force_refresh:
         return AUTH_TOKEN
@@ -642,7 +637,7 @@ def get_auth_token(force_refresh: bool = False) -> Optional[str]:
     # Check if we have credentials
     if not HASS_USERNAME or not HASS_PASSWORD:
         print(
-            "[onboarding] ❌ No credentials available (HASS_USERNAME and HASS_PASSWORD required)"
+            "[onboarding] ❌ No credentials available (HASS_USERNAME and HASS_PASSWORD required)",
         )
         return None
 
@@ -661,6 +656,7 @@ def get_auth_token(force_refresh: bool = False) -> Optional[str]:
         try:
             result = subprocess.run(
                 ["node", str(token_script)],
+                check=False,
                 env=env,
                 capture_output=True,
                 text=True,
@@ -706,11 +702,10 @@ def get_auth_token(force_refresh: bool = False) -> Optional[str]:
                     print("[onboarding] ✅ Updated credentials file with new token")
 
                 return token
-            else:
-                print("[onboarding] ❌ Failed to extract token from script output")
-                if result.stderr:
-                    print(f"[onboarding] Error: {result.stderr}")
-                return None
+            print("[onboarding] ❌ Failed to extract token from script output")
+            if result.stderr:
+                print(f"[onboarding] Error: {result.stderr}")
+            return None
 
         except subprocess.TimeoutExpired:
             print("[onboarding] ❌ Token creation script timed out")
@@ -754,7 +749,7 @@ def main():
     try:
         response = requests.get(f"{HA_URL.rstrip('/')}/api/", timeout=10)
         print(
-            f"[onboarding] ✅ Home Assistant is reachable (HTTP {response.status_code})"
+            f"[onboarding] ✅ Home Assistant is reachable (HTTP {response.status_code})",
         )
     except requests.exceptions.ConnectionError:
         print(f"[onboarding] ❌ Cannot connect to Home Assistant at {HA_URL}")
@@ -788,7 +783,8 @@ def main():
 
     print("[onboarding] Attempting fresh onboarding (user creation)...")
     client_for_user_creation = OnboardingClient(
-        HA_URL, None
+        HA_URL,
+        None,
     )  # No auth needed for user creation
     success, restart_code = client_for_user_creation.complete_user()
 
@@ -804,7 +800,7 @@ def main():
         else:
             # User was created but no token returned - try WebSocket
             print(
-                "[onboarding] No token in response, trying WebSocket token creation..."
+                "[onboarding] No token in response, trying WebSocket token creation...",
             )
             auth_token = get_auth_token()
             if auth_token:
@@ -846,41 +842,38 @@ def main():
     for step in incomplete_steps:
         if step == "core_config":
             success, restart_code = client.complete_core_config(
-                refresh_token_fn=get_auth_token
+                refresh_token_fn=get_auth_token,
             )
             if success:
                 print("[onboarding] ✅ Core config step completed")
+            elif restart_code == 2:
+                needs_restart = True
             else:
-                if restart_code == 2:
-                    needs_restart = True
-                else:
-                    print("[onboarding] ⚠️  Core config step failed, continuing...")
+                print("[onboarding] ⚠️  Core config step failed, continuing...")
             time.sleep(2)
 
         elif step == "analytics":
             success, restart_code = client.complete_analytics(
-                refresh_token_fn=get_auth_token
+                refresh_token_fn=get_auth_token,
             )
             if success:
                 print("[onboarding] ✅ Analytics step completed")
+            elif restart_code == 2:
+                needs_restart = True
             else:
-                if restart_code == 2:
-                    needs_restart = True
-                else:
-                    print("[onboarding] ⚠️  Analytics step failed, continuing...")
+                print("[onboarding] ⚠️  Analytics step failed, continuing...")
             time.sleep(2)
 
         elif step == "integration":
             success, restart_code = client.complete_integration(
-                refresh_token_fn=get_auth_token
+                refresh_token_fn=get_auth_token,
             )
             if success:
                 print("[onboarding] ✅ Integration step completed")
+            elif restart_code == 2:
+                needs_restart = True
             else:
-                if restart_code == 2:
-                    needs_restart = True
-                else:
-                    print("[onboarding] ⚠️  Integration step failed, continuing...")
+                print("[onboarding] ⚠️  Integration step failed, continuing...")
             time.sleep(2)
 
         elif step == "user":
@@ -895,11 +888,11 @@ def main():
 
     if remaining_steps:
         print(
-            f"[onboarding] ⚠️  Some onboarding steps may still be incomplete: {', '.join(remaining_steps)}"
+            f"[onboarding] ⚠️  Some onboarding steps may still be incomplete: {', '.join(remaining_steps)}",
         )
         if needs_restart:
             print(
-                "[onboarding] 💡 Consider restarting Home Assistant Core: ha core restart"
+                "[onboarding] 💡 Consider restarting Home Assistant Core: ha core restart",
             )
         sys.exit(1)
     else:
