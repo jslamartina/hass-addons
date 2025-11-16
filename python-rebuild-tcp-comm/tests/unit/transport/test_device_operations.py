@@ -474,10 +474,12 @@ class TestDeviceOperationsErrorPaths:
 
     @pytest.mark.asyncio
     async def test_ask_for_mesh_info_unexpected_exception_wrapped(self, device_ops, mock_transport):
-        """Test that unexpected exceptions are wrapped in MeshInfoRequestError with exception chaining."""
+        """Test that unexpected exceptions are wrapped in MeshInfoRequestError
+        with exception chaining."""
         # Setup
         device_ops.set_primary(True)
-        # Mock transport to raise unexpected exception (not ConnectionError, TimeoutError, or OSError)
+        # Mock transport to raise unexpected exception
+        # (not ConnectionError, TimeoutError, or OSError)
         mock_transport.send_reliable.side_effect = ValueError("Unexpected error")
 
         # Execute & Assert
@@ -617,7 +619,8 @@ class TestDeviceOperationsErrorPaths:
 
     @pytest.mark.asyncio
     async def test_request_device_info_connection_error_exception(self, device_ops, mock_transport):
-        """Test that ConnectionError exceptions are caught and re-raised as DeviceInfoRequestError."""
+        """Test that ConnectionError exceptions are caught and re-raised as
+        DeviceInfoRequestError."""
         # Setup
         device_id = bytes([0x39, 0x87, 0xC8, 0x57])
         mock_transport.send_reliable.side_effect = ConnectionError("Connection refused")

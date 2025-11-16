@@ -164,10 +164,7 @@ def main() -> int:
     logger.info("%s", report)
 
     # Return 0 if validation passes, 1 if fails
-    passed = (
-        stats["total_validated"] >= MIN_DECODED_PACKETS_REQUIRED
-        and stats["error_rate"] < 1.0
-    )
+    passed = stats["total_validated"] >= MIN_DECODED_PACKETS_REQUIRED and stats["error_rate"] < 1.0
     return 0 if passed else 1
 
 

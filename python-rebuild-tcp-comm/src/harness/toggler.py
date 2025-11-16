@@ -311,7 +311,7 @@ async def toggle_device_with_retry(
         if attempt < max_attempts:
             # Exponential backoff with jitter
             backoff_base = 0.25 * (2 ** (attempt - 1))
-            jitter = random.uniform(0, 0.1)
+            jitter = random.uniform(0, 0.1)  # noqa: S311
             delay = backoff_base + jitter
             logger.warning(
                 "Toggle failed, retrying in %.2fs (attempt %d/%d)",

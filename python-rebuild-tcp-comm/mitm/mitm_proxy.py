@@ -211,9 +211,7 @@ class MITMProxy:
             self.upstream_host,
             self.upstream_port,
         )
-        logger.info(
-            "Upstream SSL: %s", "enabled" if self.ssl_context else "disabled"
-        )
+        logger.info("Upstream SSL: %s", "enabled" if self.ssl_context else "disabled")
         logger.info("Captures will be saved to %s", self.capture_file)
         logger.info("Backpressure mode: %s", self.backpressure_config.mode)
         if self.backpressure_config.mode == "slow_consumer":
@@ -433,9 +431,7 @@ class MITMProxy:
             annotation_str = f" [{self.current_annotation}]" if self.current_annotation else ""
             conn_str = f" [conn:{connection_id}]" if connection_id else ""
             timestamp = datetime.now(UTC).isoformat()
-            f.write(
-                f"{timestamp} {direction}{annotation_str}{conn_str} ({len(data)} bytes)\n"
-            )
+            f.write(f"{timestamp} {direction}{annotation_str}{conn_str} ({len(data)} bytes)\n")
             f.write(data.hex(" ") + "\n\n")
 
     async def inject_packet(
@@ -588,7 +584,9 @@ class MITMProxy:
         runner = web.AppRunner(app)
         await runner.setup()
         site = web.TCPSite(
-            runner, "0.0.0.0", api_port  # noqa: S104  # Intentional for REST API server
+            runner,
+            "0.0.0.0",
+            api_port,  # Intentional for REST API server
         )
         _site_task = await site.start()
         _ = _site_task  # Store reference for RUF006
