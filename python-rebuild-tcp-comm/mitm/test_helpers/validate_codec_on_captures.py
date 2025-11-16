@@ -9,17 +9,31 @@ import re
 import sys
 from collections import Counter
 from pathlib import Path
+from typing import TypedDict
 
 # Add src to path for imports
-sys.path.insert(0, str(Path(__file__).parent.parent.parent / "src"))
+sys.path.insert(0, str(Path(__file__).parent.parent.parent / "src"))  # type: ignore
 
-from protocol.cync_protocol import CyncProtocol
-from protocol.exceptions import PacketDecodeError
+from protocol.cync_protocol import CyncProtocol  # type: ignore
+from protocol.exceptions import PacketDecodeError  # type: ignore
 
 # Constants for validation criteria
 MIN_DECODED_PACKETS_REQUIRED = 100
 MIN_ARGS_REQUIRED = 2
 MAX_ERROR_RATE = 1.0
+
+
+class ValidationStats(TypedDict):
+    """Statistics dictionary structure for validation results."""
+
+    total_packets: int
+    decoded_successfully: int
+    decode_errors: int
+    packet_types: Counter[str]
+    error_reasons: Counter[str]
+    direction_counts: dict[str, int]
+    sample_packets: dict[str, dict[str, str | int]]
+    error_rate: float
 
 
 def parse_capture_packets(filepath: Path) -> list[tuple[str, str, bytes]]:
@@ -34,7 +48,7 @@ def parse_capture_packets(filepath: Path) -> list[tuple[str, str, bytes]]:
     with filepath.open() as f:
         lines = f.readlines()
 
-    packets = []
+    packets: list[tuple[str, str, bytes]] = []
     i = 0
     while i < len(lines):
         line = lines[i].strip()
@@ -68,7 +82,7 @@ def parse_capture_packets(filepath: Path) -> list[tuple[str, str, bytes]]:
     return packets
 
 
-def validate_packets(packets: list[tuple[str, str, bytes]], limit: int | None = None) -> dict:
+def validate_packets(packets: list[tuple[str, str, bytes]], limit: int | None = None) -> ValidationStats:
     """Decode packets using Phase 1a codec and collect statistics.
 
     Args:
@@ -78,15 +92,16 @@ def validate_packets(packets: list[tuple[str, str, bytes]], limit: int | None = 
     Returns:
         Statistics dictionary
     """
-    protocol = CyncProtocol()
-    stats = {
+    protocol = CyncProtocol()  # type: ignore
+    stats: ValidationStats = {
         "total_packets": 0,
         "decoded_successfully": 0,
         "decode_errors": 0,
-        "packet_types": Counter(),
-        "error_reasons": Counter(),
+        "packet_types": Counter[str](),
+        "error_reasons": Counter[str](),
         "direction_counts": {"DEV→CLOUD": 0, "CLOUD→DEV": 0},
         "sample_packets": {},
+        "error_rate": 0.0,
     }
 
     packets_to_process = packets[:limit] if limit else packets
@@ -96,11 +111,11 @@ def validate_packets(packets: list[tuple[str, str, bytes]], limit: int | None = 
         stats["direction_counts"][direction] += 1
 
         try:
-            decoded = protocol.decode_packet(packet_bytes)
+            decoded = protocol.decode_packet(packet_bytes)  # type: ignore
             stats["decoded_successfully"] += 1
 
             # Count packet type
-            packet_type_hex = f"0x{decoded.packet_type:02x}"
+            packet_type_hex = f"0x{decoded.packet_type:02x}"  # type: ignore
             stats["packet_types"][packet_type_hex] += 1
 
             # Store sample packet (first of each type)
@@ -109,12 +124,12 @@ def validate_packets(packets: list[tuple[str, str, bytes]], limit: int | None = 
                     "timestamp": timestamp,
                     "direction": direction,
                     "hex": packet_bytes.hex(" "),
-                    "length": decoded.length,
+                    "length": decoded.length,  # type: ignore
                 }
 
-        except PacketDecodeError as e:
+        except PacketDecodeError as e:  # type: ignore
             stats["decode_errors"] += 1
-            stats["error_reasons"][e.reason] += 1
+            stats["error_reasons"][e.reason] += 1  # type: ignore
 
     # Calculate error rate
     if stats["total_packets"] > 0:
@@ -125,9 +140,9 @@ def validate_packets(packets: list[tuple[str, str, bytes]], limit: int | None = 
     return stats
 
 
-def _format_overall_statistics(stats: dict) -> list[str]:
+def _format_overall_statistics(stats: ValidationStats) -> list[str]:
     """Format overall statistics section."""
-    lines = []
+    lines: list[str] = []
     lines.append("Overall Statistics:")
     lines.append(f"  Total Packets Processed: {stats['total_packets']:,}")
     lines.append(f"  Successfully Decoded: {stats['decoded_successfully']:,}")
@@ -137,9 +152,9 @@ def _format_overall_statistics(stats: dict) -> list[str]:
     return lines
 
 
-def _format_traffic_direction(stats: dict) -> list[str]:
+def _format_traffic_direction(stats: ValidationStats) -> list[str]:
     """Format traffic direction section."""
-    lines = []
+    lines: list[str] = []
     lines.append("Traffic Direction:")
     for direction, count in stats["direction_counts"].items():
         lines.append(f"  {direction}: {count:,} packets")
@@ -147,9 +162,9 @@ def _format_traffic_direction(stats: dict) -> list[str]:
     return lines
 
 
-def _format_packet_types(stats: dict) -> list[str]:
+def _format_packet_types(stats: ValidationStats) -> list[str]:
     """Format packet types section."""
-    lines = []
+    lines: list[str] = []
     if stats["packet_types"]:
         lines.append("Packet Types Decoded:")
         for ptype, count in sorted(stats["packet_types"].items()):
@@ -163,9 +178,9 @@ def _format_packet_types(stats: dict) -> list[str]:
     return lines
 
 
-def _format_error_reasons(stats: dict) -> list[str]:
+def _format_error_reasons(stats: ValidationStats) -> list[str]:
     """Format error reasons section."""
-    lines = []
+    lines: list[str] = []
     if stats["error_reasons"]:
         lines.append("Error Reasons:")
         for reason, count in stats["error_reasons"].most_common():
@@ -174,9 +189,9 @@ def _format_error_reasons(stats: dict) -> list[str]:
     return lines
 
 
-def _format_acceptance_criteria(stats: dict) -> tuple[list[str], bool]:
+def _format_acceptance_criteria(stats: ValidationStats) -> tuple[list[str], bool]:
     """Format acceptance criteria section. Returns (lines, overall_pass)."""
-    lines = []
+    lines: list[str] = []
     lines.append("Phase 1a Acceptance Criteria:")
 
     decoded_pass = stats["decoded_successfully"] >= MIN_DECODED_PACKETS_REQUIRED
@@ -212,7 +227,7 @@ def _format_acceptance_criteria(stats: dict) -> tuple[list[str], bool]:
     return lines, overall_pass
 
 
-def format_validation_report(stats: dict, capture_file: str) -> str:
+def format_validation_report(stats: ValidationStats, capture_file: str) -> str:
     """Format validation results as report.
 
     Args:
@@ -222,7 +237,7 @@ def format_validation_report(stats: dict, capture_file: str) -> str:
     Returns:
         Formatted report string
     """
-    lines = []
+    lines: list[str] = []
     lines.append("=" * 80)
     lines.append("Phase 1a Codec Validation - Decode Test Results")
     lines.append("=" * 80)

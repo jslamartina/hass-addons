@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-"""
-Parse and analyze MITM capture files.
+"""Parse and analyze MITM capture files.
 
 Usage:
     # Show all packet types
@@ -22,9 +21,11 @@ import re
 from collections import Counter, defaultdict
 from datetime import datetime
 from pathlib import Path
+from typing import Any
 
 logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    level=logging.INFO,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
 )
 logger = logging.getLogger(__name__)
 
@@ -33,9 +34,9 @@ FIRST_PACKETS_TO_SHOW = 10
 LAST_PACKETS_TO_SHOW = 5
 
 
-def parse_capture_file(filepath: str) -> list[dict]:
+def parse_capture_file(filepath: str) -> list[dict[str, Any]]:
     """Parse MITM capture file and extract packets."""
-    packets = []
+    packets: list[dict[str, Any]] = []
 
     file_path = Path(filepath)
     with file_path.open() as f:
@@ -64,7 +65,7 @@ def parse_capture_file(filepath: str) -> list[dict]:
                         "packet_type": packet_type.lower(),
                         "hex_bytes": hex_bytes,
                         "length": len(hex_bytes.split()) if hex_bytes else 0,
-                    }
+                    },
                 )
 
         i += 1
@@ -72,12 +73,12 @@ def parse_capture_file(filepath: str) -> list[dict]:
     return packets
 
 
-def filter_packets(packets: list[dict], packet_type: str) -> list[dict]:
+def filter_packets(packets: list[dict[str, Any]], packet_type: str) -> list[dict[str, Any]]:
     """Filter packets by type."""
     return [p for p in packets if p["packet_type"] == packet_type.lower().replace("0x", "")]
 
 
-def show_statistics(packets: list[dict]):
+def show_statistics(packets: list[dict[str, Any]]) -> None:
     """Show packet statistics."""
     total = len(packets)
     type_counts = Counter(p["packet_type"] for p in packets)
@@ -99,11 +100,13 @@ def show_statistics(packets: list[dict]):
         logger.info("  %-10s: %6d (%5.1f%%)", direction, count, pct)
 
 
-def extract_ack_pairs(packets: list[dict]) -> dict[str, list[tuple]]:
+def extract_ack_pairs(
+    packets: list[dict[str, Any]],
+) -> dict[str, list[tuple[dict[str, Any], dict[str, Any], float]]]:
     """Extract request → ACK pairs."""
-    pairs = defaultdict(list)
+    pairs: defaultdict[str, list[tuple[dict[str, Any], dict[str, Any], float]]] = defaultdict(list)
 
-    pending = {
+    pending: dict[str, list[dict[str, Any]]] = {
         "23": [],  # Handshake → 28
         "73": [],  # Data → 7b
         "83": [],  # Status → 88
@@ -141,7 +144,9 @@ def extract_ack_pairs(packets: list[dict]) -> dict[str, list[tuple]]:
     return pairs
 
 
-def show_ack_pairs(pairs: dict[str, list[tuple]]):
+def show_ack_pairs(
+    pairs: dict[str, list[tuple[dict[str, Any], dict[str, Any], float]]],
+) -> None:
     """Display ACK pair statistics."""
     logger.info("=== ACK Pair Statistics ===")
 
@@ -161,7 +166,8 @@ def show_ack_pairs(pairs: dict[str, list[tuple]]):
             logger.info("  Max latency: %.1fms", max(latencies))
 
 
-def main():
+def main() -> None:
+    """Parse and analyze MITM capture files."""
     parser = argparse.ArgumentParser(description="Parse and analyze MITM capture files")
     parser.add_argument("files", nargs="+", help="Capture files to analyze")
     parser.add_argument("--filter", metavar="TYPE", help="Filter by packet type (e.g., 0x73)")
@@ -172,7 +178,7 @@ def main():
     args = parser.parse_args()
 
     # Parse all files
-    all_packets = []
+    all_packets: list[dict[str, Any]] = []
     for filepath in args.files:
         packets = parse_capture_file(filepath)
         all_packets.extend(packets)

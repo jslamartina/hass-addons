@@ -10,9 +10,10 @@ import re
 import sys
 from collections import Counter
 from pathlib import Path
+from typing import Any
 
 logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
 )
 logger = logging.getLogger(__name__)
 
@@ -20,7 +21,7 @@ MIN_ARGS_REQUIRED = 2
 MIN_DECODED_PACKETS_REQUIRED = 100
 
 
-def parse_capture_file(filepath: Path) -> dict[str, any]:
+def parse_capture_file(filepath: Path) -> dict[str, Any]:
     """Parse MITM capture file and extract packet statistics.
 
     Args:
@@ -28,6 +29,7 @@ def parse_capture_file(filepath: Path) -> dict[str, any]:
 
     Returns:
         Dictionary with packet statistics and validation results
+
     """
     with filepath.open() as f:
         content = f.read()
@@ -56,7 +58,7 @@ def parse_capture_file(filepath: Path) -> dict[str, any]:
         "total_validated": len(validated_matches),
         "total_failed": len(failed_matches),
         "error_rate": (
-            (len(failed_matches) / len(validated_matches) * MIN_DECODED_PACKETS_REQUIRED)
+            (len(failed_matches) / len(validated_matches) * 100)
             if validated_matches
             else 0.0
         ),
@@ -70,7 +72,7 @@ def parse_capture_file(filepath: Path) -> dict[str, any]:
     }
 
 
-def format_statistics_report(stats: dict[str, any]) -> str:
+def format_statistics_report(stats: dict[str, Any]) -> str:
     """Format statistics as human-readable report.
 
     Args:
@@ -78,8 +80,9 @@ def format_statistics_report(stats: dict[str, any]) -> str:
 
     Returns:
         Formatted report string
+
     """
-    report = []
+    report: list[str] = []
     report.append("=" * 70)
     report.append("Phase 1a Codec Validation - Capture Analysis")
     report.append("=" * 70)
@@ -116,7 +119,7 @@ def format_statistics_report(stats: dict[str, any]) -> str:
     else:
         report.append(
             f"  ❌ FAIL: Only {stats['total_validated']} packets "
-            f"(need ≥{MIN_DECODED_PACKETS_REQUIRED})"
+            f"(need ≥{MIN_DECODED_PACKETS_REQUIRED})",
         )
 
     if stats["error_rate"] < 1.0:
@@ -139,10 +142,11 @@ def format_statistics_report(stats: dict[str, any]) -> str:
 
 
 def main() -> int:
-    """Main entry point for capture analysis script.
+    """Run capture analysis script.
 
     Returns:
         Exit code (0 = success, 1 = error)
+
     """
     if len(sys.argv) < MIN_ARGS_REQUIRED:
         logger.error("Usage: python analyze_capture.py <capture_file>")
