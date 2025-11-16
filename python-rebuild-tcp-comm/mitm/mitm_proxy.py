@@ -585,8 +585,8 @@ class MITMProxy:
         await runner.setup()
         site = web.TCPSite(
             runner,
-            "0.0.0.0",
-            api_port,  # Intentional for REST API server
+            "0.0.0.0",  # noqa: S104 - Intentional binding to all interfaces for REST API server
+            api_port,
         )
         _site_task = await site.start()
         _ = _site_task  # Store reference for RUF006

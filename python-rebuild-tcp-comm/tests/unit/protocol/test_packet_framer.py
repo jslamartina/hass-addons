@@ -270,6 +270,7 @@ class TestPacketFramerEdgeCases:
         packet = bytes([PACKET_TYPE_HANDSHAKE, 0x00, 0x00, 0x00, 0x03]) + (b"\xaa" * 3)
 
         # Feed one byte at a time
+        packets: list[bytes] = []
         for byte in packet:
             packets = framer.feed(bytes([byte]))
             if byte != packet[-1]:  # Not last byte

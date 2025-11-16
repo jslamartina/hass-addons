@@ -7,7 +7,8 @@
   "executionEnvironments": [
     {
       "root": ".",
-      "extraPaths": ["src"]
+      "extraPaths": ["src"],
+      "pythonVersion": "3.13"
     }
   ]
 }

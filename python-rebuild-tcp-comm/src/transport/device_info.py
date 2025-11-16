@@ -55,6 +55,7 @@ class DeviceInfo:
     Legacy Reference:
         Adapted from cync-controller/src/cync_controller/structs.py
         Device struct definitions and parsing logic
+
     """
 
     device_id: bytes  # 4 bytes - unique device identifier
@@ -79,6 +80,7 @@ class DeviceInfo:
             raise ValueError(error_msg)
 
         # Validate correlation_id format (UUID v7 string)
+        # Note: isinstance check required - type annotations are not enforced at runtime
         if (
             not isinstance(self.correlation_id, str)
             or len(self.correlation_id) < UUID_STRING_MIN_LENGTH
@@ -118,6 +120,7 @@ class MeshInfoRequestError(Exception):
     Attributes:
         reason: Error reason code (not_primary, send_failed, timeout)
         message: Human-readable error message
+
     """
 
     def __init__(self, reason: str, message: str):
@@ -132,6 +135,7 @@ class DeviceInfoRequestError(Exception):
     Attributes:
         reason: Error reason code (send_failed, timeout)
         message: Human-readable error message
+
     """
 
     def __init__(self, reason: str, message: str):
@@ -145,6 +149,7 @@ class DeviceStructParseError(Exception):
 
     Attributes:
         message: Human-readable error message describing parse failure
+
     """
 
     def __init__(self, message: str):

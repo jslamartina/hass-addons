@@ -34,9 +34,10 @@ class JSONFormatter(logging.Formatter):
             "message": record.getMessage(),
         }
 
-        # Add extra fields if present
-        if hasattr(record, "extra_fields"):
-            log_data.update(record.extra_fields)
+        # Add extra fields if present (dynamically added attribute)
+        extra_fields = getattr(record, "extra_fields", None)
+        if extra_fields:
+            log_data.update(extra_fields)
 
         return json.dumps(log_data)
 

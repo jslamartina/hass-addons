@@ -264,7 +264,10 @@ DEVICE_INFO_0x43_FRAMED_3_METADATA: PacketMetadata = PacketMetadata(
     captured_at="2025-11-06T08:20:59.868595",
     device_id="45:88:0d:50",
     operation="device_info",
-    notes="90-byte device info with 0x7e framing, checksum 0xc1 (same as FRAMED_1), different endpoint",
+    notes=(
+        "90-byte device info with 0x7e framing, checksum 0xc1 "
+        "(same as FRAMED_1), different endpoint"
+    ),
 )
 
 # Status Broadcast packets with diverse endpoints and checksums
