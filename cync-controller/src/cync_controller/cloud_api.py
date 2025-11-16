@@ -179,14 +179,8 @@ class CyncCloudAPI:
             r.raise_for_status()
             iat = datetime.datetime.now(datetime.UTC)
             token_data = await r.json()
-        except aiohttp.ClientResponseError:
-            logger.exception("Failed to authenticate")
-            return False
-        except json.JSONDecodeError:
-            logger.exception("Failed to decode JSON")
-            return False
-        except KeyError:
-            logger.exception("Failed to get key from JSON")
+        except (aiohttp.ClientResponseError, json.JSONDecodeError, KeyError):
+            logger.exception("Failed to authenticate or decode response")
             return False
         else:
             # add issued_at to the token data for computing the expiration datetime
@@ -232,14 +226,16 @@ class CyncCloudAPI:
         lp = f"{self.lp}:get_devices:"
         await self._check_session()
         if not self.token_cache:
-            raise CyncAuthenticationError("Token cache is None, cannot request devices")
+            msg = "Token cache is None, cannot request devices"
+            raise CyncAuthenticationError(msg)
         user_id = self.token_cache.user_id
         access_token = self.token_cache.access_token
         api_devices_url = f"{CYNC_API_BASE}user/{user_id}/subscribe/devices"
         headers = {"Access-Token": access_token}
         sesh = self.http_session
         if not sesh:
-            raise RuntimeError("HTTP session is None, cannot request devices")
+            msg = "HTTP session is None, cannot request devices"
+            raise RuntimeError(msg)
         try:
             r = await sesh.get(
                 api_devices_url,
@@ -272,13 +268,15 @@ class CyncCloudAPI:
         lp = f"{self.lp}:get_properties:"
         await self._check_session()
         if not self.token_cache:
-            raise CyncAuthenticationError("Token cache is None, cannot get properties")
+            msg = "Token cache is None, cannot get properties"
+            raise CyncAuthenticationError(msg)
         access_token = self.token_cache.access_token
         api_device_prop_url = f"{CYNC_API_BASE}product/{product_id}/device/{device_id}/property"
         headers = {"Access-Token": access_token}
         sesh = self.http_session
         if not sesh:
-            raise RuntimeError("HTTP session is None, cannot get properties")
+            msg = "HTTP session is None, cannot get properties"
+            raise RuntimeError(msg)
         ret: dict[str, Any] | None = None
         try:
             r = await sesh.get(
@@ -299,7 +297,8 @@ class CyncCloudAPI:
 
         # {'error': {'msg': 'Access-Token Expired', 'code': 4031021}}
         if ret is None:
-            raise RuntimeError("Failed to get properties: response is None")
+            msg = "Failed to get properties: response is None"
+            raise RuntimeError(msg)
         logit = False
         if "error" in ret:
             error_data = ret["error"]

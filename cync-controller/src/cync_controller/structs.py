@@ -5,7 +5,6 @@ import datetime
 import logging
 import os
 import time
-import uuid
 from argparse import Namespace
 from collections.abc import Coroutine
 from enum import StrEnum

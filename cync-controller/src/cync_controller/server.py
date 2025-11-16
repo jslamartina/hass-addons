@@ -75,7 +75,9 @@ class CloudRelayConnection:
 
             # Connect to cloud
             self.cloud_reader, self.cloud_writer = await asyncio.open_connection(
-                self.cloud_server, self.cloud_port, ssl=ssl_context,
+                self.cloud_server,
+                self.cloud_port,
+                ssl=ssl_context,
             )
             logger.info(
                 " Cloud relay connected",

@@ -13,7 +13,8 @@ from pathlib import Path
 from typing import Any
 
 logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    level=logging.INFO,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
 )
 logger = logging.getLogger(__name__)
 
@@ -58,9 +59,7 @@ def parse_capture_file(filepath: Path) -> dict[str, Any]:
         "total_validated": len(validated_matches),
         "total_failed": len(failed_matches),
         "error_rate": (
-            (len(failed_matches) / len(validated_matches) * 100)
-            if validated_matches
-            else 0.0
+            (len(failed_matches) / len(validated_matches) * 100) if validated_matches else 0.0
         ),
         "packet_types": dict(packet_types),
         "direction_counts": dict(direction_counts),

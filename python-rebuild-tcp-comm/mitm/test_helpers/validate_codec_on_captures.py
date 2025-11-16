@@ -82,7 +82,9 @@ def parse_capture_packets(filepath: Path) -> list[tuple[str, str, bytes]]:
     return packets
 
 
-def validate_packets(packets: list[tuple[str, str, bytes]], limit: int | None = None) -> ValidationStats:
+def validate_packets(
+    packets: list[tuple[str, str, bytes]], limit: int | None = None
+) -> ValidationStats:
     """Decode packets using Phase 1a codec and collect statistics.
 
     Args:

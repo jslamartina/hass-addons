@@ -75,7 +75,7 @@ class DeviceCommands:
     green: int | None = None
     blue: int | None = None
 
-    async def set_power(self, state: int):
+    async def set_power(self, state: int):  # noqa: PLR0915
         """Send raw data to control device state (1=on, 0=off).
 
         If the device receives the msg and changes state, every TCP device connected will send
@@ -249,9 +249,8 @@ class DeviceCommands:
         else:
             return True
 
-    async def set_brightness(self, bri: int):
-        """Send raw data to control device brightness (0-100). Fans are 0-255.
-        """
+    async def set_brightness(self, bri: int):  # noqa: PLR0915
+        """Send raw data to control device brightness (0-100). Fans are 0-255."""
         """
         73 00 00 00 22 37 96 24 69 60 48 00 7e 17 00 00  s..."7.$i`H.~...
         00 f8 f0 10 00 17 00 00 00 00 07 00 f0 11 02 01  ................
@@ -517,7 +516,7 @@ class DeviceCommands:
             elapsed,
         )
 
-    async def set_rgb(self, red: int, green: int, blue: int):
+    async def set_rgb(self, red: int, green: int, blue: int):  # noqa: PLR0915
         """Send raw data to control device RGB color (0-255 for each channel).
 
         If the device receives the msg and changes state, every TCP device connected will send
