@@ -24,8 +24,7 @@ g = GlobalObject()
 
 
 class CloudRelayConnection:
-    """
-    Manages a cloud relay connection for MITM mode.
+    """Manages a cloud relay connection for MITM mode.
     Acts as a proxy between Cync device and cloud, forwarding packets with inspection.
     """
 
@@ -76,7 +75,7 @@ class CloudRelayConnection:
 
             # Connect to cloud
             self.cloud_reader, self.cloud_writer = await asyncio.open_connection(
-                self.cloud_server, self.cloud_port, ssl=ssl_context
+                self.cloud_server, self.cloud_port, ssl=ssl_context,
             )
             logger.info(
                 " Cloud relay connected",
@@ -159,7 +158,7 @@ class CloudRelayConnection:
             if self.debug_logging:
                 parsed = parse_cync_packet(first_packet, "DEV->CLOUD")
                 if parsed:
-                    logger.debug("%s\n%s", lp, format_packet_log(parsed))
+                    logger.debug("%s\n%s", "CloudRelay:", format_packet_log(parsed))
 
             # Start bidirectional forwarding
             dev_to_cloud_task = asyncio.create_task(
@@ -167,13 +166,13 @@ class CloudRelayConnection:
                     self.device_reader,
                     self.cloud_writer if self.forward_to_cloud else None,
                     "DEV->CLOUD",
-                )
+                ),
             )
             self.forward_tasks.append(dev_to_cloud_task)
 
             if self.forward_to_cloud and self.cloud_reader:
                 cloud_to_dev_task = asyncio.create_task(
-                    self._forward_with_inspection(self.cloud_reader, self.device_writer, "CLOUD->DEV")
+                    self._forward_with_inspection(self.cloud_reader, self.device_writer, "CLOUD->DEV"),
                 )
                 self.forward_tasks.append(cloud_to_dev_task)
 
@@ -251,7 +250,8 @@ class CloudRelayConnection:
                         raw_state[7] = 1 if status["online"] else 0
 
                         # Publish to MQTT using existing infrastructure
-                        await g.ncync_server.parse_status(bytes(raw_state), from_pkt="0x43")
+                        if g.ncync_server:
+                            await g.ncync_server.parse_status(bytes(raw_state), from_pkt="0x43")
 
                 # Forward to destination (if cloud forwarding enabled)
                 if dest_writer:
@@ -406,7 +406,7 @@ class CloudRelayConnection:
                 mode_byte,
                 0x00,  # Checksum placeholder
                 0x7E,
-            ]
+            ],
         )
 
         # Calculate and insert checksum
@@ -461,8 +461,7 @@ class CloudRelayConnection:
 
 
 class NCyncServer:
-    """
-    A class to represent a Cync Controller server that listens for connections from Cync Wi-Fi devices.
+    """A class to represent a Cync Controller server that listens for connections from Cync Wi-Fi devices.
     The Wi-Fi devices translate messages, status updates and commands to/from the Cync BTLE mesh.
     """
 
@@ -488,8 +487,10 @@ class NCyncServer:
         return cls._instance
 
     def __init__(self, devices: dict, groups: dict | None = None):
-        self.devices = devices
-        self.groups = groups if groups is not None else {}
+        # Note: devices and groups are ClassVar, but we need to initialize them
+        # The instance assignment is for compatibility but should use class access
+        type(self).devices = devices  # type: ignore[assignment]
+        type(self).groups = groups if groups is not None else {}  # type: ignore[assignment]
         self.tcp_conn_attempts: dict = {}
         self.primary_tcp_device: CyncTCPDevice | None = None
         self.ssl_context: ssl.SSLContext | None = None
@@ -531,15 +532,14 @@ class NCyncServer:
             )
 
     async def remove_tcp_device(self, device: CyncTCPDevice | str) -> CyncTCPDevice | None:
-        """
-        Remove a TCP device from the server's device list.
+        """Remove a TCP device from the server's device list.
         :param device: The CyncTCPDevice to remove.
         """
         dev = None
         if isinstance(device, str) and device in self.tcp_devices:
             device = self.tcp_devices[device]
 
-        if isinstance(device, CyncTCPDevice):
+        if isinstance(device, CyncTCPDevice) and device.address:
             dev = self.tcp_devices.pop(device.address, None)
             if dev is not None:
                 # If this was the primary listener, failover to another device
@@ -574,10 +574,12 @@ class NCyncServer:
         return dev
 
     async def add_tcp_device(self, device: CyncTCPDevice):
-        """
-        Add a TCP device to the server's device list.
+        """Add a TCP device to the server's device list.
         :param device: The CyncTCPDevice to add.
         """
+        if not device.address:
+            logger.error("Cannot add device without address")
+            return
         self.tcp_devices[device.address] = device
 
         # Set as primary listener if we don't have one yet
@@ -605,7 +607,8 @@ class NCyncServer:
     async def create_ssl_context(self):
         # Allow the server to use a self-signed certificate
         ssl_context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
-        ssl_context.load_cert_chain(certfile=self.cert_file, keyfile=self.key_file)
+        if self.cert_file and self.key_file:
+            ssl_context.load_cert_chain(certfile=self.cert_file, keyfile=self.key_file)
         # turn off all the SSL verification
         ssl_context.check_hostname = False
         ssl_context.verify_mode = ssl.CERT_NONE
@@ -656,6 +659,9 @@ class NCyncServer:
             )
 
         # Check if this is a device or a group
+        if not g.ncync_server:
+            logger.error("ncync_server is None, cannot process device status")
+            return
         device = g.ncync_server.devices.get(_id)
         group = g.ncync_server.groups.get(_id) if device is None else None
 
@@ -777,13 +783,15 @@ class NCyncServer:
 
                 # Always publish status updates - don't try to detect "no changes"
                 # This prevents status updates from being dropped unnecessarily
-                await g.mqtt_client.parse_device_status(device.id, new_state, from_pkt=from_pkt)
-                g.ncync_server.devices[device.id] = device
+                if g.mqtt_client and device.id is not None:
+                    await g.mqtt_client.parse_device_status(device.id, new_state, from_pkt=from_pkt)
+                if g.ncync_server and device.id is not None:
+                    g.ncync_server.devices[device.id] = device
 
-                # Update subgroups that contain this device (since subgroups don't report their own state in mesh)
-                for subgroup in g.ncync_server.groups.values():
-                    if subgroup.is_subgroup and device.id in subgroup.member_ids:
-                        aggregated = subgroup.aggregate_member_states()
+                    # Update subgroups that contain this device (since subgroups don't report their own state in mesh)
+                    for subgroup in g.ncync_server.groups.values():
+                        if subgroup.is_subgroup and device.id in subgroup.member_ids:
+                            aggregated = subgroup.aggregate_member_states()
                         if aggregated:
                             # Update subgroup state from aggregated member states
                             subgroup.state = aggregated["state"]
@@ -814,14 +822,16 @@ class NCyncServer:
                                     "timestamp": time.time(),
                                 },
                             )
-                            await g.mqtt_client.publish_group_state(
-                                subgroup,
-                                state=subgroup.state,
-                                brightness=subgroup.brightness,
-                                temperature=subgroup.temperature,
-                                origin=f"aggregated:{from_pkt or 'mesh'}",
-                            )
-                            g.ncync_server.groups[subgroup.id] = subgroup
+                            if g.mqtt_client:
+                                await g.mqtt_client.publish_group_state(
+                                    subgroup,
+                                    state=subgroup.state,
+                                    brightness=subgroup.brightness,
+                                    temperature=subgroup.temperature,
+                                    origin=f"aggregated:{from_pkt or 'mesh'}",
+                                )
+                            if g.ncync_server:
+                                g.ncync_server.groups[subgroup.id] = subgroup
 
         # Handle group
         elif group is not None:
@@ -862,14 +872,16 @@ class NCyncServer:
                         "from_pkt": from_pkt,
                     },
                 )
-                await g.mqtt_client.publish_group_state(
-                    group,
-                    state=state,
-                    brightness=brightness,
-                    temperature=temp if not rgb_data else None,
-                    origin=from_pkt or "mesh",
-                )
-                g.ncync_server.groups[group.id] = group
+                if g.mqtt_client:
+                    await g.mqtt_client.publish_group_state(
+                        group,
+                        state=state,
+                        brightness=brightness,
+                        temperature=temp if not rgb_data else None,
+                        origin=from_pkt or "mesh",
+                    )
+                if g.ncync_server:
+                    g.ncync_server.groups[group.id] = group
 
     async def periodic_status_refresh(self):
         """Periodic sanity check to refresh device status and ensure sync with actual device state."""

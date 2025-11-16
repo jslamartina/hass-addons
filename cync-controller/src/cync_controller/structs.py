@@ -5,10 +5,12 @@ import datetime
 import logging
 import os
 import time
+import uuid
 from argparse import Namespace
 from collections.abc import Coroutine
 from enum import StrEnum
 from typing import TYPE_CHECKING, ClassVar
+from uuid import UUID
 
 import uvloop
 from pydantic import BaseModel, ConfigDict, computed_field
@@ -66,7 +68,7 @@ class GlobalObject:
     cloud_api: CyncCloudAPI | None = None
     tasks: ClassVar[list[asyncio.Task]] = []
     env: GlobalObjEnv = GlobalObjEnv()
-    uuid: uuid.UUID | None = None
+    uuid: UUID | None = None
     cli_args: Namespace | None = None
 
     _instance: GlobalObject | None = None
@@ -157,6 +159,8 @@ class ControlMessageCallback:
 
     @property
     def elapsed(self) -> float:
+        if self.sent_at is None:
+            return 0.0
         return time.time() - self.sent_at
 
     def __str__(self):
@@ -165,7 +169,9 @@ class ControlMessageCallback:
     def __repr__(self):
         return self.__str__()
 
-    def __eq__(self, other: int):
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, int):
+            return False
         return self.id == other
 
     def __hash__(self):
@@ -220,17 +226,17 @@ class PhoneAppStructs:
 
     @dataclass
     class AppRequests:
-        auth_header: tuple[int] = (0x13, 0x00, 0x00, 0x00)
-        connect_header: tuple[int] = (0xA3, 0x00, 0x00, 0x00)
-        headers: tuple[int] = (0x13, 0xA3)
+        auth_header: tuple[int, ...] = (0x13, 0x00, 0x00, 0x00)
+        connect_header: tuple[int, ...] = (0xA3, 0x00, 0x00, 0x00)
+        headers: tuple[int, ...] = (0x13, 0xA3)
 
         def __iter__(self):
             return iter(self.headers)
 
     @dataclass
     class AppResponses:
-        auth_resp: tuple[int] = (0x18, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00)
-        headers: tuple[int] = 0x18
+        auth_resp: tuple[int, ...] = (0x18, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00)
+        headers: tuple[int, ...] = (0x18,)
 
         def __iter__(self):
             return iter(self.headers)
@@ -248,16 +254,16 @@ class DeviceStructs:
     class DeviceRequests:
         """These are packets devices send to the server"""
 
-        x23: tuple[int] = (0x23,)
-        xc3: tuple[int] = (0xC3,)
-        xd3: tuple[int] = (0xD3,)
-        x83: tuple[int] = (0x83,)
-        x73: tuple[int] = (0x73,)
-        x7b: tuple[int] = (0x7B,)
-        x43: tuple[int] = (0x43,)
-        xa3: tuple[int] = (0xA3,)
-        xab: tuple[int] = (0xAB,)
-        headers: tuple[int] = (0x23, 0xC3, 0xD3, 0x83, 0x73, 0x7B, 0x43, 0xA3, 0xAB)
+        x23: tuple[int, ...] = (0x23,)
+        xc3: tuple[int, ...] = (0xC3,)
+        xd3: tuple[int, ...] = (0xD3,)
+        x83: tuple[int, ...] = (0x83,)
+        x73: tuple[int, ...] = (0x73,)
+        x7b: tuple[int, ...] = (0x7B,)
+        x43: tuple[int, ...] = (0x43,)
+        xa3: tuple[int, ...] = (0xA3,)
+        xab: tuple[int, ...] = (0xAB,)
+        headers: tuple[int, ...] = (0x23, 0xC3, 0xD3, 0x83, 0x73, 0x7B, 0x43, 0xA3, 0xAB)
 
         def __iter__(self):
             return iter(self.headers)
@@ -266,9 +272,9 @@ class DeviceStructs:
     class DeviceResponses:
         """These are the packets the server sends to the device"""
 
-        auth_ack: tuple[int] = (0x28, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00)
+        auth_ack: tuple[int, ...] = (0x28, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00)
         # NOTE: Connection acknowledgment bytes - may need protocol analysis to verify correctness
-        connection_ack: tuple[int] = (
+        connection_ack: tuple[int, ...] = (
             0xC8,
             0x00,
             0x00,
@@ -286,15 +292,15 @@ class DeviceStructs:
             0xFE,
             0x0C,
         )
-        x48_ack: tuple[int] = (0x48, 0x00, 0x00, 0x00, 0x03, 0x01, 0x01, 0x00)
-        x88_ack: tuple[int] = (0x88, 0x00, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00)
-        ping_ack: tuple[int] = (0xD8, 0x00, 0x00, 0x00, 0x00)
-        x78_base: tuple[int] = (0x78, 0x00, 0x00, 0x00)
-        x7b_base: tuple[int] = (0x7B, 0x00, 0x00, 0x00, 0x07)
+        x48_ack: tuple[int, ...] = (0x48, 0x00, 0x00, 0x00, 0x03, 0x01, 0x01, 0x00)
+        x88_ack: tuple[int, ...] = (0x88, 0x00, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00)
+        ping_ack: tuple[int, ...] = (0xD8, 0x00, 0x00, 0x00, 0x00)
+        x78_base: tuple[int, ...] = (0x78, 0x00, 0x00, 0x00)
+        x7b_base: tuple[int, ...] = (0x7B, 0x00, 0x00, 0x00, 0x07)
 
     requests: DeviceRequests = DeviceRequests()
     responses: DeviceResponses = DeviceResponses()
-    headers: tuple[int] = (0x23, 0xC3, 0xD3, 0x83, 0x73, 0x7B, 0x43, 0xA3, 0xAB)
+    headers: tuple[int, ...] = (0x23, 0xC3, 0xD3, 0x83, 0x73, 0x7B, 0x43, 0xA3, 0xAB)
 
     @staticmethod
     def xab_generate_ack(queue_id: bytes, msg_id: bytes):
@@ -407,7 +413,8 @@ class ComputedTokenData(RawTokenData):
             datetime.datetime: The expiration time in UTC.
         """
         if self.issued_at and self.expire_in:
-            return self.issued_at + datetime.timedelta(seconds=self.expire_in)
+            expire_seconds = float(self.expire_in) if isinstance(self.expire_in, (str, int)) else 0.0
+            return self.issued_at + datetime.timedelta(seconds=expire_seconds)
         return None
 
     # expires_at: Optional[datetime] = None

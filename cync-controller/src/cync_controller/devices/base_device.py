@@ -1,7 +1,13 @@
 import asyncio
 
 from cync_controller.logging_abstraction import get_logger
-from cync_controller.metadata.model_info import DeviceClassification, DeviceTypeInfo, device_type_map
+from cync_controller.metadata.model_info import (
+    DeviceClassification,
+    DeviceTypeInfo,
+    LightCapabilities,
+    SwitchCapabilities,
+    device_type_map,
+)
 from cync_controller.structs import (
     DeviceStatus,
 )
@@ -55,7 +61,7 @@ class CyncDevice(DeviceCommands):
     """
 
     lp = "CyncDevice:"
-    id: int = None
+    id: int | None = None
     type: int | None = None
     _supports_rgb: bool | None = None
     _supports_temperature: bool | None = None
@@ -87,12 +93,12 @@ class CyncDevice(DeviceCommands):
             raise ValueError(msg)
         self.id = cync_id
         self.type = cync_type
-        self.metadata = device_type_map[self.type] if cync_type in device_type_map else None
+        self.metadata = device_type_map[cync_type] if cync_type is not None and cync_type in device_type_map else None
         self.home_id: int | None = home_id
         self.hass_id: str = f"{home_id}-{cync_id}"
         self._mac = mac
         self.wifi_mac = wifi_mac
-        self._version: str | None = None
+        self._version: int | None = None
         self.version = fw_version
         if name is None:
             name = f"device_{cync_id}"
@@ -138,7 +144,7 @@ class CyncDevice(DeviceCommands):
             self._is_hvac = value
 
     @property
-    def version(self) -> str | None:
+    def version(self) -> int | None:
         return self._version
 
     @version.setter
@@ -163,7 +169,7 @@ class CyncDevice(DeviceCommands):
                     self._version = _x
 
     @property
-    def mac(self) -> str:
+    def mac(self) -> str | None:
         return str(self._mac) if self._mac is not None else None
 
     @mac.setter
@@ -226,7 +232,11 @@ class CyncDevice(DeviceCommands):
     def is_plug(self) -> bool:
         if self._is_plug is not None:
             return self._is_plug
-        if self.metadata and self.metadata.type == DeviceClassification.SWITCH:
+        if (
+            self.metadata
+            and self.metadata.type == DeviceClassification.SWITCH
+            and isinstance(self.metadata.capabilities, SwitchCapabilities)
+        ):
             return self.metadata.capabilities.plug
         return False
 
@@ -238,7 +248,11 @@ class CyncDevice(DeviceCommands):
     def is_fan_controller(self):
         if self._is_fan_controller is not None:
             return self._is_fan_controller
-        if self.metadata and self.metadata.type == DeviceClassification.SWITCH:
+        if (
+            self.metadata
+            and self.metadata.type == DeviceClassification.SWITCH
+            and isinstance(self.metadata.capabilities, SwitchCapabilities)
+        ):
             return self.metadata.capabilities.fan
         return False
 
@@ -248,7 +262,11 @@ class CyncDevice(DeviceCommands):
 
     @property
     def is_dimmable(self) -> bool:
-        if self.metadata and self.metadata.type == DeviceClassification.LIGHT:
+        if (
+            self.metadata
+            and self.metadata.type == DeviceClassification.LIGHT
+            and isinstance(self.metadata.capabilities, LightCapabilities)
+        ):
             return self.metadata.capabilities.dimmable
         return False
 
@@ -256,7 +274,11 @@ class CyncDevice(DeviceCommands):
     def supports_rgb(self) -> bool:
         if self._supports_rgb is not None:
             return self._supports_rgb
-        if self.metadata and self.metadata.type == DeviceClassification.LIGHT:
+        if (
+            self.metadata
+            and self.metadata.type == DeviceClassification.LIGHT
+            and isinstance(self.metadata.capabilities, LightCapabilities)
+        ):
             return self.metadata.capabilities.color
         return False
 
@@ -268,7 +290,11 @@ class CyncDevice(DeviceCommands):
     def supports_temperature(self) -> bool:
         if self._supports_temperature is not None:
             return self._supports_temperature
-        if self.metadata and self.metadata.type == DeviceClassification.LIGHT:
+        if (
+            self.metadata
+            and self.metadata.type == DeviceClassification.LIGHT
+            and isinstance(self.metadata.capabilities, LightCapabilities)
+        ):
             return self.metadata.capabilities.tunable_white
         return False
 
@@ -309,10 +335,11 @@ class CyncDevice(DeviceCommands):
             raise TypeError(msg)
         if value != self._online:
             self._online = value
-            g.tasks.append(asyncio.get_running_loop().create_task(g.mqtt_client.pub_online(self.id, value)))
+            if g.mqtt_client:
+                g.tasks.append(asyncio.get_running_loop().create_task(g.mqtt_client.pub_online(self.id, value)))
 
     @property
-    def current_status(self) -> list[int]:
+    def current_status(self) -> list[int | None]:
         """
         Return the current status of the device as a list
 

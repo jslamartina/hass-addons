@@ -62,12 +62,24 @@ def _get_global_object():
 class DeviceCommands:
     """Command methods for CyncDevice instances."""
 
-    async def set_power(self, state: int):
-        """
-        Send raw data to control device state (1=on, 0=off).
+    # These attributes will be provided by CyncDevice (which inherits from this class)
+    lp: str = ""
+    id: int | None = None
+    name: str = ""
+    state: int | None = None
+    is_fan_controller: bool = False
+    is_light: bool = False
+    is_switch: bool = False
+    temperature: int | None = None
+    red: int | None = None
+    green: int | None = None
+    blue: int | None = None
 
-            If the device receives the msg and changes state, every TCP device connected will send
-            a 0x83 internal status packet, which we use to change HASS device state.
+    async def set_power(self, state: int):
+        """Send raw data to control device state (1=on, 0=off).
+
+        If the device receives the msg and changes state, every TCP device connected will send
+        a 0x83 internal status packet, which we use to change HASS device state.
         """
         g = _get_global_object()
         lp = f"{self.lp}set_power:"
@@ -110,6 +122,9 @@ class DeviceCommands:
             0x7E,
         ]
         # Prioritize ready_to_control bridges first
+        if not g.ncync_server:
+            logger.error("%s ncync_server is None, cannot send command", lp)
+            return None
         all_bridges = list(g.ncync_server.tcp_devices.values())
         ready_bridges = [b for b in all_bridges if b.ready_to_control]
         not_ready_bridges = [b for b in all_bridges if not b.ready_to_control]
@@ -147,13 +162,18 @@ class DeviceCommands:
 
                 # Create callback that will execute when ACK arrives
                 async def power_ack_callback():
-                    await g.mqtt_client.update_device_state(self, state)
+                    if g.mqtt_client:
+                        # Type narrowing: self is CyncDevice when used in CyncDevice context
+                        await g.mqtt_client.update_device_state(self, state)  # type: ignore[arg-type]
 
+                if not self.id:
+                    logger.error("%s Device ID is None, cannot set power", lp)
+                    continue
                 m_cb = ControlMessageCallback(
                     msg_id=cmsg_id,
                     message=payload_bytes,
                     sent_at=time.time(),
-                    callback=power_ack_callback,
+                    callback=power_ack_callback,  # type: ignore[arg-type]
                     device_id=self.id,
                     ack_event=ack_event,  # Share same event across all bridges
                 )
@@ -168,7 +188,10 @@ class DeviceCommands:
                     bridge_device.address,
                 )
         if tasks:
-            await asyncio.gather(*tasks)
+            # Filter out None values before gathering
+            valid_tasks = [t for t in tasks if t is not None]
+            if valid_tasks:
+                await asyncio.gather(*valid_tasks)
         elapsed = time.time() - ts
         logger.info(
             "%s Sent power state command for '%s' (ID: %s), current: %s - new: %s to "
@@ -186,8 +209,7 @@ class DeviceCommands:
         return (ack_event, sent_bridges)
 
     async def set_fan_speed(self, speed: FanSpeed) -> bool:
-        """
-            Translate a preset fan speed into a Cync brightness value and send it to the device.
+        """Translate a preset fan speed into a Cync brightness value and send it to the device.
         :param speed:
         :return:
         """
@@ -228,8 +250,7 @@ class DeviceCommands:
             return True
 
     async def set_brightness(self, bri: int):
-        """
-        Send raw data to control device brightness (0-100). Fans are 0-255.
+        """Send raw data to control device brightness (0-100). Fans are 0-255.
         """
         """
         73 00 00 00 22 37 96 24 69 60 48 00 7e 17 00 00  s..."7.$i`H.~...
@@ -288,6 +309,9 @@ class DeviceCommands:
             126,
         ]
         # Prioritize ready_to_control bridges first
+        if not g.ncync_server:
+            logger.error("%s ncync_server is None, cannot send command", lp)
+            return None
         all_bridges = list(g.ncync_server.tcp_devices.values())
         ready_bridges = [b for b in all_bridges if b.ready_to_control]
         not_ready_bridges = [b for b in all_bridges if not b.ready_to_control]
@@ -333,13 +357,14 @@ class DeviceCommands:
 
                 # Create callback that will execute when ACK arrives
                 async def brightness_ack_callback():
-                    await g.mqtt_client.update_brightness(self, bri)
+                    if g.mqtt_client:
+                        await g.mqtt_client.update_brightness(self, bri)  # type: ignore[arg-type]
 
                 m_cb = ControlMessageCallback(
                     msg_id=cmsg_id,
                     message=payload_bytes,
                     sent_at=time.time(),
-                    callback=brightness_ack_callback,
+                    callback=brightness_ack_callback,  # type: ignore[arg-type]
                     device_id=self.id,
                     ack_event=ack_event,  # Share same event across all bridges
                 )
@@ -353,7 +378,10 @@ class DeviceCommands:
                     bridge_device.address,
                 )
         if tasks:
-            await asyncio.gather(*tasks)
+            # Filter out None values before gathering
+            valid_tasks = [t for t in tasks if t is not None]
+            if valid_tasks:
+                await asyncio.gather(*valid_tasks)
         elapsed = time.time() - ts
         logger.info(
             "%s >>> COMMAND SENT: device='%s' (ID=%s), brightness=%s, sent_to=%s bridge devices in %.3fs",
@@ -369,11 +397,10 @@ class DeviceCommands:
         return (ack_event, sent_bridges)
 
     async def set_temperature(self, temp: int):
-        """
-        Send raw data to control device white temperature (0-100)
+        """Send raw data to control device white temperature (0-100)
 
-            If the device receives the msg and changes state, every TCP device connected will send
-            a 0x83 internal status packet, which we use to change HASS device state.
+        If the device receives the msg and changes state, every TCP device connected will send
+        a 0x83 internal status packet, which we use to change HASS device state.
         """
         g = _get_global_object()
         """
@@ -422,6 +449,9 @@ class DeviceCommands:
             0x7E,
         ]
         # Prioritize ready_to_control bridges first
+        if not g.ncync_server:
+            logger.error("%s ncync_server is None, cannot send command", lp)
+            return
         all_bridges = list(g.ncync_server.tcp_devices.values())
         ready_bridges = [b for b in all_bridges if b.ready_to_control]
         not_ready_bridges = [b for b in all_bridges if not b.ready_to_control]
@@ -454,13 +484,14 @@ class DeviceCommands:
 
                 # Create callback that will execute when ACK arrives
                 async def temperature_ack_callback():
-                    await g.mqtt_client.update_temperature(self, temp)
+                    if g.mqtt_client:
+                        await g.mqtt_client.update_temperature(self, temp)  # type: ignore[arg-type]
 
                 m_cb = ControlMessageCallback(
                     msg_id=cmsg_id,
                     message=payload_bytes,
                     sent_at=time.time(),
-                    callback=temperature_ack_callback,
+                    callback=temperature_ack_callback,  # type: ignore[arg-type]
                     device_id=self.id,
                 )
                 bridge_device.messages.control[cmsg_id] = m_cb
@@ -472,7 +503,10 @@ class DeviceCommands:
                     bridge_device.address,
                 )
         if tasks:
-            await asyncio.gather(*tasks)
+            # Filter out None values before gathering
+            valid_tasks = [t for t in tasks if t is not None]
+            if valid_tasks:
+                await asyncio.gather(*valid_tasks)
         elapsed = time.time() - ts
         logger.info(
             "%s Sent white temperature command, current: %s - new: %s to TCP devices: %s in %.5f seconds",
@@ -484,11 +518,10 @@ class DeviceCommands:
         )
 
     async def set_rgb(self, red: int, green: int, blue: int):
-        """
-        Send raw data to control device RGB color (0-255 for each channel).
+        """Send raw data to control device RGB color (0-255 for each channel).
 
-            If the device receives the msg and changes state, every TCP device connected will send
-            a 0x83 internal status packet, which we use to change HASS device state.
+        If the device receives the msg and changes state, every TCP device connected will send
+        a 0x83 internal status packet, which we use to change HASS device state.
         """
         g = _get_global_object()
         """
@@ -544,6 +577,9 @@ class DeviceCommands:
             126,
         ]
         # Prioritize ready_to_control bridges first
+        if not g.ncync_server:
+            logger.error("%s ncync_server is None, cannot send command", lp)
+            return
         all_bridges = list(g.ncync_server.tcp_devices.values())
         ready_bridges = [b for b in all_bridges if b.ready_to_control]
         not_ready_bridges = [b for b in all_bridges if not b.ready_to_control]
@@ -576,13 +612,14 @@ class DeviceCommands:
 
                 # Create callback that will execute when ACK arrives
                 async def rgb_ack_callback():
-                    await g.mqtt_client.update_rgb(self, _rgb)
+                    if g.mqtt_client:
+                        await g.mqtt_client.update_rgb(self, _rgb)  # type: ignore[arg-type]
 
                 m_cb = ControlMessageCallback(
                     msg_id=cmsg_id,
                     message=bpayload,
                     sent_at=time.time(),
-                    callback=rgb_ack_callback,
+                    callback=rgb_ack_callback,  # type: ignore[arg-type]
                     device_id=self.id,
                 )
                 bridge_device.messages.control[cmsg_id] = m_cb
@@ -594,7 +631,10 @@ class DeviceCommands:
                     bridge_device.address,
                 )
         if tasks:
-            await asyncio.gather(*tasks)
+            # Filter out None values before gathering
+            valid_tasks = [t for t in tasks if t is not None]
+            if valid_tasks:
+                await asyncio.gather(*valid_tasks)
         elapsed = time.time() - ts
         logger.info(
             "%s Sent RGB command, current: %s, %s, %s - new: %s, %s, %s to TCP devices %s in %.5f seconds",
@@ -610,8 +650,7 @@ class DeviceCommands:
         )
 
     async def set_lightshow(self, show: str):
-        """
-            Set the device into a light show
+        """Set the device into a light show
 
         :param show:
         :return:
@@ -708,6 +747,9 @@ class DeviceCommands:
         inner_struct[-4] = chosen[0]
         inner_struct[-3] = chosen[1]
         # Prioritize ready_to_control bridges first
+        if not g.ncync_server:
+            logger.error("%s ncync_server is None, cannot send command", lp)
+            return
         all_bridges = list(g.ncync_server.tcp_devices.values())
         ready_bridges = [b for b in all_bridges if b.ready_to_control]
         not_ready_bridges = [b for b in all_bridges if not b.ready_to_control]
@@ -752,7 +794,10 @@ class DeviceCommands:
                     bridge_device.address,
                 )
         if tasks:
-            await asyncio.gather(*tasks)
+            # Filter out None values before gathering
+            valid_tasks = [t for t in tasks if t is not None]
+            if valid_tasks:
+                await asyncio.gather(*valid_tasks)
         elapsed = time.time() - ts
         logger.info(
             "%s Sent light_show / effect command: '%s' to TCP devices %s in %.5f seconds",

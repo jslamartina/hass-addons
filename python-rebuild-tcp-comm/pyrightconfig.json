@@ -6,11 +6,15 @@
   "pythonVersion": "3.13",
   "typeCheckingMode": "strict",
   "useLibraryCodeForTypes": true,
+  "pythonPlatform": "Linux",
   "executionEnvironments": [
     {
       "root": ".",
       "extraPaths": ["src"],
       "pythonVersion": "3.13"
     }
-  ]
+  ],
+  "reportMissingImports": true,
+  "reportMissingTypeStubs": false,
+  "stubPath": ""
 }

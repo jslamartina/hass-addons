@@ -4,6 +4,7 @@ import pickle
 import random
 import string
 from pathlib import Path
+from typing import Any
 
 import aiohttp
 import yaml
@@ -100,7 +101,8 @@ class CyncCloudAPI:
             logger.debug("%s No cached token found, requesting OTP...", lp)
             return False
         # check if the token is expired
-        if self.token_cache.expires_at < datetime.datetime.now(datetime.UTC):
+        token_cache = self.token_cache
+        if token_cache.expires_at < datetime.datetime.now(datetime.UTC):
             logger.debug("%s Token expired, requesting OTP...", lp)
             # token expired, request OTP
             return False
@@ -125,6 +127,9 @@ class CyncCloudAPI:
             "local_lang": CYNC_ACCOUNT_LANGUAGE,
         }
         sesh = self.http_session
+        if not sesh:
+            logger.error("%s HTTP session is None, cannot request OTP", lp)
+            return False
         try:
             otp_r = await sesh.post(
                 req_otp_url,
@@ -162,6 +167,9 @@ class CyncCloudAPI:
         logger.debug("%s Sending OTP code: %s to Cync Cloud API for authentication", lp, otp_code)
 
         sesh = self.http_session
+        if not sesh:
+            logger.error("%s HTTP session is None, cannot send OTP", lp)
+            return False
         try:
             r = await sesh.post(
                 api_auth_url,
@@ -223,11 +231,15 @@ class CyncCloudAPI:
         """Get a list of devices for a particular user."""
         lp = f"{self.lp}:get_devices:"
         await self._check_session()
+        if not self.token_cache:
+            raise CyncAuthenticationError("Token cache is None, cannot request devices")
         user_id = self.token_cache.user_id
         access_token = self.token_cache.access_token
         api_devices_url = f"{CYNC_API_BASE}user/{user_id}/subscribe/devices"
         headers = {"Access-Token": access_token}
         sesh = self.http_session
+        if not sesh:
+            raise RuntimeError("HTTP session is None, cannot request devices")
         try:
             r = await sesh.get(
                 api_devices_url,
@@ -259,10 +271,15 @@ class CyncCloudAPI:
         """Get properties for a single device. Properties contain a device list (bulbsArray), groups (groupsArray), and saved light effects (lightShows)."""
         lp = f"{self.lp}:get_properties:"
         await self._check_session()
+        if not self.token_cache:
+            raise CyncAuthenticationError("Token cache is None, cannot get properties")
         access_token = self.token_cache.access_token
         api_device_prop_url = f"{CYNC_API_BASE}product/{product_id}/device/{device_id}/property"
         headers = {"Access-Token": access_token}
         sesh = self.http_session
+        if not sesh:
+            raise RuntimeError("HTTP session is None, cannot get properties")
+        ret: dict[str, Any] | None = None
         try:
             r = await sesh.get(
                 api_device_prop_url,
@@ -272,6 +289,7 @@ class CyncCloudAPI:
             ret = await r.json()
         except aiohttp.ClientResponseError:
             logger.exception("%s Failed to get device properties", lp)
+            raise
         except json.JSONDecodeError:
             logger.exception("%s Failed to decode JSON", lp)
             raise
@@ -280,6 +298,8 @@ class CyncCloudAPI:
             raise
 
         # {'error': {'msg': 'Access-Token Expired', 'code': 4031021}}
+        if ret is None:
+            raise RuntimeError("Failed to get properties: response is None")
         logit = False
         if "error" in ret:
             error_data = ret["error"]

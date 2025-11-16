@@ -60,7 +60,7 @@ def set_correlation_id(correlation_id: str | None) -> None:
 def correlation_context(
     correlation_id: str | None = None,
     auto_generate: bool = True,
-) -> Generator[str]:
+) -> Generator[str | None]:
     """
     Context manager for correlation ID scope.
 

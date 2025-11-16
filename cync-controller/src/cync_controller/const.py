@@ -98,26 +98,34 @@ DEVICE_LWT_MSG: bytes = b"offline"
 
 CYNC_SRV_HOST = os.environ.get("CYNC_SRV_HOST", "0.0.0.0")
 CYNC_ACCOUNT_LANGUAGE: str = os.environ.get("CYNC_ACCOUNT_LANGUAGE", "en-us").casefold()
-CYNC_ACCOUNT_USERNAME: str = os.environ.get("CYNC_ACCOUNT_USERNAME", None)
-CYNC_ACCOUNT_PASSWORD: str = os.environ.get("CYNC_ACCOUNT_PASSWORD", None)
+_username = os.environ.get("CYNC_ACCOUNT_USERNAME")
+CYNC_ACCOUNT_USERNAME: str | None = _username if _username else None
+_password = os.environ.get("CYNC_ACCOUNT_PASSWORD")
+CYNC_ACCOUNT_PASSWORD: str | None = _password if _password else None
 
-CYNC_CMD_BROADCASTS: int = os.environ.get("CYNC_CMD_BROADCASTS", "2")
-if not CYNC_CMD_BROADCASTS:
-    CYNC_CMD_BROADCASTS = 2
+_cmd_broadcasts = os.environ.get("CYNC_CMD_BROADCASTS", "2")
+if not _cmd_broadcasts:
+    CYNC_CMD_BROADCASTS: int = 2
 else:
     try:
-        CYNC_CMD_BROADCASTS = int(CYNC_CMD_BROADCASTS)
+        CYNC_CMD_BROADCASTS = int(_cmd_broadcasts)
     except ValueError:
         CYNC_CMD_BROADCASTS = 2
-CYNC_MAX_TCP_CONN: int = os.environ.get("CYNC_MAX_TCP_CONN", "8")
-if not CYNC_MAX_TCP_CONN:
-    CYNC_MAX_TCP_CONN = 8
+_max_tcp_conn = os.environ.get("CYNC_MAX_TCP_CONN", "8")
+if not _max_tcp_conn:
+    CYNC_MAX_TCP_CONN: int = 8
 else:
     try:
-        CYNC_MAX_TCP_CONN = int(CYNC_MAX_TCP_CONN)
+        CYNC_MAX_TCP_CONN = int(_max_tcp_conn)
     except ValueError:
         CYNC_MAX_TCP_CONN = 8
-CYNC_TCP_WHITELIST: str | list[str | None] | None = os.environ.get("CYNC_TCP_WHITELIST")
+_tcp_whitelist_env = os.environ.get("CYNC_TCP_WHITELIST")
+if _tcp_whitelist_env:
+    # split into a list using comma
+    _whitelist_split = _tcp_whitelist_env.split(",")
+    CYNC_TCP_WHITELIST: list[str] = [x.strip() for x in _whitelist_split if x]
+else:
+    CYNC_TCP_WHITELIST: list[str] | None = None
 
 CYNC_MQTT_HOST = os.environ.get("CYNC_MQTT_HOST", "homeassistant.local")
 CYNC_MQTT_PORT = os.environ.get("CYNC_MQTT_PORT", "1883")
@@ -162,10 +170,6 @@ CYNC_BRIDGE_OBJ_ID: str = "cync_lan_bridge"
 EXPORT_SRV_START_TASK_NAME = "ExportServer_START"
 MQTT_CLIENT_START_TASK_NAME = "MQTTClient_START"
 NCYNC_START_TASK_NAME = "CyncLanServer_START"
-if CYNC_TCP_WHITELIST:
-    # split into a list using comma
-    CYNC_TCP_WHITELIST = CYNC_TCP_WHITELIST.split(",")
-    CYNC_TCP_WHITELIST = [x.strip() for x in CYNC_TCP_WHITELIST if x]
 
 FACTORY_EFFECTS_BYTES: dict[str, tuple[int, int]] = {
     "candle": (0x01, 0xF1),
@@ -187,9 +191,11 @@ ORIGIN_STRUCT = {
 }
 
 CYNC_MANUFACTURER = "Savant"
-TCP_BLACKHOLE_DELAY: float = os.environ.get("CYNC_TCP_BLACKHOLE_DELAY", "14.75")
-if TCP_BLACKHOLE_DELAY and not isinstance(TCP_BLACKHOLE_DELAY, float):
-    TCP_BLACKHOLE_DELAY = float(TCP_BLACKHOLE_DELAY)
+_blackhole_delay = os.environ.get("CYNC_TCP_BLACKHOLE_DELAY", "14.75")
+try:
+    TCP_BLACKHOLE_DELAY: float = float(_blackhole_delay) if _blackhole_delay else 14.75
+except (ValueError, TypeError):
+    TCP_BLACKHOLE_DELAY: float = 14.75
 
 # Cloud Relay Configuration
 CYNC_CLOUD_RELAY_ENABLED: bool = os.environ.get("CYNC_CLOUD_RELAY_ENABLED", "false").casefold() in YES_ANSWER
