@@ -13,6 +13,7 @@ import os
 import sys
 import time
 from pathlib import Path
+from typing import Any
 from urllib.parse import urljoin
 
 try:
@@ -24,13 +25,13 @@ except ImportError:
     sys.exit(1)
 
 try:
-    from colorama import Fore, Style, init  # pyright: ignore[reportMissingModuleSource]
+    from colorama import Fore, Style, init  # pyright: ignore[reportMissingModuleSource, reportAssignmentType]
 
     init(autoreset=True)
-    HAS_COLORAMA = True
+    HAS_COLORAMA: bool = True
 except ImportError:
     # Fallback to no colors if colorama not installed
-    HAS_COLORAMA = False
+    HAS_COLORAMA: bool = False  # pyright: ignore[reportConstantRedefinition]
 
     class Fore:
         GREEN = ""
@@ -58,7 +59,6 @@ ONBOARDING_TIME_ZONE = os.getenv("ONBOARDING_TIME_ZONE", "America/Chicago")
 ONBOARDING_ANALYTICS = os.getenv("ONBOARDING_ANALYTICS", "false").lower() == "true"
 
 # Load credentials from file if available
-AUTH_TOKEN: str | None = None
 credentials_file = REPO_ROOT / "hass-credentials.env"
 if credentials_file.exists():
     for line in credentials_file.read_text().splitlines():
@@ -67,7 +67,7 @@ if credentials_file.exists():
             os.environ[key] = value
 
 # Load token from environment
-AUTH_TOKEN = os.getenv("LONG_LIVED_ACCESS_TOKEN") or os.getenv("ONBOARDING_TOKEN")
+AUTH_TOKEN: str | None = os.getenv("LONG_LIVED_ACCESS_TOKEN") or os.getenv("ONBOARDING_TOKEN")
 
 
 class OnboardingError(Exception):
@@ -98,7 +98,7 @@ class OnboardingClient:
     def _log_error(self, message: str):
         print(f"{Fore.RED}[onboarding] ❌{Style.RESET_ALL} {message}")
 
-    def get_onboarding_status(self, require_auth: bool = False) -> list[dict] | None:
+    def get_onboarding_status(self, require_auth: bool = False) -> list[dict[str, Any]] | None:
         """Get current onboarding status
 
         Args:

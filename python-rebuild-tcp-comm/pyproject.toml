@@ -9,6 +9,7 @@ description = "Lean harness and reliable TCP transport rebuild"
 authors = ["TCP Rebuild Team <team@example.com>"]
 readme = "README.md"
 packages = [
+    { include = "protocol", from = "src" },
     { include = "transport", from = "src" },
     { include = "metrics", from = "src" },
     { include = "harness", from = "src" },

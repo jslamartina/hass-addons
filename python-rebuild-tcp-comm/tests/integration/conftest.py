@@ -271,9 +271,9 @@ def unique_device_id(request: pytest.FixtureRequest) -> str:
     Uses the test node ID to ensure uniqueness.
     """
     # Use test name as device ID to ensure uniqueness
-    test_name = request.node.name
+    test_name: str = request.node.name
     # Sanitize for use as device_id
-    device_id = test_name.replace("[", "_").replace("]", "_").replace("-", "_")
+    device_id: str = test_name.replace("[", "_").replace("]", "_").replace("-", "_")
     return f"TEST_{device_id}"
 
 

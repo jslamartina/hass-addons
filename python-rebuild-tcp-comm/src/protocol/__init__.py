@@ -12,10 +12,10 @@ Public API:
 - Exception types (CyncProtocolError, PacketDecodeError, PacketFramingError)
 """
 
-from protocol.cync_protocol import CyncProtocol
-from protocol.exceptions import CyncProtocolError, PacketDecodeError, PacketFramingError
-from protocol.packet_framer import PacketFramer
-from protocol.packet_types import (
+from .cync_protocol import CyncProtocol
+from .exceptions import CyncProtocolError, PacketDecodeError, PacketFramingError
+from .packet_framer import PacketFramer
+from .packet_types import (
     PACKET_TYPE_DATA_ACK,
     PACKET_TYPE_DATA_CHANNEL,
     PACKET_TYPE_DEVICE_INFO,

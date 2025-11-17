@@ -143,7 +143,7 @@ class CyncCloudAPI:
         else:
             return True
 
-    async def send_otp(self, otp_code: int) -> bool:
+    async def send_otp(self, otp_code: int) -> bool:  # pyright: ignore[reportUnnecessaryComparison]
         lp = f"{self.lp}:send_otp:"
         await self._check_session()
         if not otp_code:

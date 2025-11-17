@@ -800,7 +800,7 @@ class DeviceOperations:
             List of parsed DeviceInfo objects
 
         """
-        devices = []
+        devices: list[DeviceInfo] = []
         payload = packet.payload
 
         # Extract device structs (DEVICE_TYPE_LENGTH_BYTES bytes each) from between 0x7e markers

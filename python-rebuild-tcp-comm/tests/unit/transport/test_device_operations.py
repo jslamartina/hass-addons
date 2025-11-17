@@ -73,7 +73,7 @@ def mock_protocol():
 
 
 @pytest.fixture
-def device_ops(mock_transport, mock_protocol):
+def device_ops(mock_transport: Mock, mock_protocol: Mock) -> DeviceOperations:
     """Create DeviceOperations instance with mocks."""
     return DeviceOperations(mock_transport, mock_protocol)
 
