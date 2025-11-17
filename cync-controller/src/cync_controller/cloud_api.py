@@ -104,6 +104,10 @@ class CyncCloudAPI:
         # check if the token is expired
         # Type narrowing: token_cache is not None after the check above
         assert token_cache is not None  # Type guard for pyright
+        # expires_at can return None if issued_at or expire_in are missing
+        if token_cache.expires_at is None:
+            logger.debug("%s Token expiration time is None (malformed token), requesting OTP...", lp)
+            return False
         if token_cache.expires_at < datetime.datetime.now(datetime.UTC):
             logger.debug("%s Token expired, requesting OTP...", lp)
             # token expired, request OTP

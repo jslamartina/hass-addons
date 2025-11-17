@@ -849,29 +849,29 @@ class NCyncServer:
                                     blue=subgroup.blue,
                                 )
 
-                            # Publish subgroup state
-                            logger.debug(
-                                "Subgroup state aggregated from member",
-                                extra={
-                                    "subgroup_name": subgroup.name,
-                                    "subgroup_id": subgroup.id,
-                                    "member_device_id": device.id,
-                                    "state": "ON" if subgroup.state else "OFF",
-                                    "brightness": subgroup.brightness,
-                                    "from_pkt": from_pkt,
-                                    "timestamp": time.time(),
-                                },
-                            )
-                            if g.mqtt_client:
-                                await g.mqtt_client.publish_group_state(
-                                    subgroup,
-                                    state=subgroup.state,
-                                    brightness=subgroup.brightness,
-                                    temperature=subgroup.temperature,
-                                    origin=f"aggregated:{from_pkt or 'mesh'}",
+                                # Publish subgroup state (only when aggregation succeeded)
+                                logger.debug(
+                                    "Subgroup state aggregated from member",
+                                    extra={
+                                        "subgroup_name": subgroup.name,
+                                        "subgroup_id": subgroup.id,
+                                        "member_device_id": device.id,
+                                        "state": "ON" if subgroup.state else "OFF",
+                                        "brightness": subgroup.brightness,
+                                        "from_pkt": from_pkt,
+                                        "timestamp": time.time(),
+                                    },
                                 )
-                            if g.ncync_server:
-                                g.ncync_server.groups[subgroup.id] = subgroup
+                                if g.mqtt_client:
+                                    await g.mqtt_client.publish_group_state(
+                                        subgroup,
+                                        state=subgroup.state,
+                                        brightness=subgroup.brightness,
+                                        temperature=subgroup.temperature,
+                                        origin=f"aggregated:{from_pkt or 'mesh'}",
+                                    )
+                                if g.ncync_server:
+                                    g.ncync_server.groups[subgroup.id] = subgroup
 
         # Handle group
         elif group is not None:
