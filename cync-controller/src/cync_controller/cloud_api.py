@@ -97,11 +97,17 @@ class CyncCloudAPI:
         lp = f"{self.lp}:check_tkn:"
         # read the token cache
         self.token_cache = await self.read_token_cache()
-        if not self.token_cache:
+        token_cache = self.token_cache
+        if not token_cache:
             logger.debug("%s No cached token found, requesting OTP...", lp)
             return False
         # check if the token is expired
-        token_cache = self.token_cache
+        # Type narrowing: token_cache is not None after the check above
+        assert token_cache is not None  # Type guard for pyright
+        # expires_at can return None if issued_at or expire_in are missing
+        if token_cache.expires_at is None:
+            logger.debug("%s Token expiration time is None (malformed token), requesting OTP...", lp)
+            return False
         if token_cache.expires_at < datetime.datetime.now(datetime.UTC):
             logger.debug("%s Token expired, requesting OTP...", lp)
             # token expired, request OTP
@@ -179,8 +185,33 @@ class CyncCloudAPI:
             r.raise_for_status()
             iat = datetime.datetime.now(datetime.UTC)
             token_data = await r.json()
-        except (aiohttp.ClientResponseError, json.JSONDecodeError, KeyError):
-            logger.exception("Failed to authenticate or decode response")
+        except aiohttp.ClientResponseError as e:
+            logger.exception(
+                "HTTP error during authentication",
+                extra={
+                    "status": e.status,
+                    "error": str(e),
+                    "error_type": type(e).__name__,
+                },
+            )
+            return False
+        except json.JSONDecodeError as e:
+            logger.exception(
+                "Invalid JSON response",
+                extra={
+                    "error": str(e),
+                    "error_type": type(e).__name__,
+                },
+            )
+            return False
+        except KeyError as e:
+            logger.exception(
+                "Missing required field in response",
+                extra={
+                    "missing_key": str(e),
+                    "error_type": type(e).__name__,
+                },
+            )
             return False
         else:
             # add issued_at to the token data for computing the expiration datetime

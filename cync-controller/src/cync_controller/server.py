@@ -87,14 +87,27 @@ class CloudRelayConnection:
                     "cloud_port": self.cloud_port,
                 },
             )
-        except Exception as e:
+        except (ConnectionError, TimeoutError, OSError, ssl.SSLError) as e:
             logger.exception(
-                " Cloud connection failed",
+                "Cloud connection failed (expected error)",
                 extra={
                     "client_addr": self.client_addr,
                     "cloud_server": self.cloud_server,
                     "cloud_port": self.cloud_port,
                     "error": str(e),
+                    "error_type": type(e).__name__,
+                },
+            )
+            return False
+        except Exception as e:
+            logger.exception(
+                "Cloud connection failed (unexpected error)",
+                extra={
+                    "client_addr": self.client_addr,
+                    "cloud_server": self.cloud_server,
+                    "cloud_port": self.cloud_port,
+                    "error": str(e),
+                    "error_type": type(e).__name__,
                 },
             )
             return False
@@ -184,12 +197,22 @@ class CloudRelayConnection:
             # Wait for all tasks to complete
             await asyncio.gather(*self.forward_tasks, return_exceptions=True)
 
-        except Exception as e:
+        except (ConnectionError, TimeoutError, OSError, asyncio.CancelledError) as e:
             logger.exception(
-                " Relay error",
+                "Relay error (expected error)",
                 extra={
                     "client_addr": self.client_addr,
                     "error": str(e),
+                    "error_type": type(e).__name__,
+                },
+            )
+        except Exception as e:
+            logger.exception(
+                "Relay error (unexpected error)",
+                extra={
+                    "client_addr": self.client_addr,
+                    "error": str(e),
+                    "error_type": type(e).__name__,
                 },
             )
         finally:
@@ -269,13 +292,24 @@ class CloudRelayConnection:
                 },
             )
             raise
-        except Exception as e:
+        except (ConnectionError, TimeoutError, OSError, BrokenPipeError) as e:
             logger.exception(
-                " Relay forward error",
+                "Relay forward error (expected error)",
                 extra={
                     "client_addr": self.client_addr,
                     "direction": direction,
                     "error": str(e),
+                    "error_type": type(e).__name__,
+                },
+            )
+        except Exception as e:
+            logger.exception(
+                "Relay forward error (unexpected error)",
+                extra={
+                    "client_addr": self.client_addr,
+                    "direction": direction,
+                    "error": str(e),
+                    "error_type": type(e).__name__,
                 },
             )
 
@@ -539,7 +573,11 @@ class NCyncServer:
         """
         dev = None
         if isinstance(device, str) and device in self.tcp_devices:
-            device = self.tcp_devices[device]
+            device_value = self.tcp_devices[device]
+            if device_value is not None:
+                device = device_value
+            else:
+                return None
 
         if isinstance(device, CyncTCPDevice) and device.address:
             dev = self.tcp_devices.pop(device.address, None)
@@ -794,46 +832,46 @@ class NCyncServer:
                     for subgroup in g.ncync_server.groups.values():
                         if subgroup.is_subgroup and device.id in subgroup.member_ids:
                             aggregated = subgroup.aggregate_member_states()
-                        if aggregated:
-                            # Update subgroup state from aggregated member states
-                            subgroup.state = aggregated["state"]
-                            subgroup.brightness = aggregated["brightness"]
-                            subgroup.temperature = aggregated["temperature"]
-                            subgroup.online = aggregated["online"]
+                            if aggregated:
+                                # Update subgroup state from aggregated member states
+                                subgroup.state = aggregated["state"]
+                                subgroup.brightness = aggregated["brightness"]
+                                subgroup.temperature = aggregated["temperature"]
+                                subgroup.online = aggregated["online"]
 
-                            # Create status object for the subgroup
-                            subgroup.status = DeviceStatus(
-                                state=subgroup.state,
-                                brightness=subgroup.brightness,
-                                temperature=subgroup.temperature,
-                                red=subgroup.red,
-                                green=subgroup.green,
-                                blue=subgroup.blue,
-                            )
-
-                            # Publish subgroup state
-                            logger.debug(
-                                "Subgroup state aggregated from member",
-                                extra={
-                                    "subgroup_name": subgroup.name,
-                                    "subgroup_id": subgroup.id,
-                                    "member_device_id": device.id,
-                                    "state": "ON" if subgroup.state else "OFF",
-                                    "brightness": subgroup.brightness,
-                                    "from_pkt": from_pkt,
-                                    "timestamp": time.time(),
-                                },
-                            )
-                            if g.mqtt_client:
-                                await g.mqtt_client.publish_group_state(
-                                    subgroup,
+                                # Create status object for the subgroup
+                                subgroup.status = DeviceStatus(
                                     state=subgroup.state,
                                     brightness=subgroup.brightness,
                                     temperature=subgroup.temperature,
-                                    origin=f"aggregated:{from_pkt or 'mesh'}",
+                                    red=subgroup.red,
+                                    green=subgroup.green,
+                                    blue=subgroup.blue,
                                 )
-                            if g.ncync_server:
-                                g.ncync_server.groups[subgroup.id] = subgroup
+
+                                # Publish subgroup state (only when aggregation succeeded)
+                                logger.debug(
+                                    "Subgroup state aggregated from member",
+                                    extra={
+                                        "subgroup_name": subgroup.name,
+                                        "subgroup_id": subgroup.id,
+                                        "member_device_id": device.id,
+                                        "state": "ON" if subgroup.state else "OFF",
+                                        "brightness": subgroup.brightness,
+                                        "from_pkt": from_pkt,
+                                        "timestamp": time.time(),
+                                    },
+                                )
+                                if g.mqtt_client:
+                                    await g.mqtt_client.publish_group_state(
+                                        subgroup,
+                                        state=subgroup.state,
+                                        brightness=subgroup.brightness,
+                                        temperature=subgroup.temperature,
+                                        origin=f"aggregated:{from_pkt or 'mesh'}",
+                                    )
+                                if g.ncync_server:
+                                    g.ncync_server.groups[subgroup.id] = subgroup
 
         # Handle group
         elif group is not None:
@@ -1021,7 +1059,7 @@ class NCyncServer:
         try:
             self.shutting_down = True
             device: CyncTCPDevice
-            devices = list(self.tcp_devices.values())
+            devices = [d for d in self.tcp_devices.values() if d is not None]
 
             if devices:
                 logger.info(
@@ -1033,7 +1071,7 @@ class NCyncServer:
                         await device.close()
                         logger.debug(
                             " Device connection closed",
-                            extra={"address": device.address},
+                            extra={"address": device.address if device.address else "unknown"},
                         )
                     except asyncio.CancelledError as ce:
                         logger.debug("Device close cancelled", extra={"reason": str(ce)})

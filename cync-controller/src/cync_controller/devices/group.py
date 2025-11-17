@@ -56,8 +56,8 @@ class CyncGroup:
     """
 
     lp = "CyncGroup:"
-    id: int = None
-    name: str = None
+    id: int | None = None
+    name: str | None = None
     member_ids: list[int]
     is_subgroup: bool = False
     home_id: int | None = None
@@ -99,7 +99,11 @@ class CyncGroup:
     def members(self) -> list["CyncDevice"]:
         """Get the actual device objects for this group's members."""
         g = _get_global_object()
-        return [g.ncync_server.devices[dev_id] for dev_id in self.member_ids if dev_id in g.ncync_server.devices]
+        ncync_server = getattr(g, "ncync_server", None)
+        devices = getattr(ncync_server, "devices", None) if ncync_server else None
+        if not devices:
+            return []
+        return [devices[dev_id] for dev_id in self.member_ids if dev_id in devices]
 
     @property
     def supports_rgb(self) -> bool:
@@ -129,8 +133,7 @@ class CyncGroup:
         - temperature: Average of all online members
         - online: True if ANY member is online
         """
-        g = _get_global_object()
-        members = [g.ncync_server.devices[dev_id] for dev_id in self.member_ids if dev_id in g.ncync_server.devices]
+        members = self.members
         online_members = [m for m in members if m.online]
 
         if not online_members:

@@ -86,6 +86,15 @@ class TestCyncGroup:
             assert mock_device1 in members
             assert mock_device2 in members
 
+    def test_group_members_when_server_uninitialized(self):
+        """members should return empty list when ncync_server is not ready"""
+        with patch("cync_controller.devices.g") as mock_g:
+            mock_g.ncync_server = None
+
+            group = CyncGroup(group_id=0xABCD, name="Test Group", member_ids=[0x1234, 0x5678])
+
+            assert group.members == []
+
     def test_group_supports_rgb_property(self):
         """Test group supports_rgb property checks member capabilities"""
         with patch("cync_controller.devices.g") as mock_g:
@@ -161,6 +170,15 @@ class TestCyncGroup:
             assert agg["temperature"] == 50
             # Online if ANY member online
             assert agg["online"] is True
+
+    def test_group_aggregate_when_server_uninitialized(self):
+        """Aggregate should safely return None when ncync_server is missing"""
+        with patch("cync_controller.devices.g") as mock_g:
+            mock_g.ncync_server = None
+
+            group = CyncGroup(group_id=0xABCD, name="Test Group", member_ids=[0x1234, 0x5678])
+
+            assert group.aggregate_member_states() is None
 
     def test_group_aggregate_no_online_members(self):
         """Test group aggregation returns None when no members online"""
