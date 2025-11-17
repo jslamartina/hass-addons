@@ -56,8 +56,8 @@ class CyncGroup:
     """
 
     lp = "CyncGroup:"
-    id: int = None
-    name: str = None
+    id: int | None = None
+    name: str | None = None
     member_ids: list[int]
     is_subgroup: bool = False
     home_id: int | None = None

@@ -87,14 +87,27 @@ class CloudRelayConnection:
                     "cloud_port": self.cloud_port,
                 },
             )
-        except Exception as e:
+        except (ConnectionError, TimeoutError, OSError, ssl.SSLError) as e:
             logger.exception(
-                " Cloud connection failed",
+                "Cloud connection failed (expected error)",
                 extra={
                     "client_addr": self.client_addr,
                     "cloud_server": self.cloud_server,
                     "cloud_port": self.cloud_port,
                     "error": str(e),
+                    "error_type": type(e).__name__,
+                },
+            )
+            return False
+        except Exception as e:
+            logger.exception(
+                "Cloud connection failed (unexpected error)",
+                extra={
+                    "client_addr": self.client_addr,
+                    "cloud_server": self.cloud_server,
+                    "cloud_port": self.cloud_port,
+                    "error": str(e),
+                    "error_type": type(e).__name__,
                 },
             )
             return False
@@ -184,12 +197,22 @@ class CloudRelayConnection:
             # Wait for all tasks to complete
             await asyncio.gather(*self.forward_tasks, return_exceptions=True)
 
-        except Exception as e:
+        except (ConnectionError, TimeoutError, OSError, asyncio.CancelledError) as e:
             logger.exception(
-                " Relay error",
+                "Relay error (expected error)",
                 extra={
                     "client_addr": self.client_addr,
                     "error": str(e),
+                    "error_type": type(e).__name__,
+                },
+            )
+        except Exception as e:
+            logger.exception(
+                "Relay error (unexpected error)",
+                extra={
+                    "client_addr": self.client_addr,
+                    "error": str(e),
+                    "error_type": type(e).__name__,
                 },
             )
         finally:
@@ -269,13 +292,24 @@ class CloudRelayConnection:
                 },
             )
             raise
-        except Exception as e:
+        except (ConnectionError, TimeoutError, OSError, BrokenPipeError) as e:
             logger.exception(
-                " Relay forward error",
+                "Relay forward error (expected error)",
                 extra={
                     "client_addr": self.client_addr,
                     "direction": direction,
                     "error": str(e),
+                    "error_type": type(e).__name__,
+                },
+            )
+        except Exception as e:
+            logger.exception(
+                "Relay forward error (unexpected error)",
+                extra={
+                    "client_addr": self.client_addr,
+                    "direction": direction,
+                    "error": str(e),
+                    "error_type": type(e).__name__,
                 },
             )
 

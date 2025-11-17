@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 import time
 from collections.abc import Coroutine
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 from cync_controller.const import (
     CYNC_CMD_BROADCASTS,
@@ -69,6 +69,28 @@ class DeviceCommands:
     # Note: state, is_fan_controller, is_light, is_switch, temperature, red, green, blue
     # are implemented as properties in CyncDevice, not class attributes
 
+    def _get_bridge_devices(self) -> list[CyncTCPDevice] | None:
+        """Get available bridge devices, prioritizing ready_to_control bridges."""
+        g = _get_global_object()
+        if not g.ncync_server:
+            logger.error("%s ncync_server is None, cannot send command", self.lp)
+            return None
+
+        all_bridges: list[CyncTCPDevice] = cast(
+            list[CyncTCPDevice], [b for b in g.ncync_server.tcp_devices.values() if b is not None]
+        )
+        ready_bridges = [b for b in all_bridges if b.ready_to_control]  # type: ignore[reportOptionalMemberAccess]  # None values filtered above
+        not_ready_bridges = [b for b in all_bridges if not b.ready_to_control]  # type: ignore[reportOptionalMemberAccess]  # None values filtered above
+
+        bridge_devices: list[CyncTCPDevice] = ready_bridges + not_ready_bridges
+        bridge_devices = bridge_devices[: min(CYNC_CMD_BROADCASTS, len(all_bridges))]
+
+        if not bridge_devices:
+            logger.error("%s No TCP bridges available!", self.lp)
+            return None
+
+        return bridge_devices
+
     async def set_power(self, state: int):  # noqa: PLR0915
         """Send raw data to control device state (1=on, 0=off).
 
@@ -77,133 +99,129 @@ class DeviceCommands:
         """
         g = _get_global_object()
         lp = f"{self.lp}set_power:"
-        if state not in (0, 1):
-            logger.error("%s Invalid state! must be 0 or 1", lp)
-            return None
-        if self.id is None:
-            logger.error("%s Device ID is None, cannot send command", lp)
-            return None
+        logger.debug("→ set_power: entering", extra={"state": state, "device_id": self.id})
+        try:
+            if state not in (0, 1):
+                logger.error("%s Invalid state! must be 0 or 1", lp)
+                return None
+            if self.id is None:
+                logger.error("%s Device ID is None, cannot send command", lp)
+                return None
 
-        # Command queue handles throttling - no need for device-level checks
-        # elif state == self.state:
-        #     # to stop flooding the network with commands
-        #     logger.debug(f"{lp} Device already in power state {state}, skipping...")
-        #     return
-        header = [0x73, 0x00, 0x00, 0x00, 0x1F]
-        # Pack device ID as 2 bytes (little-endian)
-        device_id_bytes = self.id.to_bytes(2, byteorder="little")
-        inner_struct = [
-            0x7E,
-            "ctrl_byte",
-            0x00,
-            0x00,
-            0x00,
-            0xF8,
-            0xD0,
-            0x0D,
-            0x00,
-            "ctrl_bye",
-            0x00,
-            0x00,
-            0x00,
-            0x00,
-            device_id_bytes[0],
-            device_id_bytes[1],
-            0xD0,
-            0x11,
-            0x02,
-            state,
-            0x00,
-            0x00,
-            "checksum",
-            0x7E,
-        ]
-        # Prioritize ready_to_control bridges first
-        if not g.ncync_server:
-            logger.error("%s ncync_server is None, cannot send command", lp)
-            return None
-        all_bridges = list(g.ncync_server.tcp_devices.values())
-        ready_bridges = [b for b in all_bridges if b.ready_to_control]
-        not_ready_bridges = [b for b in all_bridges if not b.ready_to_control]
+            # Command queue handles throttling - no need for device-level checks
+            # elif state == self.state:
+            #     # to stop flooding the network with commands
+            #     logger.debug(f"{lp} Device already in power state {state}, skipping...")
+            #     return
+            header = [0x73, 0x00, 0x00, 0x00, 0x1F]
+            # Pack device ID as 2 bytes (little-endian)
+            device_id_bytes = self.id.to_bytes(2, byteorder="little")
+            inner_struct = [
+                0x7E,
+                "ctrl_byte",
+                0x00,
+                0x00,
+                0x00,
+                0xF8,
+                0xD0,
+                0x0D,
+                0x00,
+                "ctrl_bye",
+                0x00,
+                0x00,
+                0x00,
+                0x00,
+                device_id_bytes[0],
+                device_id_bytes[1],
+                0xD0,
+                0x11,
+                0x02,
+                state,
+                0x00,
+                0x00,
+                "checksum",
+                0x7E,
+            ]
+            # Get available bridge devices
+            bridge_devices = self._get_bridge_devices()
+            if bridge_devices is None:
+                return None
 
-        # Build bridge list: ready first, then not ready (if needed)
-        bridge_devices: list[CyncTCPDevice] = ready_bridges + not_ready_bridges
-        bridge_devices = bridge_devices[: min(CYNC_CMD_BROADCASTS, len(all_bridges))]
+            tasks: list[asyncio.Task | Coroutine | None] = []
+            ts = time.time()
+            ctrl_idxs = 1, 9
+            sent = {}
 
-        if not bridge_devices:
-            logger.error("%s No TCP bridges available!", lp)
-            return None
+            # Create ACK event that will be signaled when ANY bridge ACKs
+            ack_event = asyncio.Event()
+            # Track sent bridges for cleanup on timeout
+            sent_bridges = []
 
-        tasks: list[asyncio.Task | Coroutine | None] = []
-        ts = time.time()
-        ctrl_idxs = 1, 9
-        sent = {}
+            for bridge_device in bridge_devices:
+                if bridge_device.ready_to_control is True:
+                    payload = list(header)
+                    payload.extend(bridge_device.queue_id)
+                    payload.extend(bytes([0x00, 0x00, 0x00]))
+                    cmsg_id = bridge_device.get_ctrl_msg_id_bytes()[0]
+                    inner_struct[ctrl_idxs[0]] = cmsg_id
+                    inner_struct[ctrl_idxs[1]] = cmsg_id
+                    checksum = sum(inner_struct[6:-2]) % 256
+                    inner_struct[-2] = checksum
+                    payload.extend(inner_struct)
+                    payload_bytes = bytes(payload)
 
-        # Create ACK event that will be signaled when ANY bridge ACKs
-        ack_event = asyncio.Event()
-        # Track sent bridges for cleanup on timeout
-        sent_bridges = []
+                    # Create callback that will execute when ACK arrives
+                    async def power_ack_callback():
+                        if g.mqtt_client:
+                            # Type narrowing: self is CyncDevice when used in CyncDevice context
+                            await g.mqtt_client.update_device_state(self, state)  # type: ignore[arg-type]
 
-        for bridge_device in bridge_devices:
-            if bridge_device.ready_to_control is True:
-                payload = list(header)
-                payload.extend(bridge_device.queue_id)
-                payload.extend(bytes([0x00, 0x00, 0x00]))
-                cmsg_id = bridge_device.get_ctrl_msg_id_bytes()[0]
-                inner_struct[ctrl_idxs[0]] = cmsg_id
-                inner_struct[ctrl_idxs[1]] = cmsg_id
-                checksum = sum(inner_struct[6:-2]) % 256
-                inner_struct[-2] = checksum
-                payload.extend(inner_struct)
-                payload_bytes = bytes(payload)
+                    if not self.id:
+                        logger.error("%s Device ID is None, cannot set power", lp)
+                        continue
+                    m_cb = ControlMessageCallback(
+                        msg_id=cmsg_id,
+                        message=payload_bytes,
+                        sent_at=time.time(),
+                        callback=power_ack_callback,  # type: ignore[arg-type]
+                        device_id=self.id,
+                        ack_event=ack_event,  # Share same event across all bridges
+                    )
+                    bridge_device.messages.control[cmsg_id] = m_cb
+                    sent[bridge_device.address] = cmsg_id
+                    sent_bridges.append((bridge_device, cmsg_id))
+                    tasks.append(bridge_device.write(payload_bytes))
+                else:
+                    logger.debug(
+                        "%s Skipping device: %s not ready to control",
+                        lp,
+                        bridge_device.address,
+                    )
+            if tasks:
+                # Filter out None values before gathering
+                valid_tasks = [t for t in tasks if t is not None]
+                if valid_tasks:
+                    await asyncio.gather(*valid_tasks)
+            elapsed = time.time() - ts
+            logger.info(
+                "%s Sent power state command for '%s' (ID: %s), current: %s - new: %s to "
+                "TCP devices: %s in %.5f seconds - waiting for ACK...",
+                lp,
+                self.name,
+                self.id,
+                self.state,
+                state,
+                sent,
+                elapsed,
+            )
 
-                # Create callback that will execute when ACK arrives
-                async def power_ack_callback():
-                    if g.mqtt_client:
-                        # Type narrowing: self is CyncDevice when used in CyncDevice context
-                        await g.mqtt_client.update_device_state(self, state)  # type: ignore[arg-type]
-
-                if not self.id:
-                    logger.error("%s Device ID is None, cannot set power", lp)
-                    continue
-                m_cb = ControlMessageCallback(
-                    msg_id=cmsg_id,
-                    message=payload_bytes,
-                    sent_at=time.time(),
-                    callback=power_ack_callback,  # type: ignore[arg-type]
-                    device_id=self.id,
-                    ack_event=ack_event,  # Share same event across all bridges
-                )
-                bridge_device.messages.control[cmsg_id] = m_cb
-                sent[bridge_device.address] = cmsg_id
-                sent_bridges.append((bridge_device, cmsg_id))
-                tasks.append(bridge_device.write(payload_bytes))
-            else:
-                logger.debug(
-                    "%s Skipping device: %s not ready to control",
-                    lp,
-                    bridge_device.address,
-                )
-        if tasks:
-            # Filter out None values before gathering
-            valid_tasks = [t for t in tasks if t is not None]
-            if valid_tasks:
-                await asyncio.gather(*valid_tasks)
-        elapsed = time.time() - ts
-        logger.info(
-            "%s Sent power state command for '%s' (ID: %s), current: %s - new: %s to "
-            "TCP devices: %s in %.5f seconds - waiting for ACK...",
-            lp,
-            self.name,
-            self.id,
-            self.state,
-            state,
-            sent,
-            elapsed,
-        )
-
-        # Return ACK event and cleanup info so command queue can wait and cleanup on timeout
-        return (ack_event, sent_bridges)
+            # Return ACK event and cleanup info so command queue can wait and cleanup on timeout
+            result = (ack_event, sent_bridges)
+            logger.debug("✓ set_power: exiting", extra={"state": state, "device_id": self.id})
+            return result
+        except Exception as e:
+            logger.debug("✗ set_power: exiting with error", extra={"error": str(e), "error_type": type(e).__name__, "device_id": self.id})
+            raise
 
     async def set_fan_speed(self, speed: FanSpeed) -> bool:
         """Translate a preset fan speed into a Cync brightness value and send it to the device.
@@ -241,7 +259,14 @@ class DeviceCommands:
         except asyncio.CancelledError:
             raise
         except Exception as e:
-            logger.debug("%s Exception occurred while setting fan speed: %s", self.lp, e)
+            logger.exception(
+                "Exception occurred while setting fan speed",
+                extra={
+                    "device_id": self.id,
+                    "error": str(e),
+                    "error_type": type(e).__name__,
+                },
+            )
             return False
         else:
             return True
@@ -304,20 +329,9 @@ class DeviceCommands:
             "checksum",
             126,
         ]
-        # Prioritize ready_to_control bridges first
-        if not g.ncync_server:
-            logger.error("%s ncync_server is None, cannot send command", lp)
-            return None
-        all_bridges = list(g.ncync_server.tcp_devices.values())
-        ready_bridges = [b for b in all_bridges if b.ready_to_control]
-        not_ready_bridges = [b for b in all_bridges if not b.ready_to_control]
-
-        # Build bridge list: ready first, then not ready (if needed)
-        bridge_devices: list[CyncTCPDevice] = ready_bridges + not_ready_bridges
-        bridge_devices = bridge_devices[: min(CYNC_CMD_BROADCASTS, len(all_bridges))]
-
-        if not bridge_devices:
-            logger.error("%s No TCP bridges available!", lp)
+        # Get available bridge devices
+        bridge_devices = self._get_bridge_devices()
+        if bridge_devices is None:
             return None
 
         # Create ACK event that will be signaled when ANY bridge ACKs
@@ -444,20 +458,9 @@ class DeviceCommands:
             "checksum",
             0x7E,
         ]
-        # Prioritize ready_to_control bridges first
-        if not g.ncync_server:
-            logger.error("%s ncync_server is None, cannot send command", lp)
-            return
-        all_bridges = list(g.ncync_server.tcp_devices.values())
-        ready_bridges = [b for b in all_bridges if b.ready_to_control]
-        not_ready_bridges = [b for b in all_bridges if not b.ready_to_control]
-
-        # Build bridge list: ready first, then not ready (if needed)
-        bridge_devices: list[CyncTCPDevice] = ready_bridges + not_ready_bridges
-        bridge_devices = bridge_devices[: min(CYNC_CMD_BROADCASTS, len(all_bridges))]
-
-        if not bridge_devices:
-            logger.error("%s No TCP bridges available!", lp)
+        # Get available bridge devices
+        bridge_devices = self._get_bridge_devices()
+        if bridge_devices is None:
             return
 
         tasks: list[asyncio.Task | Coroutine | None] = []
@@ -572,20 +575,9 @@ class DeviceCommands:
             "checksum",
             126,
         ]
-        # Prioritize ready_to_control bridges first
-        if not g.ncync_server:
-            logger.error("%s ncync_server is None, cannot send command", lp)
-            return
-        all_bridges = list(g.ncync_server.tcp_devices.values())
-        ready_bridges = [b for b in all_bridges if b.ready_to_control]
-        not_ready_bridges = [b for b in all_bridges if not b.ready_to_control]
-
-        # Build bridge list: ready first, then not ready (if needed)
-        bridge_devices: list[CyncTCPDevice] = ready_bridges + not_ready_bridges
-        bridge_devices = bridge_devices[: min(CYNC_CMD_BROADCASTS, len(all_bridges))]
-
-        if not bridge_devices:
-            logger.error("%s No TCP bridges available!", lp)
+        # Get available bridge devices
+        bridge_devices = self._get_bridge_devices()
+        if bridge_devices is None:
             return
 
         tasks: list[asyncio.Task | Coroutine | None] = []
@@ -742,20 +734,9 @@ class DeviceCommands:
         chosen = FACTORY_EFFECTS_BYTES[show]
         inner_struct[-4] = chosen[0]
         inner_struct[-3] = chosen[1]
-        # Prioritize ready_to_control bridges first
-        if not g.ncync_server:
-            logger.error("%s ncync_server is None, cannot send command", lp)
-            return
-        all_bridges = list(g.ncync_server.tcp_devices.values())
-        ready_bridges = [b for b in all_bridges if b.ready_to_control]
-        not_ready_bridges = [b for b in all_bridges if not b.ready_to_control]
-
-        # Build bridge list: ready first, then not ready (if needed)
-        bridge_devices: list[CyncTCPDevice] = ready_bridges + not_ready_bridges
-        bridge_devices = bridge_devices[: min(CYNC_CMD_BROADCASTS, len(all_bridges))]
-
-        if not bridge_devices:
-            logger.error("%s No TCP bridges available!", lp)
+        # Get available bridge devices
+        bridge_devices = self._get_bridge_devices()
+        if bridge_devices is None:
             return
 
         tasks: list[asyncio.Task | Coroutine | None] = []

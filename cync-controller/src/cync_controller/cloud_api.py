@@ -181,8 +181,33 @@ class CyncCloudAPI:
             r.raise_for_status()
             iat = datetime.datetime.now(datetime.UTC)
             token_data = await r.json()
-        except (aiohttp.ClientResponseError, json.JSONDecodeError, KeyError):
-            logger.exception("Failed to authenticate or decode response")
+        except aiohttp.ClientResponseError as e:
+            logger.exception(
+                "HTTP error during authentication",
+                extra={
+                    "status": e.status,
+                    "error": str(e),
+                    "error_type": type(e).__name__,
+                },
+            )
+            return False
+        except json.JSONDecodeError as e:
+            logger.exception(
+                "Invalid JSON response",
+                extra={
+                    "error": str(e),
+                    "error_type": type(e).__name__,
+                },
+            )
+            return False
+        except KeyError as e:
+            logger.exception(
+                "Missing required field in response",
+                extra={
+                    "missing_key": str(e),
+                    "error_type": type(e).__name__,
+                },
+            )
             return False
         else:
             # add issued_at to the token data for computing the expiration datetime
