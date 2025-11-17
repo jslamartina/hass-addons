@@ -198,7 +198,7 @@ async def test_close_success(tcp_connection: TCPConnection) -> None:
 
     await tcp_connection.close()
 
-    assert tcp_connection._connected is False
+    assert tcp_connection._connected is False  # pyright: ignore[reportPrivateUsage]
     mock_writer.close.assert_called_once()
     mock_writer.wait_closed.assert_called_once()
 
@@ -212,7 +212,7 @@ async def test_close_not_connected(tcp_connection: TCPConnection) -> None:
     # Should not raise
     await tcp_connection.close()
 
-    assert tcp_connection._connected is False
+    assert tcp_connection._connected is False  # pyright: ignore[reportPrivateUsage]
 
 
 @pytest.mark.asyncio
@@ -227,7 +227,7 @@ async def test_close_oserror_continues(tcp_connection: TCPConnection) -> None:
     # Should not raise - cleanup is best-effort
     await tcp_connection.close()
 
-    assert tcp_connection._connected is False
+    assert tcp_connection._connected is False  # pyright: ignore[reportPrivateUsage]
 
 
 @pytest.mark.asyncio
@@ -242,7 +242,7 @@ async def test_close_unexpected_error_continues(tcp_connection: TCPConnection) -
     # Should not raise - cleanup is best-effort
     await tcp_connection.close()
 
-    assert tcp_connection._connected is False
+    assert tcp_connection._connected is False  # pyright: ignore[reportPrivateUsage]
 
 
 @pytest.mark.asyncio
@@ -257,7 +257,7 @@ async def test_close_wait_closed_error_continues(tcp_connection: TCPConnection) 
     # Should not raise - cleanup is best-effort
     await tcp_connection.close()
 
-    assert tcp_connection._connected is False
+    assert tcp_connection._connected is False  # pyright: ignore[reportPrivateUsage]
 
 
 @pytest.mark.asyncio

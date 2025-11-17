@@ -1,6 +1,7 @@
 {
-  "include": ["src", "tests"],
-  "extraPaths": ["src"],
+  "include": ["src", "tests", "mitm"],
+  "exclude": ["mitm/validate-checksum-REFERENCE-ONLY.py"],
+  "extraPaths": ["src", "."],
   "venvPath": ".",
   "venv": ".venv",
   "pythonVersion": "3.13",
@@ -10,7 +11,7 @@
   "executionEnvironments": [
     {
       "root": ".",
-      "extraPaths": ["src"],
+      "extraPaths": ["src", "."],
       "pythonVersion": "3.13"
     }
   ],

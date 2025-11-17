@@ -24,7 +24,7 @@ legacy_path = Path(__file__).parent.parent.parent / "cync-controller" / "src"
 sys.path.insert(0, str(legacy_path))
 
 # Import from legacy codebase (reference only - for validation)
-from cync_controller.packet_checksum import calculate_checksum_between_markers  # noqa: E402
+from cync_controller.packet_checksum import calculate_checksum_between_markers  # type: ignore[import-untyped] # noqa: E402
 
 # Legacy test fixtures from cync-controller (known-good checksums)
 LEGACY_FIXTURES = {

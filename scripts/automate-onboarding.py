@@ -12,6 +12,7 @@ Usage:
 import os
 import sys
 import time
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 from urllib.parse import urljoin
@@ -28,10 +29,10 @@ try:
     from colorama import Fore, Style, init  # pyright: ignore[reportMissingModuleSource, reportAssignmentType]
 
     init(autoreset=True)
-    HAS_COLORAMA: bool = True
+    _has_colorama: bool = True
 except ImportError:
     # Fallback to no colors if colorama not installed
-    HAS_COLORAMA: bool = False  # pyright: ignore[reportConstantRedefinition]
+    _has_colorama = False
 
     class Fore:
         GREEN = ""
@@ -40,6 +41,8 @@ except ImportError:
 
     class Style:
         RESET_ALL = ""
+
+HAS_COLORAMA: bool = _has_colorama
 
 
 # Configuration defaults
@@ -320,7 +323,7 @@ class OnboardingClient:
         elevation: int = ONBOARDING_ELEVATION,
         unit_system: str = ONBOARDING_UNIT_SYSTEM,
         time_zone: str = ONBOARDING_TIME_ZONE,
-        refresh_token_fn=None,
+        refresh_token_fn: Callable[[bool], str | None] | None = None,
     ) -> tuple[bool, int | None]:
         """Complete core_config step (location configuration)
 
@@ -408,7 +411,7 @@ class OnboardingClient:
     def complete_analytics(
         self,
         analytics_enabled: bool = ONBOARDING_ANALYTICS,
-        refresh_token_fn=None,
+        refresh_token_fn: Callable[[bool], str | None] | None = None,
     ) -> tuple[bool, int | None]:
         """Complete analytics step
 
@@ -483,8 +486,8 @@ class OnboardingClient:
 
     def complete_integration(
         self,
-        payload: dict | None = None,
-        refresh_token_fn=None,
+        payload: dict[str, Any] | None = None,
+        refresh_token_fn: Callable[[bool], str | None] | None = None,
     ) -> tuple[bool, int | None]:
         """Complete integration step (if applicable)
 

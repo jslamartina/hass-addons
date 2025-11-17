@@ -47,14 +47,14 @@ class MockTCPServer:
         host: str = "127.0.0.1",
         port: int = 0,
     ):
-        """
-        Initialize mock TCP server.
+        """Initialize mock TCP server.
 
         Args:
             response_mode: How the server should respond
             response_delay: Delay before responding (for DELAY mode)
             host: Host to bind to
             port: Port to bind to (0 = OS assigns)
+
         """
         self.response_mode = response_mode
         self.response_delay = response_delay
@@ -110,7 +110,7 @@ class MockTCPServer:
         return False
 
     async def _read_packet_header(
-        self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter
+        self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter,
     ) -> tuple[bytes, int, int] | None:
         """Read and parse packet header. Returns (magic, version, payload_length) or None."""
         header_length = 7  # magic (2) + version (1) + length (4)
@@ -265,13 +265,12 @@ async def mock_tcp_server_timeout() -> AsyncGenerator[MockTCPServer]:
 
 @pytest.fixture
 def unique_device_id(request: pytest.FixtureRequest) -> str:
-    """
-    Generate unique device ID for each test to avoid metric collisions.
+    """Generate unique device ID for each test to avoid metric collisions.
 
     Uses the test node ID to ensure uniqueness.
     """
     # Use test name as device ID to ensure uniqueness
-    test_name: str = request.node.name
+    test_name: str = request.node.name  # type: ignore[assignment]
     # Sanitize for use as device_id
     device_id: str = test_name.replace("[", "_").replace("]", "_").replace("-", "_")
     return f"TEST_{device_id}"
@@ -279,8 +278,7 @@ def unique_device_id(request: pytest.FixtureRequest) -> str:
 
 @pytest.fixture
 def unique_metrics_port() -> int:
-    """
-    Get a unique port for metrics server.
+    """Get a unique port for metrics server.
 
     In practice, since we're running tests sequentially and the metrics
     server is global, we'll use a fixed port. The metrics server is
@@ -298,7 +296,7 @@ def performance_tracker() -> PerformanceTracker:
 def pytest_terminal_summary(terminalreporter: Any, exitstatus: int, config: Any) -> None:  # noqa: ARG001
     """Hook to display performance report at end of test session."""
     # Get the performance tracker from the session
-    tracker = config._performance_tcker if hasattr(config, "_performance_tracker") else None
+    tracker = config._performance_tracker if hasattr(config, "_performance_tracker") else None  # type: ignore[attr-defined]
 
     if tracker is None or not tracker.samples:
         return
@@ -317,7 +315,7 @@ def pytest_terminal_summary(terminalreporter: Any, exitstatus: int, config: Any)
 
 @pytest.fixture(scope="session", autouse=True)
 def _init_performance_tracker(
-    request: pytest.FixtureRequest, performance_tracker: PerformanceTracker
+    request: pytest.FixtureRequest, performance_tracker: PerformanceTracker,
 ) -> PerformanceTracker:
     """Initialize performance tracker in pytest config."""
     request.config._performance_tracker = performance_tracker  # type: ignore[attr-defined]

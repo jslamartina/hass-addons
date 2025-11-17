@@ -8,6 +8,7 @@ These helpers work with pytest-playwright and enable comprehensive e2e testing.
 import json
 import subprocess
 import time
+from typing import Any
 
 
 def get_supervisor_token() -> str:
@@ -42,7 +43,7 @@ def get_supervisor_token() -> str:
         raise RuntimeError(msg) from e
 
 
-def get_addon_config(addon_slug: str) -> dict:
+def get_addon_config(addon_slug: str) -> dict[str, Any]:
     """
     Get current add-on configuration via Supervisor API.
 
@@ -75,7 +76,7 @@ def get_addon_config(addon_slug: str) -> dict:
     return data.get("data", {}).get("options", {})
 
 
-def update_addon_config(addon_slug: str, config: dict) -> bool:
+def update_addon_config(addon_slug: str, config: dict[str, Any]) -> bool:
     """
     Update add-on configuration via Supervisor API.
 
@@ -191,7 +192,7 @@ def restart_addon_and_wait(addon_slug: str, wait_seconds: int = 5) -> None:
     time.sleep(wait_seconds)
 
 
-def get_addon_status(addon_slug: str) -> dict:
+def get_addon_status(addon_slug: str) -> dict[str, Any]:
     """
     Get add-on status information via Supervisor API.
 
@@ -224,7 +225,7 @@ def get_addon_status(addon_slug: str) -> dict:
     return data.get("data", {})
 
 
-def read_json_logs(addon_slug: str, lines: int = 100) -> list[dict]:
+def read_json_logs(addon_slug: str, lines: int = 100) -> list[dict[str, Any]]:
     """
     Read JSON logs from add-on container.
 
@@ -293,7 +294,7 @@ def read_human_logs(addon_slug: str, lines: int = 100) -> str:
     return "\n".join(all_lines[-lines:])
 
 
-def get_log_levels_from_json(logs: list[dict]) -> set[str]:
+def get_log_levels_from_json(logs: list[dict[str, Any]]) -> set[str]:
     """
     Extract unique log levels from parsed JSON logs.
 
@@ -310,7 +311,7 @@ def get_log_levels_from_json(logs: list[dict]) -> set[str]:
     return levels
 
 
-def count_log_levels(logs: list[dict]) -> dict[str, int]:
+def count_log_levels(logs: list[dict[str, Any]]) -> dict[str, int]:
     """
     Count occurrences of each log level.
 
@@ -328,7 +329,7 @@ def count_log_levels(logs: list[dict]) -> dict[str, int]:
     return counts
 
 
-def filter_logs_by_level(logs: list[dict], level: str) -> list[dict]:
+def filter_logs_by_level(logs: list[dict[str, Any]], level: str) -> list[dict[str, Any]]:
     """
     Filter logs to only entries of a specific level.
 
@@ -342,7 +343,7 @@ def filter_logs_by_level(logs: list[dict], level: str) -> list[dict]:
     return [entry for entry in logs if entry.get("level") == level]
 
 
-def filter_logs_by_logger(logs: list[dict], logger_name: str) -> list[dict]:
+def filter_logs_by_logger(logs: list[dict[str, Any]], logger_name: str) -> list[dict[str, Any]]:
     """
     Filter logs to only entries from a specific logger.
 

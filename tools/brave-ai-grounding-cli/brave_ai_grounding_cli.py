@@ -131,12 +131,12 @@ async def stream_brave_ai(
         print("SOURCES")
         print("=" * 60)
         for i, cite in enumerate(citations, 1):
-            print(f"\n[{i}] {cite.get('url', 'N/A')}")
+            print(f"\n[{i}] {cite.get('url', 'N/A')}")  # type: ignore[union-attr]
             if "snippet" in cite:
-                snippet = cite["snippet"]
+                snippet = cite["snippet"]  # type: ignore[typeddict-item]
                 # Snippet might be JSON string, try to parse it
                 try:
-                    snippet_data = json.loads(snippet)
+                    snippet_data = json.loads(snippet)  # type: ignore[arg-type]
                     if isinstance(snippet_data, dict):
                         # Print structured snippet
                         for key, value in snippet_data.items():

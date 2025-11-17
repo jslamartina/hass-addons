@@ -12,7 +12,7 @@ from pathlib import Path
 
 # Add scripts to path to import validator
 sys.path.insert(0, str(Path(__file__).parent))
-from validate_edit_context import EditContextValidator
+from validate_edit_context import EditContextValidator  # type: ignore[import-untyped]
 
 
 class TestEditContextValidator(unittest.TestCase):

@@ -79,7 +79,9 @@ def device_ops(mock_transport: Mock, mock_protocol: Mock) -> DeviceOperations:
 
 
 @pytest.mark.asyncio
-async def test_ask_for_mesh_info_success(device_ops, mock_transport):
+async def test_ask_for_mesh_info_success(
+    device_ops: DeviceOperations, mock_transport: Mock
+) -> None:
     """Test successful mesh info request with 0x83 responses."""
     # Setup
     device_ops.set_primary(True)

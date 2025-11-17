@@ -115,9 +115,9 @@ def main():
         if not isinstance(device, dict):
             continue
 
-        device_id = device.get("id", "")
-        identifiers = device.get("identifiers", [])
-        name = device.get("name_by_user") or device.get("name", "")
+        device_id = device.get("id", "")  # type: ignore[assignment]
+        identifiers = device.get("identifiers", [])  # type: ignore[assignment]
+        name = device.get("name_by_user") or device.get("name", "")  # type: ignore[assignment]
 
         is_mqtt = any(
             isinstance(id_pair, list) and len(id_pair) == 2 and id_pair[0] == "mqtt"
