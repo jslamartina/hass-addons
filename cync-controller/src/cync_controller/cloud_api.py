@@ -97,11 +97,13 @@ class CyncCloudAPI:
         lp = f"{self.lp}:check_tkn:"
         # read the token cache
         self.token_cache = await self.read_token_cache()
-        if not self.token_cache:
+        token_cache = self.token_cache
+        if not token_cache:
             logger.debug("%s No cached token found, requesting OTP...", lp)
             return False
         # check if the token is expired
-        token_cache = self.token_cache
+        # Type narrowing: token_cache is not None after the check above
+        assert token_cache is not None  # Type guard for pyright
         if token_cache.expires_at < datetime.datetime.now(datetime.UTC):
             logger.debug("%s Token expired, requesting OTP...", lp)
             # token expired, request OTP

@@ -148,7 +148,7 @@ class CyncDevice(DeviceCommands):
         return self._version
 
     @version.setter
-    def version(self, value: str | int) -> None:
+    def version(self, value: str | int | None) -> None:
         if value is None:
             return
         if isinstance(value, int):
@@ -335,7 +335,7 @@ class CyncDevice(DeviceCommands):
             raise TypeError(msg)
         if value != self._online:
             self._online = value
-            if g.mqtt_client:
+            if g.mqtt_client and self.id is not None:
                 g.tasks.append(asyncio.get_running_loop().create_task(g.mqtt_client.pub_online(self.id, value)))
 
     @property

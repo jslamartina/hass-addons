@@ -539,7 +539,11 @@ class NCyncServer:
         """
         dev = None
         if isinstance(device, str) and device in self.tcp_devices:
-            device = self.tcp_devices[device]
+            device_value = self.tcp_devices[device]
+            if device_value is not None:
+                device = device_value
+            else:
+                return None
 
         if isinstance(device, CyncTCPDevice) and device.address:
             dev = self.tcp_devices.pop(device.address, None)
@@ -794,22 +798,22 @@ class NCyncServer:
                     for subgroup in g.ncync_server.groups.values():
                         if subgroup.is_subgroup and device.id in subgroup.member_ids:
                             aggregated = subgroup.aggregate_member_states()
-                        if aggregated:
-                            # Update subgroup state from aggregated member states
-                            subgroup.state = aggregated["state"]
-                            subgroup.brightness = aggregated["brightness"]
-                            subgroup.temperature = aggregated["temperature"]
-                            subgroup.online = aggregated["online"]
+                            if aggregated:
+                                # Update subgroup state from aggregated member states
+                                subgroup.state = aggregated["state"]
+                                subgroup.brightness = aggregated["brightness"]
+                                subgroup.temperature = aggregated["temperature"]
+                                subgroup.online = aggregated["online"]
 
-                            # Create status object for the subgroup
-                            subgroup.status = DeviceStatus(
-                                state=subgroup.state,
-                                brightness=subgroup.brightness,
-                                temperature=subgroup.temperature,
-                                red=subgroup.red,
-                                green=subgroup.green,
-                                blue=subgroup.blue,
-                            )
+                                # Create status object for the subgroup
+                                subgroup.status = DeviceStatus(
+                                    state=subgroup.state,
+                                    brightness=subgroup.brightness,
+                                    temperature=subgroup.temperature,
+                                    red=subgroup.red,
+                                    green=subgroup.green,
+                                    blue=subgroup.blue,
+                                )
 
                             # Publish subgroup state
                             logger.debug(
@@ -1021,7 +1025,7 @@ class NCyncServer:
         try:
             self.shutting_down = True
             device: CyncTCPDevice
-            devices = list(self.tcp_devices.values())
+            devices = [d for d in self.tcp_devices.values() if d is not None]
 
             if devices:
                 logger.info(
@@ -1033,7 +1037,7 @@ class NCyncServer:
                         await device.close()
                         logger.debug(
                             " Device connection closed",
-                            extra={"address": device.address},
+                            extra={"address": device.address if device.address else "unknown"},
                         )
                     except asyncio.CancelledError as ce:
                         logger.debug("Device close cancelled", extra={"reason": str(ce)})

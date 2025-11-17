@@ -123,7 +123,7 @@ _tcp_whitelist_env = os.environ.get("CYNC_TCP_WHITELIST")
 if _tcp_whitelist_env:
     # split into a list using comma
     _whitelist_split = _tcp_whitelist_env.split(",")
-    CYNC_TCP_WHITELIST: list[str] = [x.strip() for x in _whitelist_split if x]
+    CYNC_TCP_WHITELIST: list[str] | None = [x.strip() for x in _whitelist_split if x]
 else:
     CYNC_TCP_WHITELIST: list[str] | None = None
 

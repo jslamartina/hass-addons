@@ -66,14 +66,8 @@ class DeviceCommands:
     lp: str = ""
     id: int | None = None
     name: str = ""
-    state: int | None = None
-    is_fan_controller: bool = False
-    is_light: bool = False
-    is_switch: bool = False
-    temperature: int | None = None
-    red: int | None = None
-    green: int | None = None
-    blue: int | None = None
+    # Note: state, is_fan_controller, is_light, is_switch, temperature, red, green, blue
+    # are implemented as properties in CyncDevice, not class attributes
 
     async def set_power(self, state: int):  # noqa: PLR0915
         """Send raw data to control device state (1=on, 0=off).
@@ -85,6 +79,9 @@ class DeviceCommands:
         lp = f"{self.lp}set_power:"
         if state not in (0, 1):
             logger.error("%s Invalid state! must be 0 or 1", lp)
+            return None
+        if self.id is None:
+            logger.error("%s Device ID is None, cannot send command", lp)
             return None
 
         # Command queue handles throttling - no need for device-level checks
