@@ -75,7 +75,10 @@ run_pyright() {
     return 1
   fi
 
-  "${pyright_cmd[@]}" --project "$REPO_ROOT/python-rebuild-tcp-comm/pyrightconfig.json"
+  (
+    cd "$REPO_ROOT/python-rebuild-tcp-comm"
+    "${pyright_cmd[@]}" src tests
+  )
 }
 
 # Python type checking with pyright
