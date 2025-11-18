@@ -1,10 +1,6 @@
 {
   "include": ["src"],
-  "exclude": [
-    "tests",
-    "mitm",
-    "mitm/validate-checksum-REFERENCE-ONLY.py"
-  ],
+  "exclude": ["tests", "mitm", "mitm/validate-checksum-REFERENCE-ONLY.py"],
   "extraPaths": ["src", "."],
   "venvPath": "..",
   "venv": ".venv",

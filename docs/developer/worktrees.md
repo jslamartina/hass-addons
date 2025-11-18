@@ -47,5 +47,3 @@ Use `repo_root() / "hass-credentials.env"` (or similar) as the base for filesyst
 - Show commands as `cd "$REPO_ROOT"` instead of `cd /workspaces/...`.
 - Mention that `REPO_ROOT` can come from `HASS_ADDONS_ROOT` or `git rev-parse`.
 - When referencing a file path, prefer relative (`python-rebuild-tcp-comm/captures/`) plus a short note about resolving the repo root.
-
-
