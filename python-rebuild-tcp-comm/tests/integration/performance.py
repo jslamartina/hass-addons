@@ -38,7 +38,7 @@ class PerformanceReport:
     thresholds: PerformanceThresholds
     metrics: PerformanceMetrics
     samples_ms: list[float]
-    warnings: list[str] = field(default_factory=lambda: [])
+    warnings: list[str] = field(default_factory=lambda: [])  # noqa: PIE807
 
     def to_dict(self) -> dict[str, object]:
         """Convert to dictionary for JSON serialization."""
