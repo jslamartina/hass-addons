@@ -21,7 +21,7 @@ activate_venv() {
   local venv_path="$REPO_ROOT/.venv"
   if [ -f "$venv_path/bin/activate" ]; then
     log_info "Activating repository virtualenv at $venv_path"
-    # shellcheck disable=SC1090
+    # shellcheck disable=SC1090,SC1091  # Source path is dynamic via $venv_path
     source "$venv_path/bin/activate"
   else
     log_warn "Repository virtualenv not found at $venv_path. Run scripts/setup-worktree.sh to create it."
