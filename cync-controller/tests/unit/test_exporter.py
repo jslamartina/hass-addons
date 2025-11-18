@@ -404,7 +404,7 @@ class TestFastAPIEndpoints:
             detail = exc.value.detail
             assert "error_id" in detail
             assert "boom" not in detail["message"]
-            assert "Supervisor" in detail["message"]
+            assert "Failed to contact Supervisor API" in detail["message"]
 
     @pytest.mark.asyncio
     async def test_restart_api_unexpected_error_masked(self):
