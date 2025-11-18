@@ -4,22 +4,40 @@ updates:
     directory: "/"
     schedule:
       interval: daily
-      time: "06:00"
+      time: "08:00"
 
   - package-ecosystem: "npm"
     directory: "/"
     schedule:
       interval: daily
-      time: "07:00"
+      time: "08:00"
 
   - package-ecosystem: "pip"
-    directory: "/"
+    directory: "/scripts"
+    schedule:
+      interval: daily
+      time: "08:00"
+
+  - package-ecosystem: "pip"
+    directory: "/cync-controller"
+    schedule:
+      interval: daily
+      time: "08:00"
+
+  - package-ecosystem: "pip"
+    directory: "/python-rebuild-tcp-comm"
     schedule:
       interval: daily
       time: "08:00"
 
   - package-ecosystem: "docker"
-    directory: "/"
+    directory: "/cync-controller"
     schedule:
       interval: daily
-      time: "09:00"
+      time: "08:00"
+
+  - package-ecosystem: "docker"
+    directory: "/.cursor"
+    schedule:
+      interval: daily
+      time: "08:00"

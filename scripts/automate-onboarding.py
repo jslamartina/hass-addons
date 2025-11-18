@@ -21,7 +21,7 @@ try:
     import requests
 except ImportError:
     print(
-        "Error: requests library required. Install with: pip install -r scripts/requirements.txt",
+        "Error: requests library required. Install dependencies with: pip install -e ./scripts",
     )
     sys.exit(1)
 
