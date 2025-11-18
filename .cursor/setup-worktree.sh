@@ -3,11 +3,43 @@ set -Eeuo pipefail
 IFS=$'\n\t'
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-# shellcheck disable=SC1091  # Source path is dynamic via $SCRIPT_DIR
-source "$SCRIPT_DIR/shell-common/common-output.sh"
-
-# shellcheck disable=SC2034  # LP used by common-output.sh log functions
 LP="[$(basename "$0")]"
+
+if [ -t 1 ]; then
+  COLOR_BLUE=$'\033[34m'
+  COLOR_GREEN=$'\033[32m'
+  COLOR_YELLOW=$'\033[33m'
+  COLOR_RED=$'\033[31m'
+  COLOR_MAGENTA=$'\033[35m'
+  COLOR_RESET=$'\033[0m'
+else
+  COLOR_BLUE=""
+  COLOR_GREEN=""
+  COLOR_YELLOW=""
+  COLOR_RED=""
+  COLOR_MAGENTA=""
+  COLOR_RESET=""
+fi
+
+log_section() {
+  printf '\n%s== %s ==%s\n' "$COLOR_MAGENTA" "$*" "$COLOR_RESET"
+}
+
+log_info() {
+  printf '%sINFO%s %s %s\n' "$COLOR_BLUE" "$COLOR_RESET" "$LP" "$*"
+}
+
+log_success() {
+  printf '%sSUCCESS%s %s %s\n' "$COLOR_GREEN" "$COLOR_RESET" "$LP" "$*"
+}
+
+log_warn() {
+  printf '%sWARN%s %s %s\n' "$COLOR_YELLOW" "$COLOR_RESET" "$LP" "$*"
+}
+
+log_error() {
+  printf '%sERROR%s %s %s\n' "$COLOR_RED" "$COLOR_RESET" "$LP" "$*"
+}
 
 trap 'cleanup' EXIT
 trap 'on_error $LINENO' ERR
