@@ -1,7 +1,6 @@
 {
-  "include": ["src"],
+  "include": ["src", "tests"],
   "exclude": [
-    "tests",
     "mitm",
     "mitm/validate-checksum-REFERENCE-ONLY.py"
   ],
