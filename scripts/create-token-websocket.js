@@ -4,6 +4,8 @@
  * This is the "legitimate" way to create tokens programmatically
  */
 
+const fs = require("fs");
+const path = require("path");
 const WebSocket = require("ws");
 
 const HA_URL = process.env.HA_URL || "http://localhost:8123";
@@ -12,6 +14,30 @@ const USERNAME = process.env.HASS_USERNAME || "dev";
 const PASSWORD = process.env.HASS_PASSWORD || "dev";
 const TOKEN_NAME =
   process.env.TOKEN_NAME || `Setup Script ${new Date().toISOString()}`;
+const TOKEN_OUTPUT_FILE =
+  process.env.TOKEN_OUTPUT_FILE ||
+  path.resolve(process.cwd(), "long_lived_access_token.txt");
+
+function logSensitiveAction(message, meta = "") {
+  const suffix = meta ? ` ${meta}` : "";
+  console.log(`[websocket-token] ${message}${suffix}`);
+}
+
+function persistTokenToFile(token) {
+  try {
+    fs.writeFileSync(TOKEN_OUTPUT_FILE, token, { mode: 0o600 });
+    fs.chmodSync(TOKEN_OUTPUT_FILE, 0o600);
+    console.log(
+      `[websocket-token] Token securely stored at ${TOKEN_OUTPUT_FILE}`,
+    );
+  } catch (error) {
+    console.error(
+      "[websocket-token] Failed to persist token to file:",
+      error.message,
+    );
+    throw error;
+  }
+}
 
 async function createToken() {
   console.log("[websocket-token] Starting WebSocket token creation...");
@@ -48,9 +74,9 @@ async function createToken() {
             type: "auth",
             access_token: accessToken,
           };
-          console.log(
-            "[websocket-token] Sending auth request:",
-            JSON.stringify(authRequest, null, 2),
+          logSensitiveAction(
+            "Sending auth request with redacted token.",
+            `(length=${authRequest.access_token.length})`,
           );
           ws.send(JSON.stringify(authRequest));
         } else if (message.type === "auth_ok") {
@@ -72,9 +98,9 @@ async function createToken() {
           ws.send(JSON.stringify(tokenRequest));
         } else if (message.type === "result" && message.success) {
           console.log("[websocket-token] ✅ Long-lived token created!");
-          console.log(
-            "[websocket-token] Token:",
-            message.result.substring(0, 50) + "...",
+          logSensitiveAction(
+            "Token generated (value redacted).",
+            `(length=${message.result.length})`,
           );
 
           ws.close();
@@ -166,10 +192,7 @@ async function getAccessTokenViaRegularLogin() {
     handler: ["homeassistant", null],
     redirect_uri: HA_URL + "/",
   };
-  console.log(
-    "[websocket-token] Sending login flow request:",
-    JSON.stringify(loginFlowRequest, null, 2),
-  );
+  console.log("[websocket-token] Sending login flow request.");
 
   const response = await fetch(`${HA_URL}/auth/login_flow`, {
     method: "POST",
@@ -188,7 +211,7 @@ async function getAccessTokenViaRegularLogin() {
   }
 
   const flowData = await response.json();
-  console.log("[websocket-token] Login flow initiated:", flowData.flow_id);
+  console.log("[websocket-token] Login flow initiated.");
 
   // Submit credentials
   const credentialRequest = {
@@ -196,9 +219,8 @@ async function getAccessTokenViaRegularLogin() {
     username: USERNAME,
     password: PASSWORD,
   };
-  console.log(
-    "[websocket-token] Sending credentials request:",
-    JSON.stringify({ ...credentialRequest, password: "[REDACTED]" }, null, 2),
+  logSensitiveAction(
+    "Sending credentials request with password redacted.",
   );
 
   const submitResponse = await fetch(
@@ -235,9 +257,8 @@ async function getAccessTokenViaRegularLogin() {
       code: result.result,
       client_id: HA_URL + "/",
     };
-    console.log(
-      "[websocket-token] Sending token exchange request:",
-      JSON.stringify(tokenExchangeParams, null, 2),
+    logSensitiveAction(
+      "Sending token exchange request with authorization code redacted.",
     );
 
     const tokenResponse = await fetch(`${HA_URL}/auth/token`, {
@@ -277,8 +298,8 @@ if (typeof fetch === "undefined") {
 
 createToken()
   .then((token) => {
-    console.log("[websocket-token] ✅ Done! Token created and saved.");
-    console.log("[websocket-token] Full token:", token);
+    persistTokenToFile(token);
+    console.log("[websocket-token] ✅ Done! Token available on disk.");
     process.exit(0);
   })
   .catch((error) => {
