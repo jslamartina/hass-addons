@@ -81,6 +81,15 @@ else
   echo "mosquitto-clients already installed"
 fi
 
+# Ensure lynx is installed for text-only webpage dumps
+if ! command -v lynx > /dev/null 2>&1; then
+  echo "Installing lynx..."
+  sudo apt-get update -qq
+  sudo apt-get install -y lynx
+else
+  echo "lynx already installed"
+fi
+
 # Step 0: Configure Docker daemon with journald logging (BEFORE Docker starts)
 echo "Step 0: Configuring Docker daemon with journald logging..."
 DOCKER_CONFIG="/etc/docker/daemon.json"

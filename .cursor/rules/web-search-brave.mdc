@@ -73,6 +73,18 @@ Examples:
 3. **Multiple queries** - Break complex questions into smaller searches
 4. **Cite sources** - Always include URLs in responses
 
+## Fetching Specific URLs
+
+- Prefer MCP tools (Brave Search, Brave AI Grounding CLI) whenever they already expose the needed information—they only return text, so they keep context lean.
+- When you must fetch a specific URL by hand, NEVER fetch raw HTML. Strip styling/JS by piping `curl` output through `lynx` (installed in the devcontainer) and pipe out only the relevant lines:
+
+```bash
+curl -sS "https://example.com/page" | lynx -dump -stdin
+```
+
+- Keep the excerpt concise (quote only the portion needed to answer the question) and still provide the source URL in your response.
+- If `lynx` ever becomes unavailable, fall back to another text-only converter (for example, a tiny `python3 html.parser` filter) after alerting the user.
+
 ## Setup
 
 The Brave Search MCP server is configured in `.cursor/mcp.json` and uses `BRAVE_SEARCH_FREE_API_KEY` from `hass-credentials.env`.
