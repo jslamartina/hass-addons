@@ -42,6 +42,7 @@ except ImportError:
     class Style:
         RESET_ALL = ""
 
+
 HAS_COLORAMA: bool = _has_colorama
 
 
@@ -70,7 +71,9 @@ if credentials_file.exists():
             os.environ[key] = value
 
 # Load token from environment
-AUTH_TOKEN: str | None = os.getenv("LONG_LIVED_ACCESS_TOKEN") or os.getenv("ONBOARDING_TOKEN")
+AUTH_TOKEN: str | None = os.getenv("LONG_LIVED_ACCESS_TOKEN") or os.getenv(
+    "ONBOARDING_TOKEN"
+)
 
 
 class OnboardingError(Exception):
@@ -101,7 +104,9 @@ class OnboardingClient:
     def _log_error(self, message: str):
         print(f"{Fore.RED}[onboarding] ❌{Style.RESET_ALL} {message}")
 
-    def get_onboarding_status(self, require_auth: bool = False) -> list[dict[str, Any]] | None:
+    def get_onboarding_status(
+        self, require_auth: bool = False
+    ) -> list[dict[str, Any]] | None:
         """Get current onboarding status
 
         Args:

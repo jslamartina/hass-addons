@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 import time
 from collections.abc import Coroutine
-from typing import TYPE_CHECKING, cast
+from typing import cast
 
 from cync_controller.const import (
     CYNC_CMD_BROADCASTS,
@@ -15,8 +15,7 @@ from cync_controller.structs import (
     FanSpeed,
 )
 
-if TYPE_CHECKING:
-    from .tcp_device import CyncTCPDevice
+from .tcp_device import CyncTCPDevice
 
 logger = get_logger(__name__)
 
@@ -217,11 +216,12 @@ class DeviceCommands:
 
             # Return ACK event and cleanup info so command queue can wait and cleanup on timeout
             result = (ack_event, sent_bridges)
-            logger.debug("✓ set_power: exiting", extra={"state": state, "device_id": self.id})
-            return result
         except Exception as e:
             logger.debug("✗ set_power: exiting with error", extra={"error": str(e), "error_type": type(e).__name__, "device_id": self.id})
             raise
+        else:
+            logger.debug("✓ set_power: exiting", extra={"state": state, "device_id": self.id})
+            return result
 
     async def set_fan_speed(self, speed: FanSpeed) -> bool:
         """Translate a preset fan speed into a Cync brightness value and send it to the device.
@@ -643,8 +643,6 @@ class DeviceCommands:
         :param show:
         :return:
         """
-        g = _get_global_object()
-
         """
             # candle 0x01 0xf1
         73 00 00 00 20 2d e4 b5 d2 b3 05 00 7e 14 00 00  s... -......~...

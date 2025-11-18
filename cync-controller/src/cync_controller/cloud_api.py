@@ -176,6 +176,7 @@ class CyncCloudAPI:
         if not sesh:
             logger.error("%s HTTP session is None, cannot send OTP", lp)
             return False
+        success = False
         try:
             r = await sesh.post(
                 api_auth_url,
@@ -194,7 +195,6 @@ class CyncCloudAPI:
                     "error_type": type(e).__name__,
                 },
             )
-            return False
         except json.JSONDecodeError as e:
             logger.exception(
                 "Invalid JSON response",
@@ -203,7 +203,6 @@ class CyncCloudAPI:
                     "error_type": type(e).__name__,
                 },
             )
-            return False
         except KeyError as e:
             logger.exception(
                 "Missing required field in response",
@@ -212,7 +211,6 @@ class CyncCloudAPI:
                     "error_type": type(e).__name__,
                 },
             )
-            return False
         else:
             # add issued_at to the token data for computing the expiration datetime
             token_data["issued_at"] = iat
@@ -228,7 +226,9 @@ class CyncCloudAPI:
             if not write_success:
                 logger.warning("%s Token set in memory but file write failed - token will be lost on restart", lp)
 
-            return True
+            success = True
+
+        return success
 
     async def write_token_cache(self, tkn: ComputedTokenData) -> bool:
         """

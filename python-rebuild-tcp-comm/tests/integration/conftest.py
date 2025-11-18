@@ -110,7 +110,9 @@ class MockTCPServer:
         return False
 
     async def _read_packet_header(
-        self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter,
+        self,
+        reader: asyncio.StreamReader,
+        writer: asyncio.StreamWriter,
     ) -> tuple[bytes, int, int] | None:
         """Read and parse packet header. Returns (magic, version, payload_length) or None."""
         header_length = 7  # magic (2) + version (1) + length (4)
@@ -315,7 +317,8 @@ def pytest_terminal_summary(terminalreporter: Any, exitstatus: int, config: Any)
 
 @pytest.fixture(scope="session", autouse=True)
 def _init_performance_tracker(
-    request: pytest.FixtureRequest, performance_tracker: PerformanceTracker,
+    request: pytest.FixtureRequest,
+    performance_tracker: PerformanceTracker,
 ) -> PerformanceTracker:
     """Initialize performance tracker in pytest config."""
     request.config._performance_tracker = performance_tracker  # type: ignore[attr-defined]
