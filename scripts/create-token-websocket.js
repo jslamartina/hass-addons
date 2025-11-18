@@ -221,7 +221,6 @@ async function getAccessTokenViaRegularLogin() {
   };
   logSensitiveAction(
     "Sending credentials request with password redacted.",
-    `(user=${credentialRequest.username})`,
   );
 
   const submitResponse = await fetch(
