@@ -58,7 +58,7 @@
     "nodemon": "^3.1.11",
     "playwright": "^1.56.0",
     "prettier": "^3.6.2",
-    "prettier-plugin-sh": "^0.17.4",
+    "prettier-plugin-sh": "^0.18.0",
     "pyright": "^1.1.400",
     "ts-node": "^10.9.2",
     "typescript": "^5.9.3",
