@@ -43,7 +43,7 @@
     "ruff.lint.select": ["ALL"],
     "ruff.nativeServer": "on",
     "prettier.documentSelectors": ["**/*.sh"],
-    "prettier.prettierPath": "/workspaces/hass-addons/node_modules/prettier",
+    "prettier.prettierPath": "${workspaceFolder}/node_modules/prettier",
     "prettier.requireConfig": true,
   },
 }

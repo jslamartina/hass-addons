@@ -54,7 +54,8 @@ _Alt text: Network flow diagram showing Cync devices connecting through MITM pro
 ### Start MITM
 
 ```bash
-cd /workspaces/hass-addons/python-rebuild-tcp-comm
+REPO_ROOT="${HASS_ADDONS_ROOT:-$(git rev-parse --show-toplevel)}"
+cd "$REPO_ROOT/python-rebuild-tcp-comm"
 
 ## Replace 192.168.50.32 with your Home Assistant IP
 ## Add --enable-codec-validation to validate packets in real-time

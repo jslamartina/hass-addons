@@ -105,6 +105,10 @@ def start_http_server(port: int, addr: str = ..., registry: Any | None = ...) ->
 
 
 class CollectorRegistry:
-    def __init__(self, auto_describe: bool = ..., target_info: Mapping[str, str] | None = ...) -> None: ...
+    def __init__(
+        self,
+        auto_describe: bool = ...,
+        target_info: Mapping[str, str] | None = ...,
+    ) -> None: ...
 
 

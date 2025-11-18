@@ -217,7 +217,10 @@ class DeviceCommands:
             # Return ACK event and cleanup info so command queue can wait and cleanup on timeout
             result = (ack_event, sent_bridges)
         except Exception as e:
-            logger.debug("✗ set_power: exiting with error", extra={"error": str(e), "error_type": type(e).__name__, "device_id": self.id})
+            logger.debug(
+                "✗ set_power: exiting with error",
+                extra={"error": str(e), "error_type": type(e).__name__, "device_id": self.id},
+            )
             raise
         else:
             logger.debug("✓ set_power: exiting", extra={"state": state, "device_id": self.id})

@@ -8,6 +8,28 @@ import pytest
 from playwright.sync_api import Page
 
 
+def _resolve_repo_root() -> Path:
+    """Return the repo root, honoring overrides for worktrees."""
+    env_root = os.getenv("HASS_ADDONS_ROOT")
+    if env_root:
+        return Path(env_root).expanduser().resolve()
+
+    current = Path(__file__).resolve()
+    for candidate in current.parents:
+        if (candidate / ".git").exists():
+            return candidate
+
+    return current
+
+
+def _credentials_file() -> Path:
+    """Resolve the credentials file path."""
+    env_creds = os.getenv("HASS_CREDENTIALS_FILE")
+    if env_creds:
+        return Path(env_creds).expanduser().resolve()
+    return _resolve_repo_root() / "hass-credentials.env"
+
+
 @pytest.fixture(scope="session")
 def browser_context_args():
     """Configure browser context for tests."""
@@ -26,7 +48,7 @@ def ha_credentials():
 
     # Fall back to credentials file
     if not username or not password:
-        creds_file = Path("/workspaces/hass-addons/hass-credentials.env")
+        creds_file = _credentials_file()
         if creds_file.exists():
             with creds_file.open() as f:
                 for line in f:
