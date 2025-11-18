@@ -140,26 +140,32 @@ async def restart():
             if response.status == 200:
                 logger.info("%s Successfully called the restart API. The add-on will now restart.", lp)
                 return {"success": True, "message": "Add-on is restarting."}
-            # Try to get more details from the response if it fails
+
             error_details = await response.text()
             logger.warning(
-                "%s Error: Failed to restart add-on. API returned status %s",
+                "%s Supervisor restart failed status=%s response=%s",
                 lp,
                 response.status,
+                error_details,
             )
-            logger.warning("%s Response: %s", lp, error_details)
-            return {
-                "success": False,
-                "message": f"API returned status {response.status}: {error_details}",
-            }
+            raise _masked_http_exception(
+                "Supervisor restart failed",
+                RuntimeError(f"status={response.status} body={error_details}"),
+                "Failed to restart add-on. Please retry and provide the error ID to support.",
+            )
 
     except aiohttp.ClientError as e:
-        logger.exception("%s Error: An aiohttp client error occurred", lp)
-        return {"success": False, "message": f"AIOHTTP Client Error: {e}"}
+        raise _masked_http_exception(
+            "Supervisor restart aiohttp error",
+            e,
+            "Failed to reach Supervisor API. Please retry and provide the error ID to support.",
+        ) from e
     except Exception as e:  # pylint: disable=broad-except
-        # Broad exception catch is appropriate here to handle any unexpected errors during restart
-        logger.exception("%s An unexpected error occurred", lp)
-        return {"success": False, "message": f"An unexpected error occurred: {e}"}
+        raise _masked_http_exception(
+            "Supervisor restart unexpected error",
+            e,
+            "An unexpected error occurred while restarting the add-on. See server logs with the error ID.",
+        ) from e
 
 
 @app.post("/api/export/otp/submit")
