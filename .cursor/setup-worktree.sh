@@ -162,11 +162,8 @@ install_playwright_assets() {
     return
   fi
 
-  log_info "Installing Playwright Chromium browser (with dependencies)"
-  npx --yes playwright install chromium --with-deps
-
-  log_info "Installing Playwright system dependencies"
-  npx --yes playwright install-deps chromium
+  log_info "Installing Playwright Chromium browser"
+  npx --yes playwright install chromium
 
   log_success "Playwright tooling ready"
 }
