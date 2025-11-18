@@ -63,11 +63,6 @@ RUN curl -fsSL https://deb.nodesource.com/setup_${NODE_VERSION}.x | bash - \
 RUN useradd -m -s /bin/bash ubuntu \
   && echo "ubuntu ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
 
-# Copy setup script into image for use when repo is cloned
-# The script consolidates all package installation (Python tools, npm, Playwright)
-COPY --chown=ubuntu:ubuntu .cursor/setup-worktree.sh /home/ubuntu/setup-worktree.sh
-RUN chmod +x /home/ubuntu/setup-worktree.sh
-
 # Switch to non-root user
 USER ubuntu
 
@@ -75,8 +70,9 @@ USER ubuntu
 WORKDIR /home/ubuntu
 
 # Note: Python tools (pip, ruff, poetry) and Playwright installation
-# are now handled by setup-worktree.sh, which should be called after
-# the repository is cloned by the background agent
+# are now consolidated in .cursor/setup-worktree.sh, which should be called
+# after the repository is cloned by the background agent:
+#   cd /path/to/cloned/repo && .cursor/setup-worktree.sh
 
 # Set default shell to bash
 SHELL ["/bin/bash", "-c"]
