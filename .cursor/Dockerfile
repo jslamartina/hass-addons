@@ -10,7 +10,7 @@
 # - Use home directory as WORKDIR
 
 # Use Python 3.13 as base (required by project)
-FROM python:3.13-slim-bookworm
+FROM python:3.14-slim-bookworm
 
 # Set environment variables
 ENV DEBIAN_FRONTEND=noninteractive \
