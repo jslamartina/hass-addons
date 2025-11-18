@@ -5,9 +5,11 @@ on:
     branches:
       - master
       - dev
+      - tcp-comms-rewrite
   pull_request:
     branches:
       - dev
+      - tcp-comms-rewrite
   schedule:
     - cron: "0 0 * * *"
 
