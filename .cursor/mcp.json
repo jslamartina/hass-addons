@@ -16,6 +16,10 @@
     "brave-search": {
       "command": "/workspaces/hass-addons/scripts/start-brave-search-mcp.sh",
       "args": []
+    },
+    "github": {
+      "command": "/workspaces/hass-addons/scripts/start-github-mcp.sh",
+      "args": []
     }
   }
 }

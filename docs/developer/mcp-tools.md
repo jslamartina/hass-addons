@@ -8,6 +8,7 @@ The devcontainer includes Model Context Protocol (MCP) servers for specialized d
 | ------------- | ----------------------- | ------------------------------------ | -------------------------------------------------- |
 | **web_fetch** | Web content fetching    | `fetch` (markdown/HTML)              | Documentation, API specs, release notes            |
 | **python**    | Native Python execution | `run_python_code`, `run_python_file` | Large file processing, data analysis, code testing |
+| **github**    | GitHub data + actions   | `issues`, `repos`, `pull_requests`   | Querying GH metadata, PR triage, Dependabot intel  |
 
 **Installation:** The `uv` package manager is installed during devcontainer setup (`.devcontainer/02-setup-mcp-servers.sh`). MCP servers are automatically downloaded and cached by `uvx` when Cursor first connects.
 
@@ -99,6 +100,22 @@ print("Valid config:", bool(config.get("name")))
 
 Process multi-megabyte files without tokenizing them into context. Ideal for bulk transformations and file analysis.
 
+### 🐙 GitHub MCP Server (`github-mcp-server`)
+
+- **Wrapper:** `/workspaces/hass-addons/scripts/start-github-mcp.sh`
+- **Runtime:** Docker (`ghcr.io/github/github-mcp-server`)
+- **Auth:** `GITHUB_MCP_TOKEN` defined in `hass-credentials.env` (copied from `hass-credentials.env.example`)
+- **Optional:** Override exposed toolsets with `GITHUB_TOOLSETS` (comma-separated list)
+
+#### Setup
+
+1. Copy `hass-credentials.env.example` → `hass-credentials.env` (never commit the real file).
+2. Generate a GitHub personal access token (recommended scopes: `repo`, `workflow`, `read:org`, `read:user`, `security_events`, `read:packages`) and set `GITHUB_MCP_TOKEN=` in `hass-credentials.env`.
+3. (Optional) Set `GITHUB_TOOLSETS=` if you need a subset/superset of the default toolsets.
+4. Cursor/Claude will call the wrapper, which injects the token and launches the Docker container with the required toolsets.
+
+The Docker wrapper ensures we always match GitHub's published toolchain versions without baking credentials into source control.
+
 ### 🌐 Web Content Fetching (`mcp-server-fetch`)
 
 Fetch web pages as simplified markdown or raw HTML.
@@ -181,6 +198,10 @@ MCP servers are configured in `.cursor/mcp.json`:
         "--python-path",
         "/usr/local/bin/python3"
       ]
+    },
+    "github": {
+      "command": "/workspaces/hass-addons/scripts/start-github-mcp.sh",
+      "args": []
     }
   }
 }
