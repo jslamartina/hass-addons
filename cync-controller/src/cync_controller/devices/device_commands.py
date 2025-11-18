@@ -65,8 +65,23 @@ class DeviceCommands:
     lp: str = ""
     id: int | None = None
     name: str = ""
-    # Note: state, is_fan_controller, is_light, is_switch, temperature, red, green, blue
-    # are implemented as properties in CyncDevice, not class attributes
+    # These properties are implemented in CyncDevice (base_device.py) but declared here for type checking
+    @property
+    def state(self) -> int: ...  # type: ignore[empty-body]
+    @property
+    def is_fan_controller(self) -> bool: ...  # type: ignore[empty-body]
+    @property
+    def is_light(self) -> bool: ...  # type: ignore[empty-body]
+    @property
+    def is_switch(self) -> bool: ...  # type: ignore[empty-body]
+    @property
+    def temperature(self) -> int: ...  # type: ignore[empty-body]
+    @property
+    def red(self) -> int: ...  # type: ignore[empty-body]
+    @property
+    def green(self) -> int: ...  # type: ignore[empty-body]
+    @property
+    def blue(self) -> int: ...  # type: ignore[empty-body]
 
     def _get_bridge_devices(self) -> list[CyncTCPDevice] | None:
         """Get available bridge devices, prioritizing ready_to_control bridges."""
@@ -757,11 +772,13 @@ class DeviceCommands:
                 payload.extend(inner_struct)
                 bpayload = bytes(payload)
                 sent[bridge_device.address] = cmsg_id
+                # Call _noop_callback() to get the coroutine, not the function itself
+                callback_coro = _noop_callback()
                 m_cb = ControlMessageCallback(
                     msg_id=cmsg_id,
                     message=bpayload,
                     sent_at=time.time(),
-                    callback=_noop_callback,
+                    callback=callback_coro,
                 )
                 bridge_device.messages.control[cmsg_id] = m_cb
                 tasks.append(bridge_device.write(bpayload))
