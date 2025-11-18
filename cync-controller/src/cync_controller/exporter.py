@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import os
+import uuid
 from pathlib import Path
 
 import aiohttp
@@ -57,6 +58,19 @@ async def get_index():
         return f.read()
 
 
+def _masked_http_exception(operation: str, exc: Exception, user_message: str) -> HTTPException:
+    """Create a sanitized HTTPException while logging full details server-side."""
+    error_id = uuid.uuid4().hex[:8]
+    logger.exception("%s error_id=%s unexpected error", operation, error_id, exc_info=exc)
+    return HTTPException(
+        status_code=400,
+        detail={
+            "error_id": error_id,
+            "message": user_message,
+        },
+    )
+
+
 @app.get("/api/export/start")
 async def start_export():
     """Start the device configuration export process."""
@@ -72,8 +86,12 @@ async def start_export():
             return {"success": False, "message": ret_msg}
         await g.cloud_api.export_config_file()
     except Exception as e:
-        logger.exception("Export start failed")
-        raise HTTPException(status_code=400, detail=str(e)) from e
+        op_name = "Export start failed"
+        raise _masked_http_exception(
+            op_name,
+            e,
+            "Failed to start export. Please retry or check server logs with the provided error ID.",
+        ) from e
     else:
         return {"success": True, "message": ret_msg}
 
@@ -85,8 +103,12 @@ async def request_otp():
     try:
         otp_succ = await g.cloud_api.request_otp()
     except Exception as e:
-        logger.exception("OTP request failed")
-        raise HTTPException(status_code=400, detail=str(e)) from e
+        op_name = "OTP request failed"
+        raise _masked_http_exception(
+            op_name,
+            e,
+            "Failed to request OTP. Please try again.",
+        ) from e
     else:
         if otp_succ:
             return {"success": True, "message": ret_msg}
@@ -156,8 +178,12 @@ async def submit_otp(otp_request: OTPRequest):
             ret_msg = "Invalid OTP. Please try again."
 
     except Exception as e:
-        logger.exception("Export completion failed")
-        raise HTTPException(status_code=400, detail=str(e)) from e
+        op_name = "Export completion failed"
+        raise _masked_http_exception(
+            op_name,
+            e,
+            "Failed to complete export after OTP verification. Please try again.",
+        ) from e
     else:
         return {"success": export_succ, "message": ret_msg}
 
