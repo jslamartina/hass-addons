@@ -647,8 +647,30 @@ class NCyncServer:
     async def create_ssl_context(self):
         # Allow the server to use a self-signed certificate
         ssl_context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
-        if self.cert_file and self.key_file:
-            ssl_context.load_cert_chain(certfile=self.cert_file, keyfile=self.key_file)
+        if not self.cert_file or not self.key_file:
+            msg = "SSL certificate/key not configured"
+            logger.error(
+                msg,
+                extra={
+                    "cert_file": self.cert_file,
+                    "key_file": self.key_file,
+                },
+            )
+            raise TypeError(msg)
+
+        cert_path = PathLib(self.cert_file)
+        key_path = PathLib(self.key_file)
+        if not cert_path.exists() or not key_path.exists():
+            missing = []
+            if not cert_path.exists():
+                missing.append(self.cert_file)
+            if not key_path.exists():
+                missing.append(self.key_file)
+            msg = f"SSL files missing: {', '.join(missing)}"
+            logger.error(msg)
+            raise FileNotFoundError(msg)
+
+        ssl_context.load_cert_chain(certfile=self.cert_file, keyfile=self.key_file)
         # turn off all the SSL verification
         ssl_context.check_hostname = False
         ssl_context.verify_mode = ssl.CERT_NONE

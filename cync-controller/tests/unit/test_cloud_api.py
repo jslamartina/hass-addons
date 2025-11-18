@@ -9,7 +9,7 @@ from unittest.mock import AsyncMock, MagicMock, mock_open, patch
 
 import pytest
 
-from cync_controller.cloud_api import CyncCloudAPI
+from cync_controller.cloud_api import CyncAuthenticationError, CyncCloudAPI
 from cync_controller.structs import ComputedTokenData
 
 
@@ -416,9 +416,9 @@ class TestCyncCloudAPIDeviceOperations:
         api.token_cache = None
         api._check_session = AsyncMock()
 
-        # request_devices accesses token_cache.user_id directly
-        # When token_cache is None, this should raise AttributeError
-        with pytest.raises(AttributeError):
+        # request_devices requires a valid token cache and should raise
+        # an explicit authentication error when it is missing
+        with pytest.raises(CyncAuthenticationError):
             await api.request_devices()
 
     @pytest.mark.asyncio

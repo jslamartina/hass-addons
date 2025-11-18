@@ -186,7 +186,9 @@ def record_decode_error(device_id: str, reason: str) -> None:
 def record_ack_received(device_id: str, ack_type: str, outcome: str) -> None:
     """Record an ACK packet received."""
     tcp_comm_ack_received_total.labels(
-        device_id=device_id, ack_type=ack_type, outcome=outcome,
+        device_id=device_id,
+        ack_type=ack_type,
+        outcome=outcome,
     ).inc()  # type: ignore[no-untyped-call]
 
 
@@ -203,7 +205,8 @@ def record_idempotent_drop(device_id: str) -> None:
 def record_retry_attempt(device_id: str, attempt_number: int) -> None:
     """Record a retry attempt."""
     tcp_comm_retry_attempts_total.labels(
-        device_id=device_id, attempt_number=str(attempt_number),
+        device_id=device_id,
+        attempt_number=str(attempt_number),
     ).inc()  # type: ignore[no-untyped-call]
 
 

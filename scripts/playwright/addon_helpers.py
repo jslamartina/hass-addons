@@ -329,7 +329,9 @@ def count_log_levels(logs: list[dict[str, Any]]) -> dict[str, int]:
     return counts
 
 
-def filter_logs_by_level(logs: list[dict[str, Any]], level: str) -> list[dict[str, Any]]:
+def filter_logs_by_level(
+    logs: list[dict[str, Any]], level: str
+) -> list[dict[str, Any]]:
     """
     Filter logs to only entries of a specific level.
 
@@ -343,7 +345,9 @@ def filter_logs_by_level(logs: list[dict[str, Any]], level: str) -> list[dict[st
     return [entry for entry in logs if entry.get("level") == level]
 
 
-def filter_logs_by_logger(logs: list[dict[str, Any]], logger_name: str) -> list[dict[str, Any]]:
+def filter_logs_by_logger(
+    logs: list[dict[str, Any]], logger_name: str
+) -> list[dict[str, Any]]:
     """
     Filter logs to only entries from a specific logger.
 

@@ -12,7 +12,8 @@
         "Lint: Prettier",
         "Lint: Ruff (cync-controller)",
         "Lint: Ruff (python-rebuild-tcp-comm)",
-        "Lint: ShellCheck"
+        "Lint: ShellCheck",
+        "Lint: Pyright"
       ],
       "problemMatcher": [],
       "group": {
@@ -85,6 +86,29 @@
           "column": 3,
           "code": 4,
           "message": 5
+        }
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      }
+    },
+    {
+      "label": "Lint: Pyright",
+      "type": "shell",
+      "command": "${workspaceFolder}/.vscode/scripts/lint-pyright.py || true",
+      "problemMatcher": {
+        "owner": "pyright-ci",
+        "fileLocation": ["relative", "${workspaceFolder}"],
+        "severity": "warning",
+        "pattern": {
+          "regexp": "^(.+):(\\d+):(\\d+) - (error|warning|information):\\s+(.+?)(?:\\s+\\(([^)]+)\\))?$",
+          "file": 1,
+          "line": 2,
+          "column": 3,
+          "severity": 4,
+          "message": 5,
+          "code": 6
         }
       },
       "presentation": {
