@@ -21,7 +21,7 @@ TEST_PID=0
 EXIT_CODE=0
 
 # Cleanup function (invoked via trap)
-# shellcheck disable=SC2329  # Function is invoked via trap statement
+# shellcheck disable=SC2329,SC2317  # Function is invoked via trap statement
 cleanup() {
   trap - EXIT ERR
   # Kill test process if still running
@@ -32,7 +32,7 @@ cleanup() {
 }
 
 # Error handler (invoked via trap)
-# shellcheck disable=SC2329  # Function is invoked via trap statement
+# shellcheck disable=SC2329,SC2317  # Function is invoked via trap statement
 on_error() {
   echo -e "${RED}Error on line $1${NC}" >&2
   cleanup

@@ -107,9 +107,9 @@ docs/
 Historical documentation and completed testing artifacts.
 
 | Document                                                                                                                       | Description                                                            |
-| ------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------- |
-| **[2025-10-14T18-40-00-absorb-cync-controller-repo-plan.md](archive/2025-10-14T18-40-00-absorb-cync-controller-repo-plan.md)** | Plan: Consolidate cync-controller repo into hass-addons (✅ completed) |
-| **[2025-10-14T18-40-01-remove-symlink-architecture-plan.md](archive/2025-10-14T18-40-01-remove-symlink-architecture-plan.md)** | Plan: Remove symlink to fix semantic search (✅ completed)             |
+|--------------------------------------------------------------------------------------------------------------------------------|------------------------------------------------------------------------|
+| **[2025-10-14T18-40-00-absorb-cync-controller-repo-plan.md](archive/2025-10-14T18-40-00-absorb-cync-controller-repo-plan.md)** | Plan: Consolidate cync-controller repo into hass-addons (✅ completed)  |
+| **[2025-10-14T18-40-01-remove-symlink-architecture-plan.md](archive/2025-10-14T18-40-01-remove-symlink-architecture-plan.md)** | Plan: Remove symlink to fix semantic search (✅ completed)              |
 | **[2025-10-14T16-13-43-cleanup-unused-scripts-plan.md](archive/2025-10-14T16-13-43-cleanup-unused-scripts-plan.md)**           | Plan: Cleanup unused scripts                                           |
 | **[2025-10-14T15-39-00-cleanup-summary.md](archive/2025-10-14T15-39-00-cleanup-summary.md)**                                   | Documentation cleanup (October 2025)                                   |
 | **[2025-10-14T16-00-00-gui-validation-results.md](archive/2025-10-14T16-00-00-gui-validation-results.md)**                     | GUI validation test results                                            |

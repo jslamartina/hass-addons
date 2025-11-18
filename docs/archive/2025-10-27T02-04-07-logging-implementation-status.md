@@ -221,8 +221,8 @@ This document tracks the progress of implementing first-class logging throughout
 
 | File             | Total Logs | Refactored | Remaining | Progress |
 | ---------------- | ---------- | ---------- | --------- | -------- |
-| `main.py`        | 16         | 16         | 0         | 100% ✅  |
-| `server.py`      | 82         | ~33        | ~49       | 40% ⏳   |
+| `main.py`        | 16         | 16         | 0         | 100% ✅   |
+| `server.py`      | 82         | ~33        | ~49       | 40% ⏳    |
 | `devices.py`     | 199        | 0          | 199       | 0% 🔲    |
 | `mqtt_client.py` | 155        | 0          | 155       | 0% 🔲    |
 | `cloud_api.py`   | 46         | 0          | 46        | 0% 🔲    |

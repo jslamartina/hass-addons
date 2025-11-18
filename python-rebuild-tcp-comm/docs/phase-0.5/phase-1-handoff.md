@@ -18,10 +18,10 @@ Phase 0.5 successfully validated the Cync protocol structure with 100% checksum 
 
 | Field    | Position              | Size    | Overlap? | Validated? |
 | -------- | --------------------- | ------- | -------- | ---------- |
-| endpoint | bytes[5:10]           | 5 bytes | NO       | ✅         |
-| msg_id   | bytes[10:12]          | 2 bytes | NO       | ✅         |
-| padding  | byte 12               | 1 byte  | N/A      | ✅ (0x00)  |
-| checksum | Last byte before 0x7E | 1 byte  | N/A      | ✅         |
+| endpoint | bytes[5:10]           | 5 bytes | NO       | ✅          |
+| msg_id   | bytes[10:12]          | 2 bytes | NO       | ✅          |
+| padding  | byte 12               | 1 byte  | N/A      | ✅ (0x00)   |
+| checksum | Last byte before 0x7E | 1 byte  | N/A      | ✅          |
 
 **Implementation**: Simple array slicing, no overlap handling needed.
 

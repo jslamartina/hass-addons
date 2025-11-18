@@ -156,7 +156,9 @@ async def restart():
         ) from e
     except Exception as e:  # pylint: disable=broad-except
         unexpected_operation = "Supervisor restart unexpected error"
-        unexpected_message = "An unexpected error occurred while restarting the add-on. See server logs with the error ID."
+        unexpected_message = (
+            "An unexpected error occurred while restarting the add-on. See server logs with the error ID."
+        )
         raise _masked_http_exception(
             unexpected_operation,
             e,

@@ -219,9 +219,7 @@ async function getAccessTokenViaRegularLogin() {
     username: USERNAME,
     password: PASSWORD,
   };
-  logSensitiveAction(
-    "Sending credentials request with password redacted.",
-  );
+  logSensitiveAction("Sending credentials request with password redacted.");
 
   const submitResponse = await fetch(
     `${HA_URL}/auth/login_flow/${flowData.flow_id}`,

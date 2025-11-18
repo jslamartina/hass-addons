@@ -360,8 +360,8 @@ if not result.success:
 
 | Policy          | Control Commands  | Status Updates    | Sensor Data       | Use Case             |
 | --------------- | ----------------- | ----------------- | ----------------- | -------------------- |
-| **BLOCK**       | ✅ Best           | ⚠️ May block      | ⚠️ May block      | Event-driven control |
-| **DROP_OLDEST** | ❌ Loses commands | ✅ Best           | ✅ Best           | Latest value matters |
+| **BLOCK**       | ✅ Best            | ⚠️ May block      | ⚠️ May block      | Event-driven control |
+| **DROP_OLDEST** | ❌ Loses commands  | ✅ Best            | ✅ Best            | Latest value matters |
 | **REJECT**      | ⚠️ Needs handling | ⚠️ Needs handling | ⚠️ Needs handling | Circuit breaker      |
 
 #### Traffic Type Classification

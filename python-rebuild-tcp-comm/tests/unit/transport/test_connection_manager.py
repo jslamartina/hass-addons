@@ -1,5 +1,7 @@
 """Unit tests for connection manager."""
 
+# pyright: reportPrivateUsage=false
+
 from __future__ import annotations
 
 import asyncio

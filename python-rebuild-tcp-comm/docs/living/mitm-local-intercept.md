@@ -35,7 +35,7 @@ _Alt text: Network flow diagram showing Cync devices connecting through MITM pro
 | ------------- | ----------------------------- | --------------------------------- |
 | Upstream      | 35.196.85.236:23779           | HA IP:23779 (e.g., 192.168.50.32) |
 | Commands      | Cloud-initiated only          | HA UI commands captured           |
-| Bidirectional | Yes (device ↔ cloud)         | Yes (device ↔ HA)                |
+| Bidirectional | Yes (device ↔ cloud)          | Yes (device ↔ HA)                 |
 | Use Case      | Protocol research             | Live command debugging            |
 | DNS           | cm.gelighting.com → localhost | cm.gelighting.com → devcontainer  |
 

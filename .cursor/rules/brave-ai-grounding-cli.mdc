@@ -126,12 +126,12 @@ Response text streams cleanly without markup interruptions.
 
 | Feature            | AI Grounding | Brave Search    | Built-in search |
 | ------------------ | ------------ | --------------- | --------------- |
-| Synthesized answer | ✅           | ❌              | ❌              |
-| Citations          | ✅           | Partial         | ❌              |
-| Research mode      | ✅           | ❌              | ❌              |
-| Raw results        | ❌           | ✅              | ✅              |
-| Specialized search | ❌           | ✅ (news/video) | ❌              |
-| Reliability        | ✅ High      | ✅ High         | ❌ Broken       |
+| Synthesized answer | ✅            | ❌               | ❌               |
+| Citations          | ✅            | Partial         | ❌               |
+| Research mode      | ✅            | ❌               | ❌               |
+| Raw results        | ❌            | ✅               | ✅               |
+| Specialized search | ❌            | ✅ (news/video)  | ❌               |
+| Reliability        | ✅ High       | ✅ High          | ❌ Broken        |
 
 ## Troubleshooting
 
