@@ -48,4 +48,3 @@ exec docker run \
   -e GITHUB_TOOLSETS \
   ghcr.io/github/github-mcp-server \
   "$@"
-
