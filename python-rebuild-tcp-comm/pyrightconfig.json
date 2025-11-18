@@ -6,7 +6,7 @@
     "mitm/validate-checksum-REFERENCE-ONLY.py"
   ],
   "extraPaths": ["src", "."],
-  "venvPath": ".",
+  "venvPath": "..",
   "venv": ".venv",
   "pythonVersion": "3.14",
   "typeCheckingMode": "strict",

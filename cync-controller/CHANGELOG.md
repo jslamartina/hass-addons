@@ -24,9 +24,9 @@
   - Enhanced code formatting and whitespace consistency
   - Location: Multiple modules across `src/cync_controller/`
 
-- **Python runtime base image**: Updated amd64/aarch64 Home Assistant base images to Python 3.14-alpine3.22
-  - Aligns add-on runtime with repository-wide Python 3.14 target
-  - armhf/armv7/i386 remain on 3.13 until upstream publishes 3.14 images
+- **Python runtime base image**: All Home Assistant base images now use Python 3.14-alpine3.22
+  - Aligns every architecture with the repository-wide Python 3.14 target
+  - Requires rebuilding the add-on before publishing multi-arch images
   - Location: `build.yaml`
 
 - **Test infrastructure**: Enhanced Playwright test commands and fan control tests
