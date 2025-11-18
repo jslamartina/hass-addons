@@ -61,7 +61,7 @@ async def get_index():
 def _masked_http_exception(operation: str, exc: Exception, user_message: str) -> HTTPException:
     """Create a sanitized HTTPException while logging full details server-side."""
     error_id = uuid.uuid4().hex[:8]
-    logger.exception("%s error_id=%s unexpected error: %s", operation, error_id, exc, exc_info=exc)
+    logger.exception("%s error_id=%s unexpected error: %s", operation, error_id, exc)
     return HTTPException(
         status_code=400,
         detail={
@@ -141,34 +141,41 @@ async def restart():
                 logger.info("%s Successfully called the restart API. The add-on will now restart.", lp)
                 return {"success": True, "message": "Add-on is restarting."}
 
-            failure_status = response.status
+            response_status = response.status
             error_details = await response.text()
-            logger.warning(
-                "%s Supervisor restart failed status=%s response=%s",
-                lp,
-                failure_status,
-                error_details,
-            )
-            raise _masked_http_exception(
-                "Supervisor restart failed",
-                RuntimeError(f"status={failure_status} body={error_details}"),
-                "Failed to restart add-on. Please retry and provide the error ID to support.",
-            )
 
-    except aiohttp.ClientError as exc:
-        raise _masked_http_exception(
-            "Supervisor restart aiohttp error",
-            exc,
-            "Failed to reach Supervisor API. Please retry and provide the error ID to support.",
-        ) from exc
     except HTTPException:
         raise
-    except Exception as exc:  # pylint: disable=broad-except
+    except aiohttp.ClientError as e:
+        client_operation = "Supervisor restart client error"
+        client_message = "Failed to contact Supervisor API. Check server logs with the error ID."
         raise _masked_http_exception(
-            "Supervisor restart unexpected error",
-            exc,
-            "An unexpected error occurred while restarting the add-on. See server logs with the error ID.",
-        ) from exc
+            client_operation,
+            e,
+            client_message,
+        ) from e
+    except Exception as e:  # pylint: disable=broad-except
+        unexpected_operation = "Supervisor restart unexpected error"
+        unexpected_message = "An unexpected error occurred while restarting the add-on. See server logs with the error ID."
+        raise _masked_http_exception(
+            unexpected_operation,
+            e,
+            unexpected_message,
+        ) from e
+    else:
+        logger.warning(
+            "%s Failed Supervisor restart status=%s response=%s",
+            lp,
+            response_status,
+            error_details,
+        )
+        api_operation = "Supervisor restart API failure"
+        api_message = "Failed to restart add-on via Supervisor API. Check server logs with the error ID."
+        raise _masked_http_exception(
+            api_operation,
+            RuntimeError(f"status={response_status} body={error_details}"),
+            api_message,
+        )
 
 
 @app.post("/api/export/otp/submit")

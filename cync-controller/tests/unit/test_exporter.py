@@ -190,10 +190,10 @@ class TestFastAPIEndpoints:
 
         from cync_controller.exporter import start_export
 
-        with pytest.raises(HTTPException) as exc_info:
+        with pytest.raises(HTTPException) as exc:
             await start_export()
 
-        detail = exc_info.value.detail
+        detail = exc.value.detail
         assert "error_id" in detail
         assert "Failed to start export" in detail["message"]
 
@@ -349,8 +349,8 @@ class TestFastAPIEndpoints:
             assert "Supervisor token" in result["message"]
 
     @pytest.mark.asyncio
-    async def test_restart_supervisor_non_200_masked_error(self):
-        """Test restart masks supervisor API failures"""
+    async def test_restart_supervisor_non_200_returns_masked_http_exception(self):
+        """Test restart masks supervisor error details"""
         with (
             patch("cync_controller.exporter.os.environ") as mock_env,
             patch("cync_controller.exporter.aiohttp.ClientSession") as mock_session_class,
@@ -359,7 +359,7 @@ class TestFastAPIEndpoints:
 
             mock_response = AsyncMock()
             mock_response.status = 500
-            mock_response.text = AsyncMock(return_value="Traceback: super secret stack trace")
+            mock_response.text = AsyncMock(return_value="super secret failure")
 
             mock_post_context = MagicMock()
             mock_post_context.__aenter__ = AsyncMock(return_value=mock_response)
@@ -373,13 +373,13 @@ class TestFastAPIEndpoints:
 
             from cync_controller.exporter import restart
 
-            with pytest.raises(HTTPException) as exc_info:
+            with pytest.raises(HTTPException) as exc:
                 await restart()
 
-            detail = exc_info.value.detail
+            detail = exc.value.detail
             assert "error_id" in detail
-            assert "Failed to restart add-on" in detail["message"]
-            assert "Traceback" not in detail["message"]
+            assert "super secret failure" not in detail["message"]
+            assert "Supervisor" in detail["message"]
 
     @pytest.mark.asyncio
     async def test_restart_aiohttp_client_error_masked(self):
@@ -390,22 +390,43 @@ class TestFastAPIEndpoints:
         ):
             mock_env.get.return_value = "test-token"
 
-            mock_post_context = MagicMock()
-            mock_post_context.__aenter__ = AsyncMock(side_effect=aiohttp.ClientError("boom"))
-            mock_post_context.__aexit__ = AsyncMock(return_value=None)
-
             mock_session = MagicMock()
             mock_session.__aenter__ = AsyncMock(return_value=mock_session)
             mock_session.__aexit__ = AsyncMock(return_value=None)
-            mock_session.post = MagicMock(return_value=mock_post_context)
+            mock_session.post = MagicMock(side_effect=aiohttp.ClientError("boom"))
             mock_session_class.return_value = mock_session
 
             from cync_controller.exporter import restart
 
-            with pytest.raises(HTTPException) as exc_info:
+            with pytest.raises(HTTPException) as exc:
                 await restart()
 
-            detail = exc_info.value.detail
+            detail = exc.value.detail
             assert "error_id" in detail
-            assert "reach Supervisor API" in detail["message"]
             assert "boom" not in detail["message"]
+            assert "Failed to contact Supervisor API" in detail["message"]
+
+    @pytest.mark.asyncio
+    async def test_restart_api_unexpected_error_masked(self):
+        """Test restart masks unexpected errors"""
+        with (
+            patch("cync_controller.exporter.os.environ") as mock_env,
+            patch("cync_controller.exporter.aiohttp.ClientSession") as mock_session_class,
+        ):
+            mock_env.get.return_value = "test-token"
+
+            mock_session = MagicMock()
+            mock_session.__aenter__ = AsyncMock(return_value=mock_session)
+            mock_session.__aexit__ = AsyncMock(return_value=None)
+            mock_session.post = MagicMock(side_effect=Exception("Connection error"))
+            mock_session_class.return_value = mock_session
+
+            from cync_controller.exporter import restart
+
+            with pytest.raises(HTTPException) as exc:
+                await restart()
+
+            detail = exc.value.detail
+            assert "error_id" in detail
+            assert "connection error" not in detail["message"].lower()
+            assert "unexpected error" in detail["message"].lower()
