@@ -61,7 +61,7 @@ async def get_index():
 def _masked_http_exception(operation: str, exc: Exception, user_message: str) -> HTTPException:
     """Create a sanitized HTTPException while logging full details server-side."""
     error_id = uuid.uuid4().hex[:8]
-    logger.exception("%s error_id=%s unexpected error", operation, error_id, exc_info=exc)
+    logger.exception("%s error_id=%s unexpected error", operation, error_id)
     return HTTPException(
         status_code=400,
         detail={
