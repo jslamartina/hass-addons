@@ -37,7 +37,7 @@ class CyncCloudAPI:
     auth_cache_file = CYNC_CLOUD_AUTH_PATH
     token_cache: ComputedTokenData | None
     http_session: aiohttp.ClientSession | None = None
-    _instance: "CyncCloudAPI | None" = None
+    _instance: CyncCloudAPI | None = None
 
     def __new__(cls, *_args, **_kwargs):
         if cls._instance is None:

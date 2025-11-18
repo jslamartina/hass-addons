@@ -19,7 +19,7 @@
 
 - **10-100x faster** than Pylint/Flake8 (written in Rust)
 - **Compatible** with Pylint, Flake8, isort rules
-- **Modern** - supports Python 3.13+ features
+- **Modern** - supports Python 3.14+ features
 - **Already configured** in `pyproject.toml`
 
 ## How to Use

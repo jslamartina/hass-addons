@@ -37,7 +37,7 @@ The devcontainer includes Model Context Protocol (MCP) servers for specialized d
 
 ### 🐍 Python Code Execution (`mcp-python-interpreter`)
 
-Execute native Python 3.13 code with full filesystem access.
+Execute native Python 3.14 code with full filesystem access.
 
 #### Available Functions
 
@@ -57,7 +57,7 @@ Execute native Python 3.13 code with full filesystem access.
 
 ### Features
 
-- **Native CPython 3.13** (not WebAssembly)
+- **Native CPython 3.14** (not WebAssembly)
 - **Full filesystem access** - Use `open()`, `Path()`, read/write files directly
 - **Standard library** - json, datetime, pathlib, re, etc.
 - **Working directory**: `/mnt/supervisor/addons/local/hass-addons`

@@ -1,11 +1,11 @@
 build_from:
   armhf: ghcr.io/home-assistant/armhf-base-python:3.13-alpine3.22
   armv7: ghcr.io/home-assistant/armv7-base-python:3.13-alpine3.22
-  aarch64: ghcr.io/home-assistant/aarch64-base-python:3.13-alpine3.22
-  amd64: ghcr.io/home-assistant/amd64-base-python:3.13-alpine3.22
+  aarch64: ghcr.io/home-assistant/aarch64-base-python:3.14-alpine3.22
+  amd64: ghcr.io/home-assistant/amd64-base-python:3.14-alpine3.22
   i386: ghcr.io/home-assistant/i386-base-python:3.13-alpine3.22
 labels:
   org.opencontainers.image.title: "Cync Controler - Home Assistant Add-on"
-  org.opencontainers.image.description: "Local MQTT controller for Cync devices. Forked from https://github.com/baudneo/hass-addons (DNS redirection required)"
+  org.opencontainers.image.description: "Local MQTT controller for Cync devices. Independent project maintained at https://github.com/jslamartina/hass-addons (DNS redirection required)"
   org.opencontainers.image.source: "https://github.com/jslamartina/hass-addons"
   org.opencontainers.image.licenses: "MIT"

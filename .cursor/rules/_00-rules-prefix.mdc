@@ -35,36 +35,36 @@ description: Optimized rules prefix with 4-tier hierarchy
 
 **14 CRITICAL RULES (Must Follow)**:
 
-0. **NEVER TOUCH IGNORE FILES**: **ABSOLUTELY FORBIDDEN** to modify, create, or edit ANY ignore file (`.gitignore`, `.markdownlintignore`, `.markdownlint-cli2.jsonc`, `.prettierignore`, `.eslintignore`, `.dockerignore`, or ANY file with "ignore" in the name). If linting errors exist in ignored directories/files, FIX THE ERRORS, NOT THE IGNORE FILES. Ask user before even considering touching ignore files.
+1. **NEVER TOUCH IGNORE FILES**: **ABSOLUTELY FORBIDDEN** to modify, create, or edit ANY ignore file (`.gitignore`, `.markdownlintignore`, `.markdownlint-cli2.jsonc`, `.prettierignore`, `.eslintignore`, `.dockerignore`, or ANY file with "ignore" in the name). If linting errors exist in ignored directories/files, FIX THE ERRORS. **DO NOT JUST SUPPRESS THE ERRORS**. Ask user before even considering touching ignore files.
 
-1. **Development Loop**: Plan → Edit → Rebuild → Verify with Unit Tests and `npm run lint`. STOP if: env error, broken tooling, tool returns error/500/timeout, stale docs, misunderstood requirement. **DON'T WORK AROUND ISSUES** - raise to user immediately.
+2. **Development Loop**: Plan → Edit → Rebuild → Verify with Unit Tests and `npm run lint`. STOP if: env error, broken tooling, tool returns error/500/timeout, stale docs, misunderstood requirement. **DON'T WORK AROUND ISSUES** - raise to user immediately.
    - **Key Strategy**: _**AGGRESIVELY**_ ground your Plans and Proposals with the Brave Web Search and Brave AI Grounding tools. See [Brave AI Grounding](/.cursor/rules/brave-ai-grounding-cli.mdc) and [](/.cursor/rules/web-search-brave.mdc) for full details.
 
-2. **Todo Discipline**: WHEN task has 3+ steps → create todos, keep 1 in_progress, update after each step.
+3. **Todo Discipline**: WHEN task has 3+ steps → create todos, keep 1 in_progress, update after each step.
 
-3. **Lint-Format-First**: BEFORE finishing a task → run linting and formatting. Treat warnings as errors. No code that fails linting or formatting. `npm run lint` must PASS.
+4. **Lint-Format-First**: BEFORE finishing a task → run linting and formatting. Treat warnings as errors. No code that fails linting or formatting. `npm run lint` must PASS.
 
-4. **Logging-First**: BEFORE editing code → add entry/exit logs for new functions; NEVER log secrets; set logger AND handler levels from config.
+5. **Logging-First**: BEFORE editing code → add entry/exit logs for new functions; NEVER log secrets; set logger AND handler levels from config.
 
-5. **Clean Architecture**: Follow DRY & SOLID principles. Refactor duplication, maintain separation of concerns.
+6. **Clean Architecture**: Follow DRY & SOLID principles. Refactor duplication, maintain separation of concerns.
 
-6. **Test Strategy**: Prefer unit over E2E; WHEN running E2E → run sequentially, persist artifacts (text/HTML/JUnit).
+7. **Test Strategy**: Prefer unit over E2E; WHEN running E2E → run sequentially, persist artifacts (text/HTML/JUnit).
 
-7. **Creativity**: Use Python MCP tools to increase efficiency (run code, analyze files, automate tasks).
+8. **Creativity**: Use Python MCP tools to increase efficiency (run code, analyze files, automate tasks).
 
-8. **Concise Communication**: Max 200 lines for AI-created docs (findings, summaries) and `alwaysApply: true` rules. Max 1 findings file per investigation. NO redundant summaries/READMEs. Short sentences, bullets, essential info only. NEVER use /tmp for artifacts - use working-files/ with proper timestamps (see working-files-convention.mdc).
+9. **Concise Communication**: Max 200 lines for AI-created docs (findings, summaries) and `alwaysApply: true` rules. Max 1 findings file per investigation. NO redundant summaries/READMEs. Short sentences, bullets, essential info only. NEVER use /tmp for artifacts - use working-files/ with proper timestamps (see working-files-convention.mdc).
 
-9. **Explain, Don't Assume Error**: WHEN user asks "why" or "how" about implementation → explain reasoning/calculation, THEN ask for confirmation. DON'T immediately assume criticism or error. Example: "why does that header include X files?" → "I calculated it based on A, B, and C. Does that look correct?" NOT "You're right! Let me remove that."
+10. **Explain, Don't Assume Error**: WHEN user asks "why" or "how" about implementation → explain reasoning/calculation, THEN ask for confirmation. DON'T immediately assume criticism or error. Example: "why does that header include X files?" → "I calculated it based on A, B, and C. Does that look correct?" NOT "You're right! Let me remove that."
 
-10. **Completion Approval**: NEVER mark as "FINAL," "COMPLETE," "production-ready," "CI-ready," or similar without explicit user approval. NEVER create files with "FINAL," "COMPLETE," "SUMMARY," "RESOLUTION," "CONCLUSION" in the name without asking first. If CI is failing (exit code != 0), the system isn't ready. User confirms = done.
+11. **Completion Approval**: NEVER mark as "FINAL," "COMPLETE," "production-ready," "CI-ready," or similar without explicit user approval. NEVER create files with "FINAL," "COMPLETE," "SUMMARY," "RESOLUTION," "CONCLUSION" in the name without asking first. If CI is failing (exit code != 0), the system isn't ready. User confirms = done.
 
-11. **Web Search Only via Brave MCP**: NEVER use built-in `web_search` tool (broken). ALWAYS use `mcp_brave-search_brave_web_search` or specialized tools (`brave_news_search`, `brave_video_search`, `brave_image_search`). Autosearch when uncertain (per memory [[memory:9966253]]). See web-search-brave.mdc.
+12. **Web Search Only via Brave MCP**: NEVER use built-in `web_search` tool (broken). ALWAYS use `mcp_brave-search_brave_web_search` or specialized tools (`brave_news_search`, `brave_video_search`, `brave_image_search`). Autosearch when uncertain (per memory [[memory:9966253]]). See web-search-brave.mdc.
 
-12. **AI Grounding for Reliable Answers**: WHEN need synthesized, factual answers (not raw search results) → use Brave AI Grounding CLI tool via `run_terminal_cmd`. Responses are anchored in verifiable web sources, reducing hallucinations. Use `--research` flag for complex queries requiring multiple searches. Citations included by default with formatted footer. Prefer over raw search when need: authoritative answers, fact-checking, research with citations, or context about topics. Use regular Brave Search for: finding specific pages, current events, or raw result lists.
+13. **AI Grounding for Reliable Answers**: WHEN need synthesized, factual answers (not raw search results) → use Brave AI Grounding CLI tool via `run_terminal_cmd`. Responses are anchored in verifiable web sources, reducing hallucinations. Use `--research` flag for complex queries requiring multiple searches. Citations included by default with formatted footer. Prefer over raw search when need: authoritative answers, fact-checking, research with citations, or context about topics. Use regular Brave Search for: finding specific pages, current events, or raw result lists.
 
-13. **Visual Diagrams**: WHEN explaining architecture, flows, processes, or relationships → create Mermaid.js diagrams. Save as `.mermaid` files in appropriate docs directory. Use flowchart (processes), sequence (interactions), class (structure), state (FSM), gantt (timelines), or ER diagrams (data models). See mermaid-diagrams.mdc for templates.
+14. **Visual Diagrams**: WHEN explaining architecture, flows, processes, or relationships → create Mermaid.js diagrams. Save as `.mermaid` files in appropriate docs directory. Use flowchart (processes), sequence (interactions), class (structure), state (FSM), gantt (timelines), or ER diagrams (data models). See mermaid-diagrams.mdc for templates.
 
-14. **NEVER TOUCH IGNORE FILES**: **ABSOLUTELY FORBIDDEN** to modify, create, or edit ANY ignore file (`.gitignore`, `.markdownlintignore`, `.markdownlint-cli2.jsonc`, `.prettierignore`, `.eslintignore`, `.dockerignore`, or ANY file with "ignore" in the name). If linting errors exist in ignored directories/files, FIX THE ERRORS, NOT THE IGNORE FILES. Ask user before even considering touching ignore files.
+15. **NEVER TOUCH IGNORE FILES**: **ABSOLUTELY FORBIDDEN** to modify, create, or edit ANY ignore file (`.gitignore`, `.markdownlintignore`, `.markdownlint-cli2.jsonc`, `.prettierignore`, `.eslintignore`, `.dockerignore`, or ANY file with "ignore" in the name). If linting errors exist in ignored directories/files, FIX THE ERRORS, NOT THE IGNORE FILES. Ask user before even considering touching ignore files.
 
 ---
 

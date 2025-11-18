@@ -1,8 +1,14 @@
 # Developer Guide
 
-> **Note:** This project is forked from [@baudneo/hass-addons](https://github.com/baudneo/hass-addons)
->
-> **This file is for developers working on the add-on code, not for end users.**
+> **Note:** This project is now maintained independently; it was originally inspired by [@baudneo/hass-addons](https://github.com/baudneo/hass-addons).
+
+## Repository Governance After Unfork
+
+- `git remote -v` should list **only** `origin` → `https://github.com/jslamartina/hass-addons.git`. Remove any lingering `upstream` remote with `git remote remove upstream`.
+- Default collaboration happens on `dev`; `main` is reserved for release tags. Protect both branches in GitHub with required reviews and the `rebuild.sh` pipeline check.
+- Update local clones after the detach: `git fetch --prune origin && git branch -u origin/dev dev`.
+- Sync automation credentials (GitHub App tokens, Actions secrets) with the new canonical repo whenever branch protections change.
+  > **This file is for developers working on the add-on code, not for end users.**
 
 ## Source Code Location
 
@@ -10,6 +16,12 @@ All Python source code for the Cync Controller add-on is located in this directo
 
 - `src/cync_lan/` - Python package source code
 - `pyproject.toml` - Package configuration and dependencies
+
+## Python Runtime Baseline
+
+- Development containers now install **CPython 3.14 via pyenv** and expose it through `/root/.pyenv/shims/python`.
+- The add-on runtime (amd64/aarch64) also targets Python 3.14 base images; other architectures will switch once upstream publishes matching tags.
+- Always rebuild the devcontainer after pulling changes to ensure pyenv picks up the latest 3.14.x patch.
 
 ## 🆕 Enhanced Development Features (v0.0.4.4)
 

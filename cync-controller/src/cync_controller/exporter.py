@@ -182,7 +182,7 @@ class ExportServer:
     enabled: bool = False
     running: bool = False
     start_task: asyncio.Task | None = None
-    _instance: "ExportServer | None" = None
+    _instance: ExportServer | None = None
 
     def __new__(cls, *_args, **_kwargs):
         if cls._instance is None:

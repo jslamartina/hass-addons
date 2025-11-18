@@ -2,6 +2,8 @@
 
 Thank you for your interest in contributing to the Cync Controller add-on!
 
+> **Project status:** This repository is now the canonical home for the add-on. All contributions should target the `dev` branch; `master` is reserved for release tags.
+
 ## Table of Contents
 
 - [Code Quality and Linting](#code-quality-and-linting)
@@ -131,7 +133,7 @@ Use [ShellCheck](https://www.shellcheck.net/wiki/) for shell script analysis:
   if [ ! -d "/path/to/dir" ]; then
     mkdir -p /path/to/dir
   fi
-  
+
   # ✅ BETTER: mkdir -p is inherently idempotent
   mkdir -p /path/to/dir
   ```

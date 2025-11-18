@@ -20,7 +20,7 @@ packages = [
 cync-mitm = "mitm.mitm_proxy:cli_main"
 
 [tool.poetry.dependencies]
-python = "^3.13"
+python = "^3.14"
 prometheus-client = "^0.20.0"
 aiohttp = "^3.9.0"
 requests = "^2.31.0"
@@ -36,7 +36,7 @@ ruff = "^0.6.9"
 
 [tool.ruff]
 line-length = 100
-target-version = "py313"
+target-version = "py314"
 # src = ["src", "tests", "mitm"]  # Commented out to scan all Python files (respect-gitignore handles exclusions)
 extend-exclude = ["__pycache__", ".venv", "mitm/validate-checksum-REFERENCE-ONLY.py"]
 force-exclude = true

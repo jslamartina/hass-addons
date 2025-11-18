@@ -33,7 +33,7 @@ async def test_happy_path_toggle_success(
     mock_tcp_server: MockTCPServer,
     unique_device_id: str,
     unique_metrics_port: int,
-    performance_tracker: "PerformanceTracker",
+    performance_tracker: PerformanceTracker,
 ) -> None:
     """Test successful toggle with immediate server response."""
     # Start metrics server
@@ -79,7 +79,7 @@ async def test_packet_format_validation(
     mock_tcp_server: MockTCPServer,
     unique_device_id: str,
     unique_metrics_port: int,
-    performance_tracker: "PerformanceTracker",
+    performance_tracker: PerformanceTracker,
 ) -> None:
     """Test exact packet structure validation."""
     start_metrics_server(unique_metrics_port)
@@ -285,7 +285,7 @@ async def test_metrics_endpoint_accessible(
     mock_tcp_server: MockTCPServer,
     unique_device_id: str,
     unique_metrics_port: int,
-    performance_tracker: "PerformanceTracker",
+    performance_tracker: PerformanceTracker,
 ) -> None:
     """Test that metrics endpoint is accessible and contains expected data."""
     # Start metrics server

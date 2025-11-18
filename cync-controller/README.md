@@ -1,6 +1,6 @@
 # Cync Controller
 
-> **Note:** This project is forked from [@baudneo/hass-addons](https://github.com/baudneo/hass-addons)
+> **Note:** This project is now maintained independently; it was originally inspired by [@baudneo/hass-addons](https://github.com/baudneo/hass-addons).
 
 **Local control for Cync/C by GE smart devices** - Control your lights, switches, and plugs via MQTT without cloud dependency.
 

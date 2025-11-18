@@ -1,9 +1,72 @@
 #!/bin/bash
 set -e
 
+PYENV_ROOT="${PYENV_ROOT:-/root/.pyenv}"
+
+check_debian_python_package() {
+  if ! command -v apt-cache > /dev/null 2>&1; then
+    return
+  fi
+
+  local candidate
+  candidate=$(apt-cache policy python3.14 2> /dev/null | awk '/Candidate:/ {print $2}')
+
+  if [ -n "$candidate" ] && [ "$candidate" != "(none)" ]; then
+    echo "⚠️  NOTICE: Debian stable now provides python3.14 ($candidate). Consider removing the pyenv shim."
+  else
+    echo "ℹ️  python3.14 is still unavailable in Debian stable repositories."
+  fi
+}
+
+auto_upgrade_pyenv_python() {
+  if [ ! -d "$PYENV_ROOT" ]; then
+    echo "pyenv root ($PYENV_ROOT) not found; skipping auto-upgrade."
+    return
+  fi
+
+  export PYENV_ROOT
+  export PATH="$PYENV_ROOT/bin:$PATH"
+
+  if ! command -v pyenv > /dev/null 2>&1; then
+    echo "pyenv command not available on PATH; skipping auto-upgrade."
+    return
+  fi
+
+  # shellcheck disable=SC1090
+  eval "$(pyenv init -)"
+
+  local current latest
+  current=$(pyenv version-name 2> /dev/null || echo "")
+  latest=$(pyenv install --list | tr -d '\r' | sed 's/^[[:space:]]*//' | grep -E '^3\.14\.[0-9]+$' | tail -1)
+
+  if [ -z "$latest" ]; then
+    echo "Unable to determine the latest 3.14.x release via pyenv."
+    return
+  fi
+
+  if [ "$current" = "$latest" ]; then
+    echo "pyenv is already using the latest Python $latest."
+    return
+  fi
+
+  if [ -n "$current" ] && [[ "$current" != 3.14.* ]]; then
+    echo "pyenv global version is $current; skipping auto-upgrade because it is not a 3.14.x interpreter."
+    return
+  fi
+
+  echo "Upgrading pyenv-managed Python from ${current:-unknown} to $latest..."
+  CFLAGS="-O3" PYTHON_CONFIGURE_OPTS="--enable-optimizations --with-lto" pyenv install --force "$latest"
+  pyenv global "$latest"
+  pyenv rehash
+  echo "  ✓ pyenv Python upgraded to $latest"
+}
+
 echo "========================================="
 echo "Starting Post-Start Configuration"
 echo "========================================="
+
+check_debian_python_package
+auto_upgrade_pyenv_python
 
 # Run devcontainer bootstrap
 echo "Running devcontainer bootstrap..."

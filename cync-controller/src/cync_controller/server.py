@@ -3,7 +3,7 @@ import contextlib
 import ssl
 import time
 from pathlib import Path as PathLib
-from typing import ClassVar, Optional
+from typing import ClassVar
 
 import uvloop
 
@@ -515,7 +515,7 @@ class NCyncServer:
     start_task: asyncio.Task | None = None
     refresh_task: asyncio.Task | None = None
     pool_monitor_task: asyncio.Task | None = None
-    _instance: Optional["NCyncServer"] = None
+    _instance: NCyncServer | None = None
 
     def __new__(cls, *_args, **_kwargs):
         if cls._instance is None:

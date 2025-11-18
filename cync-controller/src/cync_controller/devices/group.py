@@ -96,7 +96,7 @@ class CyncGroup:
         self.status: DeviceStatus | None = None
 
     @property
-    def members(self) -> list["CyncDevice"]:
+    def members(self) -> list[CyncDevice]:
         """Get the actual device objects for this group's members."""
         g = _get_global_object()
         ncync_server = getattr(g, "ncync_server", None)

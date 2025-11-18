@@ -10,7 +10,7 @@
         "--dir",
         "/mnt/supervisor/addons/local/hass-addons",
         "--python-path",
-        "/usr/local/bin/python3"
+        "/root/.pyenv/shims/python"
       ]
     },
     "brave-search": {

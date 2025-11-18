@@ -2,10 +2,6 @@
   "name": "Cync Controller Multi-Repo Development",
   "image": "ghcr.io/home-assistant/devcontainer:2-addons",
   "features": {
-    "ghcr.io/devcontainers/features/python:1": {
-      "version": "3.13",
-      "installTools": true
-    },
     "ghcr.io/devcontainers/features/node:1": {
       "version": "lts",
       "nodeGypDependencies": true,
@@ -93,7 +89,7 @@
         "prettier.requireConfig": false,
         "prettier.documentSelectors": ["**/*.sh"],
         "prettier.enable": true,
-        "python.defaultInterpreterPath": "/usr/local/python/current/bin/python",
+        "python.defaultInterpreterPath": "/root/.pyenv/shims/python",
         "python.linting.enabled": true,
         "python.linting.pylintEnabled": false,
         "cursorpyright.analysis.typeCheckingMode": "strict",

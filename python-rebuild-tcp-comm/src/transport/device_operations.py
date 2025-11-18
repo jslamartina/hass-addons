@@ -21,7 +21,8 @@ import asyncio
 import logging
 import time
 from collections import OrderedDict
-from typing import TYPE_CHECKING, Protocol
+from collections.abc import Sequence
+from typing import TYPE_CHECKING, Literal, Protocol, overload
 
 from uuid_extensions import uuid7  # type: ignore[import-untyped]
 
@@ -427,11 +428,25 @@ class DeviceOperations:
 
         return responses
 
+    @overload
+    async def ask_for_mesh_info(
+        self,
+        parse: Literal[True],
+        refresh_id: str | None = ...,
+    ) -> list[DeviceInfo]: ...
+
+    @overload
+    async def ask_for_mesh_info(
+        self,
+        parse: Literal[False] = False,
+        refresh_id: str | None = ...,
+    ) -> list[CyncPacket]: ...
+
     async def ask_for_mesh_info(
         self,
         parse: bool = False,
         refresh_id: str | None = None,
-    ) -> list[CyncPacket | DeviceInfo]:
+    ) -> Sequence[CyncPacket | DeviceInfo]:
         """Request mesh info from connected device.
 
         Sends PACKET_TYPE_DATA_CHANNEL (0x73) mesh info request with inner_struct

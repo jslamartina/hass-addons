@@ -1,7 +1,7 @@
 {
   "setup-worktree": [
-    "python -m venv venv",
-    "./venv/bin/python -m pip install -e '.[dev,test]'",
+    "python -m venv .venv",
+    "source .venv/bin/activate && pip install -e '.[dev,test]'",
     "npm install"
   ]
 }

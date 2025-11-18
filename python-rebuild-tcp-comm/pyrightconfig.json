@@ -1,10 +1,14 @@
 {
-  "include": ["src", "tests", "mitm"],
-  "exclude": ["mitm/validate-checksum-REFERENCE-ONLY.py"],
+  "include": ["src"],
+  "exclude": [
+    "tests",
+    "mitm",
+    "mitm/validate-checksum-REFERENCE-ONLY.py"
+  ],
   "extraPaths": ["src", "."],
   "venvPath": ".",
   "venv": ".venv",
-  "pythonVersion": "3.13",
+  "pythonVersion": "3.14",
   "typeCheckingMode": "strict",
   "useLibraryCodeForTypes": true,
   "pythonPlatform": "Linux",
@@ -12,10 +16,10 @@
     {
       "root": ".",
       "extraPaths": ["src", "."],
-      "pythonVersion": "3.13"
+      "pythonVersion": "3.14"
     }
   ],
   "reportMissingImports": true,
   "reportMissingTypeStubs": false,
-  "stubPath": ""
+  "stubPath": "typings"
 }

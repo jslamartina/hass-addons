@@ -100,7 +100,7 @@ class ConnectionManager:
         self.state = ConnectionState.DISCONNECTED
         self._state_lock = asyncio.Lock()  # Protect state transitions
         self.packet_router_task: asyncio.Task[None] | None = None
-        self.reconnect_task: asyncio.Task[bool] | None = None
+        self.reconnect_task: asyncio.Task[bool | None] | None = None
 
         # Timeout configuration
         self.timeout_config = timeout_config or TimeoutConfig()

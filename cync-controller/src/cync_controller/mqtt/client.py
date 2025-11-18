@@ -9,7 +9,6 @@ import asyncio
 import json
 import uuid
 from collections.abc import Coroutine
-from typing import Optional
 
 import aiomqtt
 
@@ -50,7 +49,7 @@ class MQTTClient:
     _refresh_in_progress: bool = False
     start_task: asyncio.Task | None = None
 
-    _instance: Optional["MQTTClient"] = None
+    _instance: MQTTClient | None = None
 
     def __new__(cls, *_args, **_kwargs):
         if cls._instance is None:

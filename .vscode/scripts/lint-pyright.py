@@ -90,11 +90,11 @@ def transform_line(line: str, workspace_root: Path) -> str | None:
     return transformed
 
 
-def run_pyright(targets: list[str]) -> subprocess.CompletedProcess[str]:
-    """Execute pyright against the target directories."""
-    LOGGER.info("→ Running pyright", extra={"targets": targets})
+def run_pyright(args: list[str]) -> subprocess.CompletedProcess[str]:
+    """Execute pyright with the provided argument list."""
+    LOGGER.info("→ Running pyright", extra={"pyright_args": args})
     result = subprocess.run(
-        ["npx", "pyright", *targets],
+        ["npx", "pyright", *args],
         capture_output=True,
         text=True,
         check=False,
@@ -114,10 +114,21 @@ def main() -> int:
         extra={"workspace_root": str(workspace_root)},
     )
 
-    targets = ["python-rebuild-tcp-comm/src", "python-rebuild-tcp-comm/tests"]
+    project_config = workspace_root / "python-rebuild-tcp-comm" / "pyrightconfig.json"
+    default_targets = ["python-rebuild-tcp-comm/src", "python-rebuild-tcp-comm/tests"]
+
+    if project_config.exists():
+        LOGGER.info("→ Using project config", extra={"config": str(project_config)})
+        pyright_args: list[str] = ["--project", str(project_config)]
+    else:
+        LOGGER.warning(
+            "⚠️ Project config missing, falling back to direct targets",
+            extra={"config": str(project_config)},
+        )
+        pyright_args = default_targets
 
     try:
-        result = run_pyright(targets)
+        result = run_pyright(pyright_args)
     except FileNotFoundError:
         LOGGER.error(
             "✗ pyright executable not found",

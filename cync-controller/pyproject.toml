@@ -10,12 +10,11 @@ readme = "README.md"
 authors = [{name = "jslamartina", email = "6307064+jslamartina@users.noreply.github.com"}]
 classifiers = [
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.13",
     "Programming Language :: Python :: 3.14",
     "Operating System :: OS Independent",
     "License :: OSI Approved :: MIT License",
 ]
-requires-python = ">=3.13"
+requires-python = ">=3.14"
 dependencies = [
     "pyyaml==6.0.2",
     "uvloop>=0.21.0",
@@ -46,7 +45,7 @@ Issues = "https://github.com/jslamartina/hass-addons/issues"
 
 [tool.ruff]
 # Enable project-wide linting
-target-version = "py313"
+target-version = "py314"
 line-length = 120
 # src = ["src"]  # Commented out to scan all Python files (respect-gitignore handles exclusions)
 extend-exclude = ["__pycache__", ".venv"]
