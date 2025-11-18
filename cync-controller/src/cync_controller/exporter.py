@@ -61,7 +61,7 @@ async def get_index():
 def _masked_http_exception(operation: str, exc: Exception, user_message: str) -> HTTPException:
     """Create a sanitized HTTPException while logging full details server-side."""
     error_id = uuid.uuid4().hex[:8]
-    logger.exception("%s error_id=%s unexpected error", operation, error_id)
+    logger.exception("%s error_id=%s unexpected error: %s", operation, error_id, exc, exc_info=exc)
     return HTTPException(
         status_code=400,
         detail={
@@ -141,31 +141,34 @@ async def restart():
                 logger.info("%s Successfully called the restart API. The add-on will now restart.", lp)
                 return {"success": True, "message": "Add-on is restarting."}
 
+            failure_status = response.status
             error_details = await response.text()
             logger.warning(
                 "%s Supervisor restart failed status=%s response=%s",
                 lp,
-                response.status,
+                failure_status,
                 error_details,
             )
             raise _masked_http_exception(
                 "Supervisor restart failed",
-                RuntimeError(f"status={response.status} body={error_details}"),
+                RuntimeError(f"status={failure_status} body={error_details}"),
                 "Failed to restart add-on. Please retry and provide the error ID to support.",
             )
 
-    except aiohttp.ClientError as e:
+    except aiohttp.ClientError as exc:
         raise _masked_http_exception(
             "Supervisor restart aiohttp error",
-            e,
+            exc,
             "Failed to reach Supervisor API. Please retry and provide the error ID to support.",
-        ) from e
-    except Exception as e:  # pylint: disable=broad-except
+        ) from exc
+    except HTTPException:
+        raise
+    except Exception as exc:  # pylint: disable=broad-except
         raise _masked_http_exception(
             "Supervisor restart unexpected error",
-            e,
+            exc,
             "An unexpected error occurred while restarting the add-on. See server logs with the error ID.",
-        ) from e
+        ) from exc
 
 
 @app.post("/api/export/otp/submit")

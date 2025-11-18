@@ -190,8 +190,12 @@ class TestFastAPIEndpoints:
 
         from cync_controller.exporter import start_export
 
-        with pytest.raises(Exception, match="API Error"):
+        with pytest.raises(HTTPException) as exc_info:
             await start_export()
+
+        detail = exc_info.value.detail
+        assert "error_id" in detail
+        assert "Failed to start export" in detail["message"]
 
     @pytest.mark.asyncio
     async def test_request_otp_success(self, mock_global_object):
