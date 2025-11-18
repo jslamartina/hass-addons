@@ -45,17 +45,17 @@ All Phase 0.5 packet fixtures decoded successfully:
 
 | Packet Type           | Fixture                              | Status     |
 | --------------------- | ------------------------------------ | ---------- |
-| 0x23 Handshake        | `HANDSHAKE_0x23_DEV_TO_CLOUD`        | ✅ Decoded |
-| 0x28 Hello ACK        | `HELLO_ACK_0x28_CLOUD_TO_DEV`        | ✅ Decoded |
-| 0x43 Device Info      | `DEVICE_INFO_0x43_DEV_TO_CLOUD`      | ✅ Decoded |
-| 0x48 Info ACK         | `INFO_ACK_0x48_CLOUD_TO_DEV`         | ✅ Decoded |
-| 0x73 Data Channel     | `TOGGLE_ON_0x73_CLOUD_TO_DEV`        | ✅ Decoded |
-| 0x73 Data Channel     | `TOGGLE_OFF_0x73_CLOUD_TO_DEV`       | ✅ Decoded |
-| 0x7B Data ACK         | `DATA_ACK_0x7B_DEV_TO_CLOUD`         | ✅ Decoded |
-| 0x83 Status Broadcast | `STATUS_BROADCAST_0x83_DEV_TO_CLOUD` | ✅ Decoded |
-| 0x88 Status ACK       | `STATUS_ACK_0x88_CLOUD_TO_DEV`       | ✅ Decoded |
-| 0xD3 Heartbeat        | `HEARTBEAT_DEV_0xD3_DEV_TO_CLOUD`    | ✅ Decoded |
-| 0xD8 Heartbeat        | `HEARTBEAT_CLOUD_0xD8_CLOUD_TO_DEV`  | ✅ Decoded |
+| 0x23 Handshake        | `HANDSHAKE_0x23_DEV_TO_CLOUD`        | ✅ Decoded  |
+| 0x28 Hello ACK        | `HELLO_ACK_0x28_CLOUD_TO_DEV`        | ✅ Decoded  |
+| 0x43 Device Info      | `DEVICE_INFO_0x43_DEV_TO_CLOUD`      | ✅ Decoded  |
+| 0x48 Info ACK         | `INFO_ACK_0x48_CLOUD_TO_DEV`         | ✅ Decoded  |
+| 0x73 Data Channel     | `TOGGLE_ON_0x73_CLOUD_TO_DEV`        | ✅ Decoded  |
+| 0x73 Data Channel     | `TOGGLE_OFF_0x73_CLOUD_TO_DEV`       | ✅ Decoded  |
+| 0x7B Data ACK         | `DATA_ACK_0x7B_DEV_TO_CLOUD`         | ✅ Decoded  |
+| 0x83 Status Broadcast | `STATUS_BROADCAST_0x83_DEV_TO_CLOUD` | ✅ Decoded  |
+| 0x88 Status ACK       | `STATUS_ACK_0x88_CLOUD_TO_DEV`       | ✅ Decoded  |
+| 0xD3 Heartbeat        | `HEARTBEAT_DEV_0xD3_DEV_TO_CLOUD`    | ✅ Decoded  |
+| 0xD8 Heartbeat        | `HEARTBEAT_CLOUD_0xD8_CLOUD_TO_DEV`  | ✅ Decoded  |
 
 **Total**: 11/11 fixtures (100%)
 
@@ -77,9 +77,9 @@ Custom exceptions implemented with structured error information:
 
 | Exception            | Attributes               | Status         |
 | -------------------- | ------------------------ | -------------- |
-| `CyncProtocolError`  | Base exception           | ✅ Implemented |
-| `PacketDecodeError`  | `reason`, `data_preview` | ✅ Implemented |
-| `PacketFramingError` | `reason`, `buffer_size`  | ✅ Implemented |
+| `CyncProtocolError`  | Base exception           | ✅ Implemented  |
+| `PacketDecodeError`  | `reason`, `data_preview` | ✅ Implemented  |
+| `PacketFramingError` | `reason`, `buffer_size`  | ✅ Implemented  |
 
 **Supported Error Reasons**:
 
@@ -127,12 +127,12 @@ All security tests passing:
 
 | Security Feature                                   | Test                                                  | Status  |
 | -------------------------------------------------- | ----------------------------------------------------- | ------- |
-| Reject oversized packets (>4096 bytes)             | `test_reject_packet_exceeding_max_size()`             | ✅ Pass |
-| Handle integer overflow (multiplier=255, base=255) | `test_handle_integer_overflow()`                      | ✅ Pass |
-| Buffer cleared on invalid length                   | `test_buffer_cleared_on_invalid_length()`             | ✅ Pass |
-| Recovery limit (max attempts)                      | `test_large_corrupt_stream_triggers_recovery_limit()` | ✅ Pass |
-| Malicious packet stream survival                   | `test_survive_malicious_packet_stream()`              | ✅ Pass |
-| Buffer state after recovery                        | `test_buffer_state_after_error_recovery()`            | ✅ Pass |
+| Reject oversized packets (>4096 bytes)             | `test_reject_packet_exceeding_max_size()`             | ✅ Pass  |
+| Handle integer overflow (multiplier=255, base=255) | `test_handle_integer_overflow()`                      | ✅ Pass  |
+| Buffer cleared on invalid length                   | `test_buffer_cleared_on_invalid_length()`             | ✅ Pass  |
+| Recovery limit (max attempts)                      | `test_large_corrupt_stream_triggers_recovery_limit()` | ✅ Pass  |
+| Malicious packet stream survival                   | `test_survive_malicious_packet_stream()`              | ✅ Pass  |
+| Buffer state after recovery                        | `test_buffer_state_after_error_recovery()`            | ✅ Pass  |
 
 **MAX_PACKET_SIZE**: 4096 bytes (enforced)
 
@@ -146,11 +146,11 @@ All security tests passing:
 
 | Metric         | Requirement | Actual     | Status  |
 | -------------- | ----------- | ---------- | ------- |
-| Total tests    | ≥15         | **151**    | ✅ Pass |
-| Protocol tests | N/A         | 122        | ✅ Pass |
-| MITM tests     | N/A         | 29         | ✅ Pass |
-| Pass rate      | 100%        | **100%**   | ✅ Pass |
-| Code coverage  | ≥90%        | **95.16%** | ✅ Pass |
+| Total tests    | ≥15         | **151**    | ✅ Pass  |
+| Protocol tests | N/A         | 122        | ✅ Pass  |
+| MITM tests     | N/A         | 29         | ✅ Pass  |
+| Pass rate      | 100%        | **100%**   | ✅ Pass  |
+| Code coverage  | ≥90%        | **95.16%** | ✅ Pass  |
 
 **Breakdown by Module**:
 
@@ -175,13 +175,13 @@ All edge cases tested:
 
 | Edge Case                    | Test                                           | Status  |
 | ---------------------------- | ---------------------------------------------- | ------- |
-| Partial packet buffering     | `test_partial_packet_header_only()`            | ✅ Pass |
-| Multi-packet extraction      | `test_multiple_complete_packets_single_read()` | ✅ Pass |
-| Exact boundary reads         | `test_exact_boundary_read()`                   | ✅ Pass |
-| Empty buffer                 | `test_empty_buffer_returns_empty_list()`       | ✅ Pass |
-| Large packets (multiplier>0) | `test_large_packet_with_multiplier()`          | ✅ Pass |
-| Single-byte feeds            | `test_single_byte_feeds()`                     | ✅ Pass |
-| Max valid packet             | `test_max_valid_packet_size()`                 | ✅ Pass |
+| Partial packet buffering     | `test_partial_packet_header_only()`            | ✅ Pass  |
+| Multi-packet extraction      | `test_multiple_complete_packets_single_read()` | ✅ Pass  |
+| Exact boundary reads         | `test_exact_boundary_read()`                   | ✅ Pass  |
+| Empty buffer                 | `test_empty_buffer_returns_empty_list()`       | ✅ Pass  |
+| Large packets (multiplier>0) | `test_large_packet_with_multiplier()`          | ✅ Pass  |
+| Single-byte feeds            | `test_single_byte_feeds()`                     | ✅ Pass  |
+| Max valid packet             | `test_max_valid_packet_size()`                 | ✅ Pass  |
 
 ---
 
@@ -193,14 +193,14 @@ All linters passing:
 
 | Linter                      | Files Checked  | Status  |
 | --------------------------- | -------------- | ------- |
-| Ruff (Python linter)        | 134 files      | ✅ Pass |
-| Ruff (Python formatter)     | 134 files      | ✅ Pass |
-| Mypy (strict type checking) | 8 source files | ✅ Pass |
-| ShellCheck                  | Shell scripts  | ✅ Pass |
-| ESLint (TypeScript)         | TS files       | ✅ Pass |
-| markdownlint                | 235 files      | ✅ Pass |
-| Vale (prose linter)         | 58 files       | ✅ Pass |
-| Prettier                    | All files      | ✅ Pass |
+| Ruff (Python linter)        | 134 files      | ✅ Pass  |
+| Ruff (Python formatter)     | 134 files      | ✅ Pass  |
+| Mypy (strict type checking) | 8 source files | ✅ Pass  |
+| ShellCheck                  | Shell scripts  | ✅ Pass  |
+| ESLint (TypeScript)         | TS files       | ✅ Pass  |
+| markdownlint                | 235 files      | ✅ Pass  |
+| Vale (prose linter)         | 58 files       | ✅ Pass  |
+| Prettier                    | All files      | ✅ Pass  |
 
 #### ✅ Type Annotations
 
@@ -227,11 +227,11 @@ All packet types successfully encode and decode:
 
 | Packet Type           | Round-Trip Test                                 | Status  |
 | --------------------- | ----------------------------------------------- | ------- |
-| 0x23 Handshake        | `test_roundtrip_all_handshake_params()`         | ✅ Pass |
-| 0x73 Data Channel     | `test_roundtrip_data_packet_various_payloads()` | ✅ Pass |
-| 0x83 Status Broadcast | `test_encode_status_broadcast_roundtrip()`      | ✅ Pass |
-| 0xD3 Heartbeat        | `test_encode_heartbeat_roundtrip()`             | ✅ Pass |
-| All types             | `test_roundtrip_all_packet_types()`             | ✅ Pass |
+| 0x23 Handshake        | `test_roundtrip_all_handshake_params()`         | ✅ Pass  |
+| 0x73 Data Channel     | `test_roundtrip_data_packet_various_payloads()` | ✅ Pass  |
+| 0x83 Status Broadcast | `test_encode_status_broadcast_roundtrip()`      | ✅ Pass  |
+| 0xD3 Heartbeat        | `test_encode_heartbeat_roundtrip()`             | ✅ Pass  |
+| All types             | `test_roundtrip_all_packet_types()`             | ✅ Pass  |
 
 #### ✅ msg_id Generation
 
@@ -251,12 +251,12 @@ Plugin implemented and tested:
 
 | Feature                    | Test                                        | Status  |
 | -------------------------- | ------------------------------------------- | ------- |
-| Plugin initialization      | `test_initialization()`                     | ✅ Pass |
-| Connection lifecycle       | `test_on_connection_established/closed()`   | ✅ Pass |
-| Packet validation          | `test_decode_valid_handshake/data/status()` | ✅ Pass |
-| Error handling             | `test_decode_invalid_packet()`              | ✅ Pass |
-| Partial buffering          | `test_partial_packet_buffering()`           | ✅ Pass |
-| Multi-connection isolation | `test_multi_connection_isolation()`         | ✅ Pass |
+| Plugin initialization      | `test_initialization()`                     | ✅ Pass  |
+| Connection lifecycle       | `test_on_connection_established/closed()`   | ✅ Pass  |
+| Packet validation          | `test_decode_valid_handshake/data/status()` | ✅ Pass  |
+| Error handling             | `test_decode_invalid_packet()`              | ✅ Pass  |
+| Partial buffering          | `test_partial_packet_buffering()`           | ✅ Pass  |
+| Multi-connection isolation | `test_multi_connection_isolation()`         | ✅ Pass  |
 
 **Coverage**: 100% (28/28 statements)
 
@@ -266,11 +266,11 @@ Protocol module ready for Phase 1b integration:
 
 | Requirement                 | Status                                        |
 | --------------------------- | --------------------------------------------- |
-| Clean API exports           | ✅ `CyncProtocol`, `PacketFramer`, exceptions |
-| No circular dependencies    | ✅ Module fully independent                   |
-| Comprehensive test coverage | ✅ 95.16% coverage                            |
-| Documentation complete      | ✅ All APIs documented                        |
-| 2-byte msg_id validated     | ✅ Corrected and tested                       |
+| Clean API exports           | ✅ `CyncProtocol`, `PacketFramer`, exceptions  |
+| No circular dependencies    | ✅ Module fully independent                    |
+| Comprehensive test coverage | ✅ 95.16% coverage                             |
+| Documentation complete      | ✅ All APIs documented                         |
+| 2-byte msg_id validated     | ✅ Corrected and tested                        |
 
 ---
 

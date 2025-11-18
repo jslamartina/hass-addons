@@ -665,12 +665,12 @@ grep "codec validated" mitm/captures/mitm_*.log
 
 | Component      | File                                 | Status      |
 | -------------- | ------------------------------------ | ----------- |
-| Protocol Codec | `src/protocol/cync_protocol.py`      | ✅ Complete      |
-| Packet Framer  | `src/protocol/packet_framer.py`      | ✅ Complete      |
-| Exceptions     | `src/protocol/exceptions.py`         | ✅ Complete      |
-| Checksum       | `src/protocol/checksum.py`           | ✅ Complete      |
-| Test Fixtures  | `tests/fixtures/real_packets.py`     | ✅ Complete      |
-| MITM Validator | `mitm/validation/codec_validator.py` | ✅ Complete      |
+| Protocol Codec | `src/protocol/cync_protocol.py`      | ✅ Complete  |
+| Packet Framer  | `src/protocol/packet_framer.py`      | ✅ Complete  |
+| Exceptions     | `src/protocol/exceptions.py`         | ✅ Complete  |
+| Checksum       | `src/protocol/checksum.py`           | ✅ Complete  |
+| Test Fixtures  | `tests/fixtures/real_packets.py`     | ✅ Complete  |
+| MITM Validator | `mitm/validation/codec_validator.py` | ✅ Complete  |
 
 ### Key Constants
 
