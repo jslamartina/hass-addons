@@ -174,11 +174,10 @@ class CyncTCPDevice:
         callback_cleanup_task = asyncio.get_event_loop().create_task(
             self.callback_cleanup_task(), name=f"callback_cleanup-{self._py_id}"
         )
-        # Type annotation to help pyright understand Tasks is not PydanticDataclass
-        from typing import cast
-        tasks = cast(Tasks, self.tasks)
-        tasks.receive = receive_task
-        tasks.callback_cleanup = callback_cleanup_task
+        # Pyright incorrectly infers Tasks (pydantic dataclass) as PydanticDataclass
+        # Runtime type is correct (Tasks instance), so we use type: ignore
+        self.tasks.receive = receive_task  # type: ignore[assignment]
+        self.tasks.callback_cleanup = callback_cleanup_task  # type: ignore[assignment]
         return True
 
     def get_ctrl_msg_id_bytes(self):
@@ -342,10 +341,9 @@ class CyncTCPDevice:
         g = _get_global_object()
         lp = f"{self.address}:raw read:"
         started_at = time.time()
-        # Type annotation to help pyright understand Tasks is not PydanticDataclass
-        from typing import cast
-        tasks = cast(Tasks, self.tasks)
-        receive_task = tasks.receive
+        # Pyright incorrectly infers Tasks (pydantic dataclass) as PydanticDataclass
+        # Runtime type is correct (Tasks instance), so we use type: ignore
+        receive_task = self.tasks.receive  # type: ignore[attr-defined]
         name = receive_task.get_name() if receive_task is not None else "receive_task"
         logger.debug("%s receive_task CALLED", lp) if CYNC_RAW is True else None
         try:
@@ -566,10 +564,9 @@ class CyncTCPDevice:
 
     async def close(self):
         # Count non-None tasks (Tasks object has __iter__ but not __len__)
-        # Type annotation to help pyright understand Tasks is iterable
-        from typing import cast
-        tasks = cast(Tasks, self.tasks)
-        task_count = sum(1 for task in tasks if task is not None)
+        # Pyright incorrectly infers Tasks (pydantic dataclass) as PydanticDataclass
+        # Runtime type is correct (Tasks instance with __iter__), so we use type: ignore
+        task_count = sum(1 for task in self.tasks if task is not None)  # type: ignore[attr-defined]
         logger.debug(
             "→ Closing device connection",
             extra={
@@ -578,7 +575,7 @@ class CyncTCPDevice:
             },
         )
         try:
-            for dev_task in tasks:
+            for dev_task in self.tasks:  # type: ignore[attr-defined]
                 if dev_task and dev_task.done() is False:
                     logger.debug(
                         "Cancelling task",
