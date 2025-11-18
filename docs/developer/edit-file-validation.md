@@ -29,8 +29,11 @@ old_string = """def validate_input(data):
 
 ### 2. Run the Validator
 
+> Tip: Use `HASS_ADDONS_ROOT` or `git rev-parse --show-toplevel` to stay portable between `/workspaces` and worktree paths.
+
 ```bash
-cd /workspaces/hass-addons
+REPO_ROOT="${HASS_ADDONS_ROOT:-$(git rev-parse --show-toplevel)}"
+cd "$REPO_ROOT"
 
 ## Validate the context exists in the file
 python3 scripts/validate-edit-context.py \

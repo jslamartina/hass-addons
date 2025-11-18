@@ -1,11 +1,45 @@
 """Pytest fixtures for E2E tests using Playwright."""
 
+import logging
 import os
 import re
 from pathlib import Path
 
 import pytest
 from playwright.sync_api import Page
+
+logger = logging.getLogger(__name__)
+
+
+def _resolve_repo_root() -> Path:
+    """Return the repo root, honoring overrides for worktrees."""
+    env_root = os.getenv("HASS_ADDONS_ROOT")
+    if env_root:
+        repo_root = Path(env_root).expanduser().resolve()
+        logger.debug("Using HASS_ADDONS_ROOT override for repo root: %s", repo_root)
+        return repo_root
+
+    current = Path(__file__).resolve()
+    for candidate in current.parents:
+        if (candidate / ".git").exists():
+            logger.debug("Located repo root via .git at: %s", candidate)
+            return candidate
+
+    fallback = current.parent
+    logger.warning(
+        "Unable to find .git when resolving repo root from %s; falling back to %s",
+        current,
+        fallback,
+    )
+    return fallback
+
+
+def _credentials_file() -> Path:
+    """Resolve the credentials file path."""
+    env_creds = os.getenv("HASS_CREDENTIALS_FILE")
+    if env_creds:
+        return Path(env_creds).expanduser().resolve()
+    return _resolve_repo_root() / "hass-credentials.env"
 
 
 @pytest.fixture(scope="session")
@@ -26,7 +60,7 @@ def ha_credentials():
 
     # Fall back to credentials file
     if not username or not password:
-        creds_file = Path("/workspaces/hass-addons/hass-credentials.env")
+        creds_file = _credentials_file()
         if creds_file.exists():
             with creds_file.open() as f:
                 for line in f:

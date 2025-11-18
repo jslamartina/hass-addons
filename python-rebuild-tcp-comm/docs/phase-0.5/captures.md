@@ -106,7 +106,7 @@ d8 00 00 00 00
 
 ## Capture Files
 
-**Location**: `/workspaces/hass-addons/python-rebuild-tcp-comm/captures/`
+**Location**: `python-rebuild-tcp-comm/captures/` (relative to `$(git rev-parse --show-toplevel)` or `HASS_ADDONS_ROOT`)
 
 **Files**:
 

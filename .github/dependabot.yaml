@@ -7,19 +7,19 @@ updates:
       time: "06:00"
 
   - package-ecosystem: "npm"
-  directory: "/"
-  schedule:
-    interval: daily
-    time: "07:00"
+    directory: "/"
+    schedule:
+      interval: daily
+      time: "07:00"
 
   - package-ecosystem: "pip"
-  directory: "/"
-  schedule:
-    interval: daily
-    time: "08:00"
+    directory: "/"
+    schedule:
+      interval: daily
+      time: "08:00"
 
-  - package-ecosystem: "docker" 
-  directory: "/"
-  schedule:
-    interval: daily
-    time: "09:00"
+  - package-ecosystem: "docker"
+    directory: "/"
+    schedule:
+      interval: daily
+      time: "09:00"
