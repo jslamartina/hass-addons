@@ -21,7 +21,7 @@ cync-mitm = "mitm.mitm_proxy:cli_main"
 
 [tool.poetry.dependencies]
 python = "^3.14"
-prometheus-client = "^0.20.0"
+prometheus-client = "^0.23.1"
 aiohttp = "^3.9.0"
 requests = "^2.31.0"
 uuid7 = "^0.1.0"
