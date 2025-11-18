@@ -1,5 +1,6 @@
 """Pytest fixtures for E2E tests using Playwright."""
 
+import logging
 import os
 import re
 from pathlib import Path
@@ -7,19 +8,30 @@ from pathlib import Path
 import pytest
 from playwright.sync_api import Page
 
+logger = logging.getLogger(__name__)
+
 
 def _resolve_repo_root() -> Path:
     """Return the repo root, honoring overrides for worktrees."""
     env_root = os.getenv("HASS_ADDONS_ROOT")
     if env_root:
-        return Path(env_root).expanduser().resolve()
+        repo_root = Path(env_root).expanduser().resolve()
+        logger.debug("Using HASS_ADDONS_ROOT override for repo root: %s", repo_root)
+        return repo_root
 
     current = Path(__file__).resolve()
     for candidate in current.parents:
         if (candidate / ".git").exists():
+            logger.debug("Located repo root via .git at: %s", candidate)
             return candidate
 
-    return current
+    fallback = current.parent
+    logger.warning(
+        "Unable to find .git when resolving repo root from %s; falling back to %s",
+        current,
+        fallback,
+    )
+    return fallback
 
 
 def _credentials_file() -> Path:
