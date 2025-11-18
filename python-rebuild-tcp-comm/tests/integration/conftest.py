@@ -7,7 +7,7 @@ from collections.abc import AsyncGenerator
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 import pytest
 
@@ -272,7 +272,7 @@ def unique_device_id(request: pytest.FixtureRequest) -> str:
     Uses the test node ID to ensure uniqueness.
     """
     # Use test name as device ID to ensure uniqueness
-    test_name: str = request.node.name  # type: ignore[assignment]
+    test_name: str = cast(str, request.node.name)  # type: ignore[assignment]
     # Sanitize for use as device_id
     device_id: str = test_name.replace("[", "_").replace("]", "_").replace("-", "_")
     return f"TEST_{device_id}"
@@ -316,7 +316,7 @@ def pytest_terminal_summary(terminalreporter: Any, exitstatus: int, config: Any)
 
 
 @pytest.fixture(scope="session", autouse=True)
-def _init_performance_tracker(
+def _init_performance_tracker(  # pyright: ignore[reportUnusedFunction]
     request: pytest.FixtureRequest,
     performance_tracker: PerformanceTracker,
 ) -> PerformanceTracker:

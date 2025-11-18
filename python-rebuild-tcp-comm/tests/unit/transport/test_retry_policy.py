@@ -1,5 +1,7 @@
 """Unit tests for retry policy and timeout configuration."""
 
+# pyright: reportUnknownMemberType=false
+
 from __future__ import annotations
 
 import pytest

@@ -247,7 +247,7 @@ def test_observer_receives_correct_data(proxy: MITMProxy, mock_observer: MagicMo
 
 def test_observer_list_order_preserved(proxy: MITMProxy) -> None:
     """Test observers are called in registration order."""
-    call_order = []
+    call_order: list[int] = []
 
     def create_ordered_observer(order_id: int) -> MagicMock:
         observer = MagicMock(spec=PacketObserver)

@@ -20,9 +20,10 @@ from __future__ import annotations
 import asyncio
 import logging
 import time
+import uuid
 from collections import OrderedDict
 from collections.abc import Sequence
-from typing import TYPE_CHECKING, Literal, Protocol, overload
+from typing import TYPE_CHECKING, Literal, Protocol, cast, overload
 
 from uuid_extensions import uuid7  # type: ignore[import-untyped]
 
@@ -486,7 +487,7 @@ class DeviceOperations:
 
         """
         # Generate correlation_id for tracking (UUID v7 for time-ordering)
-        correlation_id = refresh_id if refresh_id else str(uuid7())
+        correlation_id = refresh_id if refresh_id else str(cast(uuid.UUID, uuid7()))
 
         logger.info(
             "→ Starting mesh info request",
@@ -659,7 +660,7 @@ class DeviceOperations:
         # Validate parameters and get validated timeout
         timeout = self._validate_device_info_request(device_id, timeout)
 
-        correlation_id = str(uuid7())
+        correlation_id = str(cast(uuid.UUID, uuid7()))
         request_start = time.time()
 
         logger.info(
