@@ -20,7 +20,7 @@ All Python source code for the Cync Controller add-on is located in this directo
 ## Python Runtime Baseline
 
 - Development containers now install **CPython 3.14 via pyenv** and expose it through `/root/.pyenv/shims/python`.
-- The add-on runtime (amd64/aarch64) also targets Python 3.14 base images; other architectures will switch once upstream publishes matching tags.
+- All add-on runtimes (armhf, armv7, aarch64, amd64, i386) now target Python 3.14 base images.
 - Always rebuild the devcontainer after pulling changes to ensure pyenv picks up the latest 3.14.x patch.
 
 ## 🆕 Enhanced Development Features (v0.0.4.4)

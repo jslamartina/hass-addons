@@ -1,5 +1,7 @@
 """FastAPI application for exporting Cync device configuration from the Cync Cloud API."""
 
+from __future__ import annotations
+
 import asyncio
 import os
 from pathlib import Path

@@ -1,9 +1,10 @@
-"""
-MQTT client core for Cync Controller.
+"""MQTT client core for Cync Controller.
 
 Provides the main MQTTClient class with connection lifecycle, discovery,
 and message routing delegation to helper modules.
 """
+
+from __future__ import annotations
 
 import asyncio
 import json
