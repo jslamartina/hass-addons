@@ -24,7 +24,7 @@ activate_venv() {
     # shellcheck disable=SC1090
     source "$venv_path/bin/activate"
   else
-    log_warn "Repository virtualenv not found at $venv_path. Run python-rebuild-tcp-comm/scripts/setup.sh to create it."
+    log_warn "Repository virtualenv not found at $venv_path. Run scripts/setup-worktree.sh to create it."
   fi
 }
 
