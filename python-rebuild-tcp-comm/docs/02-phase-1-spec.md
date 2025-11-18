@@ -156,9 +156,9 @@ grep -r "from cync_controller" src/ harness/ tests/ && exit 1
 
 | Code Type                        | Legacy Imports    | Rationale                                      |
 | -------------------------------- | ----------------- | ---------------------------------------------- |
-| **Phase 0.5 validation scripts** | ✅ Allowed        | One-time validation of legacy algorithms       |
-| **Phase 1a-1d production code**  | ❌ Forbidden      | Must be independent, copy algorithms instead   |
-| **Phase 1a-1d tests**            | ❌ Forbidden      | Test against copied code, not legacy           |
+| **Phase 0.5 validation scripts** | ✅ Allowed         | One-time validation of legacy algorithms       |
+| **Phase 1a-1d production code**  | ❌ Forbidden       | Must be independent, copy algorithms instead   |
+| **Phase 1a-1d tests**            | ❌ Forbidden       | Test against copied code, not legacy           |
 | **Helper scripts**               | ⚠️ Reference only | Can read legacy for comparison, not dependency |
 
 **Common Mistakes to Avoid**:

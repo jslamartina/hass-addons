@@ -417,10 +417,10 @@ class ReliableTransport:
 
 | ACK Type           | msg_id Present? | Position     | Matching Strategy       |
 | ------------------ | --------------- | ------------ | ----------------------- |
-| 0x7B DATA_ACK      | ✅ YES          | bytes[10:12] | Parallel (msg_id match) |
-| 0x28 HELLO_ACK     | ❌ NO           | N/A          | FIFO queue              |
-| 0x88 STATUS_ACK    | ❌ NO           | N/A          | FIFO queue              |
-| 0xD8 HEARTBEAT_ACK | ❌ NO           | N/A          | FIFO queue              |
+| 0x7B DATA_ACK      | ✅ YES           | bytes[10:12] | Parallel (msg_id match) |
+| 0x28 HELLO_ACK     | ❌ NO            | N/A          | FIFO queue              |
+| 0x88 STATUS_ACK    | ❌ NO            | N/A          | FIFO queue              |
+| 0xD8 HEARTBEAT_ACK | ❌ NO            | N/A          | FIFO queue              |
 
 **Implementation Guidance**:
 
@@ -665,12 +665,12 @@ grep "codec validated" mitm/captures/mitm_*.log
 
 | Component      | File                                 | Status      |
 | -------------- | ------------------------------------ | ----------- |
-| Protocol Codec | `src/protocol/cync_protocol.py`      | ✅ Complete |
-| Packet Framer  | `src/protocol/packet_framer.py`      | ✅ Complete |
-| Exceptions     | `src/protocol/exceptions.py`         | ✅ Complete |
-| Checksum       | `src/protocol/checksum.py`           | ✅ Complete |
-| Test Fixtures  | `tests/fixtures/real_packets.py`     | ✅ Complete |
-| MITM Validator | `mitm/validation/codec_validator.py` | ✅ Complete |
+| Protocol Codec | `src/protocol/cync_protocol.py`      | ✅ Complete      |
+| Packet Framer  | `src/protocol/packet_framer.py`      | ✅ Complete      |
+| Exceptions     | `src/protocol/exceptions.py`         | ✅ Complete      |
+| Checksum       | `src/protocol/checksum.py`           | ✅ Complete      |
+| Test Fixtures  | `tests/fixtures/real_packets.py`     | ✅ Complete      |
+| MITM Validator | `mitm/validation/codec_validator.py` | ✅ Complete      |
 
 ### Key Constants
 

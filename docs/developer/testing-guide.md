@@ -643,11 +643,11 @@ Based on Phase 1 & 2 results:
 
 | Module                   | Target | Achieved | Status          | Notes                                 |
 | ------------------------ | ------ | -------- | --------------- | ------------------------------------- |
-| `packet_parser.py`       | 90%+   | 95.76%   | ✅ **EXCEEDED** | Critical - enables protocol work      |
-| `packet_checksum.py`     | 95%+   | 100%     | ✅ **EXCEEDED** | Critical - validates packet integrity |
-| `const.py`               | 90%+   | 90.70%   | ✅ **MET**      | Configuration constants               |
-| `structs.py`             | 70%+   | 76.62%   | ✅ **EXCEEDED** | Data structures                       |
-| `metadata/model_info.py` | 70%+   | 70.77%   | ✅ **MET**      | Device type info                      |
+| `packet_parser.py`       | 90%+   | 95.76%   | ✅ **EXCEEDED**  | Critical - enables protocol work      |
+| `packet_checksum.py`     | 95%+   | 100%     | ✅ **EXCEEDED**  | Critical - validates packet integrity |
+| `const.py`               | 90%+   | 90.70%   | ✅ **MET**       | Configuration constants               |
+| `structs.py`             | 70%+   | 76.62%   | ✅ **EXCEEDED**  | Data structures                       |
+| `metadata/model_info.py` | 70%+   | 70.77%   | ✅ **MET**       | Device type info                      |
 | `cloud_api.py`           | 50%+   | 45.93%   | 🟡 Close        | Complex HTTP workflows                |
 | `devices.py`             | 40%+   | 33.80%   | 🟡 Partial      | Large module, many integration points |
 | `mqtt_client.py`         | 40%+   | 27.28%   | 🟡 Partial      | Complex MQTT workflows                |

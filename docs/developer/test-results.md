@@ -268,15 +268,15 @@ cloud_relay:
 
 | Metric                   | Value       | Status |
 | ------------------------ | ----------- | ------ |
-| Total Test Duration      | ~30 minutes | ✅     |
-| Configuration Changes    | 6           | ✅     |
-| Devices Tested           | 4           | ✅     |
-| Packet Types Captured    | 6           | ✅     |
-| Total Packets Logged     | 20+         | ✅     |
-| Critical Errors          | 0           | ✅     |
-| Graceful Errors          | 13          | ✅     |
-| Successful Reconnections | 4           | ✅     |
-| Injection Tests          | 3           | ✅     |
+| Total Test Duration      | ~30 minutes | ✅      |
+| Configuration Changes    | 6           | ✅      |
+| Devices Tested           | 4           | ✅      |
+| Packet Types Captured    | 6           | ✅      |
+| Total Packets Logged     | 20+         | ✅      |
+| Critical Errors          | 0           | ✅      |
+| Graceful Errors          | 13          | ✅      |
+| Successful Reconnections | 4           | ✅      |
+| Injection Tests          | 3           | ✅      |
 
 ---
 

@@ -281,12 +281,12 @@ Only successful, realistic scenarios are tracked for performance:
 
 | Test                               | Tracked? | Reason                        |
 | ---------------------------------- | -------- | ----------------------------- |
-| `test_happy_path_toggle_success`   | ✅ Yes   | Realistic success case        |
-| `test_packet_format_validation`    | ✅ Yes   | Realistic success case        |
-| `test_metrics_endpoint_accessible` | ✅ Yes   | Realistic success case        |
-| `test_retry_*`                     | ❌ No    | Includes intentional failures |
-| `test_connection_refused`          | ❌ No    | Intentional error scenario    |
-| `test_all_attempts_timeout`        | ❌ No    | Intentional timeout scenario  |
+| `test_happy_path_toggle_success`   | ✅ Yes    | Realistic success case        |
+| `test_packet_format_validation`    | ✅ Yes    | Realistic success case        |
+| `test_metrics_endpoint_accessible` | ✅ Yes    | Realistic success case        |
+| `test_retry_*`                     | ❌ No     | Includes intentional failures |
+| `test_connection_refused`          | ❌ No     | Intentional error scenario    |
+| `test_all_attempts_timeout`        | ❌ No     | Intentional timeout scenario  |
 
 This ensures performance metrics reflect **normal operating conditions** rather than error paths.
 

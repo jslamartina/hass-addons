@@ -13,12 +13,12 @@ These findings are **definitive** and do not require Phase 1d validation:
 
 | Finding                   | Status   | Rationale                                                          |
 | ------------------------- | -------- | ------------------------------------------------------------------ |
-| **Packet Structure**      | ✅ Final | Wire protocol structure is fixed (msg_id at bytes[10:12], 2 bytes) |
-| **ACK msg_id Presence**   | ✅ Final | 0x7B has msg_id; 0x28/0x88/0xD8 do not (validated 24,960 packets)  |
-| **Checksum Algorithm**    | ✅ Final | Validated 13/13 packets (100% match), algorithm is deterministic   |
-| **Packet Size Limit**     | ✅ Final | MAX_PACKET_SIZE=4096 validated safe (largest observed: 450 bytes)  |
-| **Deduplication Fields**  | ✅ Final | All Full Fingerprint fields confirmed extractable and stable       |
-| **Backpressure Behavior** | ✅ Final | Device uses BLOCK policy on queue full (manually tested)           |
+| **Packet Structure**      | ✅ Final  | Wire protocol structure is fixed (msg_id at bytes[10:12], 2 bytes) |
+| **ACK msg_id Presence**   | ✅ Final  | 0x7B has msg_id; 0x28/0x88/0xD8 do not (validated 24,960 packets)  |
+| **Checksum Algorithm**    | ✅ Final  | Validated 13/13 packets (100% match), algorithm is deterministic   |
+| **Packet Size Limit**     | ✅ Final  | MAX_PACKET_SIZE=4096 validated safe (largest observed: 450 bytes)  |
+| **Deduplication Fields**  | ✅ Final  | All Full Fingerprint fields confirmed extractable and stable       |
+| **Backpressure Behavior** | ✅ Final  | Device uses BLOCK policy on queue full (manually tested)           |
 
 **Implementation Impact**: Use these findings directly in Phase 1a/1b/1c without re-validation.
 

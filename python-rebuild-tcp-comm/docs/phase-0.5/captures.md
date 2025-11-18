@@ -9,11 +9,11 @@
 
 | Flow                         | Packets | Status      |
 | ---------------------------- | ------- | ----------- |
-| Handshake (0x23→0x28)        | 572     | ✅ Complete |
-| Toggle (0x73→0x7B→0x83→0x88) | 788     | ✅ Complete |
-| Status (0x83→0x88)           | 2,680   | ✅ Complete |
-| Heartbeat (0xD3→0xD8)        | 21,441  | ✅ Complete |
-| Device Info (0x43→0x48)      | 7+      | ✅ Complete |
+| Handshake (0x23→0x28)        | 572     | ✅ Complete  |
+| Toggle (0x73→0x7B→0x83→0x88) | 788     | ✅ Complete  |
+| Status (0x83→0x88)           | 2,680   | ✅ Complete  |
+| Heartbeat (0xD3→0xD8)        | 21,441  | ✅ Complete  |
+| Device Info (0x43→0x48)      | 7+      | ✅ Complete  |
 
 **Total analyzed**: 24,960 packets from 9 devices
 

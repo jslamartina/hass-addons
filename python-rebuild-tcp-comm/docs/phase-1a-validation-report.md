@@ -32,10 +32,10 @@ All major packet types can be encoded:
 
 | Packet Type           | Method                      | Status  | Tests   |
 | --------------------- | --------------------------- | ------- | ------- |
-| 0x23 Handshake        | `encode_handshake()`        | ✅ Pass | 5 tests |
-| 0x73 Data Channel     | `encode_data_packet()`      | ✅ Pass | 7 tests |
-| 0x83 Status Broadcast | `encode_status_broadcast()` | ✅ Pass | 7 tests |
-| 0xD3 Heartbeat        | `encode_heartbeat()`        | ✅ Pass | 3 tests |
+| 0x23 Handshake        | `encode_handshake()`        | ✅ Pass  | 5 tests |
+| 0x73 Data Channel     | `encode_data_packet()`      | ✅ Pass  | 7 tests |
+| 0x83 Status Broadcast | `encode_status_broadcast()` | ✅ Pass  | 7 tests |
+| 0xD3 Heartbeat        | `encode_heartbeat()`        | ✅ Pass  | 3 tests |
 
 **Evidence**: `tests/unit/protocol/test_cync_protocol.py::test_roundtrip_all_packet_types()` validates encode/decode for all 4 types
 

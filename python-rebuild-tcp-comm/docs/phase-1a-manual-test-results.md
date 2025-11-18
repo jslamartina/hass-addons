@@ -17,12 +17,12 @@
 
 | Test                                   | Status  | Notes                                   |
 | -------------------------------------- | ------- | --------------------------------------- |
-| Test 1: MITM Proxy Connectivity        | ✅ Pass | Existing capture analyzed               |
-| Test 2: Device Connection              | ✅ Pass | 55 devices verified via HA              |
-| Test 3: Codec Validator (100+ packets) | ✅ Pass | 78,208/78,210 packets decoded (99.997%) |
-| Test 4: Toggle Commands                | ✅ Pass | 429 data packets (0x73) decoded         |
-| Test 5: Status Broadcasts              | ✅ Pass | 19 status packets (0x83) decoded        |
-| Test 6: Heartbeat Packets              | ✅ Pass | 185 device + 181 cloud heartbeats       |
+| Test 1: MITM Proxy Connectivity        | ✅ Pass  | Existing capture analyzed               |
+| Test 2: Device Connection              | ✅ Pass  | 55 devices verified via HA              |
+| Test 3: Codec Validator (100+ packets) | ✅ Pass  | 78,208/78,210 packets decoded (99.997%) |
+| Test 4: Toggle Commands                | ✅ Pass  | 429 data packets (0x73) decoded         |
+| Test 5: Status Broadcasts              | ✅ Pass  | 19 status packets (0x83) decoded        |
+| Test 6: Heartbeat Packets              | ✅ Pass  | 185 device + 181 cloud heartbeats       |
 
 ---
 
