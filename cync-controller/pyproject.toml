@@ -45,7 +45,7 @@ Issues = "https://github.com/jslamartina/hass-addons/issues"
 
 [tool.ruff]
 # Enable project-wide linting
-target-version = "py314"
+target-version = "py314"  # Requires Ruff >= 0.14.5
 line-length = 120
 # src = ["src"]  # Commented out to scan all Python files (respect-gitignore handles exclusions)
 extend-exclude = ["__pycache__", ".venv"]

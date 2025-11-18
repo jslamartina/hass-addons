@@ -32,11 +32,11 @@ pytest-asyncio = "^0.24.0"
 pytest-cov = "^6.0.0"
 pytest-timeout = "^2.3.1"
 pytest-xdist = "^3.8.0"
-ruff = "^0.6.9"
+ruff = "^0.14.5"
 
 [tool.ruff]
 line-length = 100
-target-version = "py314"
+target-version = "py314"  # Requires Ruff >= 0.14.5
 # src = ["src", "tests", "mitm"]  # Commented out to scan all Python files (respect-gitignore handles exclusions)
 extend-exclude = ["__pycache__", ".venv", "mitm/validate-checksum-REFERENCE-ONLY.py"]
 force-exclude = true
