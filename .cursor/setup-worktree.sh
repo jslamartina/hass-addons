@@ -3,7 +3,21 @@ set -Eeuo pipefail
 IFS=$'\n\t'
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+
+# Determine repo root: if script is in .cursor/, go up one level
+# Otherwise, assume we're already in the repo root or set it explicitly
+if [[ "$SCRIPT_DIR" == *"/.cursor" ]]; then
+  REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+else
+  # If called from elsewhere (e.g., copied to /home/ubuntu), try to detect repo root
+  # by looking for common repo markers, or use current working directory
+  if [ -f "${PWD}/package.json" ] || [ -d "${PWD}/cync-controller" ]; then
+    REPO_ROOT="$PWD"
+  else
+    # Fallback: assume script is in repo root or use explicit path
+    REPO_ROOT="${REPO_ROOT:-$SCRIPT_DIR}"
+  fi
+fi
 
 # Color definitions
 RED='\033[0;31m'
@@ -57,6 +71,22 @@ ensure_python_binary() {
     log_error "Python executable '$PYTHON_BIN' not found. Set PYTHON_BIN or install python3."
     exit 1
   fi
+}
+
+install_global_python_tools() {
+  log_section "Global Python Tools"
+  ensure_python_binary
+
+  log_info "Upgrading pip, setuptools, and wheel"
+  "$PYTHON_BIN" -m pip install --upgrade pip setuptools wheel > /dev/null
+
+  log_info "Installing Ruff (fast Python linter/formatter)"
+  "$PYTHON_BIN" -m pip install ruff > /dev/null
+
+  log_info "Installing Poetry (dependency manager)"
+  "$PYTHON_BIN" -m pip install poetry > /dev/null
+
+  log_success "Global Python tools installed"
 }
 
 setup_python_environment() {
@@ -141,6 +171,7 @@ install_playwright_assets() {
   log_success "Playwright tooling ready"
 }
 
+install_global_python_tools
 setup_python_environment
 install_npm_dependencies
 install_playwright_assets
