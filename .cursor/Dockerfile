@@ -59,14 +59,6 @@ RUN curl -fsSL https://deb.nodesource.com/setup_${NODE_VERSION}.x | bash - \
   && apt-get install -y nodejs \
   && rm -rf /var/lib/apt/lists/*
 
-# Upgrade pip and install global Python tools
-RUN pip install --upgrade pip setuptools wheel
-
-# Install Ruff (fast Python linter/formatter)
-RUN pip install ruff
-# Install Poetry (dependency manager for python-rebuild-tcp-comm)
-RUN pip install poetry
-
 # Create non-root user 'ubuntu' with sudo access
 RUN useradd -m -s /bin/bash ubuntu \
   && echo "ubuntu ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
@@ -77,10 +69,10 @@ USER ubuntu
 # Set working directory to user's home
 WORKDIR /home/ubuntu
 
-# Install Playwright browsers as the ubuntu user
-# Note: Using --with-deps requires running as root, so we skip it here
-# The system dependencies were already installed above as root
-RUN npx playwright install chromium
+# Note: Python tools (pip, ruff, poetry) and Playwright installation
+# are now consolidated in .cursor/setup-worktree.sh, which should be called
+# after the repository is cloned by the background agent:
+#   cd /path/to/cloned/repo && .cursor/setup-worktree.sh
 
 # Set default shell to bash
 SHELL ["/bin/bash", "-c"]
