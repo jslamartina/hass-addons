@@ -114,7 +114,7 @@ pytest cync-controller/tests/integration/
 
 | Module           | Coverage | Status        | Notes               |
 | ---------------- | -------- | ------------- | ------------------- |
-| `utils.py`       | 95.88%   | ✅ Excellent  | Exceeded 80% target |
+| `utils.py`       | 95.88%   | ✅ Excellent   | Exceeded 80% target |
 | `main.py`        | 70.80%   | ⚠️ Good       | Close to 80% target |
 | `server.py`      | 49.48%   | ⚠️ Needs work | +15.5% improvement  |
 | `mqtt_client.py` | 48.35%   | ⚠️ Needs work | Added 5 new tests   |
