@@ -13,8 +13,7 @@ from uuid import UUID
 
 import uvloop
 from pydantic import BaseModel, ConfigDict, computed_field
-from pydantic.dataclasses import dataclass
-from dataclasses import dataclass as std_dataclass
+from dataclasses import dataclass
 
 from cync_controller.const import *
 
@@ -119,7 +118,7 @@ class GlobalObject:
 
 # Use standard dataclass instead of pydantic's - Tasks doesn't need validation
 # and pyright understands standard dataclasses better
-@std_dataclass
+@dataclass
 class Tasks:
     receive: asyncio.Task | None = None
     send: asyncio.Task | None = None

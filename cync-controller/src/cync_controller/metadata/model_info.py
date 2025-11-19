@@ -1,8 +1,5 @@
+from dataclasses import dataclass, field
 from enum import StrEnum
-from typing import Annotated
-
-from pydantic import Field
-from pydantic.dataclasses import dataclass
 
 
 class DeviceClassification(StrEnum):
@@ -28,7 +25,7 @@ class LightCapabilities:
     tunable_white: bool = False
     dynamic: bool = False
     color: bool = False
-    colour: Annotated[bool, Field(alias="color")] = False
+    colour: bool = False
 
 
 @dataclass
@@ -40,17 +37,17 @@ class DeviceProtocol:
 
 @dataclass
 class LightCharacteristics:
-    min_kelvin: Annotated[int, Field(ge=2000, le=7000)] | None = None
-    max_kelvin: Annotated[int, Field(ge=2000, le=7000)] | None = None
-    lumens: Annotated[int, Field(ge=10)] | None = None
+    min_kelvin: int | None = None
+    max_kelvin: int | None = None
+    lumens: int | None = None
 
 
 @dataclass
 class DeviceTypeInfo:
-    type: DeviceClassification = Field(default=DeviceClassification.UNKNOWN)
+    type: DeviceClassification = field(default=DeviceClassification.UNKNOWN)
     model_name: str | None = "Unknown Device, See repo issue tracker"
     model_id: str | None = None
-    protocol: DeviceProtocol = Field(default_factory=DeviceProtocol)
+    protocol: DeviceProtocol = field(default_factory=DeviceProtocol)
     capabilities: LightCapabilities | SwitchCapabilities | None = None
     characteristics: LightCharacteristics | None = None
 
