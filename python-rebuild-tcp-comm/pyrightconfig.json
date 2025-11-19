@@ -16,6 +16,6 @@
     }
   ],
   "reportMissingImports": true,
-  "reportMissingTypeStubs": false,
+  "reportMissingTypeStubs": true,
   "stubPath": "typings"
 }

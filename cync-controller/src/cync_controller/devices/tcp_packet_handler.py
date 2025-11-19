@@ -840,10 +840,11 @@ class TCPPacketHandler:
                 if msg.ack_event:
                     msg.ack_event.set()
 
-                if callable(msg.callback):
-                    await msg.callback()
-                else:
-                    await msg.callback
+                if msg.callback is not None:
+                    if callable(msg.callback):
+                        await msg.callback()
+                    else:
+                        await msg.callback
 
                 # No need to clear pending_command - command queue handles flow control
             elif success is True and msg is None:

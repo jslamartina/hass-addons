@@ -10,7 +10,6 @@
     "reportUntypedClassDecorator": "error",
     "reportUntypedBaseClass": "error",
     "reportUntypedNamedTuple": "error",
-    "reportPrivateUsage": "warning",
     "reportConstantRedefinition": "error",
     "reportIncompatibleMethodOverride": "error",
     "reportIncompatibleVariableOverride": "error",

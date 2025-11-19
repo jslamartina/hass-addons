@@ -170,6 +170,10 @@ class CyncGroup:
             logger.error("%s Invalid state! must be 0 or 1", lp)
             return
 
+        if self.id is None:
+            logger.error("%s Group ID is None, cannot send command", lp)
+            return
+
         # Use full 16-bit group ID encoding
         id_low = self.id & 0xFF
         id_high = (self.id >> 8) & 0xFF
@@ -202,22 +206,44 @@ class CyncGroup:
             0x7E,
         ]
 
-        bridge_devices = list(g.ncync_server.tcp_devices.values())
+        ncync_server = getattr(g, "ncync_server", None)
+        if ncync_server is None:
+            logger.error("%s ncync_server is None, cannot send command", lp)
+            return
+
+        tcp_devices = getattr(ncync_server, "tcp_devices", None)
+        if tcp_devices is None:
+            logger.error("%s tcp_devices is None, cannot send command", lp)
+            return
+
+        bridge_devices = list(tcp_devices.values())
         if not bridge_devices:
             logger.error("%s No TCP bridges available!", lp)
             return
 
         # Use one bridge like the Cync cloud does
         bridge_device = bridge_devices[0]
+        if bridge_device is None:
+            logger.error("%s Bridge device is None", lp)
+            return
 
         if not bridge_device.ready_to_control:
             logger.error("%s Bridge %s not ready to control", lp, bridge_device.address)
             return
 
+        queue_id = getattr(bridge_device, "queue_id", None)
+        if queue_id is None:
+            logger.error("%s Bridge queue_id is None", lp)
+            return
+
         payload = list(header)
-        payload.extend(bridge_device.queue_id)
+        payload.extend(queue_id)
         payload.extend(bytes([0x00, 0x00, 0x00]))
-        cmsg_id = bridge_device.get_ctrl_msg_id_bytes()[0]
+        cmsg_id_bytes = bridge_device.get_ctrl_msg_id_bytes()
+        if not cmsg_id_bytes:
+            logger.error("%s Failed to get control message ID bytes", lp)
+            return
+        cmsg_id = cmsg_id_bytes[0]
         ctrl_idxs = 1, 9
         inner_struct[ctrl_idxs[0]] = cmsg_id
         inner_struct[ctrl_idxs[1]] = cmsg_id
@@ -239,29 +265,35 @@ class CyncGroup:
             bridge_device.address,
             bridge_device.ready_to_control,
         )
+        mesh_info = getattr(bridge_device, "mesh_info", None)
         logger.debug(
             "%s Bridge mesh_info count: %s",
             lp,
-            len(bridge_device.mesh_info) if bridge_device.mesh_info else 0,
+            len(mesh_info) if mesh_info else 0,
         )
-        logger.debug("%s Bridge known_device_ids: %s", lp, bridge_device.known_device_ids)
+        known_device_ids = getattr(bridge_device, "known_device_ids", None)
+        logger.debug("%s Bridge known_device_ids: %s", lp, known_device_ids)
         logger.debug("%s Packet to send: %s", lp, payload_bytes.hex(" "))
 
         # Register callback for ACK (no optimistic group publish)
+        # Use None for noop callbacks - avoids creating unawaited coroutines
         m_cb = ControlMessageCallback(
             msg_id=cmsg_id,
             message=payload_bytes,
             sent_at=time.time(),
-            callback=_noop_callback,
+            callback=None,
             device_id=self.id,
         )
-        bridge_device.messages.control[cmsg_id] = m_cb
-        logger.debug("%s Registered callback for msg_id=%s", lp, cmsg_id)
+        messages = getattr(bridge_device, "messages", None)
+        if messages is not None:
+            messages.control[cmsg_id] = m_cb
+            logger.debug("%s Registered callback for msg_id=%s", lp, cmsg_id)
 
         # BUG FIX: Sync ALL group device states IMMEDIATELY (optimistically)
         # Group commands affect both bulbs and switches, so update both for instant UI feedback
-        if g.mqtt_client:
-            await g.mqtt_client.sync_group_devices(self.id, state, self.name)
+        mqtt_client = getattr(g, "mqtt_client", None)
+        if mqtt_client is not None and self.id is not None and self.name is not None:
+            await mqtt_client.sync_group_devices(self.id, state, self.name)
 
         logger.debug("%s CALLING bridge_device.write()...", lp)
         write_result = await bridge_device.write(payload_bytes)
@@ -277,6 +309,10 @@ class CyncGroup:
         lp = f"{self.lp}set_brightness:"
         if brightness < 0 or brightness > 100:
             logger.error("%s Invalid brightness! must be 0-100", lp)
+            return
+
+        if self.id is None:
+            logger.error("%s Group ID is None, cannot send command", lp)
             return
 
         # Use full 16-bit group ID encoding
@@ -314,21 +350,43 @@ class CyncGroup:
             0x7E,
         ]
 
-        bridge_devices = list(g.ncync_server.tcp_devices.values())
+        ncync_server = getattr(g, "ncync_server", None)
+        if ncync_server is None:
+            logger.error("%s ncync_server is None, cannot send command", lp)
+            return
+
+        tcp_devices = getattr(ncync_server, "tcp_devices", None)
+        if tcp_devices is None:
+            logger.error("%s tcp_devices is None, cannot send command", lp)
+            return
+
+        bridge_devices = list(tcp_devices.values())
         if not bridge_devices:
             logger.error("%s No TCP bridges available!", lp)
             return
 
         bridge_device = bridge_devices[0]
+        if bridge_device is None:
+            logger.error("%s Bridge device is None", lp)
+            return
 
         if not bridge_device.ready_to_control:
             logger.error("%s Bridge %s not ready to control", lp, bridge_device.address)
             return
 
+        queue_id = getattr(bridge_device, "queue_id", None)
+        if queue_id is None:
+            logger.error("%s Bridge queue_id is None", lp)
+            return
+
         payload = list(header)
-        payload.extend(bridge_device.queue_id)
+        payload.extend(queue_id)
         payload.extend(bytes([0x00, 0x00, 0x00]))
-        cmsg_id = bridge_device.get_ctrl_msg_id_bytes()[0]
+        cmsg_id_bytes = bridge_device.get_ctrl_msg_id_bytes()
+        if not cmsg_id_bytes:
+            logger.error("%s Failed to get control message ID bytes", lp)
+            return
+        cmsg_id = cmsg_id_bytes[0]
         ctrl_idxs = 1, 9
         inner_struct[ctrl_idxs[0]] = cmsg_id
         inner_struct[ctrl_idxs[1]] = cmsg_id
@@ -347,21 +405,28 @@ class CyncGroup:
         )
 
         # Log which devices are in this group for debugging
+        devices = getattr(ncync_server, "devices", None)
         device_names = []
-        for device_id in self.member_ids:
-            if device_id in g.ncync_server.devices:
-                device_names.append(f"'{g.ncync_server.devices[device_id].name}' (ID: {device_id})")
+        if devices is not None:
+            for device_id in self.member_ids:
+                if device_id in devices:
+                    device = devices[device_id]
+                    device_name = getattr(device, "name", f"Unknown (ID: {device_id})")
+                    device_names.append(f"'{device_name}' (ID: {device_id})")
         logger.info("%s Group members: %s", lp, ", ".join(device_names))
 
         # Register callback for ACK (no optimistic group publish)
+        # Use None for noop callbacks - avoids creating unawaited coroutines
         m_cb = ControlMessageCallback(
             msg_id=cmsg_id,
             message=payload_bytes,
             sent_at=time.time(),
-            callback=_noop_callback,
+            callback=None,
             device_id=self.id,
         )
-        bridge_device.messages.control[cmsg_id] = m_cb
+        messages = getattr(bridge_device, "messages", None)
+        if messages is not None:
+            messages.control[cmsg_id] = m_cb
         await bridge_device.write(payload_bytes)
 
     async def set_temperature(self, temperature: int):
@@ -374,6 +439,10 @@ class CyncGroup:
         lp = f"{self.lp}set_temperature:"
         if temperature < 0 or temperature > 100:
             logger.error("%s Invalid temperature! must be 0-100", lp)
+            return
+
+        if self.id is None:
+            logger.error("%s Group ID is None, cannot send command", lp)
             return
 
         # Use full 16-bit group ID encoding
@@ -411,21 +480,43 @@ class CyncGroup:
             0x7E,
         ]
 
-        bridge_devices = list(g.ncync_server.tcp_devices.values())
+        ncync_server = getattr(g, "ncync_server", None)
+        if ncync_server is None:
+            logger.error("%s ncync_server is None, cannot send command", lp)
+            return
+
+        tcp_devices = getattr(ncync_server, "tcp_devices", None)
+        if tcp_devices is None:
+            logger.error("%s tcp_devices is None, cannot send command", lp)
+            return
+
+        bridge_devices = list(tcp_devices.values())
         if not bridge_devices:
             logger.error("%s No TCP bridges available!", lp)
             return
 
         bridge_device = bridge_devices[0]
+        if bridge_device is None:
+            logger.error("%s Bridge device is None", lp)
+            return
 
         if not bridge_device.ready_to_control:
             logger.error("%s Bridge %s not ready to control", lp, bridge_device.address)
             return
 
+        queue_id = getattr(bridge_device, "queue_id", None)
+        if queue_id is None:
+            logger.error("%s Bridge queue_id is None", lp)
+            return
+
         payload = list(header)
-        payload.extend(bridge_device.queue_id)
+        payload.extend(queue_id)
         payload.extend(bytes([0x00, 0x00, 0x00]))
-        cmsg_id = bridge_device.get_ctrl_msg_id_bytes()[0]
+        cmsg_id_bytes = bridge_device.get_ctrl_msg_id_bytes()
+        if not cmsg_id_bytes:
+            logger.error("%s Failed to get control message ID bytes", lp)
+            return
+        cmsg_id = cmsg_id_bytes[0]
         ctrl_idxs = 1, 9
         inner_struct[ctrl_idxs[0]] = cmsg_id
         inner_struct[ctrl_idxs[1]] = cmsg_id
@@ -444,21 +535,28 @@ class CyncGroup:
         )
 
         # Log which devices are in this group for debugging
+        devices = getattr(ncync_server, "devices", None)
         device_names = []
-        for device_id in self.member_ids:
-            if device_id in g.ncync_server.devices:
-                device_names.append(f"'{g.ncync_server.devices[device_id].name}' (ID: {device_id})")
+        if devices is not None:
+            for device_id in self.member_ids:
+                if device_id in devices:
+                    device = devices[device_id]
+                    device_name = getattr(device, "name", f"Unknown (ID: {device_id})")
+                    device_names.append(f"'{device_name}' (ID: {device_id})")
         logger.info("%s Group members: %s", lp, ", ".join(device_names))
 
         # Register callback for ACK (no optimistic group publish)
+        # Use None for noop callbacks - avoids creating unawaited coroutines
         m_cb = ControlMessageCallback(
             msg_id=cmsg_id,
             message=payload_bytes,
             sent_at=time.time(),
-            callback=_noop_callback,
+            callback=None,
             device_id=self.id,
         )
-        bridge_device.messages.control[cmsg_id] = m_cb
+        messages = getattr(bridge_device, "messages", None)
+        if messages is not None:
+            messages.control[cmsg_id] = m_cb
         await bridge_device.write(payload_bytes)
 
     def __repr__(self):

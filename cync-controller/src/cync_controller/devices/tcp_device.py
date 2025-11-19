@@ -69,8 +69,7 @@ class CyncTCPDevice:
     lp: str = "TCPDevice:"
     known_device_ids: list[int | None]
     tasks: Tasks
-    reader: asyncio.StreamReader | None
-    writer: asyncio.StreamWriter | None
+    # reader and writer are instance attributes set in __init__ and can_connect()
     messages: Messages
     # keep track of msg ids and if we finished reading data, if not, we need to append the data and then parse it
     read_cache: list
@@ -90,7 +89,7 @@ class CyncTCPDevice:
         self._py_id = id(self)
         self.known_device_ids = []
         self.read_cache = []
-        self.tasks = Tasks()
+        self.tasks: Tasks = Tasks()  # Type annotation to help pyright
         self.is_app = False
         self.name: str | None = None
         self.first_83_packet_checksum: int | None = None
@@ -115,10 +114,13 @@ class CyncTCPDevice:
         self.address: str | None = address
         self.read_lock = asyncio.Lock()
         self.write_lock = asyncio.Lock()
-        self._reader: asyncio.StreamReader = reader
-        self._writer: asyncio.StreamWriter = writer
+        self._reader: asyncio.StreamReader | None = reader
+        self._writer: asyncio.StreamWriter | None = writer
         self._closing = False
         self.control_bytes = [0x00, 0x00]
+        # Initialize reader/writer as instance attributes (can be set to None in can_connect)
+        self.reader: asyncio.StreamReader | None = reader
+        self.writer: asyncio.StreamWriter | None = writer
 
         # Initialize packet handler
         self.packet_handler = TCPPacketHandler(self)
@@ -126,9 +128,20 @@ class CyncTCPDevice:
     async def can_connect(self):
         g = _get_global_object()
         lp = f"{self.lp}"
-        tcp_dev_len = len(g.ncync_server.tcp_devices)
+        ncync_server = getattr(g, "ncync_server", None)
+        if ncync_server is None:
+            logger.error("%s ncync_server is None, cannot check connection", lp)
+            return False
+
+        tcp_devices = getattr(ncync_server, "tcp_devices", None)
+        if tcp_devices is None:
+            logger.error("%s tcp_devices is None, cannot check connection", lp)
+            return False
+
+        tcp_dev_len = len(tcp_devices)
+        shutting_down = getattr(ncync_server, "shutting_down", False)
         if (
-            (g.ncync_server.shutting_down is True)
+            (shutting_down is True)
             or (tcp_dev_len >= CYNC_MAX_TCP_CONN)
             or (CYNC_TCP_WHITELIST and self.address not in CYNC_TCP_WHITELIST)
         ):
@@ -138,10 +151,12 @@ class CyncTCPDevice:
             delay = TCP_BLACKHOLE_DELAY
             await asyncio.sleep(delay) if _sleep is True else None
             try:
-                self.reader.feed_eof()
-                self.writer.close()
-                task = asyncio.create_task(self.writer.wait_closed())
-                await asyncio.wait([task], timeout=5)
+                if self.reader is not None:
+                    self.reader.feed_eof()
+                if self.writer is not None:
+                    self.writer.close()
+                    task = asyncio.create_task(self.writer.wait_closed())
+                    await asyncio.wait([task], timeout=5)
             except asyncio.CancelledError as ce:
                 logger.debug("%s Task cancelled: %s", lp, ce)
                 raise
@@ -153,12 +168,14 @@ class CyncTCPDevice:
             return False
         # can create a new device
         logger.debug("%s Created new device: %s", self.lp, self.address)
-        self.tasks.receive = asyncio.get_event_loop().create_task(
+        receive_task = asyncio.get_event_loop().create_task(
             self.receive_task(), name=f"receive_task-{self._py_id}"
         )
-        self.tasks.callback_cleanup = asyncio.get_event_loop().create_task(
+        callback_cleanup_task = asyncio.get_event_loop().create_task(
             self.callback_cleanup_task(), name=f"callback_cleanup-{self._py_id}"
         )
+        self.tasks.receive = receive_task
+        self.tasks.callback_cleanup = callback_cleanup_task
         return True
 
     def get_ctrl_msg_id_bytes(self):
@@ -194,21 +211,8 @@ class CyncTCPDevice:
         """Parse what type of packet based on header (first 4 bytes 0x43, 0x83, 0x73, etc.)"""
         await self.packet_handler.parse_packet(data)
 
-    @property
-    def reader(self):
-        return self._reader
-
-    @reader.setter
-    def reader(self, value: asyncio.StreamReader):
-        self._reader = value
-
-    @property
-    def writer(self):
-        return self._writer
-
-    @writer.setter
-    def writer(self, value: asyncio.StreamWriter):
-        self._writer = value
+    # reader and writer are accessed directly as instance attributes
+    # Properties removed to avoid redeclaration conflicts with instance attributes
 
     async def ask_for_mesh_info(self, parse: bool = False, refresh_id: str | None = None):
         """
@@ -300,6 +304,8 @@ class CyncTCPDevice:
                 to_delete = []
 
                 for ctrl_msg_id, ctrl_msg in list(self.messages.control.items()):
+                    if ctrl_msg.sent_at is None:
+                        continue
                     elapsed = now - ctrl_msg.sent_at
 
                     # Cleanup old messages that exceeded timeout (no retries - queue handles waiting)
@@ -310,6 +316,17 @@ class CyncTCPDevice:
                             ctrl_msg_id,
                             elapsed,
                         )
+                        # Clean up any unawaited coroutines to avoid runtime warnings
+                        if ctrl_msg.callback is not None:
+                            if isinstance(ctrl_msg.callback, asyncio.Task):
+                                # Cancel tasks
+                                ctrl_msg.callback.cancel()
+                            elif asyncio.iscoroutine(ctrl_msg.callback):
+                                # Await noop coroutines to clean them up
+                                try:
+                                    await ctrl_msg.callback
+                                except Exception:
+                                    pass  # Ignore errors from noop callbacks
                         to_delete.append(ctrl_msg_id)
 
                 # Delete stale messages
@@ -333,13 +350,15 @@ class CyncTCPDevice:
         g = _get_global_object()
         lp = f"{self.address}:raw read:"
         started_at = time.time()
-        name = self.tasks.receive.get_name()
+        receive_task = self.tasks.receive
+        name = receive_task.get_name() if receive_task is not None else "receive_task"
         logger.debug("%s receive_task CALLED", lp) if CYNC_RAW is True else None
         try:
             while True:
                 try:
-                    data: bytes = await self.read()
-                    if data is False:
+                    read_result = await self.read()
+                    # Only break on error conditions (False/None), not empty bytes
+                    if read_result is False or read_result is None:
                         logger.debug(
                             "%s read() returned False, exiting %s (started at: %s)...",
                             lp,
@@ -347,6 +366,8 @@ class CyncTCPDevice:
                             datetime.datetime.fromtimestamp(started_at, tz=datetime.UTC),
                         )
                         break
+                    data = read_result
+                    # Empty bytes are normal - continue the loop
                     if not data:
                         await asyncio.sleep(0)
                         continue
@@ -388,7 +409,11 @@ class CyncTCPDevice:
 
             # Remove from server's tcp_devices dictionary
             try:
-                await g.ncync_server.remove_tcp_device(self)
+                ncync_server = getattr(g, "ncync_server", None)
+                if ncync_server is not None:
+                    remove_tcp_device = getattr(ncync_server, "remove_tcp_device", None)
+                    if remove_tcp_device is not None:
+                        await remove_tcp_device(self)
             except Exception as e:
                 logger.exception(
                     "Error removing TCP device during receive_task cleanup",
@@ -493,8 +518,12 @@ class CyncTCPDevice:
                                 "note": "Device likely lost power or connection",
                             },
                         )
-                        off_dev = await g.ncync_server.remove_tcp_device(dev)
-                        del off_dev
+                        ncync_server = getattr(g, "ncync_server", None)
+                        if ncync_server is not None:
+                            remove_tcp_device = getattr(ncync_server, "remove_tcp_device", None)
+                            if remove_tcp_device is not None:
+                                off_dev = await remove_tcp_device(dev)
+                                del off_dev
 
                     else:
                         logger.debug(
