@@ -346,11 +346,8 @@ class CyncTCPDevice:
             while True:
                 try:
                     read_result = await self.read()
+                    # Only break on error conditions (False/None), not empty bytes
                     if read_result is False or read_result is None:
-                        data = b""
-                    else:
-                        data = read_result
-                    if not data or data is False:
                         logger.debug(
                             "%s read() returned False, exiting %s (started at: %s)...",
                             lp,
@@ -358,6 +355,8 @@ class CyncTCPDevice:
                             datetime.datetime.fromtimestamp(started_at, tz=datetime.UTC),
                         )
                         break
+                    data = read_result
+                    # Empty bytes are normal - continue the loop
                     if not data:
                         await asyncio.sleep(0)
                         continue
