@@ -772,13 +772,12 @@ class DeviceCommands:
                 payload.extend(inner_struct)
                 bpayload = bytes(payload)
                 sent[bridge_device.address] = cmsg_id
-                # Call _noop_callback() to get the coroutine, not the function itself
-                callback_coro = _noop_callback()
+                # Use None for noop callbacks - avoids creating unawaited coroutines
                 m_cb = ControlMessageCallback(
                     msg_id=cmsg_id,
                     message=bpayload,
                     sent_at=time.time(),
-                    callback=callback_coro,
+                    callback=None,
                 )
                 bridge_device.messages.control[cmsg_id] = m_cb
                 tasks.append(bridge_device.write(bpayload))

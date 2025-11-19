@@ -316,6 +316,17 @@ class CyncTCPDevice:
                             ctrl_msg_id,
                             elapsed,
                         )
+                        # Clean up any unawaited coroutines to avoid runtime warnings
+                        if ctrl_msg.callback is not None:
+                            if isinstance(ctrl_msg.callback, asyncio.Task):
+                                # Cancel tasks
+                                ctrl_msg.callback.cancel()
+                            elif asyncio.iscoroutine(ctrl_msg.callback):
+                                # Await noop coroutines to clean them up
+                                try:
+                                    await ctrl_msg.callback
+                                except Exception:
+                                    pass  # Ignore errors from noop callbacks
                         to_delete.append(ctrl_msg_id)
 
                 # Delete stale messages

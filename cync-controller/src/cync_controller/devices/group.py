@@ -276,13 +276,12 @@ class CyncGroup:
         logger.debug("%s Packet to send: %s", lp, payload_bytes.hex(" "))
 
         # Register callback for ACK (no optimistic group publish)
-        # Call _noop_callback() to get the coroutine, not the function itself
-        callback_coro = _noop_callback()
+        # Use None for noop callbacks - avoids creating unawaited coroutines
         m_cb = ControlMessageCallback(
             msg_id=cmsg_id,
             message=payload_bytes,
             sent_at=time.time(),
-            callback=callback_coro,
+            callback=None,
             device_id=self.id,
         )
         messages = getattr(bridge_device, "messages", None)
@@ -417,13 +416,12 @@ class CyncGroup:
         logger.info("%s Group members: %s", lp, ", ".join(device_names))
 
         # Register callback for ACK (no optimistic group publish)
-        # Call _noop_callback() to get the coroutine, not the function itself
-        callback_coro = _noop_callback()
+        # Use None for noop callbacks - avoids creating unawaited coroutines
         m_cb = ControlMessageCallback(
             msg_id=cmsg_id,
             message=payload_bytes,
             sent_at=time.time(),
-            callback=callback_coro,
+            callback=None,
             device_id=self.id,
         )
         messages = getattr(bridge_device, "messages", None)
@@ -548,13 +546,12 @@ class CyncGroup:
         logger.info("%s Group members: %s", lp, ", ".join(device_names))
 
         # Register callback for ACK (no optimistic group publish)
-        # Call _noop_callback() to get the coroutine, not the function itself
-        callback_coro = _noop_callback()
+        # Use None for noop callbacks - avoids creating unawaited coroutines
         m_cb = ControlMessageCallback(
             msg_id=cmsg_id,
             message=payload_bytes,
             sent_at=time.time(),
-            callback=callback_coro,
+            callback=None,
             device_id=self.id,
         )
         messages = getattr(bridge_device, "messages", None)
