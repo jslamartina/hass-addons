@@ -42,7 +42,7 @@
         }
       },
       "presentation": {
-        "reveal": "always",
+        "reveal": "never",
         "panel": "shared"
       }
     },
@@ -64,7 +64,7 @@
         }
       },
       "presentation": {
-        "reveal": "always",
+        "reveal": "never",
         "panel": "shared"
       }
     },
@@ -89,7 +89,7 @@
         }
       },
       "presentation": {
-        "reveal": "always",
+        "reveal": "never",
         "panel": "shared"
       }
     },
@@ -112,7 +112,7 @@
         }
       },
       "presentation": {
-        "reveal": "always",
+        "reveal": "never",
         "panel": "shared"
       }
     },
@@ -133,7 +133,7 @@
         }
       },
       "presentation": {
-        "reveal": "always",
+        "reveal": "never",
         "panel": "shared"
       }
     },
@@ -147,7 +147,7 @@
       ],
       "problemMatcher": [],
       "presentation": {
-        "reveal": "always",
+        "reveal": "never",
         "panel": "shared"
       }
     },
@@ -157,7 +157,7 @@
       "command": "npx prettier --ignore-path .prettierignore --write '**/*.{js,jsx,ts,tsx,json,yaml,yml,sh}'",
       "problemMatcher": [],
       "presentation": {
-        "reveal": "always",
+        "reveal": "never",
         "panel": "shared"
       }
     },
@@ -167,7 +167,7 @@
       "command": "cd cync-controller && ruff check . --fix",
       "problemMatcher": [],
       "presentation": {
-        "reveal": "always",
+        "reveal": "never",
         "panel": "shared"
       }
     },
@@ -177,7 +177,7 @@
       "command": "cd python-rebuild-tcp-comm && ruff check . --fix",
       "problemMatcher": [],
       "presentation": {
-        "reveal": "always",
+        "reveal": "never",
         "panel": "shared"
       }
     },
@@ -187,7 +187,7 @@
       "command": "echo 'Note: ShellCheck does not support auto-fix. Please manually fix issues reported by Lint: ShellCheck.'",
       "problemMatcher": [],
       "presentation": {
-        "reveal": "always",
+        "reveal": "never",
         "panel": "shared"
       }
     }

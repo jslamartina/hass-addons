@@ -82,6 +82,6 @@ CMD ["bash"]
 
 # Labels
 LABEL maintainer="Cursor Background Agent"
-LABEL description="Background agent environment for hass-addons with Python 3.13, Node.js 20, pytest, playwright, ruff"
+LABEL description="Background agent environment for hass-addons with Python 3.14, Node.js 20, pytest, playwright, ruff"
 LABEL version="2.0.0"
 LABEL usage="Code is cloned by agent at runtime - do not copy into image"

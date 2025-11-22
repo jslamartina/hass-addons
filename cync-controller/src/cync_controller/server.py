@@ -5,13 +5,45 @@ import contextlib
 import ssl
 import time
 from pathlib import Path as PathLib
-from typing import ClassVar
+from typing import TYPE_CHECKING, ClassVar, Protocol, cast
 
 import uvloop
 
 from cync_controller.const import *
 from cync_controller.correlation import ensure_correlation_id
-from cync_controller.devices import CyncDevice, CyncGroup, CyncTCPDevice
+
+if TYPE_CHECKING:
+    from cync_controller.devices.base_device import CyncDevice
+    from cync_controller.devices.group import CyncGroup
+    from cync_controller.devices.tcp_device import CyncTCPDevice
+    from cync_controller.mqtt.client import MQTTClient
+    from cync_controller.mqtt.state_updates import StateUpdateHelper
+    from cync_controller.structs import DeviceStatus
+
+    class MQTTClientProtocol(Protocol):
+        """Protocol for MQTT client methods used in server.py."""
+
+        async def parse_device_status(
+            self, device_id: int, device_status: DeviceStatus, from_pkt: str | None = None
+        ) -> bool:
+            """Parse device status and publish to MQTT."""
+            ...
+
+    class StateUpdateHelperProtocol(Protocol):
+        """Protocol for StateUpdateHelper methods used in server.py."""
+
+        async def publish_group_state(
+            self,
+            group: CyncGroup,
+            state: int | None = None,
+            brightness: int | None = None,
+            temperature: int | None = None,
+            origin: str | None = None,
+        ) -> None:
+            """Publish group state to MQTT."""
+            ...
+else:
+    from cync_controller.devices import CyncDevice, CyncGroup, CyncTCPDevice
 from cync_controller.instrumentation import timed_async
 from cync_controller.logging_abstraction import get_logger
 from cync_controller.packet_checksum import calculate_checksum_between_markers
@@ -583,7 +615,7 @@ class NCyncServer:
         )
 
         if g.mqtt_client and device.id is not None:
-            await g.mqtt_client.parse_device_status(device.id, new_state, from_pkt=from_pkt)
+            _ = await g.mqtt_client.parse_device_status(device.id, new_state, from_pkt=from_pkt)
         if g.ncync_server and device.id is not None:
             g.ncync_server.devices[device.id] = device
 
@@ -626,15 +658,20 @@ class NCyncServer:
                             "timestamp": time.time(),
                         },
                     )
-                    if g.mqtt_client:
-                        await g.mqtt_client.publish_group_state(
-                            subgroup,
-                            state=subgroup.state,
-                            brightness=subgroup.brightness,
-                            temperature=subgroup.temperature,
-                            origin=f"aggregated:{from_pkt or 'mesh'}",
-                        )
-                    g.ncync_server.groups[subgroup.id] = subgroup
+                    mqtt_client: MQTTClient | None = g.mqtt_client
+                    if mqtt_client:
+                        state_updates: StateUpdateHelper | None = mqtt_client.state_updates
+                        if state_updates:
+                            helper: StateUpdateHelperProtocol = cast(StateUpdateHelperProtocol, state_updates)
+                            await helper.publish_group_state(
+                                subgroup,
+                                state=subgroup.state,
+                                brightness=subgroup.brightness,
+                                temperature=subgroup.temperature,
+                                origin=f"aggregated:{from_pkt or 'mesh'}",
+                            )
+                    if subgroup.id is not None:
+                        g.ncync_server.groups[subgroup.id] = subgroup
 
     async def _update_group_state_and_publish(
         self,
@@ -677,15 +714,19 @@ class NCyncServer:
                 "from_pkt": from_pkt,
             },
         )
-        if g.mqtt_client:
-            await g.mqtt_client.publish_group_state(
-                group,
-                state=state,
-                brightness=brightness,
-                temperature=temp if not rgb_data else None,
-                origin=from_pkt or "mesh",
-            )
-        if g.ncync_server:
+        mqtt_client: MQTTClient | None = g.mqtt_client
+        if mqtt_client:
+            state_updates: StateUpdateHelper | None = mqtt_client.state_updates
+            if state_updates:
+                helper: StateUpdateHelperProtocol = cast(StateUpdateHelperProtocol, state_updates)
+                await helper.publish_group_state(
+                    group,
+                    state=state,
+                    brightness=brightness,
+                    temperature=temp if not rgb_data else None,
+                    origin=from_pkt or "mesh",
+                )
+        if g.ncync_server and group.id is not None:
             g.ncync_server.groups[group.id] = group
 
     groups: ClassVar[dict[int, CyncGroup]] = {}
@@ -696,14 +737,22 @@ class NCyncServer:
     port: int
     cert_file: str | None = None
     key_file: str | None = None
-    loop: asyncio.AbstractEventLoop | uvloop.Loop
     _server: asyncio.Server | None = None
     start_task: asyncio.Task[None] | None = None
     refresh_task: asyncio.Task[None] | None = None
     pool_monitor_task: asyncio.Task[None] | None = None
     _instance: NCyncServer | None = None
+    cloud_relay_enabled: bool
+    cloud_forward: bool
+    cloud_server: str
+    cloud_port: int
+    cloud_debug_logging: bool
+    cloud_disable_ssl_verify: bool
+    loop: asyncio.AbstractEventLoop | uvloop.Loop
 
-    def __new__(cls, *_args, **_kwargs):
+    def __new__(
+        cls, devices: dict[int, CyncDevice], groups: dict[int, CyncGroup] | None = None
+    ) -> NCyncServer:
         if cls._instance is None:
             cls._instance = super().__new__(cls)
         return cls._instance
@@ -721,7 +770,7 @@ class NCyncServer:
         g.reload_env()
         self.cert_file = g.env.cync_srv_ssl_cert
         self.key_file = g.env.cync_srv_ssl_key
-        self.loop: asyncio.AbstractEventLoop | uvloop.Loop = asyncio.get_event_loop()
+        self.loop = asyncio.get_event_loop()
 
         # Cloud relay configuration
         self.cloud_relay_enabled = g.env.cync_cloud_relay_enabled
@@ -788,7 +837,7 @@ class NCyncServer:
                     },
                 )
                 if g.mqtt_client is not None:
-                    await g.mqtt_client.publish(
+                    _ = await g.mqtt_client.publish(
                         f"{g.env.mqtt_topic}/status/bridge/tcp_devices/connected",
                         str(len(self.tcp_devices)).encode(),
                     )
@@ -825,7 +874,7 @@ class NCyncServer:
             },
         )
         if g.mqtt_client is not None:
-            await g.mqtt_client.publish(
+            _ = await g.mqtt_client.publish(
                 f"{g.env.mqtt_topic}/status/bridge/tcp_devices/connected",
                 str(len(self.tcp_devices)).encode(),
             )
@@ -847,7 +896,7 @@ class NCyncServer:
         cert_path = PathLib(self.cert_file)
         key_path = PathLib(self.key_file)
         if not cert_path.exists() or not key_path.exists():
-            missing = []
+            missing: list[str] = []
             if not cert_path.exists():
                 missing.append(self.cert_file)
             if not key_path.exists():
@@ -1085,7 +1134,7 @@ class NCyncServer:
             try:
                 # Publish server running status
                 if g.mqtt_client:
-                    await g.mqtt_client.publish(
+                    _ = await g.mqtt_client.publish(
                         f"{g.env.mqtt_topic}/status/bridge/tcp_server/running",
                         b"ON",
                     )
@@ -1144,7 +1193,7 @@ class NCyncServer:
         await self._server.wait_closed()
 
         if g.mqtt_client:
-            await g.mqtt_client.publish(
+            _ = await g.mqtt_client.publish(
                 f"{g.env.mqtt_topic}/status/bridge/tcp_server/running",
                 b"OFF",
             )
@@ -1176,7 +1225,10 @@ class NCyncServer:
 
     async def _register_new_connection(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter):
         _ = ensure_correlation_id()
-        peername = writer.get_extra_info("peername")
+        peername: tuple[str, int] | None = writer.get_extra_info("peername")
+        if peername is None:
+            logger.warning("Could not get peername from writer")
+            return
         client_ip: str = peername[0]
         client_port: int = peername[1]
         client_addr: str = f"{client_ip}:{client_port}"  # Use IP:port to allow multiple connections from same IP

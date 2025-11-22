@@ -37,7 +37,7 @@ from cync_controller.utils import send_sigterm
 if TYPE_CHECKING:
     from collections.abc import Coroutine
 
-    from cync_controller.devices import CyncDevice
+    from cync_controller.devices import CyncDevice, CyncGroup
 
 logger = get_logger(__name__)
 
@@ -52,6 +52,7 @@ class MQTTClient:
     cync_topic: str
     _refresh_in_progress: bool = False
     start_task: asyncio.Task[None] | None = None
+    state_updates: StateUpdateHelper
 
     _instance: MQTTClient | None = None
 
@@ -117,7 +118,8 @@ class MQTTClient:
         """Handle initial MQTT connection setup."""
         logger.debug("%s Seeding all devices: offline", lp)
         for device_id in g.ncync_server.devices:
-            _ = await self.state_updates.pub_online(device_id, False)
+            if device_id is not None:
+                _ = await self.state_updates.pub_online(device_id, False)
         subgroups = [grp for grp in g.ncync_server.groups.values() if grp.is_subgroup]
         logger.debug("%s Setting %s subgroups: online", lp, len(subgroups))
         for group in subgroups:
@@ -144,21 +146,22 @@ class MQTTClient:
         """Handle MQTT reconnection setup."""
         tasks = []
         for device in g.ncync_server.devices.values():
-            tasks.append(self.state_updates.pub_online(device.id, device.online))
-            tasks.append(
-                self.state_updates.parse_device_status(
-                    device.id,
-                    DeviceStatus(
-                        state=device.state,
-                        brightness=device.brightness,
-                        temperature=device.temperature,
-                        red=device.red,
-                        green=device.green,
-                        blue=device.blue,
-                    ),
-                    from_pkt="'re-connect'",
-                ),
-            )
+            if device.id is not None:
+                tasks.append(self.state_updates.pub_online(device.id, device.online))
+                tasks.append(
+                    self.state_updates.parse_device_status(
+                        device.id,
+                        DeviceStatus(
+                            state=device.state,
+                            brightness=device.brightness,
+                            temperature=device.temperature,
+                            red=device.red,
+                            green=device.green,
+                            blue=device.blue,
+                        ),
+                        from_pkt="'re-connect'",
+                    )
+                )
         subgroups = [grp for grp in g.ncync_server.groups.values() if grp.is_subgroup]
         for group in subgroups:
             tasks.append(
@@ -560,18 +563,20 @@ class MQTTClient:
 
     async def publish_group_state(
         self,
-        group,
-        state=None,
-        brightness=None,
-        temperature=None,
+        group: CyncGroup,
+        state: int | None = None,
+        brightness: int | None = None,
+        temperature: int | None = None,
         origin: str | None = None,
-    ):
+    ) -> None:
         """Publish group state to MQTT."""
-        return await self.state_updates.publish_group_state(group, state, brightness, temperature, origin)
+        await self.state_updates.publish_group_state(group, state, brightness, temperature, origin)
 
-    async def parse_device_status(self, device_id: int, device_status: DeviceStatus, *_args, **kwargs) -> bool:
+    async def parse_device_status(
+        self, device_id: int, device_status: DeviceStatus, from_pkt: str | None = None, *_args: object, **kwargs: object
+    ) -> bool:
         """Parse device status and publish to MQTT."""
-        return await self.state_updates.parse_device_status(device_id, device_status, *_args, **kwargs)
+        return await self.state_updates.parse_device_status(device_id, device_status, from_pkt=from_pkt, *_args, **kwargs)
 
     async def update_switch_from_subgroup(self, device: CyncDevice, subgroup_state: int, subgroup_name: str) -> bool:
         """Update a switch device state to match its subgroup state."""

@@ -75,6 +75,8 @@ class CyncDevice(DeviceCommands):
     hvac: dict[str, Any] | None = None
     _online: bool = False
     metadata: DeviceTypeInfo | None = None
+    name: str = ""
+    offline_count: int = 0
 
     def __init__(
         self,
@@ -323,7 +325,7 @@ class CyncDevice(DeviceCommands):
         return self.control_bytes
 
     @property
-    def online(self):
+    def online(self) -> bool:
         return self._online
 
     @online.setter
@@ -418,7 +420,7 @@ class CyncDevice(DeviceCommands):
             self._temperature = value
 
     @property
-    def red(self):
+    def red(self) -> int:
         return self._r
 
     @red.setter
@@ -430,7 +432,7 @@ class CyncDevice(DeviceCommands):
             self._r = value
 
     @property
-    def green(self):
+    def green(self) -> int:
         return self._g
 
     @green.setter
@@ -442,7 +444,7 @@ class CyncDevice(DeviceCommands):
             self._g = value
 
     @property
-    def blue(self):
+    def blue(self) -> int:
         return self._b
 
     @blue.setter

@@ -59,7 +59,7 @@ class CyncGroup:
     lp: str = "CyncGroup:"
     id: int | None = None
     name: str | None = None
-    member_ids: list[int]
+    member_ids: list[int] = []
     is_subgroup: bool = False
     home_id: int | None = None
 
