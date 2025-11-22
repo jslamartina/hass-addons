@@ -1,13 +1,113 @@
-"""
-Packet parsing utilities for Cync protocol analysis
-"""
+"""Packet parsing utilities for Cync protocol analysis"""
 
 from typing import Any
 
 
+def _parse_0x73_packet(packet_bytes: bytes | bytearray, result: dict[str, Any]) -> None:
+    """Parse 0x73 DATA_CHANNEL packet."""
+    if len(packet_bytes) <= 12:
+        return
+
+    data_start = None
+    data_end = None
+    for i in range(12, len(packet_bytes)):
+        if packet_bytes[i] == 0x7E:
+            if data_start is None:
+                data_start = i
+            else:
+                data_end = i
+                break
+
+    if data_start and data_end:
+        result["data_payload"] = " ".join(f"{b:02x}" for b in packet_bytes[data_start : data_end + 1])
+        result["data_length"] = data_end - data_start + 1
+
+        if data_end - data_start > 8:
+            cmd_bytes: bytes | bytearray = packet_bytes[data_start + 5 : data_start + 8]
+            cmd_hex: str = " ".join(f"{b:02x}" for b in cmd_bytes)
+
+            cmd_names = {
+                "f8 52 06": "QUERY_STATUS",
+                "f8 8e 0c": "SET_MODE",
+                "fa 8e 14": "MODE_RESPONSE",
+                "f8 ea 00": "UNKNOWN_CMD",
+            }
+            result["command"] = cmd_names.get(cmd_hex, f"CMD_{cmd_hex}")
+
+            device_ids: list[int] = []
+            search_start = data_start + 10 if data_start + 10 < data_end else data_start + 8
+            for i in range(search_start, data_end - 1):
+                if 10 <= packet_bytes[i] <= 255 and packet_bytes[i + 1] == 0x00 and packet_bytes[i] not in device_ids:
+                    device_ids.append(packet_bytes[i])
+            if device_ids:
+                result["contains_devices"] = [f"{d} ({hex(d)})" for d in device_ids]
+
+
+def _parse_0x83_packet(packet_bytes: bytes | bytearray, result: dict[str, Any]) -> None:
+    """Parse 0x83 STATUS_BROADCAST packet."""
+    if len(packet_bytes) <= 12:
+        return
+
+    result["data_payload"] = " ".join(f"{b:02x}" for b in packet_bytes[12:])
+    result["data_length"] = len(packet_bytes) - 12
+
+    device_ids: list[int] = []
+    for i in range(12, len(packet_bytes) - 1):
+        if (
+            10 <= packet_bytes[i] <= 255
+            and packet_bytes[i + 1] == 0x00
+            and i + 3 < len(packet_bytes)
+            and packet_bytes[i + 2] == packet_bytes[i]
+            and packet_bytes[i + 3] == 0x00
+        ):
+            device_ids.append(packet_bytes[i])
+    if device_ids:
+        result["contains_devices"] = [f"{d} ({hex(d)})" for d in device_ids[:5]]
+
+
+def _parse_0x43_packet(packet_bytes: bytes | bytearray, result: dict[str, Any]) -> None:
+    """Parse 0x43 DEVICE_INFO packet."""
+    if len(packet_bytes) <= 12:
+        return
+
+    result["data_payload"] = " ".join(f"{b:02x}" for b in packet_bytes[12:])
+
+    statuses: list[dict[str, Any]] = []
+    offset: int = 12
+    while offset + 19 <= len(packet_bytes):
+        dev_id: int = packet_bytes[offset + 3]
+        state: int = packet_bytes[offset + 4]
+        brightness: int = packet_bytes[offset + 5]
+        temp: int = packet_bytes[offset + 6]
+        r: int = packet_bytes[offset + 7]
+        g: int = packet_bytes[offset + 8]
+        b: int = packet_bytes[offset + 9]
+        online: int = packet_bytes[offset + 10]
+
+        status: dict[str, Any] = {
+            "device_id": dev_id,
+            "state": "ON" if state else "OFF",
+            "brightness": brightness,
+        }
+
+        if temp > 100:
+            status["mode"] = "RGB"
+            status["color"] = f"#{r:02x}{g:02x}{b:02x}"
+        else:
+            status["mode"] = "WHITE"
+            status["temp"] = temp
+
+        status["online"] = bool(online)
+        statuses.append(status)
+        offset += 19
+
+    if statuses:
+        result["device_statuses"] = statuses
+        result["contains_devices"] = [f"{s['device_id']} ({hex(s['device_id'])})" for s in statuses]
+
+
 def parse_cync_packet(packet_bytes: bytes | bytearray, direction: str = "UNKNOWN") -> dict[str, Any] | None:
-    """
-    Parse a Cync protocol packet and return structured information
+    """Parse a Cync protocol packet and return structured information
 
     Returns dict with:
         - packet_type: hex value (0x73, 0x83, etc.)
@@ -69,126 +169,18 @@ def parse_cync_packet(packet_bytes: bytes | bytearray, direction: str = "UNKNOWN
         elif packet_type in [0x73, 0x83]:
             result["counter"] = f"0x{packet_bytes[10]:02x}"
 
-    # Parse data payload for 0x73 and 0x83
-    if packet_type == 0x73 and len(packet_bytes) > 12:
-        # Data starts at byte 12, look for 0x7e markers
-        data_start = None
-        data_end = None
-        for i in range(12, len(packet_bytes)):
-            if packet_bytes[i] == 0x7E:
-                if data_start is None:
-                    data_start = i
-                else:
-                    data_end = i
-                    break
-
-        if data_start and data_end:
-            result["data_payload"] = " ".join(f"{b:02x}" for b in packet_bytes[data_start : data_end + 1])
-            result["data_length"] = data_end - data_start + 1
-
-            # Parse command type for 0x73 packets
-            if data_end - data_start > 8:
-                cmd_bytes: bytes | bytearray = packet_bytes[data_start + 5 : data_start + 8]
-                cmd_hex: str = " ".join(f"{b:02x}" for b in cmd_bytes)
-
-                cmd_names = {
-                    "f8 52 06": "QUERY_STATUS",
-                    "f8 8e 0c": "SET_MODE",
-                    "fa 8e 14": "MODE_RESPONSE",
-                    "f8 ea 00": "UNKNOWN_CMD",
-                }
-                result["command"] = cmd_names.get(cmd_hex, f"CMD_{cmd_hex}")
-
-                # Parse device IDs in payload (skip command header bytes)
-                device_ids: list[int] = []
-                # Command header is at offsets 5-7, device ID typically at offset 14+
-                # Skip at least 10 bytes from data_start to avoid command header bytes
-                search_start = data_start + 10 if data_start + 10 < data_end else data_start + 8
-                for i in range(search_start, data_end - 1):
-                    # Look for device ID pattern (2 bytes forming valid ID)
-                    # Device IDs are typically followed by 0x00 and not part of command header
-                    # Avoid duplicates
-                    if (
-                        10 <= packet_bytes[i] <= 255
-                        and packet_bytes[i + 1] == 0x00
-                        and packet_bytes[i] not in device_ids
-                    ):
-                        device_ids.append(packet_bytes[i])
-                if device_ids:
-                    result["contains_devices"] = [f"{d} ({hex(d)})" for d in device_ids]
-
-    elif packet_type == 0x83 and len(packet_bytes) > 12:
-        # Status broadcast - data after header
-        result["data_payload"] = " ".join(f"{b:02x}" for b in packet_bytes[12:])
-        result["data_length"] = len(packet_bytes) - 12
-
-        # Parse device IDs in status
-        device_ids: list[int] = []
-        for i in range(12, len(packet_bytes) - 1):
-            # Check if followed by another copy (common pattern)
-            if (
-                10 <= packet_bytes[i] <= 255
-                and packet_bytes[i + 1] == 0x00
-                and i + 3 < len(packet_bytes)
-                and packet_bytes[i + 2] == packet_bytes[i]
-                and packet_bytes[i + 3] == 0x00
-            ):
-                device_ids.append(packet_bytes[i])
-        if device_ids:
-            result["contains_devices"] = [f"{d} ({hex(d)})" for d in device_ids[:5]]  # Limit to first 5
-
-    elif packet_type == 0x43 and len(packet_bytes) > 12:
-        # Device info packet - contains 19-byte status structures for each device
-        result["data_payload"] = " ".join(f"{b:02x}" for b in packet_bytes[12:])
-
-        # Parse device statuses (19 bytes each)
-        # Format: item(1) ?(1) ?(1) device_id(1) state(1) brightness(1) temp(1) R(1) G(1) B(1) online(1) ?(8)
-        statuses: list[dict[str, Any]] = []
-        offset: int = 12
-        while offset + 19 <= len(packet_bytes):
-            dev_id: int = packet_bytes[offset + 3]
-            state: int = packet_bytes[offset + 4]
-            brightness: int = packet_bytes[offset + 5]
-            temp: int = packet_bytes[offset + 6]
-            r: int = packet_bytes[offset + 7]
-            g: int = packet_bytes[offset + 8]
-            b: int = packet_bytes[offset + 9]
-            online: int = packet_bytes[offset + 10]
-
-            status: dict[str, Any] = {
-                "device_id": dev_id,
-                "state": "ON" if state else "OFF",
-                "brightness": brightness,
-            }
-
-            if temp > 100:
-                # RGB mode
-                status["mode"] = "RGB"
-                status["color"] = f"#{r:02x}{g:02x}{b:02x}"
-            else:
-                # White/temp mode
-                status["mode"] = "WHITE"
-                status["temp"] = temp
-
-            status["online"] = bool(online)
-            statuses.append(status)
-            offset += 19
-
-        if statuses:
-            result["device_statuses"] = statuses
-            result["contains_devices"] = [f"{s['device_id']} ({hex(s['device_id'])})" for s in statuses]
+    if packet_type == 0x73:
+        _parse_0x73_packet(packet_bytes, result)
+    elif packet_type == 0x83:
+        _parse_0x83_packet(packet_bytes, result)
+    elif packet_type == 0x43:
+        _parse_0x43_packet(packet_bytes, result)
 
     return result
 
 
-def format_packet_log(parsed: dict[str, Any] | None, verbose: bool = True) -> str:
-    """Format parsed packet into readable log string"""
-    if not parsed:
-        return "Invalid packet"
-
-    lines: list[str] = []
-
-    # Header line with type and direction
+def _format_packet_header(parsed: dict[str, Any]) -> str:
+    """Format packet header line."""
     header = f"[{parsed['direction']}] {parsed['packet_type']} {parsed['packet_type_name']}"
     if "endpoint" in parsed:
         header += f" | EP:{parsed['endpoint']}"
@@ -196,20 +188,15 @@ def format_packet_log(parsed: dict[str, Any] | None, verbose: bool = True) -> st
         header += f" | CTR:{parsed['counter']}"
     if "declared_length" in parsed:
         header += f" | LEN:{parsed['declared_length']}"
-    lines.append(header)
+    return header
 
-    # Command info for data packets
-    if "command" in parsed:
-        lines.append(f"  Command: {parsed['command']}")
 
-    # Device IDs if present
-    if "contains_devices" in parsed:
-        lines.append(f"  Devices: {', '.join(parsed['contains_devices'])}")
-
-    # Device statuses for 0x43 packets
-    if "device_statuses" in parsed and verbose:
+def _format_device_statuses(parsed: dict[str, Any]) -> list[str]:
+    """Format device statuses section."""
+    lines: list[str] = []
+    if "device_statuses" in parsed:
         lines.append(f"  Device Statuses ({len(parsed['device_statuses'])} devices):")
-        for status in parsed["device_statuses"][:10]:  # Limit to 10
+        for status in parsed["device_statuses"][:10]:
             line = f"    [{status['device_id']:3d}] {status['state']:3s} "
             if status["mode"] == "RGB":
                 line += f"Bri:{status['brightness']:3d} RGB:{status['color']}"
@@ -217,10 +204,13 @@ def format_packet_log(parsed: dict[str, Any] | None, verbose: bool = True) -> st
                 line += f"Bri:{status['brightness']:3d} Temp:{status['temp']:3d}"
             line += f" Online:{status['online']}"
             lines.append(line)
+    return lines
 
-    # Data payload if verbose
+
+def _format_data_payload(parsed: dict[str, Any], verbose: bool) -> list[str]:
+    """Format data payload section."""
+    lines: list[str] = []
     if verbose and "data_payload" in parsed:
-        # Split long payloads into multiple lines
         data: str = parsed["data_payload"]
         if len(data) > 100:
             lines.append(f"  Data: {data[:100]}...")
@@ -229,11 +219,29 @@ def format_packet_log(parsed: dict[str, Any] | None, verbose: bool = True) -> st
                 lines.append(f"        ... ({len(data)} chars total)")
         else:
             lines.append(f"  Data: {data}")
+    return lines
 
-    # Raw hex if very verbose
-    if verbose and parsed["raw_len"] <= 100:
-        lines.append(f"  Raw: {parsed['raw_hex']}")
-    elif verbose:
-        lines.append(f"  Raw: {parsed['raw_hex'][:200]}... ({parsed['raw_len']} bytes)")
+
+def format_packet_log(parsed: dict[str, Any] | None, verbose: bool = True) -> str:
+    """Format parsed packet into readable log string"""
+    if not parsed:
+        return "Invalid packet"
+
+    lines: list[str] = [_format_packet_header(parsed)]
+
+    if "command" in parsed:
+        lines.append(f"  Command: {parsed['command']}")
+
+    if "contains_devices" in parsed:
+        lines.append(f"  Devices: {', '.join(parsed['contains_devices'])}")
+
+    if verbose:
+        lines.extend(_format_device_statuses(parsed))
+        lines.extend(_format_data_payload(parsed, verbose))
+
+        if parsed["raw_len"] <= 100:
+            lines.append(f"  Raw: {parsed['raw_hex']}")
+        else:
+            lines.append(f"  Raw: {parsed['raw_hex'][:200]}... ({parsed['raw_len']} bytes)")
 
     return "\n".join(lines)

@@ -23,7 +23,7 @@ def test_group_turns_off_all_switches(ha_login: Page, ha_base_url: str):
     page = ha_login
 
     # Navigate to Overview dashboard where the Hallway group is visible
-    page.goto(f"{ha_base_url}/lovelace/0")
+    _ = page.goto(f"{ha_base_url}/lovelace/0")
     page.wait_for_load_state("networkidle")
     page.wait_for_timeout(2000)
 
@@ -117,7 +117,7 @@ def test_group_turns_on_all_switches(ha_login: Page, ha_base_url: str):
     page = ha_login
 
     # Navigate to Overview dashboard
-    page.goto(f"{ha_base_url}/lovelace/0")
+    _ = page.goto(f"{ha_base_url}/lovelace/0")
     page.wait_for_load_state("networkidle")
     page.wait_for_timeout(2000)
 
@@ -185,7 +185,7 @@ def test_individual_switch_control_still_works(ha_login: Page, ha_base_url: str)
     page = ha_login
 
     # Navigate to Overview dashboard
-    page.goto(f"{ha_base_url}/lovelace/0")
+    _ = page.goto(f"{ha_base_url}/lovelace/0")
     page.wait_for_load_state("networkidle")
     page.wait_for_timeout(2000)
 
@@ -231,7 +231,7 @@ def test_individual_switch_toggle_no_flicker(ha_login: Page, ha_base_url: str):
     page = ha_login
 
     # Navigate to Overview dashboard
-    page.goto(f"{ha_base_url}/lovelace/0")
+    _ = page.goto(f"{ha_base_url}/lovelace/0")
     page.wait_for_load_state("networkidle")
     page.wait_for_timeout(2000)
 
@@ -344,7 +344,7 @@ def test_comprehensive_flicker_detection(ha_login: Page, ha_base_url: str):
     visible flicker even when the backend sync is working correctly.
     """
     page = ha_login
-    page.goto(f"{ha_base_url}/lovelace/0")
+    _ = page.goto(f"{ha_base_url}/lovelace/0")
     page.wait_for_load_state("networkidle")
     page.wait_for_timeout(2000)
 

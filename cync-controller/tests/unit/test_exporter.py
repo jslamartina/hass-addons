@@ -44,7 +44,7 @@ def mock_static_dir(tmp_path):
     static_dir: Path = cast(Path, tmp_path / "static")
     static_dir.mkdir()
     index_file: Path = cast(Path, static_dir / "index.html")
-    index_file.write_text("<html>Test Page</html>")
+    _ = index_file.write_text("<html>Test Page</html>")
     return static_dir  # type: ignore[return-value]
 
 
@@ -89,7 +89,7 @@ class TestExportServerLifecycle:
         assert server.running is True
         assert mock_global_object.mqtt_client.publish.called
 
-        start_task.cancel()
+        _ = start_task.cancel()
         with contextlib.suppress(asyncio.CancelledError):
             await start_task
 
@@ -193,7 +193,7 @@ class TestFastAPIEndpoints:
         from cync_controller.exporter import start_export
 
         with pytest.raises(HTTPException) as exc:
-            await start_export()
+            _ = await start_export()
 
         detail = exc.value.detail
         assert "error_id" in detail
@@ -281,7 +281,7 @@ class TestFastAPIEndpoints:
     async def test_download_config_file_exists(self, tmp_path):
         """Test download_config returns file when config exists"""
         config_file: Path = cast(Path, tmp_path / "cync_mesh.yaml")
-        config_file.write_text("test config")
+        _ = config_file.write_text("test config")
 
         with patch("cync_controller.exporter.CYNC_CONFIG_FILE_PATH", str(config_file)):
             from cync_controller.exporter import download_config
@@ -304,7 +304,7 @@ class TestFastAPIEndpoints:
             from cync_controller.exporter import download_config
 
             with pytest.raises(Exception, match=r".*"):
-                await download_config()
+                _ = await download_config()
 
     @pytest.mark.asyncio
     async def test_restart_success(self, mock_global_object):
@@ -376,7 +376,7 @@ class TestFastAPIEndpoints:
             from cync_controller.exporter import restart
 
             with pytest.raises(HTTPException) as exc:
-                await restart()
+                _ = await restart()
 
             detail = exc.value.detail
             assert "error_id" in detail
@@ -401,7 +401,7 @@ class TestFastAPIEndpoints:
             from cync_controller.exporter import restart
 
             with pytest.raises(HTTPException) as exc:
-                await restart()
+                _ = await restart()
 
             detail = exc.value.detail
             assert "error_id" in detail
@@ -426,7 +426,7 @@ class TestFastAPIEndpoints:
             from cync_controller.exporter import restart
 
             with pytest.raises(HTTPException) as exc:
-                await restart()
+                _ = await restart()
 
             detail = exc.value.detail
             assert "error_id" in detail

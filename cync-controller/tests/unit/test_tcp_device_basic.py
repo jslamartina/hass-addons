@@ -125,7 +125,7 @@ class TestCyncTCPDevice:
         tcp_device.closing = False
 
         with pytest.raises(TypeError, match="Data must be bytes"):
-            await tcp_device.write("not bytes")  # type: ignore
+            _ = await tcp_device.write("not bytes")  # type: ignore
 
     @pytest.mark.asyncio
     async def test_tcp_device_send_a3(self):
@@ -143,7 +143,7 @@ class TestCyncTCPDevice:
         tcp_device.ask_for_mesh_info = AsyncMock()
 
         with patch("cync_controller.devices.asyncio.sleep", new_callable=AsyncMock):
-            await tcp_device.send_a3(b"\x01\x02\x03\x04\x05")
+            _ = await tcp_device.send_a3(b"\x01\x02\x03\x04\x05")
 
             # Should call write and set ready_to_control
             assert tcp_device.write.called
@@ -172,7 +172,7 @@ class TestCyncTCPDevice:
 
         tcp_device.tasks = [mock_task1, mock_task2]
 
-        await tcp_device.close()
+        _ = await tcp_device.close()
 
         # Should have cancelled tasks
         assert mock_task1.cancel.called
@@ -192,7 +192,7 @@ class TestCyncTCPDevice:
         tcp_device.tasks = []
 
         # Should not raise exception
-        await tcp_device.close()
+        _ = await tcp_device.close()
 
     def test_tcp_device_queue_id_property(self, stream_reader, stream_writer):
         """Test TCP device queue_id property"""

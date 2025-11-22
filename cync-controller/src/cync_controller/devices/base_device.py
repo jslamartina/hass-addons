@@ -61,7 +61,7 @@ class CyncDevice(DeviceCommands):
     and send commands to it by using its device ID defined when the device was added to your Cync account.
     """
 
-    lp = "CyncDevice:"
+    lp: str = "CyncDevice:"
     id: int | None = None
     type: int | None = None
     _supports_rgb: bool | None = None
@@ -87,8 +87,8 @@ class CyncDevice(DeviceCommands):
         fw_version: str | None = None,
         home_id: int | None = None,
         hvac: dict[str, Any] | None = None,
-    ):
-        self.control_bytes = bytes([0x00, 0x00])
+    ) -> None:
+        self.control_bytes: bytes = bytes([0x00, 0x00])
         if cync_id is None:
             msg = "ID must be provided to constructor"
             raise ValueError(msg)
@@ -103,7 +103,7 @@ class CyncDevice(DeviceCommands):
         self.version = fw_version
         if name is None:
             name = f"device_{cync_id}"
-        self.name = name
+        self.name: str = name
         self.lp = f"CyncDevice:{self.name}({cync_id}):"
         self._status: DeviceStatus = DeviceStatus()
         self._mesh_alive_byte: int | str = 0x00

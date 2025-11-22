@@ -57,7 +57,7 @@ class CyncGroup:
     A class to represent a Cync group (room) from the config. Groups can control multiple devices with a single command.
     """
 
-    lp = "CyncGroup:"
+    lp: str = "CyncGroup:"
     id: int | None = None
     name: str | None = None
     member_ids: list[int]
@@ -71,7 +71,7 @@ class CyncGroup:
         member_ids: list[int],
         is_subgroup: bool = False,
         home_id: int | None = None,
-    ):
+    ) -> None:
         if group_id is None:
             msg = "Group ID must be provided"
             raise ValueError(msg)
@@ -80,7 +80,7 @@ class CyncGroup:
         self.member_ids = member_ids if member_ids else []
         self.is_subgroup = is_subgroup
         self.home_id = home_id
-        self.hass_id = f"{home_id}-group-{group_id}"
+        self.hass_id: str = f"{home_id}-group-{group_id}"
         self.lp = f"CyncGroup:{self.name}({group_id}):"
 
         # Derive capabilities from member devices
@@ -424,7 +424,7 @@ class CyncGroup:
         messages = getattr(bridge_device, "messages", None)
         if messages is not None:
             messages.control[cmsg_id] = m_cb
-        await bridge_device.write(payload_bytes)
+        _ = await bridge_device.write(payload_bytes)
 
     async def set_temperature(self, temperature: int):
         """
@@ -519,7 +519,7 @@ class CyncGroup:
         messages = getattr(bridge_device, "messages", None)
         if messages is not None:
             messages.control[cmsg_id] = m_cb
-        await bridge_device.write(payload_bytes)
+        _ = await bridge_device.write(payload_bytes)
 
     def __repr__(self):
         return f"CyncGroup(id={self.id}, name='{self.name}', members={len(self.member_ids)})"

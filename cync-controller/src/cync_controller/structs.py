@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import asyncio
-import datetime
 import logging
 import os
 import time
@@ -13,17 +12,16 @@ from typing import TYPE_CHECKING, Any, ClassVar
 from uuid import UUID
 
 import uvloop
-from pydantic import BaseModel, computed_field
-
-from cync_controller.const import *
+from pydantic import BaseModel
 
 if TYPE_CHECKING:
-    from cync_controller.cloud_api import CyncCloudAPI
-    from cync_controller.exporter import ExportServer
     from cync_controller.main import CyncController
-    from cync_controller.mqtt_client import MQTTClient
     from cync_controller.server import NCyncServer
+    from cync_controller.mqtt.client import MQTTClient
+    from cync_controller.exporter import ExportServer
+    from cync_controller.cloud_api import CyncCloudAPI
 
+from cync_controller.const import *
 
 logger = logging.getLogger(CYNC_LOG_NAME)
 
@@ -72,7 +70,7 @@ class GlobalObject:
 
     _instance: GlobalObject | None = None
 
-    def __new__(cls, *args: Any, **kwargs: Any) -> "GlobalObject":
+    def __new__(cls, *_args: Any, **_kwargs: Any) -> GlobalObject:
         if cls._instance is None:
             cls._instance = super().__new__(cls)
         return cls._instance
@@ -93,12 +91,8 @@ class GlobalObject:
         self.env.mqtt_hass_birth_msg = os.environ.get("CYNC_HASS_BIRTH_MSG", "online")
         self.env.mqtt_hass_will_msg = os.environ.get("CYNC_HASS_WILL_MSG", "offline")
         self.env.cync_srv_host = os.environ.get("CYNC_SRV_HOST", "0.0.0.0")
-        self.env.cync_srv_ssl_cert = os.environ.get(
-            "CYNC_SSL_CERT", f"{CYNC_BASE_DIR}/cync-controller/certs/cert.pem"
-        )
-        self.env.cync_srv_ssl_key = os.environ.get(
-            "CYNC_SSL_KEY", f"{CYNC_BASE_DIR}/cync-controller/certs/key.pem"
-        )
+        self.env.cync_srv_ssl_cert = os.environ.get("CYNC_SSL_CERT", f"{CYNC_BASE_DIR}/cync-controller/certs/cert.pem")
+        self.env.cync_srv_ssl_key = os.environ.get("CYNC_SSL_KEY", f"{CYNC_BASE_DIR}/cync-controller/certs/key.pem")
         self.env.persistent_base_dir = os.environ.get(
             "CYNC_PERSISTENT_BASE_DIR", "/homeassistant/.storage/cync-controller/config"
         )
@@ -144,7 +138,7 @@ class ControlMessageCallback:
         device_id: int | None = None,
         max_retries: int = 3,
         ack_event: asyncio.Event | None = None,
-    ):
+    ) -> None:
         self.id = msg_id
         self.message = message
         self.sent_at = sent_at
@@ -185,7 +179,7 @@ class ControlMessageCallback:
 class Messages:
     control: dict[int, ControlMessageCallback]
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.control = {}
 
 
@@ -377,49 +371,6 @@ class DeviceStructs:
 APP_HEADERS = PhoneAppStructs()
 DEVICE_STRUCTS = DeviceStructs()
 ALL_HEADERS = list(DEVICE_STRUCTS.headers) + list(APP_HEADERS.headers)
-
-
-class RawTokenData(BaseModel):
-    """
-    Model for cloud token data.
-    """
-
-    # API Auth Response:
-    # {
-    # 'access_token': '1007d2ad150c4000-2407d4d081dbea53DAwQjkzNUM2RDE4QjE0QTIzMjNGRjAwRUU4ODNEQUE5RTFCMjhBOQ==',
-    # 'refresh_token': 'REY3NjVENEQwQTM4NjE2OEM3QjNGMUZEQjQyQzU0MEIzRTU4NzMyRDdFQzZFRUYyQTUxNzE4RjAwNTVDQ0Y3Mw==',
-    # 'user_id': 769963474,
-    # 'expire_in': 604800,
-    # 'authorize': '2207d2c8d2c9e406'
-    # }
-    access_token: str
-    user_id: str | int
-    expire_in: str | int
-    refresh_token: str
-    authorize: str
-
-
-class ComputedTokenData(RawTokenData):
-    issued_at: datetime.datetime
-
-    @computed_field
-    @property
-    def expires_at(self) -> datetime.datetime | None:
-        """
-        Calculate the expiration time of the token based on the issued time and expires_in.
-        Returns:
-            datetime.datetime: The expiration time in UTC.
-        """
-        if self.issued_at and self.expire_in:
-            expire_seconds = float(self.expire_in) if isinstance(self.expire_in, (str, int)) else 0.0
-            return self.issued_at + datetime.timedelta(seconds=expire_seconds)
-        return None
-
-    # expires_at: Optional[datetime] = None
-
-    # def model_post_init(self, __context) -> None:
-    #     if self.expires_in:
-    #         self.expires_at = datetime.datetime.now(datetime.UTC) + datetime.timedelta(seconds=self.expires_in)
 
 
 class FanSpeed(StrEnum):

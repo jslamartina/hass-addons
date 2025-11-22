@@ -4,9 +4,12 @@ TCP connection management utilities for CyncTCPDevice.
 
 import asyncio
 import time
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from cync_controller.logging_abstraction import get_logger
+
+if TYPE_CHECKING:
+    from cync_controller.devices.tcp_device import CyncTCPDevice
 
 logger = get_logger(__name__)
 
@@ -14,12 +17,12 @@ logger = get_logger(__name__)
 class TCPConnectionManager:
     """Manages TCP connection lifecycle and health monitoring."""
 
-    def __init__(self, tcp_device):
-        self.tcp_device = tcp_device
-        self.connection_start_time = time.time()
-        self.last_heartbeat = time.time()
-        self.heartbeat_interval = 30.0  # seconds
-        self.connection_timeout = 300.0  # 5 minutes
+    def __init__(self, tcp_device: "CyncTCPDevice") -> None:
+        self.tcp_device: "CyncTCPDevice" = tcp_device
+        self.connection_start_time: float = time.time()
+        self.last_heartbeat: float = time.time()
+        self.heartbeat_interval: float = 30.0  # seconds
+        self.connection_timeout: float = 300.0  # 5 minutes
 
     async def monitor_connection_health(self):
         """Monitor connection health and handle timeouts."""

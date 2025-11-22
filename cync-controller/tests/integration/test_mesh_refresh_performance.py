@@ -121,7 +121,7 @@ def test_mesh_refresh_performance_group_commands():
 
     # Restart addon to get fresh logs
     print("[Setup] Restarting addon and waiting for MQTT client to connect...")
-    subprocess.run(["ha", "addons", "restart", "local_cync-controller"], check=False, timeout=30)
+    _ = subprocess.run(["ha", "addons", "restart", "local_cync-controller"], check=False, timeout=30)
     time.sleep(8)  # Wait for addon to fully start and MQTT to connect
 
     # Clear the JSON log file to get a clean baseline

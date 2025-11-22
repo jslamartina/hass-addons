@@ -692,7 +692,7 @@ class TestMQTTClientDiscovery:
             client.client = AsyncMock()
             client.client.publish = AsyncMock()
 
-            await client.homeassistant_discovery()
+            _ = await client.homeassistant_discovery()
 
             # Discovery should succeed when connected
             # The actual result depends on whether exceptions were raised during processing
@@ -1089,7 +1089,7 @@ class TestSetPowerCommand:
         device.set_power = AsyncMock()
         cmd = SetPowerCommand(device, state=1)
 
-        await cmd.execute()
+        _ = await cmd.execute()
 
         device.set_power.assert_called_once_with(1)
 
@@ -1176,7 +1176,7 @@ class TestSetBrightnessCommand:
         device.set_brightness = AsyncMock()
         cmd = SetBrightnessCommand(device, brightness=50)
 
-        await cmd.execute()
+        _ = await cmd.execute()
 
         device.set_brightness.assert_called_once_with(50)
 
@@ -1796,7 +1796,7 @@ class TestMQTTReceiverTask:
             # Run it as a task then cancel to simulate single message processing
             task = asyncio.create_task(client.start_receiver_task())
             await asyncio.sleep(0.01)  # Let it process the message
-            task.cancel()
+            _ = task.cancel()
             with contextlib.suppress(asyncio.CancelledError, StopAsyncIteration):
                 await task
 
@@ -1824,7 +1824,7 @@ class TestMQTTGroupCommandHandling:
             mock_device2 = MagicMock()
             mock_device2.id = 2
 
-            MQTTClient()
+            _ = MQTTClient()
             CommandProcessor().enqueue = AsyncMock()
 
             # Simulate message processing
@@ -1849,7 +1849,7 @@ class TestMQTTGroupCommandHandling:
             mock_g.ncync_server.groups = {123: group}
             mock_g.ncync_server.devices = {}
 
-            MQTTClient()
+            _ = MQTTClient()
             CommandProcessor().enqueue = AsyncMock()
 
             # Simulate brightness command
@@ -1867,7 +1867,7 @@ class TestMQTTGroupCommandHandling:
             mock_g.ncync_server = MagicMock()
             mock_g.ncync_server.groups = {}  # Group doesn't exist
 
-            MQTTClient()
+            _ = MQTTClient()
 
             # Should handle gracefully without raising
             # (actual implementation logs warning and continues)

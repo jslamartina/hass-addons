@@ -8,6 +8,7 @@ import re
 import shutil
 import subprocess
 from pathlib import Path
+from typing import TypedDict
 
 ANSI_PATTERN = re.compile(r"\x1b\[[0-9;]*m")
 PYRIGHT_PATTERN = re.compile(
@@ -16,6 +17,14 @@ PYRIGHT_PATTERN = re.compile(
     r"(?P<message>.+?)(?:\s+\((?P<code>[^)]+)\))?$"
 )
 LOGGER = logging.getLogger("lint_pyright")
+
+
+class ProjectConfig(TypedDict):
+    """Project configuration for pyright linting."""
+
+    name: str
+    config: Path
+    default_targets: list[str]
 
 
 def configure_logger() -> None:
@@ -121,44 +130,72 @@ def main() -> int:
         extra={"workspace_root": str(workspace_root)},
     )
 
-    project_config = workspace_root / "python-rebuild-tcp-comm" / "pyrightconfig.json"
-    default_targets = ["python-rebuild-tcp-comm/src", "python-rebuild-tcp-comm/tests"]
+    # Define projects to lint
+    projects: list[ProjectConfig] = [
+        {
+            "name": "python-rebuild-tcp-comm",
+            "config": workspace_root / "python-rebuild-tcp-comm" / "pyrightconfig.json",
+            "default_targets": ["python-rebuild-tcp-comm/src", "python-rebuild-tcp-comm/tests"],
+        },
+        {
+            "name": "cync-controller",
+            "config": workspace_root / "cync-controller" / "pyrightconfig.json",
+            "default_targets": ["cync-controller/src", "cync-controller/tests"],
+        },
+    ]
 
-    if project_config.exists():
-        LOGGER.info("→ Using project config", extra={"config": str(project_config)})
-        pyright_args: list[str] = ["--project", str(project_config)]
-    else:
-        LOGGER.warning(
-            "⚠️ Project config missing, falling back to direct targets",
-            extra={"config": str(project_config)},
-        )
-        pyright_args = default_targets
+    all_results: list[subprocess.CompletedProcess[str]] = []
+    overall_exit_code = 0
 
-    try:
-        result = run_pyright(pyright_args)
-    except (FileNotFoundError, PermissionError, OSError) as e:
-        LOGGER.error(
-            "✗ basedpyright executable error",
-            extra={
-                "error_type": type(e).__name__,
-                "error": str(e),
-                "hint": "Install basedpyright via: pip install basedpyright",
-            },
-        )
-        return 1
+    for project in projects:
+        project_config = project["config"]
+        default_targets = project["default_targets"]
 
-    combined_output = f"{result.stdout}\n{result.stderr}".strip("\n")
-    lines = combined_output.splitlines()
+        if project_config.exists():
+            LOGGER.info("→ Using project config", extra={"config": str(project_config)})
+            pyright_args: list[str] = ["--project", str(project_config)]
+        else:
+            LOGGER.warning(
+                "⚠️ Project config missing, falling back to direct targets",
+                extra={"config": str(project_config)},
+            )
+            pyright_args = default_targets
 
-    for line in lines:
-        transformed = transform_line(line, workspace_root)
-        print(transformed if transformed else strip_ansi(line))
+        try:
+            result = run_pyright(pyright_args)
+            all_results.append(result)
+            if result.returncode != 0 and overall_exit_code == 0:
+                overall_exit_code = result.returncode
+        except (FileNotFoundError, PermissionError, OSError) as e:
+            LOGGER.error(
+                "✗ basedpyright executable error",
+                extra={
+                    "error_type": type(e).__name__,
+                    "error": str(e),
+                    "hint": "Install basedpyright via: pip install basedpyright",
+                    "project": project["name"],
+                },
+            )
+            if overall_exit_code == 0:
+                overall_exit_code = 1
+            continue
+
+    # Process and output diagnostics from all projects
+    total_lines = 0
+    for result in all_results:
+        combined_output = f"{result.stdout}\n{result.stderr}".strip("\n")
+        lines = combined_output.splitlines()
+        total_lines += len(lines)
+
+        for line in lines:
+            transformed = transform_line(line, workspace_root)
+            print(transformed if transformed else strip_ansi(line))
 
     LOGGER.info(
         "✓ lint-pyright completed",
-        extra={"exit_code": result.returncode, "line_count": len(lines)},
+        extra={"exit_code": overall_exit_code, "line_count": total_lines},
     )
-    return result.returncode
+    return overall_exit_code
 
 
 if __name__ == "__main__":

@@ -152,7 +152,7 @@ class TestMQTTDeviceDiscovery:
         ):
             mock_g.uuid = "test-uuid"
 
-            MQTTClient()
+            _ = MQTTClient()
 
             # Test name normalization
             test_names = [
@@ -221,7 +221,7 @@ class TestMQTTDeviceDiscovery:
         ):
             mock_g.uuid = "test-uuid"
 
-            MQTTClient()
+            _ = MQTTClient()
 
             # Create device
             mock_device = MagicMock()

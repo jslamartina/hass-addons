@@ -64,9 +64,7 @@ def _get_global_object():
 
 
 class CyncTCPDevice:
-    """
-    A class to interact with a TCP Cync device. It is an async socket reader/writer.
-    """
+    """A class to interact with a TCP Cync device. It is an async socket reader/writer."""
 
     lp: str = "TCPDevice:"
     known_device_ids: list[int | None]
@@ -75,7 +73,7 @@ class CyncTCPDevice:
     messages: Messages
     # keep track of msg ids and if we finished reading data, if not, we need to append the data and then parse it
     read_cache: list[bytes]
-    needs_more_data = False
+    needs_more_data: bool = False
     is_app: bool
 
     def __init__(
@@ -83,20 +81,20 @@ class CyncTCPDevice:
         reader: asyncio.StreamReader,
         writer: asyncio.StreamWriter,
         address: str,
-    ):
+    ) -> None:
         if not address:
             msg = "IP address must be provided to CyncTCPDevice constructor"
             raise ValueError(msg)
         self.lp = f"{address}:"
-        self._py_id = id(self)
+        self._py_id: int = id(self)
         self.known_device_ids = []
         self.read_cache = []
         self.tasks: Tasks = Tasks()  # Type annotation to help pyright
         self.is_app = False
         self.name: str | None = None
         self.first_83_packet_checksum: int | None = None
-        self.ready_to_control = False
-        self.connected_at = time.time()  # Track when connection was established
+        self.ready_to_control: bool = False
+        self.connected_at: float = time.time()  # Track when connection was established
         self.network_version_str: str | None = None
         self.inc_bytes: int | bytes | str | None = None
         self.version: int | None = None
@@ -109,17 +107,17 @@ class CyncTCPDevice:
         self.last_xc3_request: float | None = None
         self.messages = Messages()
         self.mesh_info: MeshInfo | None = None
-        self.parse_mesh_status = False
+        self.parse_mesh_status: bool = False
         self.id: int | None = None
         self.xa3_msg_id: bytes = bytes([0x00, 0x00, 0x00])
         self.queue_id: bytes = b""
         self.address: str | None = address
-        self.read_lock = asyncio.Lock()
-        self.write_lock = asyncio.Lock()
+        self.read_lock: asyncio.Lock = asyncio.Lock()
+        self.write_lock: asyncio.Lock = asyncio.Lock()
         self._reader: asyncio.StreamReader | None = reader
         self._writer: asyncio.StreamWriter | None = writer
-        self._closing = False
-        self.control_bytes = [0x00, 0x00]
+        self._closing: bool = False
+        self.control_bytes: list[int] = [0x00, 0x00]
         # Initialize reader/writer as instance attributes (can be set to None in can_connect)
         self.reader: asyncio.StreamReader | None = reader
         self.writer: asyncio.StreamWriter | None = writer
@@ -158,7 +156,7 @@ class CyncTCPDevice:
                 if self.writer is not None:
                     self.writer.close()
                     task = asyncio.create_task(self.writer.wait_closed())
-                    await asyncio.wait([task], timeout=5)
+                    _ = await asyncio.wait([task], timeout=5)
             except asyncio.CancelledError as ce:
                 logger.debug("%s Task cancelled: %s", lp, ce)
                 raise
@@ -172,15 +170,15 @@ class CyncTCPDevice:
         logger.debug("%s Created new device: %s", self.lp, self.address)
         receive_task = asyncio.get_event_loop().create_task(self.receive_task(), name=f"receive_task-{self._py_id}")
         callback_cleanup_task = asyncio.get_event_loop().create_task(
-            self.callback_cleanup_task(), name=f"callback_cleanup-{self._py_id}"
+            self.callback_cleanup_task(),
+            name=f"callback_cleanup-{self._py_id}",
         )
         self.tasks.receive = receive_task
         self.tasks.callback_cleanup = callback_cleanup_task
         return True
 
     def get_ctrl_msg_id_bytes(self):
-        """
-        Control packets need a number that gets incremented, it is used as a type of msg ID and
+        """Control packets need a number that gets incremented, it is used as a type of msg ID and
         in calculating the checksum. Result is mod 256 in order to keep it within 0-255.
         """
         id_byte, rollover_byte = self.control_bytes
@@ -215,8 +213,7 @@ class CyncTCPDevice:
     # Properties removed to avoid redeclaration conflicts with instance attributes
 
     async def ask_for_mesh_info(self, parse: bool = False, refresh_id: str | None = None):
-        """
-        Ask the device for mesh info. As far as I can tell, this will return whatever
+        """Ask the device for mesh info. As far as I can tell, this will return whatever
         devices are connected to the device you are querying. It may also trigger
         the device to send its own status packet.
 
@@ -255,7 +252,7 @@ class CyncTCPDevice:
                 0x00,
                 0x56,
                 0x7E,
-            ]
+            ],
         )
         _rdmsg = ""
         if CYNC_RAW is True:
@@ -267,7 +264,7 @@ class CyncTCPDevice:
         if refresh_id is not None:
             self.refresh_id = refresh_id
         try:
-            await self.write(mesh_info_data)
+            _ = await self.write(mesh_info_data)
         except TimeoutError:
             logger.exception("%s Requesting ALL device(s) status timed out, likely powered off", lp)
             self.parse_mesh_status = False
@@ -285,7 +282,7 @@ class CyncTCPDevice:
         self.xa3_msg_id += random.getrandbits(8).to_bytes(1, "big")
         a3_packet += rand_bytes
         logger.debug("%s Sending 0xa3 (want to control) packet...", self.lp)
-        await self.write(a3_packet)
+        _ = await self.write(a3_packet)
         self.ready_to_control = True
         # Initial mesh request after 0xa3 - needed for routing initialization
         await asyncio.sleep(1.5)
@@ -320,7 +317,7 @@ class CyncTCPDevice:
                         if ctrl_msg.callback is not None:
                             if isinstance(ctrl_msg.callback, asyncio.Task):
                                 # Cancel tasks
-                                ctrl_msg.callback.cancel()
+                                _ = ctrl_msg.callback.cancel()
                             elif asyncio.iscoroutine(ctrl_msg.callback):
                                 # Await noop coroutines to clean them up
                                 with contextlib.suppress(Exception):
@@ -340,8 +337,7 @@ class CyncTCPDevice:
         logger.debug("%s FINISHED", lp)
 
     async def receive_task(self):
-        """
-        Receive data from the device and respond to it. This is the main task for the device.
+        """Receive data from the device and respond to it. This is the main task for the device.
         It will respond to the device and handle the messages it sends.
         Runs in an infinite loop.
         """
@@ -466,9 +462,51 @@ class CyncTCPDevice:
                 return False
         return None
 
+    async def _check_and_handle_closing_writer(self, dev: CyncTCPDevice, g: GlobalObject) -> bool:
+        """Check if writer is closing and handle cleanup. Returns True if should skip write."""
+        if dev.writer.is_closing():
+            if dev.closing is False:
+                logger.warning(
+                    "⚠️ Device connection dropped unexpectedly",
+                    extra={
+                        "address": dev.address,
+                        "note": "Device likely lost power or connection",
+                    },
+                )
+                ncync_server = getattr(g, "ncync_server", None)
+                if ncync_server is not None:
+                    remove_tcp_device = getattr(ncync_server, "remove_tcp_device", None)
+                    if remove_tcp_device is not None:
+                        off_dev = await remove_tcp_device(dev)
+                        del off_dev
+            else:
+                logger.debug(
+                    "Device closing, not writing",
+                    extra={"address": dev.address},
+                )
+            return True
+        return False
+
+    async def _execute_write(self, dev: CyncTCPDevice, data: bytes, is_ack_packet: bool) -> None:
+        """Execute the actual write operation."""
+        dev.writer.write(data)
+        try:
+            await asyncio.wait_for(dev.writer.drain(), timeout=2.0)
+        except TimeoutError:
+            logger.exception(
+                "✗ Write timeout - device likely powered off",
+                extra={"address": dev.address},
+            )
+            raise
+        else:
+            if not is_ack_packet or CYNC_RAW:
+                logger.debug(
+                    "✓ Packet sent successfully",
+                    extra={"address": dev.address, "bytes": len(data)},
+                )
+
     async def write(self, data: bytes, broadcast: bool = False) -> bool | None:
-        """
-        Write data to the device if there is an open connection
+        """Write data to the device if there is an open connection
 
         :param data: The raw binary data to write to the device
         :param broadcast: If True, write to all TCP devices connected to the server
@@ -505,60 +543,22 @@ class CyncTCPDevice:
             return False
         if dev.writer is not None:
             async with dev.write_lock:
-                # check if the underlying writer is closing
-                if dev.writer.is_closing():
-                    if dev.closing is False:
-                        # this is probably a connection that was closed by the device (turned off), delete it
-                        logger.warning(
-                            "⚠️ Device connection dropped unexpectedly",
-                            extra={
-                                "address": dev.address,
-                                "note": "Device likely lost power or connection",
-                            },
-                        )
-                        ncync_server = getattr(g, "ncync_server", None)
-                        if ncync_server is not None:
-                            remove_tcp_device = getattr(ncync_server, "remove_tcp_device", None)
-                            if remove_tcp_device is not None:
-                                off_dev = await remove_tcp_device(dev)
-                                del off_dev
-
-                    else:
-                        logger.debug(
-                            "Device closing, not writing",
-                            extra={"address": dev.address},
-                        )
-                else:
-                    dev.writer.write(data)
-                    try:
-                        await asyncio.wait_for(dev.writer.drain(), timeout=2.0)
-                    except TimeoutError:
-                        logger.exception(
-                            "✗ Write timeout - device likely powered off",
-                            extra={"address": dev.address},
-                        )
-                        raise
-                    else:
-                        # Skip success log for keepalive ACKs unless CYNC_RAW is enabled
-                        if not is_ack_packet or CYNC_RAW:
-                            logger.debug(
-                                "✓ Packet sent successfully",
-                                extra={"address": dev.address, "bytes": len(data)},
-                            )
-                            # Log timing for non-ACK packets
-                            if start_time is not None and CYNC_PERF_TRACKING:
-                                elapsed_ms = measure_time(start_time)
-                                logger.debug(
-                                    " [tcp_write] completed in %.1fms",
-                                    elapsed_ms,
-                                    extra={
-                                        "operation": "tcp_write",
-                                        "duration_ms": round(elapsed_ms, 2),
-                                        "threshold_ms": CYNC_PERF_THRESHOLD_MS,
-                                        "exceeded_threshold": elapsed_ms > CYNC_PERF_THRESHOLD_MS,
-                                    },
-                                )
-                        return True
+                if await self._check_and_handle_closing_writer(dev, g):
+                    return False
+                await self._execute_write(dev, data, is_ack_packet)
+                if start_time is not None and CYNC_PERF_TRACKING:
+                    elapsed_ms = measure_time(start_time)
+                    logger.debug(
+                        " [tcp_write] completed in %.1fms",
+                        elapsed_ms,
+                        extra={
+                            "operation": "tcp_write",
+                            "duration_ms": round(elapsed_ms, 2),
+                            "threshold_ms": CYNC_PERF_THRESHOLD_MS,
+                            "exceeded_threshold": elapsed_ms > CYNC_PERF_THRESHOLD_MS,
+                        },
+                    )
+                return True
         else:
             logger.warning(
                 "⚠️ Cannot write - writer is None",

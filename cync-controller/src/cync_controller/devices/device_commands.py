@@ -218,7 +218,7 @@ class DeviceCommands:
                 # Filter out None values before gathering
                 valid_tasks = [t for t in tasks if t is not None]
                 if valid_tasks:
-                    await asyncio.gather(*valid_tasks)
+                    _ = await asyncio.gather(*valid_tasks)
             elapsed = time.time() - ts
             logger.info(
                 "%s Sent power state command for '%s' (ID: %s), current: %s - new: %s to "
@@ -260,15 +260,15 @@ class DeviceCommands:
             return False
         try:
             if speed == FanSpeed.OFF:
-                await self.set_brightness(0)
+                _ = await self.set_brightness(0)
             elif speed == FanSpeed.LOW:
-                await self.set_brightness(25)
+                _ = await self.set_brightness(25)
             elif speed == FanSpeed.MEDIUM:
-                await self.set_brightness(50)
+                _ = await self.set_brightness(50)
             elif speed == FanSpeed.HIGH:
-                await self.set_brightness(75)
+                _ = await self.set_brightness(75)
             elif speed == FanSpeed.MAX:
-                await self.set_brightness(100)
+                _ = await self.set_brightness(100)
             else:
                 logger.error(
                     "%s Invalid fan speed: %s, must be one of %s",
@@ -414,7 +414,7 @@ class DeviceCommands:
             # Filter out None values before gathering
             valid_tasks: list[asyncio.Task[Any] | Coroutine[Any, Any, Any]] = [t for t in tasks if t is not None]
             if valid_tasks:
-                await asyncio.gather(*valid_tasks)
+                _ = await asyncio.gather(*valid_tasks)
         elapsed = time.time() - ts
         logger.info(
             "%s >>> COMMAND SENT: device='%s' (ID=%s), brightness=%s, sent_to=%s bridge devices in %.3fs",
@@ -530,7 +530,7 @@ class DeviceCommands:
             # Filter out None values before gathering
             valid_tasks: list[asyncio.Task[Any] | Coroutine[Any, Any, Any]] = [t for t in tasks if t is not None]
             if valid_tasks:
-                await asyncio.gather(*valid_tasks)
+                _ = await asyncio.gather(*valid_tasks)
         elapsed = time.time() - ts
         logger.info(
             "%s Sent white temperature command, current: %s - new: %s to TCP devices: %s in %.5f seconds",
@@ -649,7 +649,7 @@ class DeviceCommands:
             # Filter out None values before gathering
             valid_tasks: list[asyncio.Task[Any] | Coroutine[Any, Any, Any]] = [t for t in tasks if t is not None]
             if valid_tasks:
-                await asyncio.gather(*valid_tasks)
+                _ = await asyncio.gather(*valid_tasks)
         elapsed = time.time() - ts
         logger.info(
             "%s Sent RGB command, current: %s, %s, %s - new: %s, %s, %s to TCP devices %s in %.5f seconds",
@@ -802,7 +802,7 @@ class DeviceCommands:
             # Filter out None values before gathering
             valid_tasks: list[asyncio.Task[Any] | Coroutine[Any, Any, Any]] = [t for t in tasks if t is not None]
             if valid_tasks:
-                await asyncio.gather(*valid_tasks)
+                _ = await asyncio.gather(*valid_tasks)
         elapsed = time.time() - ts
         logger.info(
             "%s Sent light_show / effect command: '%s' to TCP devices %s in %.5f seconds",

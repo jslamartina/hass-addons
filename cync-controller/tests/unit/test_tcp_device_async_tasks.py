@@ -58,7 +58,7 @@ class TestCyncTCPDeviceAsyncTasks:
         assert tcp_device.write.called
 
         # Clean up
-        task.cancel()
+        _ = task.cancel()
         with contextlib.suppress(asyncio.CancelledError):
             await task
 
@@ -93,7 +93,7 @@ class TestCyncTCPDeviceAsyncTasks:
         assert msg_id not in tcp_device.messages.control
 
         # Clean up
-        task.cancel()
+        _ = task.cancel()
         with contextlib.suppress(asyncio.CancelledError):
             await task
 
@@ -137,7 +137,7 @@ class TestCyncTCPDeviceAsyncTasks:
             assert tcp_device.parse_raw_data.called
 
             # Clean up
-            task.cancel()
+            _ = task.cancel()
             with contextlib.suppress(asyncio.CancelledError):
                 await task
 
@@ -168,7 +168,7 @@ class TestCyncTCPDeviceAsyncTasks:
             assert not tcp_device.parse_raw_data.called
 
             # Clean up
-            task.cancel()
+            _ = task.cancel()
             with contextlib.suppress(asyncio.CancelledError):
                 await task
 

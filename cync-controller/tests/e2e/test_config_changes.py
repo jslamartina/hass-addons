@@ -32,7 +32,7 @@ def restore_config():
     try:
         current_config: dict[str, Any] = cast(dict[str, Any], get_addon_config(ADDON_SLUG))
         if current_config != original_config:
-            update_addon_config(ADDON_SLUG, original_config)
+            _ = update_addon_config(ADDON_SLUG, original_config)
             restart_addon_and_wait(ADDON_SLUG, wait_seconds=5)
             print("\n✓ Restored original configuration")
         else:
@@ -232,7 +232,7 @@ def test_invalid_config_rejected():
         print("  Warning: Invalid config was accepted (validation may be missing)")
         # Restore to valid value
         current_config["tuning"]["max_clients"] = 8
-        update_addon_config(ADDON_SLUG, current_config)
+        _ = update_addon_config(ADDON_SLUG, current_config)
         restart_addon_and_wait(ADDON_SLUG, wait_seconds=5)
 
 

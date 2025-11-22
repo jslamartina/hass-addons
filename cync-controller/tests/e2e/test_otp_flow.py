@@ -27,7 +27,7 @@ def test_otp_double_submission(ingress_page: Page):
     print("\n  This test requires manual OTP entry")
     print("Check your email for the OTP code and enter it in the browser")
     print("Then press Enter here to continue...")
-    input()
+    _ = input()
 
     # Wait for user to enter OTP in browser
     print("Waiting for OTP submission...")

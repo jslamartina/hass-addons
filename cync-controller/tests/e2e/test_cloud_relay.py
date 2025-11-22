@@ -35,7 +35,7 @@ def restore_baseline():
             return
 
         print("\n[Cleanup] Restoring baseline configuration...")
-        apply_addon_preset("preset-baseline")
+        _ = apply_addon_preset("preset-baseline")
         restart_addon_and_wait(ADDON_SLUG, wait_seconds=5)
         print("✓ Restored to baseline mode")
     except Exception as e:

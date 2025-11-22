@@ -6,10 +6,11 @@ import pickle
 import random
 import string
 from pathlib import Path
-from typing import Any
+from typing import Any, TypedDict
 
 import aiohttp
 import yaml
+from pydantic import BaseModel, computed_field
 
 from cync_controller.const import (
     CYNC_ACCOUNT_LANGUAGE,
@@ -22,36 +23,98 @@ from cync_controller.const import (
     PERSISTENT_BASE_DIR,
 )
 from cync_controller.logging_abstraction import get_logger
-from cync_controller.structs import ComputedTokenData, GlobalObject
 
 logger = get_logger(__name__)
-g = GlobalObject()
 
 
 class CyncAuthenticationError(Exception):
     """Exception raised when Cync Cloud API authentication fails or token expires."""
 
 
+class AuthRequestData(TypedDict):
+    """Type definition for authentication request data (OTP request)."""
+
+    corp_id: str
+    email: str
+    local_lang: str
+
+
+class AuthOTPData(TypedDict):
+    """Type definition for OTP authentication request data."""
+
+    corp_id: str
+    email: str
+    password: str
+    two_factor: int
+    resource: str
+
+
+class MeshInfoDict(TypedDict, total=False):
+    """Type definition for mesh network information from API."""
+
+    name: str
+    access_key: str
+    id: str
+    mac: str
+    product_id: str
+    properties: dict[str, Any]  # Complex nested structure, keep as Any for now
+
+
+class RawTokenData(BaseModel):
+    """Model for cloud token data."""
+
+    # API Auth Response:
+    # {
+    # 'access_token': '1007d2ad150c4000-2407d4d081dbea53DAwQjkzNUM2RDE4QjE0QTIzMjNGRjAwRUU4ODNEQUE5RTFCMjhBOQ==',
+    # 'refresh_token': 'REY3NjVENEQwQTM4NjE2OEM3QjNGMUZEQjQyQzU0MEIzRTU4NzMyRDdFQzZFRUYyQTUxNzE4RjAwNTVDQ0Y3Mw==',
+    # 'user_id': 769963474,
+    # 'expire_in': 604800,
+    # 'authorize': '2207d2c8d2c9e406'
+    # }
+    access_token: str
+    user_id: str | int
+    expire_in: str | int
+    refresh_token: str
+    authorize: str
+
+
+class ComputedTokenData(RawTokenData):
+    issued_at: datetime.datetime
+
+    @computed_field
+    @property
+    def expires_at(self) -> datetime.datetime | None:
+        """Calculate the expiration time of the token based on the issued time and expires_in.
+
+        Returns:
+            datetime.datetime: The expiration time in UTC.
+
+        """
+        if self.issued_at and self.expire_in:
+            expire_seconds = float(self.expire_in) if isinstance(self.expire_in, (str, int)) else 0.0
+            return self.issued_at + datetime.timedelta(seconds=expire_seconds)
+        return None
+
+
 class CyncCloudAPI:
     api_timeout: int = 8
     lp: str = "CyncCloudAPI"
-    auth_cache_file = CYNC_CLOUD_AUTH_PATH
+    auth_cache_file: str = CYNC_CLOUD_AUTH_PATH
     token_cache: ComputedTokenData | None = None
     http_session: aiohttp.ClientSession | None = None
     _instance: CyncCloudAPI | None = None
 
-    def __new__(cls, *args: Any, **kwargs: Any) -> CyncCloudAPI:
+    def __new__(cls, *args: object, **kwargs: object) -> CyncCloudAPI:
         if cls._instance is None:
             cls._instance = super().__new__(cls)
         return cls._instance
 
-    def __init__(self, **kwargs: Any) -> None:
+    def __init__(self, **kwargs: object) -> None:
         self.api_timeout = kwargs.get("api_timeout", 8)
         self.lp = kwargs.get("lp", self.lp)
 
     async def close(self):
-        """Close the aiohttp session if it exists and is not closed.
-        """
+        """Close the aiohttp session if it exists and is not closed."""
         lp = f"{self.lp}:close:"
         if self.http_session and not self.http_session.closed:
             logger.debug("%s Closing aiohttp ClientSession", lp)
@@ -65,7 +128,7 @@ class CyncCloudAPI:
         if not self.http_session or self.http_session.closed:
             logger.debug("%s:_check_session: Creating new aiohttp ClientSession", self.lp)
             self.http_session = aiohttp.ClientSession()
-            await self.http_session.__aenter__()
+            _ = await self.http_session.__aenter__()
 
     async def read_token_cache(self) -> ComputedTokenData | None:
         """Read the token cache from the file.
@@ -126,7 +189,7 @@ class CyncCloudAPI:
         if not CYNC_ACCOUNT_USERNAME or not CYNC_ACCOUNT_PASSWORD:
             logger.error("%s Cync account username or password not set, cannot request OTP!", lp)
             return False
-        auth_data = {
+        auth_data: AuthRequestData = {
             "corp_id": CYNC_CORP_ID,
             "email": CYNC_ACCOUNT_USERNAME,
             "local_lang": CYNC_ACCOUNT_LANGUAGE,
@@ -148,7 +211,7 @@ class CyncCloudAPI:
         else:
             return True
 
-    async def send_otp(self, otp_code: int) -> bool:  # pyright: ignore[reportUnnecessaryComparison]
+    async def send_otp(self, otp_code: int) -> bool:
         lp = f"{self.lp}:send_otp:"
         await self._check_session()
         if not otp_code:
@@ -162,7 +225,10 @@ class CyncCloudAPI:
                 return False
 
         api_auth_url = f"{CYNC_API_BASE}user_auth/two_factor"
-        auth_data: dict[str, Any] = {
+        if not CYNC_ACCOUNT_USERNAME or not CYNC_ACCOUNT_PASSWORD:
+            logger.error("%s Missing credentials", lp)
+            return False
+        auth_data: AuthOTPData = {
             "corp_id": CYNC_CORP_ID,
             "email": CYNC_ACCOUNT_USERNAME,
             "password": CYNC_ACCOUNT_PASSWORD,
@@ -327,42 +393,43 @@ class CyncCloudAPI:
             logger.exception("%s Failed to get key from JSON", lp)
             raise
 
-        # {'error': {'msg': 'Access-Token Expired', 'code': 4031021}}
         if ret is None:
             msg = "Failed to get properties: response is None"
             raise RuntimeError(msg)
-        logit = False
-        if "error" in ret:
-            error_data = ret["error"]
-            if error_data.get("msg"):
-                if error_data["msg"].lower() == "access-token expired":
-                    msg = f"{lp} Access-Token expired, you need to re-authenticate!"
-                    raise CyncAuthenticationError(msg)
-                    # logger.error("Access-Token expired, re-authenticating...")
-                    # return self.get_devices(*self.authenticate_2fa())
-                logit = True
 
-                if "code" in error_data:
-                    cync_err_code = error_data["code"]
-                    if cync_err_code == 4041009:
-                        # no properties for this home ID
-                        # I've noticed lots of empty homes in the returned data,
-                        # we only parse homes with an assigned name and a 'bulbsArray'
-                        logit = False
-                    else:
-                        logger.debug(
-                            "%s DBG>>> error code != 4041009 (int) ---> type(cync_err_code)=%s -- cync_err_code=%s /// setting logit = True",
-                            lp,
-                            type(cync_err_code),
-                            cync_err_code,
-                        )
-                        logit = True
-                else:
-                    logger.debug("%s DBG>>> no 'code' in error data, setting logit = True", lp)
-                    logit = True
-            if logit is True:
-                logger.warning("%s Cync Cloud API Error: %s", lp, error_data)
+        self._handle_properties_error(ret, lp)
         return ret
+
+    def _handle_properties_error(self, ret: dict[str, Any], lp: str) -> None:
+        """Handle error responses from get_properties."""
+        if "error" not in ret:
+            return
+
+        error_data = ret["error"]
+        if not error_data.get("msg"):
+            return
+
+        if error_data["msg"].lower() == "access-token expired":
+            msg = f"{lp} Access-Token expired, you need to re-authenticate!"
+            raise CyncAuthenticationError(msg)
+
+        logit = True
+        if "code" in error_data:
+            cync_err_code = error_data["code"]
+            if cync_err_code == 4041009:
+                logit = False
+            else:
+                logger.debug(
+                    "%s DBG>>> error code != 4041009 (int) ---> type(cync_err_code)=%s -- cync_err_code=%s /// setting logit = True",
+                    lp,
+                    type(cync_err_code),
+                    cync_err_code,
+                )
+        else:
+            logger.debug("%s DBG>>> no 'code' in error data, setting logit = True", lp)
+
+        if logit:
+            logger.warning("%s Cync Cloud API Error: %s", lp, error_data)
 
     async def export_config_file(self) -> bool:
         """Get Cync devices from the cloud"""
@@ -374,7 +441,7 @@ class CyncCloudAPI:
             # Ensure parent directory exists
             Path(CYNC_CONFIG_FILE_PATH).parent.mkdir(parents=True, exist_ok=True)
             with Path(CYNC_CONFIG_FILE_PATH).open("w") as f:
-                f.write(yaml.dump(mesh_config))
+                _ = f.write(yaml.dump(mesh_config))
         except Exception:
             logger.exception(
                 "%s Failed to write mesh config to file: %s",
@@ -385,28 +452,145 @@ class CyncCloudAPI:
         else:
             return True
 
-    async def _mesh_to_config(self, mesh_info: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
-        """Take exported cloud data and format it into a working config dict to be dumped in YAML format."""
-        # Lazy import to avoid circular dependency
-        from cync_controller.devices import CyncDevice
-
-        lp = f"{self.lp}:export config:"
-        mesh_conf: dict[str, dict[str, Any]] = {}
-        # What we get from the Cync cloud API
+    def _write_raw_mesh_file(self, mesh_info: list[dict[str, Any]], lp: str) -> None:
+        """Write raw mesh data to file."""
         raw_file_out = f"{PERSISTENT_BASE_DIR}/raw_mesh.cync"
         try:
-            # Ensure parent directory exists
             Path(raw_file_out).parent.mkdir(parents=True, exist_ok=True)
             with Path(raw_file_out).open("w") as _f:
-                _f.write(yaml.dump(mesh_info))
+                _ = _f.write(yaml.dump(mesh_info))
+            logger.debug("%s Dumped raw config from Cync account to file: %s", lp, raw_file_out)
         except Exception:
             logger.exception(
                 "%s Failed to write raw config from Cync account to file: '%s'",
                 lp,
                 raw_file_out,
             )
-        else:
-            logger.debug("%s Dumped raw config from Cync account to file: %s", lp, raw_file_out)
+
+    def _process_mesh_device(
+        self,
+        cfg_bulb: dict[str, Any],
+        lp: str,
+    ) -> tuple[int, dict[str, Any]] | None:
+        """Process a single device from mesh config. Returns (device_id, device_dict) or None."""
+        from cync_controller.devices.base_device import CyncDevice
+
+        if any(
+            checkattr not in cfg_bulb
+            for checkattr in (
+                "deviceID",
+                "displayName",
+                "mac",
+                "deviceType",
+                "firmwareVersion",
+            )
+        ):
+            logger.warning(
+                "%s Missing required attribute in Cync bulb, skipping: %s",
+                lp,
+                cfg_bulb,
+            )
+            return None
+
+        __id = int(str(cfg_bulb["deviceID"])[-3:])
+        wifi_mac = str(cfg_bulb.get("wifiMac"))
+        _mac = str(cfg_bulb["mac"])
+        name = str(cfg_bulb["displayName"])
+        _type = int(cfg_bulb["deviceType"])
+        _fw_ver = str(cfg_bulb["firmwareVersion"])
+
+        hvac_cfg: dict[str, Any] | None = None
+        if "hvacSystem" in cfg_bulb:
+            hvac_cfg = cfg_bulb["hvacSystem"]
+            if "thermostatSensors" in cfg_bulb:
+                hvac_cfg["thermostatSensors"] = cfg_bulb["thermostatSensors"]
+            logger.debug(
+                "%s Found HVAC device '%s' (ID: %s): %s",
+                lp,
+                name,
+                __id,
+                hvac_cfg,
+            )
+
+        cync_device = CyncDevice(
+            cync_id=__id,
+            cync_type=_type,
+            name=name,
+            mac=_mac,
+            wifi_mac=wifi_mac,
+            fw_version=_fw_ver,
+            home_id=None,  # home_id not available in this context
+            hvac=hvac_cfg,
+        )
+
+        new_dev_dict: dict[str, Any] = {}
+        if hvac_cfg:
+            new_dev_dict["hvac"] = hvac_cfg
+
+        for attr_set in ("name", "mac", "wifi_mac"):
+            value = getattr(cync_device, attr_set)
+            if value:
+                new_dev_dict[attr_set] = value
+            else:
+                logger.warning("%s Attribute not found for bulb: %s", lp, attr_set)
+
+        new_dev_dict["type"] = _type
+        new_dev_dict["is_plug"] = cync_device.is_plug
+        new_dev_dict["supports_temperature"] = cync_device.supports_temperature
+        new_dev_dict["supports_rgb"] = cync_device.supports_rgb
+        new_dev_dict["fw"] = _fw_ver
+
+        return __id, new_dev_dict
+
+    def _process_mesh_group(
+        self,
+        cfg_group: dict[str, Any],
+        lp: str,
+    ) -> tuple[int, dict[str, Any]] | None:
+        """Process a single group from mesh config. Returns (group_id, group_dict) or None."""
+        if "groupID" not in cfg_group or "displayName" not in cfg_group:
+            logger.warning(
+                "%s Missing required attribute in Cync group, skipping: %s",
+                lp,
+                cfg_group,
+            )
+            return None
+
+        group_id = int(cfg_group["groupID"])
+        group_name = str(cfg_group["displayName"])
+        device_ids: list[int] = [int(d) for d in cfg_group.get("deviceIDArray", [])]
+        is_subgroup: bool = cfg_group.get("isSubgroup", False)
+        member_ids: list[int] = [int(str(dev_id)[-3:]) for dev_id in device_ids]
+
+        if len(member_ids) == 0:
+            logger.debug(
+                "%s Skipping empty group '%s' (ID: %s)",
+                lp,
+                group_name,
+                group_id,
+            )
+            return None
+
+        logger.debug(
+            "%s Added group '%s' (ID: %s) with %s devices",
+            lp,
+            group_name,
+            group_id,
+            len(member_ids),
+        )
+
+        return group_id, {
+            "name": group_name,
+            "members": member_ids,
+            "is_subgroup": is_subgroup,
+        }
+
+    async def _mesh_to_config(self, mesh_info: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
+        """Take exported cloud data and format it into a working config dict to be dumped in YAML format."""
+        lp = f"{self.lp}:export config:"
+        mesh_conf: dict[str, dict[str, Any]] = {}
+        self._write_raw_mesh_file(mesh_info, lp)
+
         for mesh_ in mesh_info:
             mesh_dict: dict[str, Any] = mesh_
             if "name" not in mesh_dict or len(mesh_dict["name"]) < 1:
@@ -430,116 +614,17 @@ class CyncCloudAPI:
             new_mesh["groups"] = {}
 
             for cfg_bulb_raw in mesh_dict["properties"]["bulbsArray"]:
-                cfg_bulb: dict[str, Any] = cfg_bulb_raw
-                if any(
-                    checkattr not in cfg_bulb
-                    for checkattr in (
-                        "deviceID",
-                        "displayName",
-                        "mac",
-                        "deviceType",
-                        "firmwareVersion",
-                    )
-                ):
-                    logger.warning(
-                        "%s Missing required attribute in Cync bulb, skipping: %s",
-                        lp,
-                        cfg_bulb,
-                    )
-                    continue
-                new_dev_dict = {}
-                # last 3 digits of deviceID
-                __id = int(str(cfg_bulb["deviceID"])[-3:])
-                wifi_mac = str(cfg_bulb.get("wifiMac"))
-                _mac = str(cfg_bulb["mac"])
-                name = str(cfg_bulb["displayName"])
-                _type = int(cfg_bulb["deviceType"])
-                _fw_ver = str(cfg_bulb["firmwareVersion"])
-                # data from: https://github.com/baudneo/hass-addons/issues/8
-                # { "hvacSystem": { "changeoverMode": 0, "auxHeatStages": 1, "auxFurnaceType": 1, "stages": 1, "furnaceType": 1, "type": 2, "powerLines": 1 },
-                # "thermostatSensors": [ { "pin": "025572", "name": "Living Room", "type": "savant" }, { "pin": "044604", "name": "Bedroom Sensor", "type": "savant" }, { "pin": "022724", "name": "Thermostat sensor 3", "type": "savant" } ] } ]
-                hvac_cfg: dict[str, Any] | None = None
-                if "hvacSystem" in cfg_bulb:
-                    hvac_cfg = cfg_bulb["hvacSystem"]
-                    if "thermostatSensors" in cfg_bulb:
-                        hvac_cfg["thermostatSensors"] = cfg_bulb["thermostatSensors"]
-                    logger.debug(
-                        "%s Found HVAC device '%s' (ID: %s): %s",
-                        lp,
-                        name,
-                        __id,
-                        hvac_cfg,
-                    )
-                    new_dev_dict["hvac"] = hvac_cfg
+                result = self._process_mesh_device(cfg_bulb_raw, lp)
+                if result:
+                    __id, new_dev_dict = result
+                    new_mesh["devices"][__id] = new_dev_dict
 
-                cync_device = CyncDevice(
-                    name=name,
-                    cync_id=__id,
-                    cync_type=_type,
-                    mac=_mac,
-                    wifi_mac=wifi_mac,
-                    fw_version=_fw_ver,
-                    hvac=hvac_cfg,
-                )
-                for attr_set in (
-                    "name",
-                    "mac",
-                    "wifi_mac",
-                ):
-                    value = getattr(cync_device, attr_set)
-                    if value:
-                        new_dev_dict[attr_set] = value
-                    else:
-                        logger.warning("%s Attribute not found for bulb: %s", lp, attr_set)
-                new_dev_dict["type"] = _type
-                new_dev_dict["is_plug"] = cync_device.is_plug
-                new_dev_dict["supports_temperature"] = cync_device.supports_temperature
-                new_dev_dict["supports_rgb"] = cync_device.supports_rgb
-                new_dev_dict["fw"] = _fw_ver
-
-                new_mesh["devices"][__id] = new_dev_dict
-
-            # Parse groups
             if "groupsArray" in mesh_dict["properties"]:
                 logger.debug("%s 'groupsArray' found, processing groups...", lp)
                 for cfg_group_raw in mesh_dict["properties"]["groupsArray"]:
-                    cfg_group: dict[str, Any] = cfg_group_raw
-                    if "groupID" not in cfg_group or "displayName" not in cfg_group:
-                        logger.warning(
-                            "%s Missing required attribute in Cync group, skipping: %s",
-                            lp,
-                            cfg_group,
-                        )
-                        continue
-
-                    group_id = int(cfg_group["groupID"])
-                    group_name = str(cfg_group["displayName"])
-                    device_ids: list[Any] = cfg_group.get("deviceIDArray", [])
-                    is_subgroup: bool = cfg_group.get("isSubgroup", False)
-
-                    # Convert full device IDs to last 3 digits
-                    member_ids: list[int] = [int(str(dev_id)[-3:]) for dev_id in device_ids]
-
-                    # Only add groups that have devices
-                    if len(member_ids) > 0:
-                        new_mesh["groups"][group_id] = {
-                            "name": group_name,
-                            "members": member_ids,
-                            "is_subgroup": is_subgroup,
-                        }
-                        logger.debug(
-                            "%s Added group '%s' (ID: %s) with %s devices",
-                            lp,
-                            group_name,
-                            group_id,
-                            len(member_ids),
-                        )
-                    else:
-                        logger.debug(
-                            "%s Skipping empty group '%s' (ID: %s)",
-                            lp,
-                            group_name,
-                            group_id,
-                        )
+                    result = self._process_mesh_group(cfg_group_raw, lp)
+                    if result:
+                        group_id, group_dict = result
+                        new_mesh["groups"][group_id] = group_dict
 
         return {"account data": mesh_conf}

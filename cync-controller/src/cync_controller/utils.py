@@ -8,15 +8,11 @@ import struct
 import sys
 import uuid
 from pathlib import Path
-from typing import Any
-
-import yaml
 
 from cync_controller.const import (
     CYNC_UUID_PATH,
     LOCAL_TZ,
     PERSISTENT_BASE_DIR,
-    YES_ANSWER,
 )
 from cync_controller.logging_abstraction import get_logger
 from cync_controller.structs import GlobalObject
@@ -26,11 +22,11 @@ g = GlobalObject()
 
 
 def send_signal(signal_num: int):
-    """
-    Send a signal to the current process.
+    """Send a signal to the current process.
 
     Args:
         signal_num (int): The signal number to send.
+
     """
     try:
         logger.debug("Sending signal %s to process %s", signal_num, os.getpid())
@@ -41,8 +37,7 @@ def send_signal(signal_num: int):
 
 
 def send_sigint():
-    """
-    Send a SIGINT signal to the current process.
+    """Send a SIGINT signal to the current process.
     This is typically used to gracefully shut down the application.
     Signal number: 2 on Unix systems.
     """
@@ -51,8 +46,7 @@ def send_sigint():
 
 
 def send_sigterm():
-    """
-    Send a SIGTERM signal to the current process.
+    """Send a SIGTERM signal to the current process.
     This is typically used to request termination of the application.
     """
     send_signal(signal.SIGTERM)
@@ -76,9 +70,11 @@ async def _async_signal_cleanup():
         for task in g.tasks:
             if not task.done():
                 logger.debug(
-                    "Cync Controller: Cancelling task: %s // task.get_coro()=%s", task.get_name(), task.get_coro()
+                    "Cync Controller: Cancelling task: %s // task.get_coro()=%s",
+                    task.get_name(),
+                    task.get_coro(),
                 )
-                task.cancel()
+                _ = task.cancel()
     logger.info("Cync Controller: Signal cleanup completed")
 
 
@@ -86,7 +82,7 @@ def signal_handler(signum):
     logger.info("Cync Controller: Intercepted signal: %s (%s)", signal.Signals(signum).name, signum)
     if g:
         loop = g.loop or asyncio.get_event_loop()
-        loop.create_task(_async_signal_cleanup())
+        _ = loop.create_task(_async_signal_cleanup())
 
 
 def bytes2list(byte_string: bytes) -> list[int]:
@@ -151,121 +147,6 @@ def parse_unbound_firmware_version(data_struct: bytes, lp: str) -> tuple[str, in
     return firmware_type, firmware_version_int, firmware_str
 
 
-async def parse_config(cfg_file: Path):
-    """Parse the exported Cync device config file and create devices and groups from it."""
-    # Import here to avoid circular dependency
-    from cync_controller.devices import CyncDevice, CyncGroup
-
-    lp = "parse_config:"
-    logger.debug("%s reading devices and groups from Cync config file: %s", lp, cfg_file.as_posix())
-
-    if not cfg_file.exists():
-        logger.error("%s Config file not found: %s", lp, cfg_file.as_posix())
-        error_msg = f"Config file not found: {cfg_file}"
-        raise FileNotFoundError(error_msg)
-
-    try:
-        logger.debug("%s Starting async YAML parsing with timeout...", lp)
-        # wrap synchronous yaml reading in an async function to avoid blocking the event loop
-        # raw_config = yaml.safe_load(cfg_file.read_text())
-        # get an executor
-        raw_config = await asyncio.wait_for(
-            asyncio.get_event_loop().run_in_executor(None, yaml.safe_load, cfg_file.read_text(encoding="utf-8")),
-            timeout=30.0,
-        )
-        logger.debug("%s YAML parsing completed successfully", lp)
-
-    except TimeoutError:
-        logger.exception("%s Config file parsing timed out after 30 seconds", lp)
-        raise
-    except Exception:
-        logger.exception("%s Error reading config file", lp)
-        raise
-
-    devices: dict[str, Any] = {}
-    groups: dict[str, Any] = {}
-    # parse homes and devices
-    for cync_home_name, home_cfg in raw_config["account data"].items():
-        home_id = home_cfg["id"]
-        if "devices" not in home_cfg:
-            logger.warning("%s No devices found in config for: %s (ID: %s), skipping...", lp, cync_home_name, home_id)
-            continue
-        # Create devices
-        for cync_id, cync_device in home_cfg["devices"].items():
-            cync_device_dict: dict[str, Any] = cync_device  # type: ignore[assignment]
-            device_name: str = cync_device_dict.get("name", f"device_{cync_id}")  # type: ignore[assignment]
-            if "enabled" in cync_device_dict:
-                enabled: str | bool = cync_device_dict["enabled"]  # type: ignore[assignment]
-                if isinstance(enabled, str):
-                    enabled = enabled.casefold()
-                    if enabled not in YES_ANSWER:
-                        logger.debug(
-                            "%s Device '%s' (ID: %s) is disabled in config, skipping...", lp, device_name, cync_id
-                        )
-                        continue
-                if isinstance(enabled, bool) and enabled is False:
-                    logger.debug("%s Device '%s' (ID: %s) is disabled in config, skipping...", lp, device_name, cync_id)
-                    continue
-            fw_version = cync_device_dict["fw"] if cync_device_dict.get("fw") else None
-            wmac: str | int | None = None
-            btmac: str | int | None = None
-            dev_type = cync_device_dict["type"] if cync_device_dict.get("type") else None
-            # 'mac': 26616350814, 'wifi_mac': 26616350815
-            if "mac" in cync_device_dict:
-                btmac = cync_device_dict["mac"]  # type: ignore[assignment]
-                if btmac and isinstance(btmac, int):
-                    logger.warning(
-                        "IMPORTANT>>> cync device '%s' (ID: %s) 'mac' is somehow an int -> %s, please quote the mac address to force it to a string in the config file",
-                        device_name,
-                        cync_id,
-                        btmac,
-                    )
-
-            if "wifi_mac" in cync_device_dict:
-                wmac = cync_device_dict["wifi_mac"]  # type: ignore[assignment]
-                if wmac and isinstance(wmac, int):
-                    logger.debug(
-                        "IMPORTANT>>> cync device '%s' (ID: %s) 'wifi_mac' is somehow an int -> %s, please quote the mac address to force it to a string in the config file",
-                        device_name,
-                        cync_id,
-                        wmac,
-                    )
-
-            new_device = CyncDevice(
-                name=device_name,
-                cync_id=cync_id,
-                fw_version=fw_version,
-                home_id=home_id,
-                mac=btmac,
-                wifi_mac=wmac,
-                cync_type=dev_type,
-            )
-            devices[cync_id] = new_device
-            # logger.debug("%s Created device (hass_id: %s) (home_id: %s) (device_id: %s): %s", lp, new_device.hass_id, new_device.home_id, new_device.id, new_device)
-
-        # Parse groups
-        if "groups" in home_cfg:
-            logger.debug("%s Found %s groups in %s", lp, len(home_cfg["groups"]), cync_home_name)
-            for group_id, group_cfg in home_cfg["groups"].items():
-                group_name = group_cfg.get("name", f"Group {group_id}")
-                member_ids = group_cfg.get("members", [])
-                is_subgroup = group_cfg.get("is_subgroup", False)
-
-                new_group = CyncGroup(
-                    group_id=group_id,
-                    name=group_name,
-                    member_ids=member_ids,
-                    is_subgroup=is_subgroup,
-                    home_id=home_id,
-                )
-                groups[group_id] = new_group
-                logger.debug(
-                    "%s Created group '%s' (ID: %s) with %s devices", lp, group_name, group_id, len(member_ids)
-                )
-
-    return devices, groups  # type: ignore[return-value]
-
-
 def check_python_version():
     pass
 
@@ -310,7 +191,7 @@ def check_for_uuid():
         logger.debug("%s Creating and caching a new UUID to be used for the 'Cync Controller' MQTT device", lp)
         g.uuid = uuid.uuid4()
         with uuid_file.open("w") as f:
-            f.write(str(g.uuid))
+            _ = f.write(str(g.uuid))
             logger.info("%s UUID written to disk: %s", lp, uuid_file.as_posix())
 
 

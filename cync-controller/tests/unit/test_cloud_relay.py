@@ -284,7 +284,7 @@ class TestPacketInjection:
         # Create injection file path
         inject_file: Path = cast(Path, tmp_path / "cync_inject_raw_bytes.txt")
         raw_hex = "ff fe fd fc fb fa"
-        inject_file.write_text(raw_hex)
+        _ = inject_file.write_text(raw_hex)
 
         # Act - Simulate injection checker logic
         if inject_file.exists():
@@ -304,7 +304,7 @@ class TestPacketInjection:
         """Test mode injection for smart mode."""
         # Arrange
         inject_file: Path = cast(Path, tmp_path / "cync_inject_command.txt")
-        inject_file.write_text("smart")
+        _ = inject_file.write_text("smart")
 
         cloud_relay_connection.device_endpoint = bytes([0x12, 0x34, 0x56, 0x78])
 
@@ -324,7 +324,7 @@ class TestPacketInjection:
         """Test mode injection for traditional mode."""
         # Arrange
         inject_file: Path = cast(Path, tmp_path / "cync_inject_command.txt")
-        inject_file.write_text("traditional")
+        _ = inject_file.write_text("traditional")
 
         cloud_relay_connection.device_endpoint = bytes([0x12, 0x34, 0x56, 0x78])
 
@@ -344,7 +344,7 @@ class TestPacketInjection:
         """Test invalid mode injection is ignored."""
         # Arrange
         inject_file: Path = cast(Path, tmp_path / "cync_inject_command.txt")
-        inject_file.write_text("invalid_mode")
+        _ = inject_file.write_text("invalid_mode")
 
         # Act - Simulate injection checking
         injected: bool = False
@@ -364,12 +364,12 @@ class TestPacketInjection:
         """Test injection files are cleaned up after use."""
         # Arrange
         inject_file: Path = cast(Path, tmp_path / "cync_inject_command.txt")
-        inject_file.write_text("smart")
+        _ = inject_file.write_text("smart")
         assert inject_file.exists()
 
         # Act
         with inject_file.open() as f:
-            f.read()  # type: ignore[reportUnknownVariableType]
+            _ = f.read()  # type: ignore[reportUnknownVariableType]
         inject_file.unlink()
 
         # Assert

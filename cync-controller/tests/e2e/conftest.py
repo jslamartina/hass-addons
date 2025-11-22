@@ -85,7 +85,7 @@ def ha_base_url():
 def ha_login(page: Page, ha_base_url: str, ha_credentials: dict):
     """Log into Home Assistant and return the authenticated page."""
     # Navigate to Home Assistant
-    page.goto(ha_base_url)
+    _ = page.goto(ha_base_url)
 
     # Check if already logged in
     if page.url.startswith(f"{ha_base_url}/lovelace") or page.url.startswith(f"{ha_base_url}/config"):
@@ -119,7 +119,7 @@ def ingress_page(ha_login: Page, ha_base_url: str):
     # Navigate to ingress page
     # Try direct URL first
     ingress_url = f"{ha_base_url}/local_cync-controller/ingress"
-    page.goto(ingress_url)
+    _ = page.goto(ingress_url)
 
     # Verify we're on the ingress page by checking for expected elements
     # After fix: Button is always visible if config exists; only show #startButton if no config
@@ -141,7 +141,7 @@ def ingress_page(ha_login: Page, ha_base_url: str):
 def ha_config_page(ha_login: Page, ha_base_url: str):
     """Navigate to Home Assistant configuration page."""
     page = ha_login
-    page.goto(f"{ha_base_url}/config/dashboard")
+    _ = page.goto(f"{ha_base_url}/config/dashboard")
     page.wait_for_load_state("networkidle")
     return page
 
@@ -157,7 +157,7 @@ def addon_config_page(ha_config_page: Page, ha_base_url: str):
         settings_link.click()
 
     # Navigate to Add-ons
-    page.goto(f"{ha_base_url}/hassio/dashboard")
+    _ = page.goto(f"{ha_base_url}/hassio/dashboard")
     page.wait_for_load_state("networkidle")
 
     # Click on Cync Controller add-on
@@ -174,7 +174,7 @@ def cync_devices_page(ha_login: Page, ha_base_url: str):
     page = ha_login
 
     # Navigate to MQTT integration
-    page.goto(f"{ha_base_url}/config/integrations/integration/mqtt")
+    _ = page.goto(f"{ha_base_url}/config/integrations/integration/mqtt")
     page.wait_for_load_state("networkidle")
 
     return page

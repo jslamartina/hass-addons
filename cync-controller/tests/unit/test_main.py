@@ -118,7 +118,7 @@ class TestCyncControllerStartup:
             assert mock_global_object.mqtt_client is not None
 
             # Clean up
-            controller.start_task.cancel()
+            _ = controller.start_task.cancel()
             with contextlib.suppress(asyncio.CancelledError):
                 await controller.start_task
 
@@ -173,7 +173,7 @@ class TestCyncControllerStartup:
             # The export server should be set on the global object
             assert mock_global_object.export_server is not None
 
-            controller.start_task.cancel()
+            _ = controller.start_task.cancel()
             with contextlib.suppress(asyncio.CancelledError):
                 await controller.start_task
 

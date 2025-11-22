@@ -53,7 +53,7 @@ def set_correlation_id(correlation_id: str | None) -> None:
     Args:
         correlation_id: Correlation ID to set (or None to clear)
     """
-    _correlation_id.set(correlation_id)
+    _ = _correlation_id.set(correlation_id)
 
 
 @contextmanager

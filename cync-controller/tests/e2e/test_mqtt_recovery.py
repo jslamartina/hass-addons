@@ -127,7 +127,7 @@ def test_entities_unavailable_during_mqtt_disconnect(ha_login: Page, ha_base_url
     print("\n=== Test: Entities Unavailable During MQTT Disconnect ===")
 
     page = ha_login
-    page.goto(f"{ha_base_url}/lovelace/0")
+    _ = page.goto(f"{ha_base_url}/lovelace/0")
     page.wait_for_load_state("networkidle")
 
     # Stop MQTT
@@ -197,12 +197,12 @@ def test_rapid_mqtt_disconnect_reconnect():
 
         # Stop MQTT
         print("  Stopping MQTT...")
-        stop_addon(MQTT_ADDON_SLUG)
+        _ = stop_addon(MQTT_ADDON_SLUG)
         time.sleep(3)
 
         # Start MQTT
         print("  Starting MQTT...")
-        start_addon(MQTT_ADDON_SLUG)
+        _ = start_addon(MQTT_ADDON_SLUG)
         time.sleep(5)
 
         # Verify add-on still healthy

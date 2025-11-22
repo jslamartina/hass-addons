@@ -57,7 +57,7 @@ class TestCommandProcessorExecution:
         # Process all commands
         process_task = asyncio.create_task(processor.process_next())
         await asyncio.sleep(0.15)
-        process_task.cancel()
+        _ = process_task.cancel()
 
         with contextlib.suppress(asyncio.CancelledError):
             await process_task
@@ -89,7 +89,7 @@ class TestCommandProcessorExecution:
 
         process_task = asyncio.create_task(processor.process_next())
         await asyncio.sleep(0.1)
-        process_task.cancel()
+        _ = process_task.cancel()
 
         with contextlib.suppress(asyncio.CancelledError):
             await process_task
@@ -133,7 +133,7 @@ class TestCommandProcessorExecution:
 
         process_task = asyncio.create_task(processor.process_next())
         await asyncio.sleep(0.15)
-        process_task.cancel()
+        _ = process_task.cancel()
 
         with contextlib.suppress(asyncio.CancelledError):
             await process_task
@@ -168,7 +168,7 @@ class TestCommandProcessorExecution:
 
         process_task = asyncio.create_task(processor.process_next())
         await asyncio.sleep(0.3)
-        process_task.cancel()
+        _ = process_task.cancel()
 
         with contextlib.suppress(asyncio.CancelledError):
             await process_task
@@ -209,7 +209,7 @@ class TestCommandProcessorExecution:
         try:
             await asyncio.wait_for(process_task, timeout=1.0)
         except TimeoutError:
-            process_task.cancel()
+            _ = process_task.cancel()
 
         # All 3 commands should be executed
         assert executed_count == 3
@@ -268,7 +268,7 @@ class TestCommandProcessorExecution:
 
         process_task = asyncio.create_task(processor.process_next())
         await asyncio.sleep(0.1)
-        process_task.cancel()
+        _ = process_task.cancel()
 
         with contextlib.suppress(asyncio.CancelledError):
             await process_task
@@ -313,7 +313,7 @@ class TestCommandProcessorExecution:
 
         process_task = asyncio.create_task(processor.process_next())
         await asyncio.sleep(0.15)
-        process_task.cancel()
+        _ = process_task.cancel()
 
         with contextlib.suppress(asyncio.CancelledError):
             await process_task

@@ -1,5 +1,4 @@
-"""
-Logging abstraction layer for Cync Controller.
+"""Logging abstraction layer for Cync Controller.
 
 Provides dual-format logging (JSON + human-readable) with correlation tracking,
 structured context, and configurable output destinations.
@@ -59,7 +58,7 @@ class JSONFormatter(logging.Formatter):
 class HumanReadableFormatter(logging.Formatter):
     """Formatter that outputs human-readable logs with correlation IDs."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         # Format: timestamp level [module:line] correlation_id > message
         super().__init__(
             fmt="%(asctime)s.%(msecs)03d %(levelname)s [%(module)s:%(lineno)d] %(correlation_id)s > %(message)s",
@@ -87,8 +86,7 @@ class HumanReadableFormatter(logging.Formatter):
 
 
 class CyncLogger:
-    """
-    Logger abstraction providing dual-format output (JSON + human-readable).
+    """Logger abstraction providing dual-format output (JSON + human-readable).
 
     Similar to .NET's ILogger, provides structured logging with automatic
     correlation tracking and flexible output configuration.
@@ -100,15 +98,15 @@ class CyncLogger:
         log_format: str = "both",
         json_file: str | Path | None = None,
         human_output: str | None = "stdout",
-    ):
-        """
-        Initialize CyncLogger.
+    ) -> None:
+        """Initialize CyncLogger.
 
         Args:
             name: Logger name (typically module name)
             log_format: Output format - "json", "human", or "both"
             json_file: Path for JSON output file (None to disable file output)
             human_output: "stdout", "stderr", or file path for human-readable output
+
         """
         self.name = name
         self.logger = logging.getLogger(name)
@@ -166,7 +164,14 @@ class CyncLogger:
             human_handler.setLevel(handler_level)
             self.logger.addHandler(human_handler)
 
-    def _log(self, level: int, msg: str, *args, extra: dict[str, Any] | None = None, **kwargs):
+    def _log(
+        self,
+        level: int,
+        msg: str,
+        *args: Any,
+        extra: dict[str, Any] | None = None,
+        **kwargs: Any,
+    ) -> None:
         """Internal logging method with structured context support."""
         # Create a LogRecord with extra data attached
         if extra:
@@ -175,45 +180,45 @@ class CyncLogger:
 
         self.logger.log(level, msg, *args, **kwargs)
 
-    def debug(self, msg: str, *args, extra: dict[str, Any] | None = None, **kwargs):
+    def debug(self, msg: str, *args: Any, extra: dict[str, Any] | None = None, **kwargs: Any) -> None:
         """Log debug message with optional structured context."""
         self._log(logging.DEBUG, msg, *args, extra=extra, **kwargs)
 
-    def info(self, msg: str, *args, extra: dict[str, Any] | None = None, **kwargs):
+    def info(self, msg: str, *args: Any, extra: dict[str, Any] | None = None, **kwargs: Any) -> None:
         """Log info message with optional structured context."""
         self._log(logging.INFO, msg, *args, extra=extra, **kwargs)
 
-    def warning(self, msg: str, *args, extra: dict[str, Any] | None = None, **kwargs):
+    def warning(self, msg: str, *args: Any, extra: dict[str, Any] | None = None, **kwargs: Any) -> None:
         """Log warning message with optional structured context."""
         self._log(logging.WARNING, msg, *args, extra=extra, **kwargs)
 
-    def error(self, msg: str, *args, extra: dict[str, Any] | None = None, **kwargs):
+    def error(self, msg: str, *args: Any, extra: dict[str, Any] | None = None, **kwargs: Any) -> None:
         """Log error message with optional structured context."""
         self._log(logging.ERROR, msg, *args, extra=extra, **kwargs)
 
-    def critical(self, msg: str, *args, extra: dict[str, Any] | None = None, **kwargs):
+    def critical(self, msg: str, *args: Any, extra: dict[str, Any] | None = None, **kwargs: Any) -> None:
         """Log critical message with optional structured context."""
         self._log(logging.CRITICAL, msg, *args, extra=extra, **kwargs)
 
-    def exception(self, msg: str, *args, extra: dict[str, Any] | None = None, **kwargs):
+    def exception(self, msg: str, *args: Any, extra: dict[str, Any] | None = None, **kwargs: Any) -> None:
         """Log exception with traceback and optional structured context."""
         kwargs["exc_info"] = True
         self._log(logging.ERROR, msg, *args, extra=extra, **kwargs)
 
-    def set_level(self, level: int):
+    def set_level(self, level: int) -> None:
         """Set logging level."""
         self.logger.setLevel(level)
 
-    def add_handler(self, handler: logging.Handler):
+    def add_handler(self, handler: logging.Handler) -> None:
         """Add a custom handler."""
         self.logger.addHandler(handler)
 
-    def remove_handler(self, handler: logging.Handler):
+    def remove_handler(self, handler: logging.Handler) -> None:
         """Remove a handler."""
         self.logger.removeHandler(handler)
 
     @property
-    def handlers(self):
+    def handlers(self) -> list[logging.Handler]:
         """Get list of handlers."""
         return self.logger.handlers
 
@@ -224,8 +229,7 @@ def get_logger(
     json_file: str | Path | None = None,
     human_output: str | None = None,
 ) -> CyncLogger:
-    """
-    Get or create a CyncLogger instance.
+    """Get or create a CyncLogger instance.
 
     Args:
         name: Logger name
@@ -235,6 +239,7 @@ def get_logger(
 
     Returns:
         CyncLogger instance
+
     """
     # Import here to avoid circular dependency at module load time
     from cync_controller.const import (

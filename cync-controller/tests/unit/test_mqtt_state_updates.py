@@ -60,7 +60,7 @@ class TestMQTTClientStateUpdates:
         ):
             mock_g.uuid = "test-uuid"
 
-            MQTTClient()
+            _ = MQTTClient()
 
             # Test brightness conversions
             test_cases = [
@@ -86,7 +86,7 @@ class TestMQTTClientStateUpdates:
         ):
             mock_g.uuid = "test-uuid"
 
-            MQTTClient()
+            _ = MQTTClient()
 
             # Test temperature conversions (Kelvin to mireds)
             # Formula: mireds = 1,000,000 / kelvin
@@ -112,7 +112,7 @@ class TestMQTTClientStateUpdates:
         ):
             mock_g.uuid = "test-uuid"
 
-            MQTTClient()
+            _ = MQTTClient()
 
             # Test round-trip conversion
             original_kelvin = 4000

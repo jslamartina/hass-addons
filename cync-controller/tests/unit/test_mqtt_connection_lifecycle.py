@@ -38,7 +38,7 @@ class TestMQTTClientConnectionLifecycle:
             # Create a task that will be cancelled after first iteration
             start_task = asyncio.create_task(client.start())
             await asyncio.sleep(0.1)  # Let it start
-            start_task.cancel()
+            _ = start_task.cancel()
 
             with contextlib.suppress(asyncio.CancelledError):
                 await start_task
@@ -67,7 +67,7 @@ class TestMQTTClientConnectionLifecycle:
 
             start_task = asyncio.create_task(client.start())
             await asyncio.sleep(0.15)  # Allow retry logic to execute
-            start_task.cancel()
+            _ = start_task.cancel()
 
             with contextlib.suppress(asyncio.CancelledError):
                 await start_task
@@ -98,7 +98,7 @@ class TestMQTTClientConnectionLifecycle:
 
             start_task = asyncio.create_task(client.start())
             await asyncio.sleep(0.15)  # Allow error handling
-            start_task.cancel()
+            _ = start_task.cancel()
 
             with contextlib.suppress(asyncio.CancelledError):
                 await start_task
@@ -135,7 +135,7 @@ class TestMQTTClientConnectionLifecycle:
 
             start_task = asyncio.create_task(client.start())
             await asyncio.sleep(0.15)
-            start_task.cancel()
+            _ = start_task.cancel()
 
             with contextlib.suppress(asyncio.CancelledError):
                 await start_task
@@ -163,7 +163,7 @@ class TestMQTTClientConnectionLifecycle:
 
             start_task = asyncio.create_task(client.start())
             await asyncio.sleep(0.1)  # Let it try at least once
-            start_task.cancel()
+            _ = start_task.cancel()
 
             with contextlib.suppress(asyncio.CancelledError):
                 await start_task

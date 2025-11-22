@@ -27,7 +27,7 @@ def test_mqtt_command_updates_device_state(ha_login: Page, ha_base_url: str):
     print("\n=== Test: MQTT Command Updates Device State ===")
 
     page = ha_login
-    page.goto(f"{ha_base_url}/lovelace/0")
+    _ = page.goto(f"{ha_base_url}/lovelace/0")
     page.wait_for_load_state("networkidle")
 
     light_name = "Hallway Lights"
@@ -70,7 +70,7 @@ def test_subgroup_state_aggregation(ha_login: Page, ha_base_url: str):
     print("\n=== Test: Subgroup State Aggregation ===")
 
     page = ha_login
-    page.goto(f"{ha_base_url}/lovelace/0")
+    _ = page.goto(f"{ha_base_url}/lovelace/0")
     page.wait_for_load_state("networkidle")
 
     group_name = "Hallway Lights"
@@ -93,7 +93,7 @@ def test_simultaneous_commands_to_multiple_devices(ha_login: Page, ha_base_url: 
     print("\n=== Test: Simultaneous Commands to Multiple Devices ===")
 
     page = ha_login
-    page.goto(f"{ha_base_url}/lovelace/0")
+    _ = page.goto(f"{ha_base_url}/lovelace/0")
     page.wait_for_load_state("networkidle")
 
     # Find multiple light entities
@@ -159,7 +159,7 @@ def test_group_command_synchronization(ha_login: Page, ha_base_url: str):
     print("\n=== Test: Group Command Synchronization ===")
 
     page = ha_login
-    page.goto(f"{ha_base_url}/lovelace/0")
+    _ = page.goto(f"{ha_base_url}/lovelace/0")
     page.wait_for_load_state("networkidle")
 
     group_name = "Hallway Lights"
@@ -236,7 +236,7 @@ def test_physical_device_changes_reflect_in_ha(ha_login: Page, ha_base_url: str)
     print("\n=== Test: Physical Device Changes Reflect in HA ===")
 
     page = ha_login
-    page.goto(f"{ha_base_url}/lovelace/0")
+    _ = page.goto(f"{ha_base_url}/lovelace/0")
     page.wait_for_load_state("networkidle")
 
     print("[Manual Test] This test requires:")

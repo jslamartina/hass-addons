@@ -1,17 +1,20 @@
 {
   "include": ["src", "tests"],
-  "extraPaths": ["src"],
+  "extraPaths": ["src", "../scripts/playwright"],
   "venvPath": "..",
   "venv": ".venv",
+  "useLibraryCodeForTypes": true,
+  "reportMissingImports": "error",
   "reportMissingTypeStubs": "error",
   "reportUnnecessaryTypeIgnoreComment": "error",
   "reportUnknownMemberType": "error",
   "reportUnknownVariableType": "error",
+  "reportImportCycles": "error",
   "stubPath": "typings",
   "executionEnvironments": [
     {
       "root": ".",
-      "extraPaths": ["src"]
+      "extraPaths": ["src", "../scripts/playwright"]
     }
   ]
 }

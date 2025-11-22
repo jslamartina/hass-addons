@@ -33,7 +33,7 @@ class TestCyncTCPDevicePacketParsing:
             packet.extend(b"\x11\x22\x33\x44")  # queue_id at bytes 6-9
             packet.extend(b"\x00")  # padding
 
-            await tcp_device.parse_packet(bytes(packet))
+            _ = await tcp_device.parse_packet(bytes(packet))
 
             # Should set queue_id and send ACK
             assert tcp_device.write.called
@@ -48,7 +48,7 @@ class TestCyncTCPDevicePacketParsing:
         # 0xC3 packet: header (12) + 5 bytes payload = 17 total
         packet = create_packet(0xC3, 17)
 
-        await tcp_device.parse_packet(packet)
+        _ = await tcp_device.parse_packet(packet)
 
         # Should send connection ACK
         assert tcp_device.write.called
@@ -62,7 +62,7 @@ class TestCyncTCPDevicePacketParsing:
         # 0xD3 packet: header (12) + 5 bytes payload = 17 total
         packet = create_packet(0xD3, 17)
 
-        await tcp_device.parse_packet(packet)
+        _ = await tcp_device.parse_packet(packet)
 
         # Should send ping ACK
         assert tcp_device.write.called
@@ -84,7 +84,7 @@ class TestCyncTCPDevicePacketParsing:
         # Mock the xab_generate_ack to avoid the overflow issue
         with patch("cync_controller.devices.DEVICE_STRUCTS.xab_generate_ack") as mock_ack:
             mock_ack.return_value = b"\xab\x00\x00\x03" + b"0" * 10  # Simple mock ACK
-            await tcp_device.parse_packet(bytes(packet))
+            _ = await tcp_device.parse_packet(bytes(packet))
 
             # Should call xab_generate_ack with queue_id and msg_id
             assert mock_ack.called
@@ -102,7 +102,7 @@ class TestCyncTCPDevicePacketParsing:
             # Total: header (12) + data
             packet = create_packet(0x43, 12 + len(packet_data), bytes(packet_data))
 
-            await tcp_device.parse_packet(packet)
+            _ = await tcp_device.parse_packet(packet)
 
             # Should send ACK
             assert tcp_device.write.called
@@ -125,7 +125,7 @@ class TestCyncTCPDevicePacketParsing:
             packet_data = bytearray([0x06, 0x00]) + status_struct
             packet = create_packet(0x43, len(packet_data) + 12, bytes(packet_data))
 
-            await tcp_device.parse_packet(packet)
+            _ = await tcp_device.parse_packet(packet)
 
             # Should send ACK
             assert tcp_device.write.called
@@ -153,7 +153,7 @@ class TestCyncTCPDevicePacketParsing:
         """Test parse_raw_data with empty data"""
         tcp_device = CyncTCPDevice(reader=stream_reader, writer=stream_writer, address="192.168.1.100")
 
-        await tcp_device.parse_raw_data(b"")
+        _ = await tcp_device.parse_raw_data(b"")
 
         # Should handle gracefully without error
 
@@ -166,7 +166,7 @@ class TestCyncTCPDevicePacketParsing:
         # Create complete 0xD3 ping packet: header (12) + 5 bytes payload = 17 total
         packet = create_packet(0xD3, 17)
 
-        await tcp_device.parse_raw_data(packet)
+        _ = await tcp_device.parse_raw_data(packet)
 
         # Should call parse_packet once
         assert tcp_device.packet_handler.parse_packet.called
@@ -180,7 +180,7 @@ class TestCyncTCPDevicePacketParsing:
         # Create packet header only (partial)
         packet = bytearray([0xD3, 0x00, 0x00, 0x00, 0x20])  # Needs 50+ bytes but only has 5
 
-        await tcp_device.parse_raw_data(bytes(packet))
+        _ = await tcp_device.parse_raw_data(bytes(packet))
 
         # Should set needs_more_data flag
         assert tcp_device.needs_more_data is True
@@ -196,7 +196,7 @@ class TestCyncTCPDevicePacketParsing:
         packet2 = create_packet(0xD3, 17)
         combined = packet1 + packet2
 
-        await tcp_device.parse_raw_data(combined)
+        _ = await tcp_device.parse_raw_data(combined)
 
         # Should call parse_packet twice
         assert tcp_device.packet_handler.parse_packet.call_count == 2
@@ -234,7 +234,7 @@ class TestCyncTCPDevicePacketParsing:
             packet_data = bytearray([0x06, 0x00]) + status_struct1 + status_struct2
             packet = create_packet(0x43, len(packet_data) + 12, bytes(packet_data))
 
-            await tcp_device.parse_packet(packet)
+            _ = await tcp_device.parse_packet(packet)
 
             # Should send ACK
             assert tcp_device.write.called
@@ -260,7 +260,7 @@ class TestCyncTCPDevicePacketParsing:
             packet = create_packet(0x43, len(packet_data) + 12, bytes(packet_data))
 
             # Should not raise exception
-            await tcp_device.parse_packet(packet)
+            _ = await tcp_device.parse_packet(packet)
 
             # Should still send ACK despite the error
             assert tcp_device.write.called

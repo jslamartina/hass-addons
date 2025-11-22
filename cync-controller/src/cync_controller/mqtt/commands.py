@@ -19,7 +19,7 @@ g = GlobalObject()
 class DeviceCommand:
     """Base class for device commands."""
 
-    def __init__(self, cmd_type: str, device_id: str | int, **kwargs):
+    def __init__(self, cmd_type: str, device_id: str | int, **kwargs) -> None:
         """
         Initialize a device command.
 
@@ -55,7 +55,7 @@ class CommandProcessor:
             cls._instance = super().__new__(cls)
         return cls._instance
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize command processor."""
         if not hasattr(self, "_initialized"):
             self._queue = asyncio.Queue()
@@ -154,7 +154,7 @@ class CommandProcessor:
                     if ack_event:
                         logger.debug("%s Waiting for ACK...", lp)
                         try:
-                            await asyncio.wait_for(ack_event.wait(), timeout=5.0)
+                            _ = await asyncio.wait_for(ack_event.wait(), timeout=5.0)
                             logger.info("%s ACK received, command confirmed", lp)
                         except TimeoutError:
                             logger.warning("%s ACK timeout after 5s - cleaning up callbacks", lp)
@@ -195,7 +195,7 @@ class CommandProcessor:
 class SetPowerCommand(DeviceCommand):
     """Command to set device or group power state."""
 
-    def __init__(self, device_or_group, state: int):
+    def __init__(self, device_or_group, state: int) -> None:
         """
         Initialize set power command.
 
@@ -237,7 +237,7 @@ class SetPowerCommand(DeviceCommand):
 class SetBrightnessCommand(DeviceCommand):
     """Command to set device brightness."""
 
-    def __init__(self, device_or_group, brightness: int):
+    def __init__(self, device_or_group, brightness: int) -> None:
         """
         Initialize set brightness command.
 
@@ -254,10 +254,9 @@ class SetBrightnessCommand(DeviceCommand):
         if isinstance(self.device_or_group, CyncGroup):
             # For groups: sync_group_devices will be called in cole_dset_brightness()
             pass
-        else:
-            # For individual devices: publish optimistic brightness immediately
-            if g.mqtt_client is not None:
-                await g.mqtt_client.update_brightness(self.device_or_group, self.brightness)
+        # For individual devices: publish optimistic brightness immediately
+        elif g.mqtt_client is not None:
+            await g.mqtt_client.update_brightness(self.device_or_group, self.brightness)
 
     async def execute(self) -> tuple[asyncio.Event, list[CyncTCPDevice]] | None:
         """Execute the actual set_brightness command."""

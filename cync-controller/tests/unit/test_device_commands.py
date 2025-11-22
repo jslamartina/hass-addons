@@ -32,7 +32,7 @@ class TestCyncDeviceFanCommands:
             device = CyncDevice(cync_id=0x12)
             device.is_fan_controller = True
 
-            await device.set_fan_speed(FanSpeed.MEDIUM)
+            _ = await device.set_fan_speed(FanSpeed.MEDIUM)
 
             assert mock_tcp_device.write.called
 
@@ -47,7 +47,7 @@ class TestCyncDeviceFanCommands:
             device = CyncDevice(cync_id=0x1234)
             device.is_fan_controller = False
 
-            await device.set_fan_speed(FanSpeed.HIGH)
+            _ = await device.set_fan_speed(FanSpeed.HIGH)
 
             assert "is not a fan controller" in caplog.text
 
@@ -70,7 +70,7 @@ class TestCyncDeviceLightshowCommand:
 
             device = CyncDevice(cync_id=0x12)
 
-            await device.set_lightshow("candle")
+            _ = await device.set_lightshow("candle")
 
             # Verify write was called
             assert mock_tcp_device.write.called
@@ -83,7 +83,7 @@ class TestCyncDeviceLightshowCommand:
 
             device = CyncDevice(cync_id=0x1234)
 
-            await device.set_lightshow("rainbow")
+            _ = await device.set_lightshow("rainbow")
 
             # Should log error about no TCP bridges
             assert "No TCP bridges" in caplog.text
@@ -108,7 +108,7 @@ class TestCyncDeviceLightshowCommand:
 
             for show in shows:
                 mock_tcp_device.write.reset_mock()
-                await device.set_lightshow(show)
+                _ = await device.set_lightshow(show)
                 assert mock_tcp_device.write.called
 
 
@@ -125,7 +125,7 @@ class TestCyncDeviceErrorPathsCommands:
             device = CyncDevice(cync_id=0x12)
 
             # Should return without error when no bridges
-            await device.set_temperature(50)
+            _ = await device.set_temperature(50)
 
             # Device state should not have changed
             assert device.temperature == 0  # Still at default
@@ -141,7 +141,7 @@ class TestCyncDeviceErrorPathsCommands:
             device = CyncDevice(cync_id=0x12)
 
             # Should return without error for invalid value
-            await device.set_temperature(200)  # Too high
+            _ = await device.set_temperature(200)  # Too high
 
             # Device state should not have changed
             assert device.temperature == 0  # Still at default
@@ -156,7 +156,7 @@ class TestCyncDeviceErrorPathsCommands:
             device = CyncDevice(cync_id=0x12)
 
             # Should return without error when no bridges
-            await device.set_rgb(255, 128, 0)
+            _ = await device.set_rgb(255, 128, 0)
 
             # Device RGB should not have changed
             assert device.red == 0  # Still at default
@@ -174,7 +174,7 @@ class TestCyncDeviceErrorPathsCommands:
             device = CyncDevice(cync_id=0x12)
 
             # Should return without error for invalid values
-            await device.set_rgb(-1, 128, 0)  # Red invalid
+            _ = await device.set_rgb(-1, 128, 0)  # Red invalid
 
             # Device RGB should not have changed
             assert device.red == 0  # Still at default
@@ -191,7 +191,7 @@ class TestCyncDeviceErrorPathsCommands:
             group = CyncGroup(group_id=32768, name="Test Group", member_ids=[0x12])
 
             # Should return without error when no bridges
-            await group.set_power(1)
+            _ = await group.set_power(1)
 
             # Group state should not have changed
             assert group.state == 0  # Still at default
@@ -209,7 +209,7 @@ class TestCyncDeviceErrorPathsCommands:
             group = CyncGroup(group_id=32768, name="Test Group", member_ids=[0x12])
 
             # Should return without error when bridge not ready
-            await group.set_power(1)
+            _ = await group.set_power(1)
 
             # Group state should not have changed
             assert group.state == 0  # Still at default
@@ -245,7 +245,7 @@ class TestDeviceBridgeSelection:
             device = CyncDevice(cync_id=0x1234)
             device.name = "Test Light"
 
-            await device.set_power(1)
+            _ = await device.set_power(1)
 
             # Should call ready bridge
             assert ready_bridge.write.called
@@ -266,11 +266,11 @@ class TestDeviceErrorPaths:
             device.is_light = True
 
             # Test negative brightness
-            await device.set_brightness(-1)
+            _ = await device.set_brightness(-1)
             assert "Invalid brightness" in caplog.text or "must be 0-100" in caplog.text
 
             caplog.clear()
 
             # Test brightness > 100
-            await device.set_brightness(101)
+            _ = await device.set_brightness(101)
             assert "Invalid brightness" in caplog.text or "must be 0-100" in caplog.text

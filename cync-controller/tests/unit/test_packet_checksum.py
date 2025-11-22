@@ -243,7 +243,7 @@ class TestCalculateChecksumBetweenMarkers:
         packet = bytes([0x00, 0x01, 0x02, 0x03])
 
         with pytest.raises(ValueError, match="subsection not found"):
-            calculate_checksum_between_markers(packet)
+            _ = calculate_checksum_between_markers(packet)
 
     def test_calculate_checksum_raises_on_packet_too_short(self):
         """Test that function raises ValueError if packet is too short"""
@@ -251,7 +251,7 @@ class TestCalculateChecksumBetweenMarkers:
         packet = bytes([0x7E, 0x00, 0x00, 0x7E])
 
         with pytest.raises(ValueError, match="Packet too short to compute checksum"):
-            calculate_checksum_between_markers(packet)
+            _ = calculate_checksum_between_markers(packet)
 
     def test_calculate_checksum_raises_on_insufficient_offset(self):
         """Test ValueError when offset is too large for packet"""
@@ -267,7 +267,7 @@ class TestCalculateChecksumBetweenMarkers:
 
         # Default offset is 6, but only 3 bytes available
         with pytest.raises(ValueError, match="Packet too short"):
-            calculate_checksum_between_markers(packet)
+            _ = calculate_checksum_between_markers(packet)
 
     def test_calculate_checksum_with_large_offset(self):
         """Test checksum with large custom offset"""
@@ -585,7 +585,7 @@ class TestInsertChecksumInPlace:
                 0x7E,
             ]
         )
-        bytearray(packet1)
+        _ = bytearray(packet1)
 
         insert_checksum_in_place(packet1, checksum_index=8)
         first_checksum = packet1[8]

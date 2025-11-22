@@ -19,7 +19,10 @@
       "**/node_modules": true,
       "**/__pycache__": true,
       "**/.pytest_cache": true,
-      "**/.git": false,
+      "**/.git": true,
+      "**/.mypy_cache": true,
+      "**/.venv": true,
+      "**/.hass_addons_tools.egg-info": true,
     },
     "search.exclude": {
       "**/node_modules": true,
@@ -45,7 +48,7 @@
     "prettier.documentSelectors": ["**/*.sh"],
     "prettier.prettierPath": "${workspaceFolder}/node_modules/prettier",
     "prettier.requireConfig": true,
-    "python.defaultInterpreterPath": "/usr/local/python/current/bin/python3",
+    "python.defaultInterpreterPath": "/root/.pyenv/shims/python",
     "deno.enable": false,
     "cursorpyright.analysis.autoImportCompletions": true,
     "cursorpyright.analysis.diagnosticSeverityOverrides": {

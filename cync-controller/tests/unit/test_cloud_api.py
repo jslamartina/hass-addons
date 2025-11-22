@@ -1,5 +1,4 @@
-"""
-Unit tests for cloud_api module.
+"""Unit tests for cloud_api module.
 
 Tests CyncCloudAPI class for authentication, token management, and device export.
 """
@@ -9,8 +8,7 @@ from unittest.mock import AsyncMock, MagicMock, mock_open, patch
 
 import pytest
 
-from cync_controller.cloud_api import CyncAuthenticationError, CyncCloudAPI
-from cync_controller.structs import ComputedTokenData
+from cync_controller.cloud_api import ComputedTokenData, CyncAuthenticationError, CyncCloudAPI
 
 
 @pytest.fixture(autouse=True)
@@ -134,7 +132,7 @@ class TestCyncCloudAPITokenManagement:
             patch("cync_controller.cloud_api.Path") as mock_path,
             patch("cync_controller.cloud_api.pickle.load") as mock_pickle,
         ):
-            MagicMock()
+            _ = MagicMock()
             mock_path.return_value.open = mock_open()
             mock_pickle.return_value = sample_token
 
@@ -306,7 +304,7 @@ class TestCyncCloudAPIAuthentication:
                     "authorize": "test-auth",
                     "expire_in": 604800,
                     "refresh_token": "test-refresh-token",
-                }
+                },
             )
             mock_session.post = AsyncMock(return_value=mock_response)
             api.http_session = mock_session
@@ -348,7 +346,7 @@ class TestCyncCloudAPIAuthentication:
                     "authorize": "test-auth",
                     "expire_in": 604800,
                     "refresh_token": "test-refresh-token",
-                }
+                },
             )
             mock_session.post = AsyncMock(return_value=mock_response)
             api.http_session = mock_session
@@ -364,7 +362,7 @@ class TestCyncCloudAPIAuthentication:
                     "authorize": "test-auth",
                     "expire_in": 3600,
                     "refresh_token": "test-refresh-token",
-                }
+                },
             )
 
             # Pass string that can be converted to int
@@ -473,7 +471,7 @@ class TestCyncCloudAPIDeviceOperations:
         api.http_session = mock_session
 
         with pytest.raises(CyncAuthenticationError, match="Access-Token expired"):
-            await api.get_properties(product_id=123, device_id=456)
+            _ = await api.get_properties(product_id=123, device_id=456)
 
     @pytest.mark.asyncio
     async def test_get_properties_no_properties_error(self):
@@ -527,7 +525,7 @@ class TestCyncCloudAPIDeviceOperations:
         api.http_session = mock_session
 
         with pytest.raises(json.JSONDecodeError):
-            await api.get_properties(product_id=123, device_id=456)
+            _ = await api.get_properties(product_id=123, device_id=456)
 
     @pytest.mark.asyncio
     async def test_export_config_full_mesh(self):
@@ -548,7 +546,7 @@ class TestCyncCloudAPIDeviceOperations:
                             "mac": "11:22:33:44:55:66",
                             "deviceType": 1,
                             "firmwareVersion": "1.2.3",
-                        }
+                        },
                     ],
                     "groupsArray": [
                         {
@@ -556,10 +554,10 @@ class TestCyncCloudAPIDeviceOperations:
                             "displayName": "All Lights",
                             "deviceIDArray": [1234567890],
                             "isSubgroup": False,
-                        }
+                        },
                     ],
                 },
-            }
+            },
         ]
 
         with patch("cync_controller.cloud_api.Path") as mock_path:
@@ -590,7 +588,7 @@ class TestCyncCloudAPIDeviceOperations:
                 # No 'name' field
                 "id": "mesh-123",
                 "properties": {"bulbsArray": []},
-            }
+            },
         ]
 
         with patch("cync_controller.cloud_api.Path") as mock_path:
@@ -612,7 +610,7 @@ class TestCyncCloudAPIDeviceOperations:
                 "name": "Test Mesh",
                 "id": "mesh-123",
                 # No 'properties' field
-            }
+            },
         ]
 
         with patch("cync_controller.cloud_api.Path") as mock_path:
@@ -635,9 +633,9 @@ class TestCyncCloudAPIDeviceOperations:
                 "id": "mesh-123",
                 "properties": {
                     # No 'bulbsArray' field
-                    "someOtherField": "value"
+                    "someOtherField": "value",
                 },
-            }
+            },
         ]
 
         with patch("cync_controller.cloud_api.Path") as mock_path:
@@ -672,10 +670,10 @@ class TestCyncCloudAPIDeviceOperations:
                                 "type": 2,
                             },
                             "thermostatSensors": [{"pin": "025572", "name": "Living Room", "type": "savant"}],
-                        }
+                        },
                     ],
                 },
-            }
+            },
         ]
 
         with patch("cync_controller.cloud_api.Path") as mock_path:
@@ -720,7 +718,7 @@ class TestCyncCloudAPIDeviceOperations:
                         },
                     ],
                 },
-            }
+            },
         ]
 
         with patch("cync_controller.cloud_api.Path") as mock_path:
@@ -774,7 +772,7 @@ class TestCyncCloudAPIDeviceOperations:
                         },
                     ],
                 },
-            }
+            },
         ]
 
         with patch("cync_controller.cloud_api.Path") as mock_path:
@@ -811,10 +809,10 @@ class TestCyncCloudAPIDeviceOperations:
                             "displayName": "Empty Group",
                             "deviceIDArray": [],  # No devices
                             "isSubgroup": False,
-                        }
+                        },
                     ],
                 },
-            }
+            },
         ]
 
         with patch("cync_controller.cloud_api.Path") as mock_path:

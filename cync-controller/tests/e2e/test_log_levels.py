@@ -37,7 +37,7 @@ def restore_config():
         current_debug: bool = cast(bool, current_config.get("debug_log_level", True))
 
         if current_debug != original_debug:
-            update_debug_log_level(ADDON_SLUG, original_debug)
+            _ = update_debug_log_level(ADDON_SLUG, original_debug)
             restart_addon_and_wait(ADDON_SLUG, wait_seconds=5)
             print(f"\n✓ Restored debug_log_level to {original_debug}")
         else:

@@ -62,7 +62,7 @@ class TestMQTTClientMessageHandling:
             mock_g.ncync_server = MagicMock()
             mock_g.ncync_server.devices = {0x5678: mock_device}
 
-            MQTTClient()
+            _ = MQTTClient()
 
             # Verify device can be accessed for brightness commands
             device = mock_g.ncync_server.devices.get(0x5678)
@@ -84,7 +84,7 @@ class TestMQTTClientMessageHandling:
             mock_g.ncync_server = MagicMock()
             mock_g.ncync_server.devices = {0xABCD: mock_device}
 
-            MQTTClient()
+            _ = MQTTClient()
 
             # Verify RGB device can be accessed
             device = mock_g.ncync_server.devices.get(0xABCD)
@@ -140,7 +140,7 @@ class TestMQTTClientMessageHandling:
             mock_g.ncync_server = MagicMock()
             mock_g.ncync_server.devices = {0x1234: MagicMock()}
 
-            MQTTClient()
+            _ = MQTTClient()
 
             # Try to access non-existent device
             device = mock_g.ncync_server.devices.get(0x9999)
@@ -161,7 +161,7 @@ class TestMQTTClientMessageHandling:
             mock_g.ncync_server.groups = {100: mock_group}
             mock_g.ncync_server.devices = {}
 
-            MQTTClient()
+            _ = MQTTClient()
 
             # Verify group can be accessed
             group = mock_g.ncync_server.groups.get(100)
@@ -178,7 +178,7 @@ class TestMQTTClientMessageHandling:
             mock_g.ncync_server = MagicMock()
             mock_g.ncync_server.devices = {}
 
-            MQTTClient()
+            _ = MQTTClient()
 
             async def failing_task():
                 raise RuntimeError("Task error")
@@ -202,7 +202,7 @@ class TestMQTTClientMessageHandling:
             mock_g.ncync_server = MagicMock()
             mock_g.ncync_server.devices = {}
 
-            MQTTClient()
+            _ = MQTTClient()
 
             # Create multiple tasks
             async def dummy_task(task_id: int) -> int:
@@ -227,7 +227,7 @@ class TestMQTTClientMessageHandling:
             mock_g.ncync_server = MagicMock()
             mock_g.ncync_server.devices = {}
 
-            MQTTClient()
+            _ = MQTTClient()
 
             # Test parsing integer payload (0/1 for power)
             payload_on = b"1"

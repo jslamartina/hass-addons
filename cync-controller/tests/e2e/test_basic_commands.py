@@ -19,15 +19,14 @@ ADDON_SLUG = "local_cync-controller"
 
 @pytest.mark.serial
 def test_turn_light_on(ha_login: Page, ha_base_url: str):
-    """
-    Test turning a light ON via Home Assistant UI.
+    """Test turning a light ON via Home Assistant UI.
 
     Expected: Light state updates to ON within 2 seconds.
     """
     print("\n=== Test: Turn Light ON ===")
 
     page = ha_login
-    page.goto(f"{ha_base_url}/lovelace/0")
+    _ = page.goto(f"{ha_base_url}/lovelace/0")
     page.wait_for_load_state("networkidle")
 
     # Find a light entity (use individual entity, not group)
@@ -57,15 +56,14 @@ def test_turn_light_on(ha_login: Page, ha_base_url: str):
 
 @pytest.mark.serial
 def test_turn_light_off(ha_login: Page, ha_base_url: str):
-    """
-    Test turning a light OFF via Home Assistant UI.
+    """Test turning a light OFF via Home Assistant UI.
 
     Expected: Light state updates to OFF within 2 seconds.
     """
     print("\n=== Test: Turn Light OFF ===")
 
     page = ha_login
-    page.goto(f"{ha_base_url}/lovelace/0")
+    _ = page.goto(f"{ha_base_url}/lovelace/0")
     page.wait_for_load_state("networkidle")
 
     light_name = "Floodlight 1"
@@ -94,15 +92,14 @@ def test_turn_light_off(ha_login: Page, ha_base_url: str):
 
 @pytest.mark.serial
 def test_set_brightness(ha_login: Page, ha_base_url: str):
-    """
-    Test setting light brightness via Home Assistant UI.
+    """Test setting light brightness via Home Assistant UI.
 
     Expected: Brightness updates within 2 seconds.
     """
     print("\n=== Test: Set Light Brightness ===")
 
     page = ha_login
-    page.goto(f"{ha_base_url}/lovelace/0")
+    _ = page.goto(f"{ha_base_url}/lovelace/0")
     page.wait_for_load_state("networkidle")
 
     # Use Master Bedroom Lamp Light which supports brightness
@@ -147,7 +144,7 @@ def test_set_brightness(ha_login: Page, ha_base_url: str):
         except Exception:
             # Fallback to evaluate for custom slider elements
             brightness_slider.evaluate(
-                "el => { el.value = 50; el.dispatchEvent(new Event('change', {bubbles: true})); }"
+                "el => { el.value = 50; el.dispatchEvent(new Event('change', {bubbles: true})); }",
             )
             print("   Used evaluate method for brightness")
 
@@ -162,15 +159,14 @@ def test_set_brightness(ha_login: Page, ha_base_url: str):
 
 @pytest.mark.serial
 def test_set_color_temperature(ha_login: Page, ha_base_url: str):
-    """
-    Test setting light color temperature via Home Assistant UI.
+    """Test setting light color temperature via Home Assistant UI.
 
     Expected: Color temperature updates within 2 seconds.
     """
     print("\n=== Test: Set Color Temperature ===")
 
     page = ha_login
-    page.goto(f"{ha_base_url}/lovelace/0")
+    _ = page.goto(f"{ha_base_url}/lovelace/0")
     page.wait_for_load_state("networkidle")
 
     # Use Master Bedroom Lamp Light which supports color temperature
@@ -223,7 +219,7 @@ def test_set_color_temperature(ha_login: Page, ha_base_url: str):
         except Exception:
             # Fallback to evaluate
             color_temp_slider.evaluate(
-                "el => { el.value = 4000; el.dispatchEvent(new Event('change', {bubbles: true})); }"
+                "el => { el.value = 4000; el.dispatchEvent(new Event('change', {bubbles: true})); }",
             )
             print("   Used evaluate method")
 
@@ -237,15 +233,14 @@ def test_set_color_temperature(ha_login: Page, ha_base_url: str):
 
 @pytest.mark.serial
 def test_toggle_switch(ha_login: Page, ha_base_url: str):
-    """
-    Test toggling a switch entity.
+    """Test toggling a switch entity.
 
     Expected: Switch state changes within 2 seconds.
     """
     print("\n=== Test: Toggle Switch ===")
 
     page = ha_login
-    page.goto(f"{ha_base_url}/lovelace/0")
+    _ = page.goto(f"{ha_base_url}/lovelace/0")
     page.wait_for_load_state("networkidle")
 
     # Try both names in case HA prefixes with area
@@ -301,19 +296,20 @@ def test_toggle_switch(ha_login: Page, ha_base_url: str):
 
 
 def test_command_latency_acceptable(ha_login: Page):
-    """
-    Test that commands execute within acceptable latency (< 2 seconds).
+    """Test that commands execute within acceptable latency (< 2 seconds).
 
     This is verified in logs rather than UI to be more reliable.
     """
     print("\n=== Test: Command Latency ===")
 
     # Read recent logs
-    logs: list[dict[str, Any]] = cast(list[dict[str, Any]], read_json_logs(ADDON_SLUG, lines=100))  # type: ignore[reportUnknownVariableType]
+    logs: list[dict[str, Any]] = cast("list[dict[str, Any]]", read_json_logs(ADDON_SLUG, lines=100))  # type: ignore[reportUnknownVariableType]
 
     # Look for command-related log entries
     command_logs: list[dict[str, Any]] = [
-        cast(dict[str, Any], log) for log in logs if "command" in cast(dict[str, Any], log).get("message", "").lower()
+        cast("dict[str, Any]", log)
+        for log in logs
+        if "command" in cast("dict[str, Any]", log).get("message", "").lower()
     ]  # type: ignore[reportUnknownVariableType]
 
     print(f"  Found {len(command_logs)} command-related log entries")
@@ -327,8 +323,7 @@ def test_command_latency_acceptable(ha_login: Page):
 @pytest.mark.serial
 @pytest.mark.usefixtures("ha_login")
 def test_command_with_tcp_whitelist_enabled():
-    """
-    Test that commands work correctly when TCP whitelist is configured.
+    """Test that commands work correctly when TCP whitelist is configured.
 
     Expected: Only whitelisted devices can execute commands.
     """

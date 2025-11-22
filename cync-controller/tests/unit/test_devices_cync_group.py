@@ -227,7 +227,7 @@ class TestCyncGroup:
             group = CyncGroup(group_id=0x5678, name="Living Room", member_ids=[0x1234, 0x5678])
 
             # Call set_power
-            await group.set_power(1)
+            _ = await group.set_power(1)
 
             # Verify write was called
             assert mock_tcp_device.write.called
@@ -241,7 +241,7 @@ class TestCyncGroup:
             group = CyncGroup(group_id=0x5678, name="Living Room", member_ids=[])
 
             # Invalid state (must be 0 or 1)
-            await group.set_power(2)
+            _ = await group.set_power(2)
 
             # Should log error
             assert "Invalid state" in caplog.text
@@ -261,7 +261,7 @@ class TestCyncGroup:
             group = CyncGroup(group_id=0x5678, name="Living Room", member_ids=[0x1234, 0x5678])
 
             # Call set_brightness
-            await group.set_brightness(75)
+            _ = await group.set_brightness(75)
 
             # Verify write was called
             assert mock_tcp_device.write.called
@@ -281,7 +281,7 @@ class TestCyncGroup:
 
             group = CyncGroup(group_id=0x5678, name="Living Room", member_ids=[0x1234, 0x5678])
 
-            await group.set_temperature(75)
+            _ = await group.set_temperature(75)
 
             assert mock_tcp_device.write.called
 
@@ -293,10 +293,10 @@ class TestCyncGroup:
 
             group = CyncGroup(group_id=0x5678, name="Living Room", member_ids=[])
 
-            await group.set_temperature(-1)
+            _ = await group.set_temperature(-1)
             assert "Invalid temperature" in caplog.text
 
-            await group.set_temperature(101)
+            _ = await group.set_temperature(101)
             assert "Invalid temperature" in caplog.text
 
     @pytest.mark.asyncio
@@ -307,7 +307,7 @@ class TestCyncGroup:
 
             group = CyncGroup(group_id=0x5678, name="Living Room", member_ids=[])
 
-            await group.set_temperature(50)
+            _ = await group.set_temperature(50)
 
             assert "No TCP bridges available" in caplog.text
 
@@ -497,7 +497,7 @@ class TestCyncGroupErrorHandling:
 
             group = CyncGroup(group_id=0x5678, name="Test Group", member_ids=[0x1234, 0x5678])
 
-            await group.set_brightness(75)
+            _ = await group.set_brightness(75)
 
             assert "No TCP bridges available" in caplog.text
 
@@ -513,7 +513,7 @@ class TestCyncGroupErrorHandling:
             group = CyncGroup(group_id=0x5678, name="Test Group", member_ids=[0x1234, 0x5678])
 
             # Use a valid temperature value (0-100 range, not 0-255)
-            await group.set_temperature(50)
+            _ = await group.set_temperature(50)
 
             assert "No TCP bridges available" in caplog.text
 
@@ -529,14 +529,14 @@ class TestCyncGroupErrorHandling:
             group = CyncGroup(group_id=0x5678, name="Test Group", member_ids=[0x1234])
 
             # Test negative temperature
-            await group.set_temperature(-1)
+            _ = await group.set_temperature(-1)
             assert "Temperature must be between 0 and 255" in caplog.text or "Invalid temperature" in caplog.text
 
             # Reset logs
             caplog.clear()
 
             # Test temperature > 255
-            await group.set_temperature(256)
+            _ = await group.set_temperature(256)
             assert "Temperature must be between 0 and 255" in caplog.text or "Invalid temperature" in caplog.text
 
 
@@ -560,7 +560,7 @@ class TestCyncGroupOperations:
 
             group = CyncGroup(group_id=0x5678, name="Test Group", member_ids=[0x1234, 0x5678])
 
-            await group.set_brightness(75)
+            _ = await group.set_brightness(75)
 
             # Should have called bridge.write
             mock_bridge.write.assert_called_once()
@@ -579,7 +579,7 @@ class TestCyncGroupOperations:
 
             group = CyncGroup(group_id=0x5678, name="Test Group", member_ids=[0x1234])
 
-            await group.set_brightness(50)
+            _ = await group.set_brightness(50)
 
             assert "not ready to control" in caplog.text or "No TCP bridges" in caplog.text
 
@@ -594,13 +594,13 @@ class TestCyncGroupOperations:
             group = CyncGroup(group_id=0x5678, name="Test Group", member_ids=[0x1234])
 
             # Test negative brightness
-            await group.set_brightness(-1)
+            _ = await group.set_brightness(-1)
             assert "Invalid brightness" in caplog.text
 
             caplog.clear()
 
             # Test brightness > 100
-            await group.set_brightness(101)
+            _ = await group.set_brightness(101)
             assert "Invalid brightness" in caplog.text
 
     @pytest.mark.asyncio
@@ -621,7 +621,7 @@ class TestCyncGroupOperations:
 
             group = CyncGroup(group_id=0x5678, name="Test Group", member_ids=[0x1234, 0x5678, 0x9ABC])
 
-            await group.set_power(1)
+            _ = await group.set_power(1)
 
             # Should have called bridge.write to send group command
             mock_bridge.write.assert_called_once()

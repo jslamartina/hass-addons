@@ -397,7 +397,7 @@ class TestNCyncServerSSL:
             # create_ssl_context always tries to load certs, so it will fail with None
             # This test should verify that the method raises an appropriate error
             with pytest.raises(TypeError):
-                await server.create_ssl_context()
+                _ = await server.create_ssl_context()
 
     @pytest.mark.asyncio
     async def test_create_ssl_context_with_certs(self):
@@ -665,7 +665,7 @@ class TestPrimaryDeviceSelection:
             await server.add_tcp_device(tcp_device2)
 
             # Remove primary
-            await server.remove_tcp_device(tcp_device1)
+            _ = await server.remove_tcp_device(tcp_device1)
 
             # Second device should now be primary
             assert server.primary_tcp_device == tcp_device2
@@ -707,7 +707,7 @@ class TestPrimaryDeviceSelection:
             tcp_device.connected_at = 1000.0
             tcp_device.ready_to_control = True
             await server.add_tcp_device(tcp_device)
-            await server.remove_tcp_device(tcp_device)
+            _ = await server.remove_tcp_device(tcp_device)
 
             # Verify tcp_devices is empty
             assert len(server.tcp_devices) == 0, (
@@ -785,7 +785,7 @@ class TestTCPDeviceCleanup:
 
             server.tcp_devices["192.168.1.100"] = tcp_device
 
-            await server.remove_tcp_device(tcp_device)
+            _ = await server.remove_tcp_device(tcp_device)
 
             # Should have published MQTT update with new count
             assert mock_g.mqtt_client.publish.called

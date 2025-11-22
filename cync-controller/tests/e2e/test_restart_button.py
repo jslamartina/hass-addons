@@ -62,12 +62,12 @@ def test_restart_button_visibility_after_navigation(ingress_page: Page, ha_base_
 
     # Navigate away from ingress page
     print("[Step 2] Navigating away from ingress page...")
-    page.goto(f"{ha_base_url}/config/dashboard")
+    _ = page.goto(f"{ha_base_url}/config/dashboard")
     page.wait_for_load_state("networkidle")
 
     # Navigate back to ingress page
     print("[Step 3] Navigating back to ingress page...")
-    page.goto(ingress_url)
+    _ = page.goto(ingress_url)
     page.wait_for_load_state("networkidle")
     page.wait_for_timeout(2000)  # Wait for iframe to load
 
@@ -92,7 +92,7 @@ def test_config_persistence_check(ingress_page: Page):
 
     # Reload the page
     print("\n[Step 1] Reloading ingress page...")
-    page.reload()
+    _ = page.reload()
     page.wait_for_load_state("networkidle")
 
     # Give page time to check for existing config

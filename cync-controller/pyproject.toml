@@ -95,40 +95,25 @@ ignore = [
 ]
 
 [tool.ruff.lint.per-file-ignores]
-"__init__.py" = ["F401"]  # Allow unused imports in __init__.py files
-
-# Lazy imports for test mocking support (intentional)
-"src/cync_controller/devices/base_device.py" = ["PLC0415"]
-"src/cync_controller/devices/device_commands.py" = ["PLC0415"]
-"src/cync_controller/devices/group.py" = ["PLC0415"]
-"src/cync_controller/devices/tcp_device.py" = ["PLC0415", "PLR0912"]
-"src/cync_controller/devices/tcp_packet_handler.py" = ["PLC0415", "PLR0912", "PLR0915"]
-"src/cync_controller/mqtt/client.py" = ["PLC0415", "PLR0912", "PLR0915"]
-"src/cync_controller/mqtt/command_routing.py" = ["PLC0415", "PLR0912", "PLR0915"]
-"src/cync_controller/mqtt/discovery.py" = ["PLC0415", "PLR0912", "PLR0915", "PLW0603"]
-"src/cync_controller/mqtt/state_updates.py" = ["PLC0415", "PLR0912", "PLR0915"]
-
-# Protocol parsers with inherent complexity
-"src/cync_controller/packet_parser.py" = ["PLR0912", "PLR0915"]
-"src/cync_controller/cloud_api.py" = ["PLR0912", "PLR0915"]
-"src/cync_controller/server.py" = ["PLR0912", "PLR0915"]
-"src/cync_controller/utils.py" = ["PLR0912", "PLR0915", "PLC0415"]
-
-# Global configuration reload (intentional design)
-"src/cync_controller/structs.py" = ["PLW0603"]
-
 # Lazy imports to avoid circular dependencies
 "src/cync_controller/instrumentation.py" = ["PLC0415"]
 "src/cync_controller/logging_abstraction.py" = ["PLC0415"]
+"src/cync_controller/cloud_api.py" = ["PLC0415"]
+"src/cync_controller/devices/__init__.py" = ["PLC0415"]
+"src/cync_controller/devices/base_device.py" = ["PLC0415"]
+"src/cync_controller/devices/device_commands.py" = ["PLC0415"]
+"src/cync_controller/devices/group.py" = ["PLC0415"]
+"src/cync_controller/devices/tcp_device.py" = ["PLC0415"]
+"src/cync_controller/devices/tcp_packet_handler.py" = ["PLC0415"]
 
 # Scripts with lazy imports
 "scripts/automate-onboarding.py" = ["PLC0415"]
+
 
 # Tests: allow localized imports, unused args, and test-specific patterns
 "tests/**/*.py" = ["PLC0415", "EM101", "TRY301", "TRY002", "SIM222", "PT018", "PT006", "SIM117", "PLW2901", "PLR1714", "RET504", "PT015", "B011", "RSE102", "E402", "ARG001", "ARG002", "PLR0912", "PLR0915"]
 
 [tool.ruff.format]
-# Ruff formatter (Black-compatible)
 quote-style = "double"
 indent-style = "space"
 line-ending = "auto"

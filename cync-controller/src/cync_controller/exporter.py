@@ -235,12 +235,12 @@ class ExportServer:
     start_task: asyncio.Task[None] | None = None
     _instance: ExportServer | None = None
 
-    def __new__(cls, *_args, **_kwargs):
+    def __new__(cls, *args: object, **kwargs: object) -> "ExportServer":
         if cls._instance is None:
             cls._instance = super().__new__(cls)
         return cls._instance
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.app = app
         self.uvi_server = uvicorn.Server(
             config=uvicorn.Config(
@@ -302,4 +302,4 @@ class ExportServer:
                 )
                 if self.start_task and not self.start_task.done():
                     logger.debug("%s FINISHING: Cancelling start task", lp)
-                    self.start_task.cancel()
+                    _ = self.start_task.cancel()

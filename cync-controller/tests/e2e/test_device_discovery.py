@@ -60,7 +60,7 @@ def test_mqtt_entities_appear_after_restart(ha_login: Page, ha_base_url: str):
     print("[Step 2] Navigating to MQTT integration...")
     page = ha_login
     mqtt_url = f"{ha_base_url}/config/integrations/integration/mqtt"
-    page.goto(mqtt_url)
+    _ = page.goto(mqtt_url)
     page.wait_for_load_state("networkidle")
 
     # Look for Cync entities (wait up to 15 seconds)
@@ -93,7 +93,7 @@ def test_entity_attributes_structure(ha_login: Page, ha_base_url: str):
     # to inspect entity attributes. For now, we verify the UI shows entities.
 
     page = ha_login
-    page.goto(f"{ha_base_url}/config/entities")
+    _ = page.goto(f"{ha_base_url}/config/entities")
     page.wait_for_load_state("networkidle")
 
     # Filter for cync entities
@@ -121,7 +121,7 @@ def test_different_device_types_discovered(ha_login: Page, ha_base_url: str):
     print("\n=== Test: Different Device Types Discovered ===")
 
     page = ha_login
-    page.goto(f"{ha_base_url}/config/entities")
+    _ = page.goto(f"{ha_base_url}/config/entities")
     page.wait_for_load_state("networkidle")
 
     # Search for different device types
@@ -152,7 +152,7 @@ def test_entity_suggested_area_attribute(ha_login: Page, ha_base_url: str):
     # via Home Assistant API or entity details page.
 
     page = ha_login
-    page.goto(f"{ha_base_url}/config/entities")
+    _ = page.goto(f"{ha_base_url}/config/entities")
     page.wait_for_load_state("networkidle")
 
     print("✓ Test placeholder - requires API integration for full validation")

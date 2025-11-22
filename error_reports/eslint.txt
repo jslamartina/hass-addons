@@ -1,0 +1,4 @@
+
+> hass-addons@1.0.0 lint:typescript
+> eslint . --ext .ts,.tsx --quiet
+

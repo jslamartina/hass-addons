@@ -13,27 +13,28 @@ description: Optimized rules prefix with 4-tier hierarchy
 
 **Top Anti-Patterns - Quick Check**:
 
-- ❌ **TOUCHING ANY IGNORE FILES OR SETTINGS?** → **ABSOLUTELY FORBIDDEN** (Rule 14: NEVER modify ignore files OR settings)
-- ❌ Using built-in web_search? → Wrong (Rule 11: use Brave Search MCP)
-- ❌ Tool returns error/500/timeout? → STOP (Rule 1: report to user, don't continue)
-- ❌ Creating/editing code without entry/exit logs? → Wrong (Rule 4: Logging-First)
-- ❌ Creating 2nd findings file? → STOP (Rule 8: max 1 per investigation)
+- ❌ **TOUCHING ANY IGNORE FILES OR SETTINGS?** → **ABSOLUTELY FORBIDDEN** (Rule 1: NEVER modify ignore files OR settings)
+- ❌ Using built-in web_search? → Wrong (Rule 12: use Brave Search MCP)
+- ❌ Tool returns error/500/timeout? → STOP (Rule 2: report to user, don't continue)
+- ❌ Creating/editing code without entry/exit logs? → Wrong (Rule 5: Logging-First)
+- ❌ Creating 2nd findings file? → STOP (Rule 9: max 1 per investigation)
 - ❌ Restarting Python instead of rebuilding? → Wrong (Python = rebuild required)
-- ❌ Saying "production-ready" when CI fails? → Wrong (Rule 10: CI must pass)
-- ❌ Marking "complete" without user approval? → Wrong (Rule 10: user confirms)
-- ❌ Creating files with "FINAL," "COMPLETE," "SUMMARY," etc.? → Ask user first (Rule 10)
+- ❌ Saying "production-ready" when CI fails? → Wrong (Rule 11: CI must pass)
+- ❌ Marking "complete" without user approval? → Wrong (Rule 11: user confirms)
+- ❌ Creating files with "FINAL," "COMPLETE," "SUMMARY," etc.? → Ask user first (Rule 11)
 - ❌ Using /tmp for artifacts? → Wrong (Use working-files/ with timestamps)
-- ❌ Response >30 lines or verbose? → Too long (Rule 8: concise communication)
-- ❌ Creating todos for <3 step task? → Overkill (Rule 2: multi-step only)
-- ❌ Brave Search for "explain X"? → Wrong (Rule 12: use AI Grounding for answers)
-- ❌ AI Grounding to find docs? → Wrong (Rule 12: use Brave Search for pages)
-- ❌ Using built-in tools to check for lint errors? → Wrong (Rule 3: use `npm run lint`)
+- ❌ Response >30 lines or verbose? → Too long (Rule 9: concise communication)
+- ❌ Creating todos for <3 step task? → Overkill (Rule 3: multi-step only)
+- ❌ Brave Search for "explain X"? → Wrong (Rule 13: use AI Grounding for answers)
+- ❌ AI Grounding to find docs? → Wrong (Rule 13: use Brave Search for pages)
+- ❌ Using built-in tools to check for lint errors? → Wrong (Rule 4: use `npm run lint`)
+- ❌ Suppressing lint/format/error rules without approval? → STOP (Rule 15: requires explicit user approval)
 
 ---
 
 ## TIER 1: ALWAYS APPLY - EXECUTIVE RULES
 
-**14 CRITICAL RULES (Must Follow)**:
+**15 CRITICAL RULES (Must Follow)**:
 
 1. **NEVER TOUCH IGNORE FILES**: **ABSOLUTELY FORBIDDEN** to modify, create, or edit ANY ignore file (`.gitignore`, `.markdownlintignore`, `.markdownlint-cli2.jsonc`, `.prettierignore`, `.eslintignore`, `.dockerignore`, or ANY file with "ignore" in the name). If linting errors exist in ignored directories/files, FIX THE ERRORS. **DO NOT JUST SUPPRESS THE ERRORS**. Ask user before even considering touching ignore files.
 
@@ -65,7 +66,17 @@ description: Optimized rules prefix with 4-tier hierarchy
 
 14. **Visual Diagrams**: WHEN explaining architecture, flows, processes, or relationships → create Mermaid.js diagrams. Save as `.mermaid` files in appropriate docs directory. Use flowchart (processes), sequence (interactions), class (structure), state (FSM), gantt (timelines), or ER diagrams (data models). See mermaid-diagrams.mdc for templates.
 
-15. **NEVER TOUCH IGNORE FILES**: **ABSOLUTELY FORBIDDEN** to modify, create, or edit ANY ignore file (`.gitignore`, `.markdownlintignore`, `.markdownlint-cli2.jsonc`, `.prettierignore`, `.eslintignore`, `.dockerignore`, or ANY file with "ignore" in the name). If linting errors exist in ignored directories/files, FIX THE ERRORS, NOT THE IGNORE FILES. Ask user before even considering touching ignore files.
+15. **NEVER Suppress Linting/Formatting/Error Rules Without Approval**: **ABSOLUTELY FORBIDDEN** to suppress, disable, or reduce severity of any linting, formatting, or error detection rules without explicit user approval. This includes:
+
+- Disabling rules in configuration files (`eslint.config.js`, `.markdownlint.json`, `pyproject.toml`, `.ruff.toml`, etc.)
+- Adding inline suppressions (`# noqa`, `eslint-disable`, `markdownlint-disable`, `ruff: noqa`, etc.)
+- Changing rule severity (error → warn, warn → off)
+- Modifying rule configurations to allow previously flagged patterns
+- Adding files or patterns to ignore lists in config files
+
+**When encountering linting/formatting errors**: FIX THE ERRORS. If fixing is not feasible or requires architectural changes, STOP and ask the user for approval before suppressing.
+
+**Exception**: Only suppress when the user explicitly requests it (e.g., "disable this rule" or "suppress this error").
 
 ---
 
@@ -73,7 +84,8 @@ description: Optimized rules prefix with 4-tier hierarchy
 
 **STOP and ask user if**:
 
-- **ANY request to modify/create/edit ignore files** (Rule 0: ABSOLUTELY FORBIDDEN)
+- **ANY request to modify/create/edit ignore files** (Rule 1: ABSOLUTELY FORBIDDEN)
+- **Requesting to suppress/disable linting, formatting, or error rules** (Rule 15: requires explicit approval)
 - Environment/tooling error or unexpected behavior
 - Tool returns error, 500, timeout, or fails to execute
 - Documentation appears stale or contradicts reality

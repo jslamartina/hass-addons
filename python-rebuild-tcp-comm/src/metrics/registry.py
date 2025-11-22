@@ -11,136 +11,136 @@ from prometheus_client import (
 )
 
 # Metric definitions
-tcp_comm_packet_sent_total: Final = Counter(
+tcp_comm_packet_sent_total: Final[Counter] = Counter(
     "tcp_comm_packet_sent_total",
     "Total packets sent",
     ["device_id", "outcome"],
 )
 
-tcp_comm_packet_recv_total: Final = Counter(
+tcp_comm_packet_recv_total: Final[Counter] = Counter(
     "tcp_comm_packet_recv_total",
     "Total packets received",
     ["device_id", "outcome"],
 )
 
-tcp_comm_packet_latency_seconds: Final = Histogram(
+tcp_comm_packet_latency_seconds: Final[Histogram] = Histogram(
     "tcp_comm_packet_latency_seconds",
     "Packet round-trip latency in seconds",
     ["device_id"],
     buckets=(0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0, 2.0, 5.0),
 )
 
-tcp_comm_packet_retransmit_total: Final = Counter(
+tcp_comm_packet_retransmit_total: Final[Counter] = Counter(
     "tcp_comm_packet_retransmit_total",
     "Total packet retransmissions",
     ["device_id", "reason"],
 )
 
-tcp_comm_decode_errors_total: Final = Counter(
+tcp_comm_decode_errors_total: Final[Counter] = Counter(
     "tcp_comm_decode_errors_total",
     "Total decode errors",
     ["device_id", "reason"],
 )
 
 # Phase 1b: ACK/Response metrics
-tcp_comm_ack_received_total: Final = Counter(
+tcp_comm_ack_received_total: Final[Counter] = Counter(
     "tcp_comm_ack_received_total",
     "Total ACK packets received",
     ["device_id", "ack_type", "outcome"],
 )
 
-tcp_comm_ack_timeout_total: Final = Counter(
+tcp_comm_ack_timeout_total: Final[Counter] = Counter(
     "tcp_comm_ack_timeout_total",
     "Total ACK timeouts",
     ["device_id"],
 )
 
-tcp_comm_idempotent_drop_total: Final = Counter(
+tcp_comm_idempotent_drop_total: Final[Counter] = Counter(
     "tcp_comm_idempotent_drop_total",
     "Total duplicate packets dropped (idempotent)",
     ["device_id"],
 )
 
-tcp_comm_retry_attempts_total: Final = Counter(
+tcp_comm_retry_attempts_total: Final[Counter] = Counter(
     "tcp_comm_retry_attempts_total",
     "Total retry attempts",
     ["device_id", "attempt_number"],
 )
 
-tcp_comm_message_abandoned_total: Final = Counter(
+tcp_comm_message_abandoned_total: Final[Counter] = Counter(
     "tcp_comm_message_abandoned_total",
     "Total messages abandoned after max retries",
     ["device_id", "reason"],
 )
 
 # Phase 1b: Connection metrics
-tcp_comm_connection_state: Final = Gauge(
+tcp_comm_connection_state: Final[Gauge] = Gauge(
     "tcp_comm_connection_state",
     "Current connection state",
     ["device_id", "state"],
 )
 
-tcp_comm_handshake_total: Final = Counter(
+tcp_comm_handshake_total: Final[Counter] = Counter(
     "tcp_comm_handshake_total",
     "Total handshake attempts",
     ["device_id", "outcome"],
 )
 
-tcp_comm_reconnection_total: Final = Counter(
+tcp_comm_reconnection_total: Final[Counter] = Counter(
     "tcp_comm_reconnection_total",
     "Total reconnection attempts",
     ["device_id", "reason"],
 )
 
-tcp_comm_heartbeat_total: Final = Counter(
+tcp_comm_heartbeat_total: Final[Counter] = Counter(
     "tcp_comm_heartbeat_total",
     "Total heartbeat exchanges",
     ["device_id", "outcome"],
 )
 
 # Phase 1b: Dedup cache metrics
-tcp_comm_dedup_cache_size: Final = Gauge(
+tcp_comm_dedup_cache_size: Final[Gauge] = Gauge(
     "tcp_comm_dedup_cache_size",
     "Current deduplication cache size",
 )
 
-tcp_comm_dedup_cache_hits_total: Final = Counter(
+tcp_comm_dedup_cache_hits_total: Final[Counter] = Counter(
     "tcp_comm_dedup_cache_hits_total",
     "Total deduplication cache hits",
 )
 
-tcp_comm_dedup_cache_evictions_total: Final = Counter(
+tcp_comm_dedup_cache_evictions_total: Final[Counter] = Counter(
     "tcp_comm_dedup_cache_evictions_total",
     "Total deduplication cache evictions",
 )
 
 # Phase 1b: Performance metrics
-tcp_comm_state_lock_hold_seconds: Final = Histogram(
+tcp_comm_state_lock_hold_seconds: Final[Histogram] = Histogram(
     "tcp_comm_state_lock_hold_seconds",
     "State lock hold duration in seconds",
     buckets=(0.001, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0),
 )
 
 # Phase 1b: Device operation metrics
-tcp_comm_mesh_info_request_total: Final = Counter(
+tcp_comm_mesh_info_request_total: Final[Counter] = Counter(
     "tcp_comm_mesh_info_request_total",
     "Total mesh info requests",
     ["device_id", "outcome"],
 )
 
-tcp_comm_device_info_request_total: Final = Counter(
+tcp_comm_device_info_request_total: Final[Counter] = Counter(
     "tcp_comm_device_info_request_total",
     "Total device info requests",
     ["device_id", "outcome"],
 )
 
-tcp_comm_device_struct_parsed_total: Final = Counter(
+tcp_comm_device_struct_parsed_total: Final[Counter] = Counter(
     "tcp_comm_device_struct_parsed_total",
     "Total device structs parsed",
     ["device_id"],
 )
 
-tcp_comm_primary_device_violations_total: Final = Counter(
+tcp_comm_primary_device_violations_total: Final[Counter] = Counter(
     "tcp_comm_primary_device_violations_total",
     "Total primary device violations (non-primary mesh info attempts)",
 )
@@ -283,30 +283,30 @@ def record_primary_device_violation() -> None:
 
 
 # Phase 1b: Device operation performance metrics
-tcp_comm_device_info_request_latency_seconds: Final = Histogram(
+tcp_comm_device_info_request_latency_seconds: Final[Histogram] = Histogram(
     "tcp_comm_device_info_request_latency_seconds",
     "Device info request latency in seconds",
     ["device_id"],
     buckets=(0.1, 0.5, 1.0, 2.0, 5.0, 10.0, 30.0, 60.0),
 )
 
-tcp_comm_mesh_info_collection_duration_seconds: Final = Histogram(
+tcp_comm_mesh_info_collection_duration_seconds: Final[Histogram] = Histogram(
     "tcp_comm_mesh_info_collection_duration_seconds",
     "Mesh info collection duration in seconds",
     buckets=(1.0, 2.0, 5.0, 10.0, 15.0, 30.0, 60.0),
 )
 
-tcp_comm_device_cache_hits_total: Final = Counter(
+tcp_comm_device_cache_hits_total: Final[Counter] = Counter(
     "tcp_comm_device_cache_hits_total",
     "Total device cache hits",
 )
 
-tcp_comm_device_cache_misses_total: Final = Counter(
+tcp_comm_device_cache_misses_total: Final[Counter] = Counter(
     "tcp_comm_device_cache_misses_total",
     "Total device cache misses",
 )
 
-tcp_comm_device_cache_evictions_total: Final = Counter(
+tcp_comm_device_cache_evictions_total: Final[Counter] = Counter(
     "tcp_comm_device_cache_evictions_total",
     "Total device cache evictions",
 )

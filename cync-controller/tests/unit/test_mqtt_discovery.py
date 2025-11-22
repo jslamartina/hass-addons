@@ -128,7 +128,7 @@ class TestDeviceRegistration:
 
             mock_client.publish = AsyncMock(side_effect=capture_publish)
 
-            await client.register_single_device(mock_device)
+            _ = await client.register_single_device(mock_device)
 
             # Verify publish was called with device registry containing suggested_area
             assert mock_client.publish.called
@@ -149,7 +149,7 @@ class TestDeviceRegistration:
             client = MQTTClient()
             client._connected = True
 
-            await client.register_single_device(mock_device)
+            _ = await client.register_single_device(mock_device)
 
             # Should still publish discovery
             assert mock_client.publish.called
@@ -185,7 +185,7 @@ class TestDeviceRegistration:
             client = MQTTClient()
             client._connected = True
 
-            await client.register_single_device(switch_device)
+            _ = await client.register_single_device(switch_device)
 
             # Should have published discovery for switch
             assert mock_client.publish.called
@@ -276,7 +276,7 @@ class TestEntityIDGeneration:
             client = MQTTClient()
             client._connected = True
 
-            await client.register_single_device(mock_device)
+            _ = await client.register_single_device(mock_device)
 
             # Should have published with slugified entity ID
             assert mock_client.publish.called
@@ -296,7 +296,7 @@ class TestEntityIDGeneration:
             client = MQTTClient()
             client._connected = True
 
-            await client.register_single_device(mock_device)
+            _ = await client.register_single_device(mock_device)
 
             # Should handle complex names with numbers
             assert mock_client.publish.called
@@ -316,7 +316,7 @@ class TestEntityIDGeneration:
             client = MQTTClient()
             client._connected = True
 
-            await client.register_single_device(mock_device)
+            _ = await client.register_single_device(mock_device)
 
             # Should handle unicode characters
             assert mock_client.publish.called
@@ -366,7 +366,7 @@ class TestAreaExtraction:
             client = MQTTClient()
             client._connected = True
 
-            await client.register_single_device(mock_device)
+            _ = await client.register_single_device(mock_device)
 
             # Should have extracted "Bedroom" as area
             assert mock_client.publish.called
@@ -386,7 +386,7 @@ class TestAreaExtraction:
             client = MQTTClient()
             client._connected = True
 
-            await client.register_single_device(mock_device)
+            _ = await client.register_single_device(mock_device)
 
             # Should handle trailing numbers
             assert mock_client.publish.called
@@ -416,7 +416,7 @@ class TestAreaExtraction:
             client = MQTTClient()
             client._connected = True
 
-            await client.register_single_device(mock_device)
+            _ = await client.register_single_device(mock_device)
 
             # Should use non-subgroup name for area
             assert mock_client.publish.called

@@ -1,5 +1,4 @@
-"""
-Unit tests for utils module.
+"""Unit tests for utils module.
 
 Tests utility functions including byte/hex conversions, signal handling, and formatting functions.
 """
@@ -19,7 +18,6 @@ from cync_controller.utils import (
     hex2list,
     ints2bytes,
     ints2hex,
-    parse_config,
     parse_unbound_firmware_version,
     send_sigint,
     send_signal,
@@ -30,7 +28,7 @@ from cync_controller.utils import (
 
 # Filter RuntimeWarning about unawaited AsyncMockMixin coroutines from test cleanup
 pytestmark = pytest.mark.filterwarnings(
-    "ignore:coroutine 'AsyncMockMixin._execute_mock_call' was never awaited:RuntimeWarning"
+    "ignore:coroutine 'AsyncMockMixin._execute_mock_call' was never awaited:RuntimeWarning",
 )
 
 
@@ -45,7 +43,7 @@ class TestSignalHandling:
         send_signal(signal.SIGTERM)
 
         mock_kill.assert_called_once()
-        args: tuple[Any, ...] = cast(tuple[Any, ...], mock_kill.call_args[0])
+        args: tuple[Any, ...] = cast("tuple[Any, ...]", mock_kill.call_args[0])
         assert args[1] == signal.SIGTERM
 
     @patch("cync_controller.utils.send_signal")
@@ -624,8 +622,9 @@ class TestParseConfig:
     @pytest.mark.asyncio
     async def test_parse_config_basic_structure(self, tmp_path):
         """Test parsing a basic config file with devices and groups"""
-
         import yaml
+
+        from cync_controller.main import parse_config
 
         config_data = {
             "account data": {
@@ -639,15 +638,15 @@ class TestParseConfig:
                             "mac": "AA:BB:CC:DD:EE:FF",
                             "wifi_mac": "FF:EE:DD:CC:BB:AA",
                             "type": 123,
-                        }
+                        },
                     },
                     "groups": {"100": {"name": "Test Group", "members": [10], "is_subgroup": False}},
-                }
-            }
+                },
+            },
         }
 
-        config_file: Path = cast(Path, tmp_path / "config.yaml")
-        config_file.write_text(yaml.dump(config_data))
+        config_file: Path = cast("Path", tmp_path / "config.yaml")
+        _ = config_file.write_text(yaml.dump(config_data))
 
         devices, groups = await parse_config(config_file)
 
@@ -663,6 +662,8 @@ class TestParseConfig:
         """Test that disabled devices are skipped"""
         import yaml
 
+        from cync_controller.main import parse_config
+
         config_data = {
             "account data": {
                 "My Home": {
@@ -672,12 +673,12 @@ class TestParseConfig:
                         "20": {"name": "Disabled Device", "enabled": False},
                         "30": {"name": "Disabled String", "enabled": "False"},
                     },
-                }
-            }
+                },
+            },
         }
 
-        config_file: Path = cast(Path, tmp_path / "config.yaml")
-        config_file.write_text(yaml.dump(config_data))
+        config_file: Path = cast("Path", tmp_path / "config.yaml")
+        _ = config_file.write_text(yaml.dump(config_data))
 
         devices, _groups = await parse_config(config_file)
 
@@ -691,17 +692,19 @@ class TestParseConfig:
         """Test that homes with no devices are skipped with warning"""
         import yaml
 
+        from cync_controller.main import parse_config
+
         config_data = {
             "account data": {
                 "My Home": {
-                    "id": "home-123"
+                    "id": "home-123",
                     # No devices section
-                }
-            }
+                },
+            },
         }
 
-        config_file: Path = cast(Path, tmp_path / "config.yaml")
-        config_file.write_text(yaml.dump(config_data))
+        config_file: Path = cast("Path", tmp_path / "config.yaml")
+        _ = config_file.write_text(yaml.dump(config_data))
 
         devices, groups = await parse_config(config_file)
 
@@ -713,6 +716,8 @@ class TestParseConfig:
         """Test that int MAC addresses are handled with warnings"""
         import yaml
 
+        from cync_controller.main import parse_config
+
         config_data = {
             "account data": {
                 "My Home": {
@@ -722,14 +727,14 @@ class TestParseConfig:
                             "name": "Test Device",
                             "mac": 26616350814,  # int instead of string
                             "wifi_mac": 26616350815,
-                        }
+                        },
                     },
-                }
-            }
+                },
+            },
         }
 
-        config_file: Path = cast(Path, tmp_path / "config.yaml")
-        config_file.write_text(yaml.dump(config_data))
+        config_file: Path = cast("Path", tmp_path / "config.yaml")
+        _ = config_file.write_text(yaml.dump(config_data))
 
         devices, _groups = await parse_config(config_file)
 
@@ -739,8 +744,10 @@ class TestParseConfig:
     @pytest.mark.asyncio
     async def test_parse_config_error_handling(self, tmp_path):
         """Test that config file errors are handled properly"""
-        config_file: Path = cast(Path, tmp_path / "invalid.yaml")
-        config_file.write_text("invalid: yaml: content: [unclosed")
+        from cync_controller.main import parse_config
+
+        config_file: Path = cast("Path", tmp_path / "invalid.yaml")
+        _ = config_file.write_text("invalid: yaml: content: [unclosed")
 
         with pytest.raises(Exception, match=r".*"):
-            await parse_config(config_file)
+            _ = await parse_config(config_file)
