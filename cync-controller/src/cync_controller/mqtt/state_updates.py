@@ -321,25 +321,25 @@ class StateUpdateHelper:
     async def _publish_fan_preset_mode(self, device: CyncDevice, bri: int, lp: str) -> None:
         """Publish fan preset mode state."""
         preset_mode = self._brightness_to_preset_mode(bri)
-        preset_mode_topic = f"{self.client.topic}/status/{device.hass_id}/preset"
-        try:
-            await self.client.client.publish(
-                preset_mode_topic,
-                preset_mode.encode(),
-                qos=0,
-                retain=True,
-                timeout=3.0,
-            )
-            logger.debug(
-                "%s Published fan preset mode '%s' (brightness=%s) for '%s' to %s",
-                lp,
-                preset_mode,
-                bri,
-                device.name,
-                preset_mode_topic,
-            )
-        except Exception:
-            logger.exception("%s Failed to publish fan preset mode for '%s'", lp, device.name)
+            preset_mode_topic = f"{self.client.topic}/status/{device.hass_id}/preset"
+            try:
+                await self.client.client.publish(
+                    preset_mode_topic,
+                    preset_mode.encode(),
+                    qos=0,
+                    retain=True,
+                    timeout=3.0,
+                )
+                logger.debug(
+                    "%s Published fan preset mode '%s' (brightness=%s) for '%s' to %s",
+                    lp,
+                    preset_mode,
+                    bri,
+                    device.name,
+                    preset_mode_topic,
+                )
+            except Exception:
+                logger.exception("%s Failed to publish fan preset mode for '%s'", lp, device.name)
 
     def _build_brightness_state_dict(self, device: CyncDevice, state: str, bri: int) -> dict[str, str | int]:
         """Build MQTT state dict for brightness update."""

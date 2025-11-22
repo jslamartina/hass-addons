@@ -53,8 +53,7 @@ def _get_global_object():
 
 
 class CyncGroup:
-    """
-    A class to represent a Cync group (room) from the config. Groups can control multiple devices with a single command.
+    """A class to represent a Cync group (room) from the config. Groups can control multiple devices with a single command.
     """
 
     lp: str = "CyncGroup:"
@@ -124,8 +123,7 @@ class CyncGroup:
         return self._supports_temperature
 
     def aggregate_member_states(self) -> dict[str, Any] | None:
-        """
-        Aggregate state from all online member devices.
+        """Aggregate state from all online member devices.
 
         Returns dict with aggregated state values, or None if no online members.
 
@@ -169,8 +167,7 @@ class CyncGroup:
         return True
 
     def _get_bridge_device_info(self, lp: str) -> tuple[CyncTCPDevice, list[int], int] | None:
-        """
-        Get bridge device and related info for sending commands.
+        """Get bridge device and related info for sending commands.
 
         Returns tuple (bridge_device, queue_id, cmsg_id) or None if validation fails.
         """
@@ -211,7 +208,7 @@ class CyncGroup:
         return (bridge_device, queue_id, cmsg_id)
 
     def _build_group_payload(
-        self, header: list[int], inner_struct: list[int | str | bytes], queue_id: list[int], cmsg_id: int
+        self, header: list[int], inner_struct: list[int | str | bytes], queue_id: list[int], cmsg_id: int,
     ) -> bytes:
         """Build payload bytes from header, inner_struct, queue_id, and cmsg_id."""
         payload: list[int] = list(header)
@@ -228,8 +225,7 @@ class CyncGroup:
         return bytes(payload)
 
     async def set_power(self, state: int):
-        """
-        Send power command to all devices in the group using the group ID.
+        """Send power command to all devices in the group using the group ID.
 
         :param state: Power state (0=off, 1=on)
         """
@@ -332,8 +328,7 @@ class CyncGroup:
         logger.debug("%s bridge_device.write() RETURNED: %s", lp, write_result)
 
     async def set_brightness(self, brightness: int):
-        """
-        Send brightness command to all devices in the group using the group ID.
+        """Send brightness command to all devices in the group using the group ID.
 
         :param brightness: Brightness value (0-100)
         """
@@ -427,8 +422,7 @@ class CyncGroup:
         _ = await bridge_device.write(payload_bytes)
 
     async def set_temperature(self, temperature: int):
-        """
-        Send color temperature command to all devices in the group using the group ID.
+        """Send color temperature command to all devices in the group using the group ID.
 
         :param temperature: Color temperature value (0-100)
         """

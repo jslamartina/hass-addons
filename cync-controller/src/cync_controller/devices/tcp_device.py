@@ -464,6 +464,8 @@ class CyncTCPDevice:
 
     async def _check_and_handle_closing_writer(self, dev: CyncTCPDevice, g: GlobalObject) -> bool:
         """Check if writer is closing and handle cleanup. Returns True if should skip write."""
+        if dev.writer is None:
+            return True
         if dev.writer.is_closing():
             if dev.closing is False:
                 logger.warning(
@@ -506,7 +508,7 @@ class CyncTCPDevice:
                 )
 
     async def write(self, data: bytes, broadcast: bool = False) -> bool | None:
-        """Write data to the device if there is an open connection
+        """Write data to the device if there is an open connection.
 
         :param data: The raw binary data to write to the device
         :param broadcast: If True, write to all TCP devices connected to the server
@@ -529,11 +531,9 @@ class CyncTCPDevice:
                 },
             )
 
-        # Start timing for non-ACK packets
-        start_time = time.perf_counter() if not is_ack_packet else None
-        if not isinstance(data, bytes):
-            msg = f"Data must be bytes, not type: {type(data)}"
-            raise TypeError(msg)
+        # Start timing for non-ACK packets (or ACK packets if CYNC_RAW is enabled)
+        should_time = not is_ack_packet or CYNC_RAW
+        start_time = time.perf_counter() if should_time else None
         dev = self
         if dev.closing:
             logger.debug(

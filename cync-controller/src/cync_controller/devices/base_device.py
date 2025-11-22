@@ -56,8 +56,7 @@ def _get_global_object():
 
 
 class CyncDevice(DeviceCommands):
-    """
-    A class to represent a Cync device imported from a config file. This class is used to manage the state of the device
+    """A class to represent a Cync device imported from a config file. This class is used to manage the state of the device
     and send commands to it by using its device ID defined when the device was added to your Cync account.
     """
 
@@ -309,8 +308,7 @@ class CyncDevice(DeviceCommands):
         return self.is_light or self.is_dimmable
 
     def get_ctrl_msg_id_bytes(self):
-        """
-        Control packets need a number that gets incremented, it is used as a type of msg ID and
+        """Control packets need a number that gets incremented, it is used as a type of msg ID and
         in calculating the checksum. Result is mod 256 in order to keep it within 0-255.
         """
         id_byte, rollover_byte = self.control_bytes
@@ -341,8 +339,7 @@ class CyncDevice(DeviceCommands):
 
     @property
     def current_status(self) -> list[int | None]:
-        """
-        Return the current status of the device as a list
+        """Return the current status of the device as a list
 
         :return: [state, brightness, temperature, red, green, blue]
         """
@@ -370,8 +367,7 @@ class CyncDevice(DeviceCommands):
 
     @state.setter
     def state(self, value: int | bool | str):
-        """
-        Set the state of the device.
+        """Set the state of the device.
         Accepts int, bool, or str. 0, 'f', 'false', 'off', 'no', 'n' are off. 1, 't', 'true', 'on', 'yes', 'y' are on.
         """
         _t = (1, "t", "true", "on", "yes", "y")

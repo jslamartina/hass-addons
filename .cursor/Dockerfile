@@ -9,7 +9,7 @@
 # - Run as non-root user for security
 # - Use home directory as WORKDIR
 
-# Use Python 3.13 as base (required by project)
+# Use Python 3.14 as base (required by project)
 FROM python:3.14-slim-bookworm
 
 # Set environment variables

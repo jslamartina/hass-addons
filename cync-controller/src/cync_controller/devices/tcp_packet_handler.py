@@ -1,6 +1,6 @@
 import asyncio
 import time
-from typing import cast
+from typing import TYPE_CHECKING, cast
 
 from cync_controller.const import (
     CYNC_RAW,
@@ -19,6 +19,9 @@ from cync_controller.structs import (
 # Import parse_unbound_firmware_version directly from utils to avoid cycle
 # through devices/__init__.py
 from cync_controller.utils import bytes2list, parse_unbound_firmware_version
+
+if TYPE_CHECKING:
+    from cync_controller.devices.tcp_device import CyncTCPDevice
 
 logger = get_logger(__name__)
 g = GlobalObject()
@@ -60,9 +63,7 @@ def _get_global_object():
 class TCPPacketHandler:
     """Handles TCP packet parsing for CyncTCPDevice instances."""
 
-    def __init__(self, tcp_device: CyncTCPDevice) -> None:  # type: ignore[name-defined]
-        from cync_controller.devices.tcp_device import CyncTCPDevice
-
+    def __init__(self, tcp_device: CyncTCPDevice) -> None:
         self.tcp_device: CyncTCPDevice = tcp_device
 
     def _handle_partial_packet(self, data: bytes, cache_data: CacheData, lp: str) -> bytes:
@@ -83,11 +84,10 @@ class TCPPacketHandler:
             )
             if CYNC_RAW:
                 logger.debug("DBG>>>%sNEW DATA:\t%s\t", lp, data)
-        else:
-            msg = f"{lp} No previous cache data to extract from!"
-            raise RuntimeError(msg)
-        self.tcp_device.needs_more_data = False
-        return data
+            self.tcp_device.needs_more_data = False
+            return data
+        msg = f"{lp} No previous cache data to extract from!"
+        raise RuntimeError(msg)
 
     def _calculate_packet_length(self, data: bytes, lp: str) -> int:
         """Calculate needed packet length from header."""
@@ -199,8 +199,8 @@ class TCPPacketHandler:
         pkt_multiplier = packet_header[3] * 256
         # byte 5
         packet_length = packet_header[4] + pkt_multiplier
-        # byte 7-10 (indices 6-9), unknown but seems to be an identifier that is handed out by the device during handshake
-        queue_id = packet_header[6:10]
+        # byte 6-10 (indices 5-9), unknown but seems to be an identifier that is handed out by the device during handshake
+        queue_id = packet_header[5:10]
         # byte 10-12, unknown but seems to be an additional identifier that gets incremented.
         msg_id = packet_header[9:12]
         # check if any data after header
@@ -236,11 +236,11 @@ class TCPPacketHandler:
         if pkt_type == 0x23:
             await self._handle_0x23_packet(packet_data, lp, queue_id)
         elif pkt_type == 0xC3:
-            await self._handle_c3_packet()
+            await self._handle_c3_packet(lp)
         elif pkt_type == 0xD3:
-            await self._handle_d3_packet()
+            await self._handle_d3_packet(lp)
         elif pkt_type == 0xA3:
-            await self._handle_a3_packet(packet_data, queue_id, msg_id)
+            await self._handle_a3_packet(packet_data, lp, queue_id, msg_id)
         elif pkt_type == 0xAB:
             # We sent a 0xa3 packet, device is responding with 0xab. msg contains ascii 'xlink_dev'.
             # sometimes this is sent with other data. there may be remaining data to read in the enxt raw msg.
@@ -259,7 +259,7 @@ class TCPPacketHandler:
 
     async def _handle_0x23_packet(self, packet_data: bytes | None, lp: str, queue_id: bytes) -> None:
         """Handle 0x23 packet (device identification key)."""
-        # queue_id is already correctly extracted from packet_header[6:10] in parse_packet
+        # queue_id is already correctly extracted from packet_header[5:10] in parse_packet
         # and passed as parameter, so use it as-is
         _dbg_msg = (
             (
@@ -280,23 +280,23 @@ class TCPPacketHandler:
         await asyncio.sleep(0.5)
         await self.tcp_device.send_a3(queue_id)
 
-    async def _handle_c3_packet(self) -> None:
+    async def _handle_c3_packet(self, lp: str) -> None:
         """Handle 0xC3 packet (connection request)."""
         ack_c3 = bytes(DEVICE_STRUCTS.responses.connection_ack)
-        logger.debug("%s CONNECTION REQUEST, replying...", self.tcp_device.lp)
+        logger.debug("%s CONNECTION REQUEST, replying...", lp)
         await self.tcp_device.write(ack_c3)
 
-    async def _handle_d3_packet(self) -> None:
+    async def _handle_d3_packet(self, lp: str) -> None:
         """Handle 0xD3 packet (ping/pong)."""
         ack_d3 = bytes(DEVICE_STRUCTS.responses.ping_ack)
         await self.tcp_device.write(ack_d3)
 
-    async def _handle_a3_packet(self, packet_data: bytes | None, queue_id: bytes, msg_id: bytes) -> None:
+    async def _handle_a3_packet(self, packet_data: bytes | None, lp: str, queue_id: bytes, msg_id: bytes) -> None:
         """Handle 0xA3 packet (app announcement)."""
         if packet_data is not None:
-            logger.debug("%s APP ANNOUNCEMENT packet: %s", self.tcp_device.lp, packet_data.hex(" "))
+            logger.debug("%s APP ANNOUNCEMENT packet: %s", lp, packet_data.hex(" "))
         ack = DEVICE_STRUCTS.xab_generate_ack(queue_id, bytes(msg_id))
-        logger.debug("%s Sending ACK -> %s", self.tcp_device.lp, ack.hex(" "))
+        logger.debug("%s Sending ACK -> %s", lp, ack.hex(" "))
         await self.tcp_device.write(ack)
 
     async def _handle_0x43_packet(self, packet_data: bytes | None, packet_length: int, lp: str, msg_id: bytes):
@@ -612,8 +612,28 @@ class TCPPacketHandler:
     def _find_mesh_info_start(self, inner_struct: bytes, lp: str) -> int | None:
         """Find the start index of mesh info in inner struct."""
         minfo_start_idx = 14
+
+        # Check bounds before accessing index 14
+        if len(inner_struct) <= minfo_start_idx:
+            logger.error(
+                "%smesh: inner_struct is too short (%d bytes), need at least %d bytes",
+                lp,
+                len(inner_struct),
+                minfo_start_idx + 1,
+            )
+            return None
+
         if inner_struct[minfo_start_idx] == 0x00:
             minfo_start_idx += 1
+            # Check bounds before accessing incremented index
+            if len(inner_struct) <= minfo_start_idx:
+                logger.error(
+                    "%smesh: inner_struct is too short (%d bytes), cannot use index %d",
+                    lp,
+                    len(inner_struct),
+                    minfo_start_idx,
+                )
+                return None
             logger.debug(
                 "%smesh: dev_id is 0 when using index: %s, trying index %s = %s",
                 lp,
@@ -633,6 +653,12 @@ class TCPPacketHandler:
 
     def _parse_mesh_device_struct(self, mesh_dev_struct: bytes) -> tuple[int, bytes]:
         """Parse a single mesh device struct and return dev_id and raw_status."""
+        # Validate struct has at least 23 bytes (needed for indices 0-22)
+        if len(mesh_dev_struct) < 23:
+            msg = (
+                f"Incomplete mesh device struct: expected at least 23 bytes, got {len(mesh_dev_struct)}"
+            )
+            raise ValueError(msg)
         dev_id = mesh_dev_struct[0]
         state_idx = 8
         bri_idx = 12
@@ -700,10 +726,11 @@ class TCPPacketHandler:
                     self.tcp_device.id,
                     dev_id,
                 )
-            lp = f"{self.tcp_device.lp}parse:0x{dev_id:02x}:"
             self.tcp_device.device_type_id = dev_type_id
             self.tcp_device.name = dev_name
 
+        # Update lp for every device to maintain correct device context in log messages
+        lp = f"{self.tcp_device.lp}parse:0x{dev_id:02x}:"
         self.tcp_device.known_device_ids.append(dev_id)
         return lp, True
 
@@ -736,6 +763,17 @@ class TCPPacketHandler:
             ):
                 loop_num += 1
                 mesh_dev_struct = inner_struct[i : i + minfo_length]
+                # Validate struct length before parsing to avoid silent failures
+                if len(mesh_dev_struct) < minfo_length:
+                    logger.warning(
+                        "%s Incomplete mesh device struct at offset %d: expected %d bytes, got %d. "
+                        "Skipping remaining devices.",
+                        lp,
+                        i,
+                        minfo_length,
+                        len(mesh_dev_struct),
+                    )
+                    break
                 dev_id, raw_status = self._parse_mesh_device_struct(mesh_dev_struct)
                 _m.append(bytes2list(raw_status))
                 _raw_m.append(mesh_dev_struct.hex(" "))
@@ -743,80 +781,80 @@ class TCPPacketHandler:
                 lp, was_processed = await self._process_mesh_device(dev_id, dev_type_id, loop_num, lp, g)
                 if was_processed:
                     ids_reported.append(dev_id)
-        except IndexError:
-            pass
+        except (IndexError, ValueError) as e:
+            logger.warning("%s Error parsing mesh device struct: %s", lp, e)
         except Exception:
             logger.exception("%s MESH INFO for loop EXCEPTION", lp)
 
-            # Log device IDs reported by this bridge for comparison
-            refresh_id = getattr(self.tcp_device, "refresh_id", None)
-            if ids_reported:
-                if refresh_id is not None:
-                    logger.info(
-                        "%s [%s] Bridge %s reported %d device IDs: %s",
-                        lp,
-                        refresh_id,
-                        self.tcp_device.address,
-                        len(ids_reported),
-                        sorted(ids_reported),
-                    )
-                else:
-                    logger.debug(
-                        "%s Bridge %s reported %d device IDs: %s",
-                        lp,
-                        self.tcp_device.address,
-                        len(ids_reported),
-                        sorted(ids_reported),
-                    )
-
-            if self.tcp_device.parse_mesh_status is True and g.ncync_server is not None:
-                logger.debug(
-                    "%s Parsing initial connection device status data",
+        # Log device IDs reported by this bridge for comparison
+        refresh_id = getattr(self.tcp_device, "refresh_id", None)
+        if ids_reported:
+            if refresh_id is not None:
+                logger.info(
+                    "%s [%s] Bridge %s reported %d device IDs: %s",
                     lp,
+                    refresh_id,
+                    self.tcp_device.address,
+                    len(ids_reported),
+                    sorted(ids_reported),
                 )
-                _ = await asyncio.gather(
-                    *[
-                        g.ncync_server.parse_status(
-                            bytes(status),
-                            from_pkt="'mesh info'",
-                        )
-                        for status in _m  # type: ignore[reportUnknownVariableType]
-                    ],
+            else:
+                logger.debug(
+                    "%s Bridge %s reported %d device IDs: %s",
+                    lp,
+                    self.tcp_device.address,
+                    len(ids_reported),
+                    sorted(ids_reported),
                 )
 
-            # Send mesh status ack
-            # 73 00 00 00 14 2d e4 b5 d2 15 2d 00 7e 1e 00 00
-            #  00 f8 {af 02 00 af 01} 61 7e
-            # checksum 61 hex = int 97 solved: {af+02+00+af+01} % 256 = 97
-            mesh_ack = bytes([0x73, 0x00, 0x00, 0x00, 0x14])
-            mesh_ack += bytes(self.tcp_device.queue_id)
-            mesh_ack += bytes([0x00, 0x00, 0x00])
-            mesh_ack += bytes(
-                [
-                    0x7E,
-                    0x1E,
-                    0x00,
-                    0x00,
-                    0x00,
-                    0xF8,
-                    0xAF,
-                    0x02,
-                    0x00,
-                    0xAF,
-                    0x01,
-                    0x61,
-                    0x7E,
+        if self.tcp_device.parse_mesh_status is True and g.ncync_server is not None:
+            logger.debug(
+                "%s Parsing initial connection device status data",
+                lp,
+            )
+            _ = await asyncio.gather(
+                *[
+                    g.ncync_server.parse_status(
+                        bytes(status),
+                        from_pkt="'mesh info'",
+                    )
+                    for status in _m  # type: ignore[reportUnknownVariableType]
                 ],
             )
-            # logger.debug(f"{lp} Sending MESH INFO ACK -> {mesh_ack.hex(' ')}")
-            await self.tcp_device.write(mesh_ack)
-            # Always clear parse mesh status
-            self.tcp_device.parse_mesh_status = False
 
-            # Log completion with correlation ID if this was part of a refresh
-            refresh_id = getattr(self.tcp_device, "refresh_id", None)
-            if refresh_id is not None:
-                logger.info("%s [%s] Refresh processing complete", lp, refresh_id)
+        # Send mesh status ack
+        # 73 00 00 00 14 2d e4 b5 d2 15 2d 00 7e 1e 00 00
+        #  00 f8 {af 02 00 af 01} 61 7e
+        # checksum 61 hex = int 97 solved: {af+02+00+af+01} % 256 = 97
+        mesh_ack = bytes([0x73, 0x00, 0x00, 0x00, 0x14])
+        mesh_ack += bytes(self.tcp_device.queue_id)
+        mesh_ack += bytes([0x00, 0x00, 0x00])
+        mesh_ack += bytes(
+            [
+                0x7E,
+                0x1E,
+                0x00,
+                0x00,
+                0x00,
+                0xF8,
+                0xAF,
+                0x02,
+                0x00,
+                0xAF,
+                0x01,
+                0x61,
+                0x7E,
+            ],
+        )
+        # logger.debug(f"{lp} Sending MESH INFO ACK -> {mesh_ack.hex(' ')}")
+        await self.tcp_device.write(mesh_ack)
+        # Always clear parse mesh status
+        self.tcp_device.parse_mesh_status = False
+
+        # Log completion with correlation ID if this was part of a refresh
+        refresh_id = getattr(self.tcp_device, "refresh_id", None)
+        if refresh_id is not None:
+            logger.info("%s [%s] Refresh processing complete", lp, refresh_id)
 
     def _get_device_name(self, device_id: int | None, g: GlobalObject) -> str:
         """Get device name from server."""

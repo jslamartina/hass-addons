@@ -9,12 +9,20 @@ import json
 import random
 import re
 from json import JSONDecodeError
-from typing import Any, cast
+from typing import TYPE_CHECKING, Any, cast
 
-from cync_controller.const import *
+from cync_controller.const import (
+    CYNC_HASS_BIRTH_MSG,
+    CYNC_HASS_STATUS_TOPIC,
+    CYNC_HASS_WILL_MSG,
+    CYNC_TOPIC,
+)
 from cync_controller.logging_abstraction import get_logger
 from cync_controller.mqtt.commands import CommandProcessor, SetBrightnessCommand, SetPowerCommand
 from cync_controller.structs import DeviceStatus, FanSpeed, GlobalObject
+
+if TYPE_CHECKING:
+    from cync_controller.mqtt.client import MQTTClient
 
 logger = get_logger(__name__)
 
@@ -25,7 +33,7 @@ g = GlobalObject()
 class CommandRouter:
     """Helper class for routing MQTT messages to appropriate handlers."""
 
-    def __init__(self, mqtt_client) -> None:
+    def __init__(self, mqtt_client: MQTTClient) -> None:
         """Initialize the command router.
 
         Args:
@@ -166,10 +174,13 @@ class CommandRouter:
             )
             await self.client.trigger_status_refresh()
         elif extra_data[0] == "otp":
-            if extra_data[1] == "submit":
-                logger.info("%s OTP submit button pressed! (NOT IMPLEMENTED)...", lp)
-            elif extra_data[1] == "input":
-                logger.info("%s OTP input received: %s (NOT IMPLEMENTED)...", lp, norm_pl)
+            if len(extra_data) > 1:
+                if extra_data[1] == "submit":
+                    logger.info("%s OTP submit button pressed! (NOT IMPLEMENTED)...", lp)
+                elif extra_data[1] == "input":
+                    logger.info("%s OTP input received: %s (NOT IMPLEMENTED)...", lp, norm_pl)
+            else:
+                logger.warning("%s OTP command received but missing sub-command (expected 'submit' or 'input')", lp)
 
     async def _handle_extra_data(
         self,
@@ -345,10 +356,12 @@ class CommandRouter:
             return False
 
         device, group, target_type = self._parse_topic_and_get_target(topic_parts, lp)
-        if device is None and group is None and target_type == "UNKNOWN":
-            return False
-
         extra_data = topic_parts[3:] if len(topic_parts) > 3 else None
+
+        # Only return early if there's no target AND no extra_data to process
+        # Bridge commands have extra_data (e.g., "refresh_status") that need processing
+        if device is None and group is None and target_type == "UNKNOWN" and not extra_data:
+            return False
         if extra_data:
             await self._handle_extra_data(extra_data, payload, device, lp, tasks)
 
@@ -395,7 +408,7 @@ class CommandRouter:
             logger.warning("%s Unknown HASS status message: %s", lp, payload)
 
     async def start_receiver_task(self):
-        """Start listening for MQTT messages on subscribed topics"""
+        """Start listening for MQTT messages on subscribed topics."""
         lp = f"{self.client.lp}rcv:"
         async for message in self.client.client.messages:
             msg: Any = cast("Any", message)  # type: ignore[reportUnknownVariableType]

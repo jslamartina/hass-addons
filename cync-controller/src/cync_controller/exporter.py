@@ -235,7 +235,7 @@ class ExportServer:
     start_task: asyncio.Task[None] | None = None
     _instance: ExportServer | None = None
 
-    def __new__(cls, *args: object, **kwargs: object) -> "ExportServer":
+    def __new__(cls, *args: object, **kwargs: object) -> ExportServer:
         if cls._instance is None:
             cls._instance = super().__new__(cls)
         return cls._instance
@@ -252,7 +252,7 @@ class ExportServer:
                     "disable_existing_loggers": False,
                 },
                 log_level="info",
-            )
+            ),
         )
 
     async def start(self):

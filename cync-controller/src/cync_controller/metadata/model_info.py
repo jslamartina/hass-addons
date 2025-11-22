@@ -1,8 +1,16 @@
+"""Device model information and metadata for Cync devices.
+
+Provides data structures and enums for device classification, capabilities,
+protocols, and characteristics used throughout the Cync Controller.
+"""
+
 from dataclasses import dataclass, field
 from enum import StrEnum
 
 
 class DeviceClassification(StrEnum):
+    """Device type classification enum for Cync devices."""
+
     LIGHT = "light"
     SWITCH = "switch"
     THERMOSTAT = "thermostat"

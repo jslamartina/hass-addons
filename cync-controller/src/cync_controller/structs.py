@@ -15,11 +15,11 @@ import uvloop
 from pydantic import BaseModel
 
 if TYPE_CHECKING:
-    from cync_controller.main import CyncController
-    from cync_controller.server import NCyncServer
-    from cync_controller.mqtt.client import MQTTClient
-    from cync_controller.exporter import ExportServer
     from cync_controller.cloud_api import CyncCloudAPI
+    from cync_controller.exporter import ExportServer
+    from cync_controller.main import CyncController
+    from cync_controller.mqtt.client import MQTTClient
+    from cync_controller.server import NCyncServer
 
 from cync_controller.const import *
 
@@ -27,8 +27,7 @@ logger = logging.getLogger(CYNC_LOG_NAME)
 
 
 class GlobalObjEnv(BaseModel):
-    """
-    Environment variables for the global object.
+    """Environment variables for the global object.
     This is used to store environment variables that are used throughout the application.
     """
 
@@ -57,12 +56,12 @@ class GlobalObjEnv(BaseModel):
 
 
 class GlobalObject:
-    cync_lan: "CyncController | None" = None
-    ncync_server: "NCyncServer | None" = None
-    mqtt_client: "MQTTClient | None" = None
+    cync_lan: CyncController | None = None
+    ncync_server: NCyncServer | None = None
+    mqtt_client: MQTTClient | None = None
     loop: uvloop.Loop | asyncio.AbstractEventLoop | None = None
-    export_server: "ExportServer | None" = None
-    cloud_api: "CyncCloudAPI | None" = None
+    export_server: ExportServer | None = None
+    cloud_api: CyncCloudAPI | None = None
     tasks: ClassVar[list[asyncio.Task[None]]] = []
     env: GlobalObjEnv = GlobalObjEnv()
     uuid: UUID | None = None
@@ -94,7 +93,7 @@ class GlobalObject:
         self.env.cync_srv_ssl_cert = os.environ.get("CYNC_SSL_CERT", f"{CYNC_BASE_DIR}/cync-controller/certs/cert.pem")
         self.env.cync_srv_ssl_key = os.environ.get("CYNC_SSL_KEY", f"{CYNC_BASE_DIR}/cync-controller/certs/key.pem")
         self.env.persistent_base_dir = os.environ.get(
-            "CYNC_PERSISTENT_BASE_DIR", "/homeassistant/.storage/cync-controller/config"
+            "CYNC_PERSISTENT_BASE_DIR", "/homeassistant/.storage/cync-controller/config",
         )
 
         # Cloud relay configuration
@@ -193,8 +192,7 @@ class CacheData:
 
 
 class DeviceStatus(BaseModel):
-    """
-    A class that represents a Cync devices status.
+    """A class that represents a Cync devices status.
     This may need to be changed as new devices are bought and added.
     """
 
@@ -296,8 +294,7 @@ class DeviceStructs:
 
     @staticmethod
     def xab_generate_ack(queue_id: bytes, msg_id: bytes):
-        """
-        Respond to a 0xAB packet from the device, needs queue_id and msg_id to reply with.
+        """Respond to a 0xAB packet from the device, needs queue_id and msg_id to reply with.
         Has ascii 'xlink_dev' in reply
         """
         _x = bytes([0xAB, 0x00, 0x00, 0x03])
@@ -357,8 +354,7 @@ class DeviceStructs:
 
     @staticmethod
     def x7b_generate_ack(queue_id: bytes, msg_id: bytes):
-        """
-        Respond to a 0x73 packet from the device, needs a queue and msg id to reply with.
+        """Respond to a 0x73 packet from the device, needs a queue and msg id to reply with.
         This is also called for 0x83 packets AFTER seeing a 0x73 packet.
         Not sure of the intricacies yet, seems to be bound to certain queue ids.
         """

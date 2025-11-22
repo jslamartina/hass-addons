@@ -1,5 +1,4 @@
-"""
-Correlation ID tracking for distributed tracing across async operations.
+"""Correlation ID tracking for distributed tracing across async operations.
 
 Provides automatic correlation ID generation and propagation using contextvars
 for async-safe operation tracking across TCP  Server  MQTT  HA chains.
@@ -27,31 +26,31 @@ _correlation_id: contextvars.ContextVar[str | None] = contextvars.ContextVar(
 
 
 def generate_correlation_id() -> str:
-    """
-    Generate a new correlation ID.
+    """Generate a new correlation ID.
 
     Returns:
         New UUID-based correlation ID (format: UUID4 hex without dashes)
+
     """
     return uuid.uuid4().hex
 
 
 def get_correlation_id() -> str | None:
-    """
-    Get current correlation ID from context.
+    """Get current correlation ID from context.
 
     Returns:
         Current correlation ID or None if not set
+
     """
     return _correlation_id.get()
 
 
 def set_correlation_id(correlation_id: str | None) -> None:
-    """
-    Set correlation ID in current context.
+    """Set correlation ID in current context.
 
     Args:
         correlation_id: Correlation ID to set (or None to clear)
+
     """
     _ = _correlation_id.set(correlation_id)
 
@@ -61,8 +60,7 @@ def correlation_context(
     correlation_id: str | None = None,
     auto_generate: bool = True,
 ) -> Generator[str | None]:
-    """
-    Context manager for correlation ID scope.
+    """Context manager for correlation ID scope.
 
     Automatically generates correlation ID if not provided and auto_generate=True.
     Restores previous correlation ID on exit.
@@ -82,6 +80,7 @@ def correlation_context(
         # Use custom correlation ID (for testing)
         with correlation_context("TEST-123") as corr_id:
             logger.info("Testing critical path")  # Includes "TEST-123"
+
     """
     # Save previous correlation ID
     previous_id = get_correlation_id()
@@ -101,14 +100,14 @@ def correlation_context(
 
 
 def ensure_correlation_id() -> str:
-    """
-    Ensure a correlation ID exists in current context.
+    """Ensure a correlation ID exists in current context.
 
     If no correlation ID is set, generates and sets a new one.
     Useful for async task entry points.
 
     Returns:
         Current or newly generated correlation ID
+
     """
     current_id = get_correlation_id()
     if current_id is None:

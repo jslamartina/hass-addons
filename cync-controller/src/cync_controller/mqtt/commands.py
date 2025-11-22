@@ -1,16 +1,17 @@
-"""
-MQTT command classes for device control.
+"""MQTT command classes for device control.
 
 Provides command pattern implementation for optimistic updates and device control.
 """
 
 import asyncio
-from typing import Any, cast
+from typing import TYPE_CHECKING, Any, cast
 
 from cync_controller.devices import CyncGroup
-from cync_controller.devices.tcp_device import CyncTCPDevice
 from cync_controller.logging_abstraction import get_logger
 from cync_controller.structs import GlobalObject
+
+if TYPE_CHECKING:
+    from cync_controller.devices.tcp_device import CyncTCPDevice
 
 logger = get_logger(__name__)
 g = GlobalObject()
@@ -20,13 +21,13 @@ class DeviceCommand:
     """Base class for device commands."""
 
     def __init__(self, cmd_type: str, device_id: str | int, **kwargs) -> None:
-        """
-        Initialize a device command.
+        """Initialize a device command.
 
         Args:
             cmd_type: Command type (e.g., "set_power", "set_brightness")
             device_id: Device or group ID
             **kwargs: Command-specific parameters
+
         """
         self.cmd_type = cmd_type
         self.device_id = device_id
@@ -64,11 +65,11 @@ class CommandProcessor:
             self.lp = "CommandProcessor:"
 
     async def enqueue(self, cmd: DeviceCommand):
-        """
-        Enqueue a command for processing.
+        """Enqueue a command for processing.
 
         Args:
             cmd: DeviceCommand to process
+
         """
         await self._queue.put(cmd)
         logger.debug("%s Queued command: %s (queue size: %d)", self.lp, cmd, self._queue.qsize())
@@ -83,7 +84,7 @@ class CommandProcessor:
 
         try:
             while not self._queue.empty():
-                cmd: DeviceCommand = cast(DeviceCommand, await self._queue.get())
+                cmd: DeviceCommand = cast("DeviceCommand", await self._queue.get())
 
                 logger.info("%s Processing: %s", lp, cmd)
 
@@ -99,9 +100,7 @@ class CommandProcessor:
                         | asyncio.Event
                         | None
                     ) = cast(
-                        tuple[asyncio.Event, list[CyncTCPDevice] | list[tuple[CyncTCPDevice, int]]]
-                        | asyncio.Event
-                        | None,
+                        "tuple[asyncio.Event, list[CyncTCPDevice] | list[tuple[CyncTCPDevice, int]]] | asyncio.Event | None",
                         await cmd.execute(),
                     )
 
@@ -118,7 +117,7 @@ class CommandProcessor:
                             sent_bridges = []
                             device_id = cmd.device_id
                             # Type narrowing: sent_bridges_raw is list[CyncTCPDevice] at this point
-                            bridges_list: list[CyncTCPDevice] = cast(list[CyncTCPDevice], sent_bridges_raw)
+                            bridges_list: list[CyncTCPDevice] = cast("list[CyncTCPDevice]", sent_bridges_raw)
                             for bridge in bridges_list:
                                 msg_id_found: int | None = None
                                 # Search control messages for callback matching this device and ack_event
@@ -144,7 +143,7 @@ class CommandProcessor:
                                     )
                                     # Try to clean up all callbacks for this device_id as fallback
                                     sent_bridges.append(
-                                        (bridge, -1)
+                                        (bridge, -1),
                                     )  # Use -1 as sentinel to trigger device_id-based cleanup
                     else:
                         ack_event = result
@@ -196,12 +195,12 @@ class SetPowerCommand(DeviceCommand):
     """Command to set device or group power state."""
 
     def __init__(self, device_or_group, state: int) -> None:
-        """
-        Initialize set power command.
+        """Initialize set power command.
 
         Args:
             device_or_group: CyncDevice or CyncGroup instance
             state: Power state (0=OFF, 1=ON)
+
         """
         super().__init__("set_power", device_or_group.id, state=state)
         self.device_or_group = device_or_group
@@ -220,7 +219,7 @@ class SetPowerCommand(DeviceCommand):
             # If this is a switch, also sync its group
             try:
                 if self.device_or_group.is_switch:
-                    device: Any = cast(Any, self.device_or_group)
+                    device: Any = cast("Any", self.device_or_group)
                     if g.ncync_server and g.ncync_server.groups and g.mqtt_client is not None:
                         for group_id, group in g.ncync_server.groups.items():
                             if device.id in group.member_ids:
@@ -231,19 +230,19 @@ class SetPowerCommand(DeviceCommand):
 
     async def execute(self) -> tuple[asyncio.Event, list[CyncTCPDevice]] | None:
         """Execute the actual set_power command."""
-        return cast(tuple[asyncio.Event, list[CyncTCPDevice]] | None, await self.device_or_group.set_power(self.state))
+        return cast("tuple[asyncio.Event, list[CyncTCPDevice]] | None", await self.device_or_group.set_power(self.state))
 
 
 class SetBrightnessCommand(DeviceCommand):
     """Command to set device brightness."""
 
     def __init__(self, device_or_group, brightness: int) -> None:
-        """
-        Initialize set brightness command.
+        """Initialize set brightness command.
 
         Args:
             device_or_group: CyncDevice or CyncGroup instance
             brightness: Brightness value (0-100)
+
         """
         super().__init__("set_brightness", device_or_group.id, brightness=brightness)
         self.device_or_group = device_or_group
@@ -261,5 +260,5 @@ class SetBrightnessCommand(DeviceCommand):
     async def execute(self) -> tuple[asyncio.Event, list[CyncTCPDevice]] | None:
         """Execute the actual set_brightness command."""
         return cast(
-            tuple[asyncio.Event, list[CyncTCPDevice]] | None, await self.device_or_group.set_brightness(self.brightness)
+            "tuple[asyncio.Event, list[CyncTCPDevice]] | None", await self.device_or_group.set_brightness(self.brightness),
         )

@@ -1,8 +1,14 @@
+"""Cync Cloud API client for authentication and device discovery.
+
+Provides functionality to authenticate with the Cync Cloud API, request device
+properties, and retrieve mesh configuration for local device management.
+"""
+
 from __future__ import annotations
 
+import asyncio
 import datetime
 import json
-import pickle
 import random
 import string
 from pathlib import Path
@@ -25,6 +31,9 @@ from cync_controller.const import (
 from cync_controller.logging_abstraction import get_logger
 
 logger = get_logger(__name__)
+
+# Cync Cloud API error codes
+CYNC_ERROR_CODE_NOT_FOUND = 4041009
 
 
 class CyncAuthenticationError(Exception):
@@ -61,16 +70,18 @@ class MeshInfoDict(TypedDict, total=False):
 
 
 class RawTokenData(BaseModel):
-    """Model for cloud token data."""
+    """Model for cloud token data.
 
-    # API Auth Response:
-    # {
-    # 'access_token': '1007d2ad150c4000-2407d4d081dbea53DAwQjkzNUM2RDE4QjE0QTIzMjNGRjAwRUU4ODNEQUE5RTFCMjhBOQ==',
-    # 'refresh_token': 'REY3NjVENEQwQTM4NjE2OEM3QjNGMUZEQjQyQzU0MEIzRTU4NzMyRDdFQzZFRUYyQTUxNzE4RjAwNTVDQ0Y3Mw==',
-    # 'user_id': 769963474,
-    # 'expire_in': 604800,
-    # 'authorize': '2207d2c8d2c9e406'
-    # }
+    API Auth Response structure:
+        {
+            'access_token': '...',
+            'refresh_token': '...',
+            'user_id': 769963474,
+            'expire_in': 604800,
+            'authorize': '...'
+        }
+    """
+
     access_token: str
     user_id: str | int
     expire_in: str | int
@@ -79,6 +90,11 @@ class RawTokenData(BaseModel):
 
 
 class ComputedTokenData(RawTokenData):
+    """Extended token data model with computed expiration time.
+
+    Adds issued_at timestamp and computes expires_at based on expire_in duration.
+    """
+
     issued_at: datetime.datetime
 
     @computed_field
@@ -91,12 +107,19 @@ class ComputedTokenData(RawTokenData):
 
         """
         if self.issued_at and self.expire_in:
-            expire_seconds = float(self.expire_in) if isinstance(self.expire_in, (str, int)) else 0.0
+            expire_seconds = float(self.expire_in)
             return self.issued_at + datetime.timedelta(seconds=expire_seconds)
         return None
 
 
 class CyncCloudAPI:
+    """Cync Cloud API client for authentication and device discovery.
+
+    Singleton class that manages authentication with the Cync Cloud API,
+    handles token caching, and provides methods to request device properties
+    and mesh configuration.
+    """
+
     api_timeout: int = 8
     lp: str = "CyncCloudAPI"
     auth_cache_file: str = CYNC_CLOUD_AUTH_PATH
@@ -104,16 +127,36 @@ class CyncCloudAPI:
     http_session: aiohttp.ClientSession | None = None
     _instance: CyncCloudAPI | None = None
 
-    def __new__(cls, *args: object, **kwargs: object) -> CyncCloudAPI:
+    def __new__(cls, **_kwargs: object) -> CyncCloudAPI:
+        """Create or return the singleton instance of CyncCloudAPI.
+
+        Implements the singleton pattern to ensure only one instance exists.
+
+        Returns:
+            CyncCloudAPI: The singleton instance.
+
+        """
         if cls._instance is None:
-            cls._instance = super().__new__(cls)
+            new_instance = super().__new__(cls)
+            cls._instance = new_instance
+            return new_instance
         return cls._instance
 
     def __init__(self, **kwargs: object) -> None:
-        self.api_timeout = kwargs.get("api_timeout", 8)
-        self.lp = kwargs.get("lp", self.lp)
+        """Initialize the CyncCloudAPI instance.
 
-    async def close(self):
+        Args:
+            **kwargs: Optional keyword arguments for api_timeout and lp.
+
+        """
+        api_timeout_val = kwargs.get("api_timeout", 8)
+        lp_val = kwargs.get("lp", self.lp)
+        if isinstance(api_timeout_val, int):
+            self.api_timeout = api_timeout_val
+        if isinstance(lp_val, str):
+            self.lp = lp_val
+
+    async def close(self) -> None:
         """Close the aiohttp session if it exists and is not closed."""
         lp = f"{self.lp}:close:"
         if self.http_session and not self.http_session.closed:
@@ -121,8 +164,9 @@ class CyncCloudAPI:
             await self.http_session.close()
             self.http_session = None
 
-    async def _check_session(self):
+    async def _check_session(self) -> None:
         """Check if the aiohttp session is initialized.
+
         If not, create a new session.
         """
         if not self.http_session or self.http_session.closed:
@@ -138,11 +182,23 @@ class CyncCloudAPI:
 
         """
         lp = f"{self.lp}:read_token_cache:"
+
+        def _read_json() -> ComputedTokenData | None:
+            """Read JSON file synchronously (runs in thread pool)."""
+            with Path(self.auth_cache_file).open("r", encoding="utf-8") as f:
+                data = json.load(f)
+                # Convert datetime string back to datetime object
+                if "issued_at" in data and isinstance(data["issued_at"], str):
+                    data["issued_at"] = datetime.datetime.fromisoformat(data["issued_at"])
+                return ComputedTokenData(**data)
+
         try:
-            with Path(self.auth_cache_file).open("rb") as f:
-                token_data: ComputedTokenData | None = pickle.load(f)
+            token_data: ComputedTokenData | None = await asyncio.to_thread(_read_json)
         except FileNotFoundError:
             logger.debug("%s Token cache file not found: %s", lp, self.auth_cache_file)
+            return None
+        except (json.JSONDecodeError, ValueError, KeyError, TypeError) as e:
+            logger.warning("%s Failed to parse token cache: %s", lp, e)
             return None
         else:
             if not token_data:
@@ -150,10 +206,6 @@ class CyncCloudAPI:
                 return None
             logger.info("%s Cached token data read successfully", lp)
             return token_data
-            # add issued_at to the token data for computing the expiration datetime
-            # iat = datetime.datetime.now(datetime.UTC)
-            # token_data["issued_at"] = iat
-            # return ComputedTokenData(**token_data)
 
     async def check_token(self) -> bool:
         """Check if we need to request a new OTP code for 2FA authentication."""
@@ -166,7 +218,6 @@ class CyncCloudAPI:
             return False
         # check if the token is expired
         # Type narrowing: token_cache is not None after the check above
-        assert token_cache is not None  # Type guard for pyright
         # expires_at can return None if issued_at or expire_in are missing
         if token_cache.expires_at is None:
             logger.debug("%s Token expiration time is None (malformed token), requesting OTP...", lp)
@@ -181,7 +232,8 @@ class CyncCloudAPI:
 
     async def request_otp(self) -> bool:
         """Request an OTP code for 2FA authentication.
-        The username and password are defined in the hass_add-on 'configuration' page
+
+        The username and password are defined in the hass_add-on 'configuration' page.
         """
         lp = f"{self.lp}:request_otp:"
         await self._check_session()
@@ -212,28 +264,38 @@ class CyncCloudAPI:
             return True
 
     async def send_otp(self, otp_code: int) -> bool:
+        """Send OTP code to authenticate with Cync Cloud API.
+
+        Args:
+            otp_code: The one-time password code received via email.
+
+        Returns:
+            bool: True if authentication was successful, False otherwise.
+
+        """
         lp = f"{self.lp}:send_otp:"
         await self._check_session()
         if not otp_code:
             logger.error("OTP code must be provided")
             return False
-        if not isinstance(otp_code, int):
-            try:
-                otp_code = int(otp_code)
-            except ValueError:
-                logger.exception("%s OTP code must be an integer, got %s", lp, type(otp_code))
-                return False
+        try:
+            otp_code = int(otp_code)
+        except (ValueError, TypeError):
+            logger.exception("%s OTP code must be an integer, got %s", lp, type(otp_code))
+            return False
 
         api_auth_url = f"{CYNC_API_BASE}user_auth/two_factor"
         if not CYNC_ACCOUNT_USERNAME or not CYNC_ACCOUNT_PASSWORD:
             logger.error("%s Missing credentials", lp)
             return False
+        # Generate resource string (non-cryptographic random is acceptable for API resource ID)
+        resource_str = "".join(random.choices(string.ascii_lowercase, k=16))  # noqa: S311
         auth_data: AuthOTPData = {
             "corp_id": CYNC_CORP_ID,
             "email": CYNC_ACCOUNT_USERNAME,
             "password": CYNC_ACCOUNT_PASSWORD,
             "two_factor": otp_code,
-            "resource": "".join(random.choices(string.ascii_lowercase, k=16)),
+            "resource": resource_str,
         }
         logger.debug("%s Sending OTP code: %s to Cync Cloud API for authentication", lp, otp_code)
 
@@ -306,12 +368,21 @@ class CyncCloudAPI:
 
         """
         lp = f"{self.lp}:write_token_cache:"
-        try:
+
+        def _write_json() -> None:
+            """Write JSON file synchronously (runs in thread pool)."""
             # Ensure parent directory exists
             Path(self.auth_cache_file).parent.mkdir(parents=True, exist_ok=True)
-            with Path(self.auth_cache_file).open("wb") as f:
-                pickle.dump(tkn, f)
-        except (OSError, pickle.PicklingError, TypeError):
+            # Convert to dict and serialize datetime to ISO format
+            data = tkn.model_dump()
+            if "issued_at" in data and isinstance(data["issued_at"], datetime.datetime):
+                data["issued_at"] = data["issued_at"].isoformat()
+            with Path(self.auth_cache_file).open("w", encoding="utf-8") as f:
+                json.dump(data, f, indent=2)
+
+        try:
+            await asyncio.to_thread(_write_json)
+        except (OSError, TypeError, ValueError):
             logger.exception("%s Failed to write token cache", lp)
             return False
         else:
@@ -319,8 +390,13 @@ class CyncCloudAPI:
             # Note: self.token_cache should already be set by caller before this function
             return True
 
-    async def request_devices(self):
-        """Get a list of devices for a particular user."""
+    async def request_devices(self) -> list[dict[str, Any]]:
+        """Get a list of devices for a particular user.
+
+        Returns:
+            list[dict[str, Any]]: List of dictionaries containing device information from the API.
+
+        """
         lp = f"{self.lp}:get_devices:"
         await self._check_session()
         if not self.token_cache:
@@ -352,17 +428,26 @@ class CyncCloudAPI:
         else:
             ret = await r.json()
 
-        # {'error': {'msg': 'Access-Token Expired', 'code': 4031021}}
         if "error" in ret:
             error_data = ret["error"]
             if "msg" in error_data and error_data["msg"] and error_data["msg"].lower() == "access-token expired":
                 logger.error("%s Access-Token expired, you need to re-authenticate!", lp)
-                # logger.error("%s Access-Token expired, re-authenticating...", lp)
-                # return self.get_devices(*self.authenticate_2fa())
         return ret
 
-    async def get_properties(self, product_id: str, device_id: str):
-        """Get properties for a single device. Properties contain a device list (bulbsArray), groups (groupsArray), and saved light effects (lightShows)."""
+    async def get_properties(self, product_id: str, device_id: str) -> dict[str, Any]:
+        """Get properties for a single device.
+
+        Properties contain a device list (bulbsArray), groups (groupsArray),
+        and saved light effects (lightShows).
+
+        Args:
+            product_id: The product ID of the device.
+            device_id: The device ID.
+
+        Returns:
+            dict[str, Any]: Dictionary containing device properties.
+
+        """
         lp = f"{self.lp}:get_properties:"
         await self._check_session()
         if not self.token_cache:
@@ -416,12 +501,14 @@ class CyncCloudAPI:
         logit = True
         if "code" in error_data:
             cync_err_code = error_data["code"]
-            if cync_err_code == 4041009:
+            if cync_err_code == CYNC_ERROR_CODE_NOT_FOUND:
                 logit = False
             else:
                 logger.debug(
-                    "%s DBG>>> error code != 4041009 (int) ---> type(cync_err_code)=%s -- cync_err_code=%s /// setting logit = True",
+                    "%s DBG>>> error code != %s (int) ---> type(cync_err_code)=%s -- "
+                    "cync_err_code=%s /// setting logit = True",
                     lp,
+                    CYNC_ERROR_CODE_NOT_FOUND,
                     type(cync_err_code),
                     cync_err_code,
                 )
@@ -432,16 +519,21 @@ class CyncCloudAPI:
             logger.warning("%s Cync Cloud API Error: %s", lp, error_data)
 
     async def export_config_file(self) -> bool:
-        """Get Cync devices from the cloud"""
+        """Get Cync devices from the cloud."""
         mesh_networks = await self.request_devices()
         for mesh in mesh_networks:
             mesh["properties"] = await self.get_properties(mesh["product_id"], mesh["id"])
         mesh_config: dict[str, dict[str, Any]] = await self._mesh_to_config(mesh_networks)
-        try:
+
+        def _write_yaml() -> None:
+            """Write YAML file synchronously (runs in thread pool)."""
             # Ensure parent directory exists
             Path(CYNC_CONFIG_FILE_PATH).parent.mkdir(parents=True, exist_ok=True)
             with Path(CYNC_CONFIG_FILE_PATH).open("w") as f:
                 _ = f.write(yaml.dump(mesh_config))
+
+        try:
+            await asyncio.to_thread(_write_yaml)
         except Exception:
             logger.exception(
                 "%s Failed to write mesh config to file: %s",
@@ -502,7 +594,7 @@ class CyncCloudAPI:
         hvac_cfg: dict[str, Any] | None = None
         if "hvacSystem" in cfg_bulb:
             hvac_cfg = cfg_bulb["hvacSystem"]
-            if "thermostatSensors" in cfg_bulb:
+            if hvac_cfg is not None and "thermostatSensors" in cfg_bulb:
                 hvac_cfg["thermostatSensors"] = cfg_bulb["thermostatSensors"]
             logger.debug(
                 "%s Found HVAC device '%s' (ID: %s): %s",

@@ -1,7 +1,8 @@
+"""Constants and configuration for the Cync Controller addon."""
+
 import logging
 import os
 import zoneinfo
-from typing import Any
 
 import tzlocal
 
@@ -57,7 +58,6 @@ __all__ = [
     "CYNC_TCP_WHITELIST",
     "CYNC_TOPIC",
     "CYNC_UUID_PATH",
-    "CYNC_UUID_PATH",
     "CYNC_VERSION",
     "DATA_BOUNDARY",
     "DEVICE_LWT_MSG",
@@ -66,7 +66,6 @@ __all__ = [
     "FACTORY_EFFECTS_BYTES",
     "FOREIGN_LOG_FORMATTER",
     "INGRESS_PORT",
-    "LOCAL_TZ",
     "LOCAL_TZ",
     "LOG_FORMATTER",
     "MQTT_CLIENT_START_TASK_NAME",
@@ -97,7 +96,8 @@ SRC_REPO_URL: str = "https://github.com/jslamartina/hass-addons"
 CYNC_API_BASE: str = "https://api.gelighting.com/v2/"
 DEVICE_LWT_MSG: bytes = b"offline"
 
-CYNC_SRV_HOST = os.environ.get("CYNC_SRV_HOST", "0.0.0.0")
+# Binding to 0.0.0.0 is intentional to listen on all interfaces
+CYNC_SRV_HOST = os.environ.get("CYNC_SRV_HOST", "0.0.0.0")  # noqa: S104 intentionally binding to all interfaces
 CYNC_ACCOUNT_LANGUAGE: str = os.environ.get("CYNC_ACCOUNT_LANGUAGE", "en-us").casefold()
 _username = os.environ.get("CYNC_ACCOUNT_USERNAME")
 CYNC_ACCOUNT_USERNAME: str | None = _username if _username else None
@@ -123,13 +123,9 @@ else:
         _max_tcp_conn_value = 8
 CYNC_MAX_TCP_CONN: int = _max_tcp_conn_value
 _tcp_whitelist_env = os.environ.get("CYNC_TCP_WHITELIST")
-if _tcp_whitelist_env:
-    # split into a list using comma
-    _whitelist_split = _tcp_whitelist_env.split(",")
-    _tcp_whitelist_value: list[str] | None = [x.strip() for x in _whitelist_split if x]
-else:
-    _tcp_whitelist_value: list[str] | None = None
-CYNC_TCP_WHITELIST: list[str] | None = _tcp_whitelist_value
+CYNC_TCP_WHITELIST: list[str] | None = (
+    [x.strip() for x in _tcp_whitelist_env.split(",") if x] if _tcp_whitelist_env else None
+)
 
 CYNC_MQTT_HOST = os.environ.get("CYNC_MQTT_HOST", "homeassistant.local")
 CYNC_MQTT_PORT = os.environ.get("CYNC_MQTT_PORT", "1883")
@@ -158,7 +154,7 @@ CYNC_CLOUD_AUTH_PATH: str = f"{PERSISTENT_BASE_DIR}/.cloud_auth.yaml"
 CYNC_SSL_CERT: str = os.environ.get("CYNC_DEVICE_CERT", f"{CYNC_BASE_DIR}/cync-controller/certs/cert.pem")
 CYNC_SSL_KEY: str = os.environ.get("CYNC_DEVICE_KEY", f"{CYNC_BASE_DIR}/cync-controller/certs/key.pem")
 
-CYNC_BRIDGE_DEVICE_REGISTRY_CONF: dict[str, Any] = {}
+CYNC_BRIDGE_DEVICE_REGISTRY_CONF: dict[str, str | list[str]] = {}
 
 CYNC_PORT = 23779
 INGRESS_PORT = 23778
@@ -197,10 +193,10 @@ ORIGIN_STRUCT = {
 CYNC_MANUFACTURER = "Savant"
 _blackhole_delay = os.environ.get("CYNC_TCP_BLACKHOLE_DELAY", "14.75")
 try:
-    _blackhole_delay_value: float = float(_blackhole_delay) if _blackhole_delay else 14.75
+    _blackhole_delay_parsed = float(_blackhole_delay) if _blackhole_delay else 14.75
 except (ValueError, TypeError):
-    _blackhole_delay_value: float = 14.75
-TCP_BLACKHOLE_DELAY: float = _blackhole_delay_value
+    _blackhole_delay_parsed = 14.75
+TCP_BLACKHOLE_DELAY: float = _blackhole_delay_parsed
 
 # Cloud Relay Configuration
 CYNC_CLOUD_RELAY_ENABLED: bool = os.environ.get("CYNC_CLOUD_RELAY_ENABLED", "false").casefold() in YES_ANSWER
