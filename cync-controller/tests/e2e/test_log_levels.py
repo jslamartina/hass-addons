@@ -2,6 +2,7 @@
 
 import sys
 from pathlib import Path
+from typing import Any, cast
 
 import pytest
 
@@ -9,14 +10,14 @@ import pytest
 scripts_path = Path(__file__).parent.parent.parent.parent / "scripts" / "playwright"
 sys.path.insert(0, str(scripts_path))
 
-from addon_helpers import (
-    count_log_levels,
-    filter_logs_by_level,
-    get_addon_config,
-    get_log_levels_from_json,
-    read_json_logs,
-    restart_addon_and_wait,
-    update_debug_log_level,
+from addon_helpers import (  # type: ignore[import-untyped, reportUnknownVariableType]
+    count_log_levels,  # type: ignore[reportUnknownVariableType]
+    filter_logs_by_level,  # type: ignore[reportUnknownVariableType]
+    get_addon_config,  # type: ignore[reportUnknownVariableType]
+    get_log_levels_from_json,  # type: ignore[reportUnknownVariableType]
+    read_json_logs,  # type: ignore[reportUnknownVariableType]
+    restart_addon_and_wait,  # type: ignore[reportUnknownVariableType]
+    update_debug_log_level,  # type: ignore[reportUnknownVariableType]
 )
 
 ADDON_SLUG = "local_cync-controller"
@@ -25,15 +26,15 @@ ADDON_SLUG = "local_cync-controller"
 @pytest.fixture
 def restore_config():
     """Fixture to restore original configuration after tests."""
-    original_config = get_addon_config(ADDON_SLUG)
-    original_debug = original_config.get("debug_log_level", True)
+    original_config: dict[str, Any] = cast(dict[str, Any], get_addon_config(ADDON_SLUG))
+    original_debug: bool = cast(bool, original_config.get("debug_log_level", True))
 
     yield
 
     # Only restore if config changed
     try:
-        current_config = get_addon_config(ADDON_SLUG)
-        current_debug = current_config.get("debug_log_level", True)
+        current_config: dict[str, Any] = cast(dict[str, Any], get_addon_config(ADDON_SLUG))
+        current_debug: bool = cast(bool, current_config.get("debug_log_level", True))
 
         if current_debug != original_debug:
             update_debug_log_level(ADDON_SLUG, original_debug)
@@ -62,13 +63,13 @@ def test_debug_mode_shows_all_log_levels():
 
     # Act: Read logs
     print("[Step 2] Reading JSON logs...")
-    logs = read_json_logs(ADDON_SLUG, lines=200)
+    logs: list[dict[str, Any]] = cast(list[dict[str, Any]], read_json_logs(ADDON_SLUG, lines=200))
     assert logs, "No logs found"
 
     # Assert: Verify DEBUG logs present
     print("[Step 3] Verifying log levels...")
-    levels = get_log_levels_from_json(logs)
-    counts = count_log_levels(logs)
+    levels: set[str] = cast(set[str], get_log_levels_from_json(logs))
+    counts: dict[str, int] = cast(dict[str, int], count_log_levels(logs))
 
     print(f"  Log level distribution: {counts}")
     print(f"  Unique levels found: {sorted(levels)}")
@@ -76,7 +77,7 @@ def test_debug_mode_shows_all_log_levels():
     assert "DEBUG" in levels, "DEBUG logs not found when debug_log_level=true"
     assert "INFO" in levels, "INFO logs not found"
 
-    debug_logs = filter_logs_by_level(logs, "DEBUG")
+    debug_logs: list[dict[str, Any]] = cast(list[dict[str, Any]], filter_logs_by_level(logs, "DEBUG"))
     print(f"✓ Found {len(debug_logs)} DEBUG log entries")
     assert len(debug_logs) > 0, "Expected at least some DEBUG logs"
 
@@ -98,13 +99,13 @@ def test_production_mode_filters_debug_logs():
 
     # Act: Read logs
     print("[Step 2] Reading JSON logs...")
-    logs = read_json_logs(ADDON_SLUG, lines=200)
+    logs: list[dict[str, Any]] = cast(list[dict[str, Any]], read_json_logs(ADDON_SLUG, lines=200))
     assert logs, "No logs found"
 
     # Assert: Verify NO DEBUG logs
     print("[Step 3] Verifying DEBUG logs filtered out...")
-    levels = get_log_levels_from_json(logs)
-    counts = count_log_levels(logs)
+    levels: set[str] = cast(set[str], get_log_levels_from_json(logs))
+    counts: dict[str, int] = cast(dict[str, int], count_log_levels(logs))
 
     print(f"  Log level distribution: {counts}")
     print(f"  Unique levels found: {sorted(levels)}")
@@ -112,7 +113,7 @@ def test_production_mode_filters_debug_logs():
     assert "DEBUG" not in levels, "DEBUG logs found when debug_log_level=false!"
     assert "INFO" in levels, "INFO logs should still be present"
 
-    debug_logs = filter_logs_by_level(logs, "DEBUG")
+    debug_logs: list[dict[str, Any]] = cast(list[dict[str, Any]], filter_logs_by_level(logs, "DEBUG"))
     print(f"✓ Confirmed 0 DEBUG log entries (found {len(debug_logs)})")
     assert len(debug_logs) == 0, "Expected no DEBUG logs in production mode"
 
@@ -132,8 +133,8 @@ def test_log_level_transition_debug_to_production():
     assert update_debug_log_level(ADDON_SLUG, True), "Failed to enable debug mode"
     restart_addon_and_wait(ADDON_SLUG, wait_seconds=5)
 
-    logs_debug = read_json_logs(ADDON_SLUG, lines=100)
-    levels_debug = get_log_levels_from_json(logs_debug)
+    logs_debug: list[dict[str, Any]] = cast(list[dict[str, Any]], read_json_logs(ADDON_SLUG, lines=100))
+    levels_debug: set[str] = cast(set[str], get_log_levels_from_json(logs_debug))
     print(f"  Debug mode levels: {sorted(levels_debug)}")
     assert "DEBUG" in levels_debug, "DEBUG logs should be present in debug mode"
 
@@ -142,8 +143,8 @@ def test_log_level_transition_debug_to_production():
     assert update_debug_log_level(ADDON_SLUG, False), "Failed to disable debug mode"
     restart_addon_and_wait(ADDON_SLUG, wait_seconds=5)
 
-    logs_prod = read_json_logs(ADDON_SLUG, lines=100)
-    levels_prod = get_log_levels_from_json(logs_prod)
+    logs_prod: list[dict[str, Any]] = cast(list[dict[str, Any]], read_json_logs(ADDON_SLUG, lines=100))
+    levels_prod: set[str] = cast(set[str], get_log_levels_from_json(logs_prod))
     print(f"  Production mode levels: {sorted(levels_prod)}")
     assert "DEBUG" not in levels_prod, "DEBUG logs should be filtered in production mode"
 
@@ -165,8 +166,8 @@ def test_log_level_transition_production_to_debug():
     assert update_debug_log_level(ADDON_SLUG, False), "Failed to disable debug mode"
     restart_addon_and_wait(ADDON_SLUG, wait_seconds=5)
 
-    logs_prod = read_json_logs(ADDON_SLUG, lines=100)
-    levels_prod = get_log_levels_from_json(logs_prod)
+    logs_prod: list[dict[str, Any]] = cast(list[dict[str, Any]], read_json_logs(ADDON_SLUG, lines=100))
+    levels_prod: set[str] = cast(set[str], get_log_levels_from_json(logs_prod))
     print(f"  Production mode levels: {sorted(levels_prod)}")
     assert "DEBUG" not in levels_prod, "DEBUG logs should be filtered in production mode"
 
@@ -175,8 +176,8 @@ def test_log_level_transition_production_to_debug():
     assert update_debug_log_level(ADDON_SLUG, True), "Failed to enable debug mode"
     restart_addon_and_wait(ADDON_SLUG, wait_seconds=5)
 
-    logs_debug = read_json_logs(ADDON_SLUG, lines=100)
-    levels_debug = get_log_levels_from_json(logs_debug)
+    logs_debug: list[dict[str, Any]] = cast(list[dict[str, Any]], read_json_logs(ADDON_SLUG, lines=100))
+    levels_debug: set[str] = cast(set[str], get_log_levels_from_json(logs_debug))
     print(f"  Debug mode levels: {sorted(levels_debug)}")
     assert "DEBUG" in levels_debug, "DEBUG logs should appear after enabling debug mode"
 
@@ -198,8 +199,8 @@ def test_log_levels_always_include_info_warning_error():
     assert update_debug_log_level(ADDON_SLUG, False), "Failed to disable debug mode"
     restart_addon_and_wait(ADDON_SLUG, wait_seconds=5)
 
-    logs_prod = read_json_logs(ADDON_SLUG, lines=200)
-    levels_prod = get_log_levels_from_json(logs_prod)
+    logs_prod: list[dict[str, Any]] = cast(list[dict[str, Any]], read_json_logs(ADDON_SLUG, lines=200))
+    levels_prod: set[str] = cast(set[str], get_log_levels_from_json(logs_prod))
     print(f"  Production levels: {sorted(levels_prod)}")
 
     assert "INFO" in levels_prod, "INFO logs missing in production mode"
@@ -210,8 +211,8 @@ def test_log_levels_always_include_info_warning_error():
     assert update_debug_log_level(ADDON_SLUG, True), "Failed to enable debug mode"
     restart_addon_and_wait(ADDON_SLUG, wait_seconds=5)
 
-    logs_debug = read_json_logs(ADDON_SLUG, lines=200)
-    levels_debug = get_log_levels_from_json(logs_debug)
+    logs_debug: list[dict[str, Any]] = cast(list[dict[str, Any]], read_json_logs(ADDON_SLUG, lines=200))
+    levels_debug: set[str] = cast(set[str], get_log_levels_from_json(logs_debug))
     print(f"  Debug levels: {sorted(levels_debug)}")
 
     assert "INFO" in levels_debug, "INFO logs missing in debug mode"
@@ -231,11 +232,11 @@ def test_json_log_structure():
     print("\n=== Test: JSON Log Structure ===")
 
     # Read logs
-    logs = read_json_logs(ADDON_SLUG, lines=50)
+    logs: list[dict[str, Any]] = cast(list[dict[str, Any]], read_json_logs(ADDON_SLUG, lines=50))
     assert logs, "No logs found"
 
     # Check first log entry structure
-    first_log = logs[0]
+    first_log: dict[str, Any] = logs[0]
     print(f"  Sample log entry: {first_log}")
 
     required_fields = ["timestamp", "level", "logger", "message"]

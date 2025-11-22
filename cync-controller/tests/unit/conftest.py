@@ -110,7 +110,7 @@ def sample_device_data():
         "capabilities": ["on_off", "brightness"],
         "home": 12345,
         "mesh_id": 1,
-    }
+    }  # type: ignore[return-value]
 
 
 @pytest.fixture
@@ -126,7 +126,7 @@ def sample_group_data():
         "room": "Living Room",
         "device_ids": [0x1234, 0x5678, 0x9ABC],
         "home": 12345,
-    }
+    }  # type: ignore[return-value]
 
 
 @pytest.fixture

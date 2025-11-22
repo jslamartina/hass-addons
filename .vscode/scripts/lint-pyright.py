@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
-"""Run pyright and normalize diagnostic paths for VS Code problem matchers."""
+"""Run basedpyright/pyright and normalize diagnostic paths for VS Code problem matchers."""
 
 from __future__ import annotations
 
 import logging
 import re
+import shutil
 import subprocess
 from pathlib import Path
 
@@ -91,16 +92,22 @@ def transform_line(line: str, workspace_root: Path) -> str | None:
 
 
 def run_pyright(args: list[str]) -> subprocess.CompletedProcess[str]:
-    """Execute pyright with the provided argument list."""
-    LOGGER.info("→ Running pyright", extra={"pyright_args": args})
+    """Execute basedpyright with the provided argument list."""
+    if shutil.which("basedpyright"):
+        cmd = ["basedpyright"]
+        LOGGER.info("→ Running basedpyright", extra={"pyright_args": args})
+    else:
+        LOGGER.error("basedpyright not found. Install via: pip install basedpyright")
+        raise FileNotFoundError("basedpyright executable not found")
+
     result = subprocess.run(
-        ["npx", "pyright", *args],
+        [*cmd, *args],
         capture_output=True,
         text=True,
         check=False,
     )
     LOGGER.info(
-        "✓ Pyright finished",
+        "✓ Type checker finished",
         extra={"exit_code": result.returncode, "diagnostic_bytes": len(result.stdout)},
     )
     return result
@@ -129,10 +136,14 @@ def main() -> int:
 
     try:
         result = run_pyright(pyright_args)
-    except FileNotFoundError:
+    except (FileNotFoundError, PermissionError, OSError) as e:
         LOGGER.error(
-            "✗ pyright executable not found",
-            extra={"hint": "Install dev dependencies (npm install)."},
+            "✗ basedpyright executable error",
+            extra={
+                "error_type": type(e).__name__,
+                "error": str(e),
+                "hint": "Install basedpyright via: pip install basedpyright",
+            },
         )
         return 1
 

@@ -16,7 +16,7 @@ if str(_src_path) not in sys.path:
 try:
     from mitm.interfaces.packet_observer import PacketDirection
 except ModuleNotFoundError:  # pragma: no cover
-    from interfaces.packet_observer import PacketDirection  # type: ignore[import-not-found]
+    from interfaces.packet_observer import PacketDirection
 
 from protocol.cync_protocol import CyncProtocol  # noqa: E402
 from protocol.exceptions import PacketDecodeError, PacketFramingError  # noqa: E402

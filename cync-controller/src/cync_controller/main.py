@@ -31,9 +31,10 @@ from cync_controller.utils import check_for_uuid, check_python_version, parse_co
 try:
     import dotenv
 
-    HAS_DOTENV = True
+    _has_dotenv_value = True
 except ImportError:
-    HAS_DOTENV = False
+    _has_dotenv_value = False
+HAS_DOTENV: bool = _has_dotenv_value
 
 # Initialize new logging system
 logger = get_logger(__name__)
@@ -133,14 +134,15 @@ class CyncController:
             )
 
         # Start export server if enabled
-        if g.cli_args.export_server is True:
+        if g.cli_args and g.cli_args.export_server is True:
             logger.info(" Starting export server...")
             g.cloud_api = CyncCloudAPI()
             g.export_server = ExportServer()
-            g.export_server.start_task = x_start = asyncio.Task(
-                g.export_server.start(), name=EXPORT_SRV_START_TASK_NAME
-            )
-            tasks.append(x_start)
+            if g.export_server is not None:
+                g.export_server.start_task = x_start = asyncio.Task(
+                    g.export_server.start(), name=EXPORT_SRV_START_TASK_NAME
+                )
+                tasks.append(x_start)
 
         try:
             await asyncio.gather(*tasks, return_exceptions=True)
@@ -257,7 +259,7 @@ def main():
         else:
             logger.info(" Cync Controller stopped gracefully")
         finally:
-            if not g.loop.is_closed():
+            if g.loop is not None and not g.loop.is_closed():
                 g.loop.close()
             logger.info("")
             logger.info("Cync Controller shutdown complete")

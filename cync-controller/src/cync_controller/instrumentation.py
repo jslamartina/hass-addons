@@ -11,7 +11,7 @@ import asyncio
 import functools
 import time
 from collections.abc import Callable
-from typing import Any, ParamSpec, TypeVar
+from typing import Any, ParamSpec, TypeVar, cast
 
 __all__ = [
     "measure_time",
@@ -36,7 +36,7 @@ def measure_time(start_time: float) -> float:
     return (time.perf_counter() - start_time) * 1000
 
 
-def timed(operation_name: str | None = None) -> Callable:
+def timed(operation_name: str | None = None) -> Callable[..., Any]:
     """
     Decorator for timing synchronous functions with configurable threshold warnings.
 
@@ -82,7 +82,7 @@ def timed(operation_name: str | None = None) -> Callable:
     return decorator
 
 
-def timed_async(operation_name: str | None = None) -> Callable:
+def timed_async(operation_name: str | None = None) -> Callable[..., Any]:
     """
     Decorator for timing async functions with configurable threshold warnings.
 
@@ -113,21 +113,23 @@ def timed_async(operation_name: str | None = None) -> Callable:
 
             # Skip timing if performance tracking is disabled
             if not CYNC_PERF_TRACKING:
-                return await func(*args, **kwargs)
+                result: T = cast(T, await func(*args, **kwargs))
+                return result
 
             logger = get_logger(__name__)
             op_name = operation_name or func.__name__
 
             start_time = time.perf_counter()
             try:
-                return await func(*args, **kwargs)
+                result: T = cast(T, await func(*args, **kwargs))
+                return result
             finally:
                 elapsed_ms = measure_time(start_time)
                 _log_timing(logger, op_name, elapsed_ms, CYNC_PERF_THRESHOLD_MS)
 
-        return wrapper
+        return wrapper  # type: ignore[return-value]
 
-    return decorator
+    return decorator  # type: ignore[return-value]
 
 
 def _log_timing(logger: Any, operation_name: str, elapsed_ms: float, threshold_ms: int):

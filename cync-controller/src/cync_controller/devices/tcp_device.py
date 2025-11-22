@@ -1,7 +1,9 @@
 import asyncio
+import contextlib
 import datetime
 import random
 import time
+from typing import Any
 
 from cync_controller.const import (
     CYNC_CHUNK_SIZE,
@@ -72,7 +74,7 @@ class CyncTCPDevice:
     # reader and writer are instance attributes set in __init__ and can_connect()
     messages: Messages
     # keep track of msg ids and if we finished reading data, if not, we need to append the data and then parse it
-    read_cache: list
+    read_cache: list[bytes]
     needs_more_data = False
     is_app: bool
 
@@ -100,10 +102,10 @@ class CyncTCPDevice:
         self.version: int | None = None
         self.version_str: str | None = None
         self.network_version: int | None = None
-        self.device_types: dict | None = None
+        self.device_types: dict[str, Any] | None = None
         self.device_type_id: int | None = None
         self.device_timestamp: str | None = None
-        self.capabilities: dict | None = None
+        self.capabilities: dict[str, Any] | None = None
         self.last_xc3_request: float | None = None
         self.messages = Messages()
         self.mesh_info: MeshInfo | None = None
@@ -168,9 +170,7 @@ class CyncTCPDevice:
             return False
         # can create a new device
         logger.debug("%s Created new device: %s", self.lp, self.address)
-        receive_task = asyncio.get_event_loop().create_task(
-            self.receive_task(), name=f"receive_task-{self._py_id}"
-        )
+        receive_task = asyncio.get_event_loop().create_task(self.receive_task(), name=f"receive_task-{self._py_id}")
         callback_cleanup_task = asyncio.get_event_loop().create_task(
             self.callback_cleanup_task(), name=f"callback_cleanup-{self._py_id}"
         )
@@ -323,14 +323,12 @@ class CyncTCPDevice:
                                 ctrl_msg.callback.cancel()
                             elif asyncio.iscoroutine(ctrl_msg.callback):
                                 # Await noop coroutines to clean them up
-                                try:
+                                with contextlib.suppress(Exception):
                                     await ctrl_msg.callback
-                                except Exception:
-                                    pass  # Ignore errors from noop callbacks
                         to_delete.append(ctrl_msg_id)
 
                 # Delete stale messages
-                for msg_id in to_delete:
+                for msg_id in to_delete:  # type: ignore[reportUnknownVariableType]
                     del self.messages.control[msg_id]
 
             except asyncio.CancelledError as can_exc:

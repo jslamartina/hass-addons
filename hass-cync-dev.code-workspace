@@ -45,5 +45,25 @@
     "prettier.documentSelectors": ["**/*.sh"],
     "prettier.prettierPath": "${workspaceFolder}/node_modules/prettier",
     "prettier.requireConfig": true,
+    "python.defaultInterpreterPath": "/usr/local/python/current/bin/python3",
+    "deno.enable": false,
+    "cursorpyright.analysis.autoImportCompletions": true,
+    "cursorpyright.analysis.diagnosticSeverityOverrides": {
+      "reportUntypedFunctionDecorator": "error",
+      "reportUntypedClassDecorator": "error",
+      "reportUntypedBaseClass": "error",
+      "reportUntypedNamedTuple": "error",
+      "reportConstantRedefinition": "error",
+      "reportIncompatibleMethodOverride": "error",
+      "reportIncompatibleVariableOverride": "error",
+      "reportImplicitStringConcatenation": "none",
+      "reportUnknownVariableType": "error"
+    },
+    "cursorpyright.analysis.typeCheckingMode": "strict",
+    "cursorpyright.analysis.extraPaths": [
+      "cync-controller/src",
+      "python-rebuild-tcp-comm",
+      "python-rebuild-tcp-comm/src"
+    ],
   },
 }

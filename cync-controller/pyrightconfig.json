@@ -1,6 +1,13 @@
 {
   "include": ["src", "tests"],
   "extraPaths": ["src"],
+  "venvPath": "..",
+  "venv": ".venv",
+  "reportMissingTypeStubs": "error",
+  "reportUnnecessaryTypeIgnoreComment": "error",
+  "reportUnknownMemberType": "error",
+  "reportUnknownVariableType": "error",
+  "stubPath": "typings",
   "executionEnvironments": [
     {
       "root": ".",

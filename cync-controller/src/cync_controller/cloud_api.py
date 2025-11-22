@@ -21,7 +21,6 @@ from cync_controller.const import (
     CYNC_CORP_ID,
     PERSISTENT_BASE_DIR,
 )
-from cync_controller.devices import CyncDevice
 from cync_controller.logging_abstraction import get_logger
 from cync_controller.structs import ComputedTokenData, GlobalObject
 
@@ -37,22 +36,21 @@ class CyncCloudAPI:
     api_timeout: int = 8
     lp: str = "CyncCloudAPI"
     auth_cache_file = CYNC_CLOUD_AUTH_PATH
-    token_cache: ComputedTokenData | None
+    token_cache: ComputedTokenData | None = None
     http_session: aiohttp.ClientSession | None = None
     _instance: CyncCloudAPI | None = None
 
-    def __new__(cls, *_args, **_kwargs):
+    def __new__(cls, *args: Any, **kwargs: Any) -> CyncCloudAPI:
         if cls._instance is None:
             cls._instance = super().__new__(cls)
         return cls._instance
 
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs: Any) -> None:
         self.api_timeout = kwargs.get("api_timeout", 8)
         self.lp = kwargs.get("lp", self.lp)
 
     async def close(self):
-        """
-        Close the aiohttp session if it exists and is not closed.
+        """Close the aiohttp session if it exists and is not closed.
         """
         lp = f"{self.lp}:close:"
         if self.http_session and not self.http_session.closed:
@@ -61,8 +59,7 @@ class CyncCloudAPI:
             self.http_session = None
 
     async def _check_session(self):
-        """
-        Check if the aiohttp session is initialized.
+        """Check if the aiohttp session is initialized.
         If not, create a new session.
         """
         if not self.http_session or self.http_session.closed:
@@ -71,10 +68,11 @@ class CyncCloudAPI:
             await self.http_session.__aenter__()
 
     async def read_token_cache(self) -> ComputedTokenData | None:
-        """
-        Read the token cache from the file.
+        """Read the token cache from the file.
+
         Returns:
             CloudTokenData: The cached token data if available, otherwise None.
+
         """
         lp = f"{self.lp}:read_token_cache:"
         try:
@@ -119,8 +117,7 @@ class CyncCloudAPI:
         return True
 
     async def request_otp(self) -> bool:
-        """
-        Request an OTP code for 2FA authentication.
+        """Request an OTP code for 2FA authentication.
         The username and password are defined in the hass_add-on 'configuration' page
         """
         lp = f"{self.lp}:request_otp:"
@@ -165,7 +162,7 @@ class CyncCloudAPI:
                 return False
 
         api_auth_url = f"{CYNC_API_BASE}user_auth/two_factor"
-        auth_data = {
+        auth_data: dict[str, Any] = {
             "corp_id": CYNC_CORP_ID,
             "email": CYNC_ACCOUNT_USERNAME,
             "password": CYNC_ACCOUNT_PASSWORD,
@@ -233,12 +230,14 @@ class CyncCloudAPI:
         return success
 
     async def write_token_cache(self, tkn: ComputedTokenData) -> bool:
-        """
-        Write the token cache to the file.
+        """Write the token cache to the file.
+
         Args:
             tkn (ComputedTokenData): The token data to write to the cache.
+
         Returns:
             bool: True if the write was successful, False otherwise.
+
         """
         lp = f"{self.lp}:write_token_cache:"
         try:
@@ -370,7 +369,7 @@ class CyncCloudAPI:
         mesh_networks = await self.request_devices()
         for mesh in mesh_networks:
             mesh["properties"] = await self.get_properties(mesh["product_id"], mesh["id"])
-        mesh_config = await self._mesh_to_config(mesh_networks)
+        mesh_config: dict[str, dict[str, Any]] = await self._mesh_to_config(mesh_networks)
         try:
             # Ensure parent directory exists
             Path(CYNC_CONFIG_FILE_PATH).parent.mkdir(parents=True, exist_ok=True)
@@ -386,10 +385,13 @@ class CyncCloudAPI:
         else:
             return True
 
-    async def _mesh_to_config(self, mesh_info):
+    async def _mesh_to_config(self, mesh_info: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
         """Take exported cloud data and format it into a working config dict to be dumped in YAML format."""
+        # Lazy import to avoid circular dependency
+        from cync_controller.devices import CyncDevice
+
         lp = f"{self.lp}:export config:"
-        mesh_conf = {}
+        mesh_conf: dict[str, dict[str, Any]] = {}
         # What we get from the Cync cloud API
         raw_file_out = f"{PERSISTENT_BASE_DIR}/raw_mesh.cync"
         try:
@@ -406,18 +408,19 @@ class CyncCloudAPI:
         else:
             logger.debug("%s Dumped raw config from Cync account to file: %s", lp, raw_file_out)
         for mesh_ in mesh_info:
-            if "name" not in mesh_ or len(mesh_["name"]) < 1:
+            mesh_dict: dict[str, Any] = mesh_
+            if "name" not in mesh_dict or len(mesh_dict["name"]) < 1:
                 logger.debug("%s No name found for mesh, skipping...", lp)
                 continue
-            if "properties" not in mesh_:
+            if "properties" not in mesh_dict:
                 logger.debug("%s No properties found for mesh, skipping...", lp)
                 continue
-            if "bulbsArray" not in mesh_["properties"]:
+            if "bulbsArray" not in mesh_dict["properties"]:
                 logger.debug("%s No 'bulbsArray' in properties, skipping...", lp)
                 continue
 
-            new_mesh = {kv: mesh_[kv] for kv in ("access_key", "id", "mac") if kv in mesh_}
-            mesh_conf[mesh_["name"]] = new_mesh
+            new_mesh: dict[str, Any] = {kv: mesh_dict[kv] for kv in ("access_key", "id", "mac") if kv in mesh_dict}
+            mesh_conf[mesh_dict["name"]] = new_mesh
 
             logger.debug(
                 "%s 'properties' and 'bulbsArray' found in exported config, processing...",
@@ -426,7 +429,8 @@ class CyncCloudAPI:
             new_mesh["devices"] = {}
             new_mesh["groups"] = {}
 
-            for cfg_bulb in mesh_["properties"]["bulbsArray"]:
+            for cfg_bulb_raw in mesh_dict["properties"]["bulbsArray"]:
+                cfg_bulb: dict[str, Any] = cfg_bulb_raw
                 if any(
                     checkattr not in cfg_bulb
                     for checkattr in (
@@ -446,7 +450,7 @@ class CyncCloudAPI:
                 new_dev_dict = {}
                 # last 3 digits of deviceID
                 __id = int(str(cfg_bulb["deviceID"])[-3:])
-                wifi_mac = str(cfg_bulb.get("wifiMac", None))
+                wifi_mac = str(cfg_bulb.get("wifiMac"))
                 _mac = str(cfg_bulb["mac"])
                 name = str(cfg_bulb["displayName"])
                 _type = int(cfg_bulb["deviceType"])
@@ -454,7 +458,7 @@ class CyncCloudAPI:
                 # data from: https://github.com/baudneo/hass-addons/issues/8
                 # { "hvacSystem": { "changeoverMode": 0, "auxHeatStages": 1, "auxFurnaceType": 1, "stages": 1, "furnaceType": 1, "type": 2, "powerLines": 1 },
                 # "thermostatSensors": [ { "pin": "025572", "name": "Living Room", "type": "savant" }, { "pin": "044604", "name": "Bedroom Sensor", "type": "savant" }, { "pin": "022724", "name": "Thermostat sensor 3", "type": "savant" } ] } ]
-                hvac_cfg = None
+                hvac_cfg: dict[str, Any] | None = None
                 if "hvacSystem" in cfg_bulb:
                     hvac_cfg = cfg_bulb["hvacSystem"]
                     if "thermostatSensors" in cfg_bulb:
@@ -496,9 +500,10 @@ class CyncCloudAPI:
                 new_mesh["devices"][__id] = new_dev_dict
 
             # Parse groups
-            if "groupsArray" in mesh_["properties"]:
+            if "groupsArray" in mesh_dict["properties"]:
                 logger.debug("%s 'groupsArray' found, processing groups...", lp)
-                for cfg_group in mesh_["properties"]["groupsArray"]:
+                for cfg_group_raw in mesh_dict["properties"]["groupsArray"]:
+                    cfg_group: dict[str, Any] = cfg_group_raw
                     if "groupID" not in cfg_group or "displayName" not in cfg_group:
                         logger.warning(
                             "%s Missing required attribute in Cync group, skipping: %s",
@@ -509,11 +514,11 @@ class CyncCloudAPI:
 
                     group_id = int(cfg_group["groupID"])
                     group_name = str(cfg_group["displayName"])
-                    device_ids = cfg_group.get("deviceIDArray", [])
-                    is_subgroup = cfg_group.get("isSubgroup", False)
+                    device_ids: list[Any] = cfg_group.get("deviceIDArray", [])
+                    is_subgroup: bool = cfg_group.get("isSubgroup", False)
 
                     # Convert full device IDs to last 3 digits
-                    member_ids = [int(str(dev_id)[-3:]) for dev_id in device_ids]
+                    member_ids: list[int] = [int(str(dev_id)[-3:]) for dev_id in device_ids]
 
                     # Only add groups that have devices
                     if len(member_ids) > 0:

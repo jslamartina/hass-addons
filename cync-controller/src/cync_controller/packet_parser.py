@@ -2,8 +2,10 @@
 Packet parsing utilities for Cync protocol analysis
 """
 
+from typing import Any
 
-def parse_cync_packet(packet_bytes, direction="UNKNOWN"):
+
+def parse_cync_packet(packet_bytes: bytes | bytearray, direction: str = "UNKNOWN") -> dict[str, Any] | None:
     """
     Parse a Cync protocol packet and return structured information
 
@@ -20,14 +22,14 @@ def parse_cync_packet(packet_bytes, direction="UNKNOWN"):
     if not packet_bytes or len(packet_bytes) < 5:
         return None
 
-    result = {
+    result: dict[str, Any] = {
         "raw_hex": " ".join(f"{b:02x}" for b in packet_bytes),
         "raw_len": len(packet_bytes),
         "direction": direction,
     }
 
     # Parse header
-    packet_type = packet_bytes[0]
+    packet_type: int = packet_bytes[0]
     result["packet_type"] = f"0x{packet_type:02x}"
 
     # Packet type names
@@ -50,8 +52,8 @@ def parse_cync_packet(packet_bytes, direction="UNKNOWN"):
     # Byte 3 is multiplier (value * 256), byte 4 is base length
     # Total length = (byte[3] * 256) + byte[4]
     if len(packet_bytes) >= 5:
-        multiplier = packet_bytes[3]
-        base_len = packet_bytes[4]
+        multiplier: int = packet_bytes[3]
+        base_len: int = packet_bytes[4]
         result["declared_length"] = (multiplier * 256) + base_len
         if multiplier > 0:
             result["length_calc"] = f"({multiplier} * 256) + {base_len}"
@@ -86,8 +88,8 @@ def parse_cync_packet(packet_bytes, direction="UNKNOWN"):
 
             # Parse command type for 0x73 packets
             if data_end - data_start > 8:
-                cmd_bytes = packet_bytes[data_start + 5 : data_start + 8]
-                cmd_hex = " ".join(f"{b:02x}" for b in cmd_bytes)
+                cmd_bytes: bytes | bytearray = packet_bytes[data_start + 5 : data_start + 8]
+                cmd_hex: str = " ".join(f"{b:02x}" for b in cmd_bytes)
 
                 cmd_names = {
                     "f8 52 06": "QUERY_STATUS",
@@ -98,7 +100,7 @@ def parse_cync_packet(packet_bytes, direction="UNKNOWN"):
                 result["command"] = cmd_names.get(cmd_hex, f"CMD_{cmd_hex}")
 
                 # Parse device IDs in payload (skip command header bytes)
-                device_ids = []
+                device_ids: list[int] = []
                 # Command header is at offsets 5-7, device ID typically at offset 14+
                 # Skip at least 10 bytes from data_start to avoid command header bytes
                 search_start = data_start + 10 if data_start + 10 < data_end else data_start + 8
@@ -121,7 +123,7 @@ def parse_cync_packet(packet_bytes, direction="UNKNOWN"):
         result["data_length"] = len(packet_bytes) - 12
 
         # Parse device IDs in status
-        device_ids = []
+        device_ids: list[int] = []
         for i in range(12, len(packet_bytes) - 1):
             # Check if followed by another copy (common pattern)
             if (
@@ -141,19 +143,19 @@ def parse_cync_packet(packet_bytes, direction="UNKNOWN"):
 
         # Parse device statuses (19 bytes each)
         # Format: item(1) ?(1) ?(1) device_id(1) state(1) brightness(1) temp(1) R(1) G(1) B(1) online(1) ?(8)
-        statuses = []
-        offset = 12
+        statuses: list[dict[str, Any]] = []
+        offset: int = 12
         while offset + 19 <= len(packet_bytes):
-            dev_id = packet_bytes[offset + 3]
-            state = packet_bytes[offset + 4]
-            brightness = packet_bytes[offset + 5]
-            temp = packet_bytes[offset + 6]
-            r = packet_bytes[offset + 7]
-            g = packet_bytes[offset + 8]
-            b = packet_bytes[offset + 9]
-            online = packet_bytes[offset + 10]
+            dev_id: int = packet_bytes[offset + 3]
+            state: int = packet_bytes[offset + 4]
+            brightness: int = packet_bytes[offset + 5]
+            temp: int = packet_bytes[offset + 6]
+            r: int = packet_bytes[offset + 7]
+            g: int = packet_bytes[offset + 8]
+            b: int = packet_bytes[offset + 9]
+            online: int = packet_bytes[offset + 10]
 
-            status = {
+            status: dict[str, Any] = {
                 "device_id": dev_id,
                 "state": "ON" if state else "OFF",
                 "brightness": brightness,
@@ -179,12 +181,12 @@ def parse_cync_packet(packet_bytes, direction="UNKNOWN"):
     return result
 
 
-def format_packet_log(parsed, verbose=True):
+def format_packet_log(parsed: dict[str, Any] | None, verbose: bool = True) -> str:
     """Format parsed packet into readable log string"""
     if not parsed:
         return "Invalid packet"
 
-    lines = []
+    lines: list[str] = []
 
     # Header line with type and direction
     header = f"[{parsed['direction']}] {parsed['packet_type']} {parsed['packet_type_name']}"
@@ -219,7 +221,7 @@ def format_packet_log(parsed, verbose=True):
     # Data payload if verbose
     if verbose and "data_payload" in parsed:
         # Split long payloads into multiple lines
-        data = parsed["data_payload"]
+        data: str = parsed["data_payload"]
         if len(data) > 100:
             lines.append(f"  Data: {data[:100]}...")
             lines.append(f"        {data[100:200]}...")

@@ -3,6 +3,7 @@
 import sys
 import time
 from pathlib import Path
+from typing import Any, cast
 
 import pytest
 from playwright.sync_api import Page
@@ -11,7 +12,7 @@ from playwright.sync_api import Page
 scripts_path = Path(__file__).parent.parent.parent.parent / "scripts" / "playwright"
 sys.path.insert(0, str(scripts_path))
 
-from addon_helpers import read_json_logs
+from addon_helpers import read_json_logs  # type: ignore[import-untyped, reportUnknownVariableType]
 
 ADDON_SLUG = "local_cync-controller"
 
@@ -127,10 +128,10 @@ def test_no_cascading_refresh_storms():
     print("\n=== Test: No Cascading Refresh Storms ===")
 
     # Read logs
-    logs = read_json_logs(ADDON_SLUG, lines=200)
+    logs: list[dict[str, Any]] = cast(list[dict[str, Any]], read_json_logs(ADDON_SLUG, lines=200))
 
     # Look for refresh-related logs
-    refresh_logs = [log for log in logs if "refresh" in log.get("message", "").lower()]
+    refresh_logs: list[dict[str, Any]] = [log for log in logs if "refresh" in log.get("message", "").lower()]
 
     print(f"  Found {len(refresh_logs)} refresh-related log entries")
 
@@ -138,7 +139,7 @@ def test_no_cascading_refresh_storms():
     if len(refresh_logs) > 10:
         print("  ⚠️  Warning: High number of refresh entries detected")
         # Check timestamps to see if they're clustered
-        timestamps = [log.get("timestamp") for log in refresh_logs if "timestamp" in log]
+        timestamps: list[Any] = [log.get("timestamp") for log in refresh_logs if "timestamp" in log]
         if timestamps:
             print(f"  First refresh: {timestamps[0]}")
             print(f"  Last refresh: {timestamps[-1]}")
@@ -208,16 +209,16 @@ def test_state_updates_logged_correctly():
     print("\n=== Test: State Updates Logged ===")
 
     # Read logs
-    logs = read_json_logs(ADDON_SLUG, lines=200)
+    logs: list[dict[str, Any]] = cast(list[dict[str, Any]], read_json_logs(ADDON_SLUG, lines=200))
 
     # Look for state-related logs
-    state_logs = [log for log in logs if "state" in log.get("message", "").lower()]
+    state_logs: list[dict[str, Any]] = [log for log in logs if "state" in log.get("message", "").lower()]
 
     print(f"  Found {len(state_logs)} state-related log entries")
 
     if state_logs:
         print("  Sample state log:")
-        sample = state_logs[0]
+        sample: dict[str, Any] = state_logs[0]
         print(f"    Level: {sample.get('level')}")
         print(f"    Logger: {sample.get('logger')}")
         print(f"    Message: {sample.get('message', '')[:100]}")
@@ -244,8 +245,8 @@ def test_physical_device_changes_reflect_in_ha(ha_login: Page, ha_base_url: str)
     print("  3. Check logs for 0x83 status packet processing")
 
     # Check logs for status packets
-    logs = read_json_logs(ADDON_SLUG, lines=100)
-    status_logs = [
+    logs: list[dict[str, Any]] = cast(list[dict[str, Any]], read_json_logs(ADDON_SLUG, lines=100))
+    status_logs: list[dict[str, Any]] = [
         log for log in logs if "0x83" in log.get("message", "") or "status" in log.get("message", "").lower()
     ]
 
@@ -265,10 +266,10 @@ def test_no_state_flicker_during_updates():
     # This is primarily tested through logs
     # Flicker would show as rapid state changes in short time
 
-    logs = read_json_logs(ADDON_SLUG, lines=200)
+    logs: list[dict[str, Any]] = cast(list[dict[str, Any]], read_json_logs(ADDON_SLUG, lines=200))
 
     # Look for rapid state changes (would need timestamp analysis)
-    state_logs = [log for log in logs if "state" in log.get("message", "").lower()]
+    state_logs: list[dict[str, Any]] = [log for log in logs if "state" in log.get("message", "").lower()]
 
     print(f"  Found {len(state_logs)} state change log entries")
     print("  Note: Full flicker detection requires timestamp analysis")

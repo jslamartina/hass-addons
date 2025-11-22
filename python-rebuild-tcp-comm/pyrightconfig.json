@@ -1,6 +1,6 @@
 {
-  "include": ["src", "tests"],
-  "exclude": ["mitm", "mitm/validate-checksum-REFERENCE-ONLY.py"],
+  "include": ["src", "tests", "mitm"],
+  "exclude": ["mitm/validate-checksum-REFERENCE-ONLY.py"],
   "extraPaths": ["src", "."],
   "venvPath": "..",
   "venv": ".venv",
@@ -10,12 +10,37 @@
   "pythonPlatform": "Linux",
   "executionEnvironments": [
     {
-      "root": ".",
+      "root": "src",
       "extraPaths": ["src", "."],
-      "pythonVersion": "3.14"
+      "pythonVersion": "3.14",
+      "reportPrivateUsage": true
+    },
+    {
+      "root": "tests",
+      "extraPaths": ["src", "."],
+      "pythonVersion": "3.14",
+      "reportPrivateUsage": false
+    },
+    {
+      "root": "mitm",
+      "extraPaths": ["src", "."],
+      "pythonVersion": "3.14",
+      "reportPrivateUsage": false
     }
   ],
   "reportMissingImports": true,
-  "reportMissingTypeStubs": true,
+  "reportMissingModuleSource": "error",
+  "reportMissingTypeStubs": "error",
+  "reportUnnecessaryTypeIgnoreComment": "error",
+  "reportUnknownMemberType": "error",
+  "reportUnknownVariableType": "error",
+  "reportUntypedFunctionDecorator": "error",
+  "reportUntypedClassDecorator": "error",
+  "reportUntypedBaseClass": "error",
+  "reportUntypedNamedTuple": "error",
+  "reportConstantRedefinition": "error",
+  "reportIncompatibleMethodOverride": "error",
+  "reportIncompatibleVariableOverride": "error",
+  "reportImplicitStringConcatenation": "none",
   "stubPath": "typings"
 }

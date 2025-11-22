@@ -6,6 +6,8 @@ Tests FastAPI endpoints for OTP flow, device export, and ExportServer lifecycle.
 
 import asyncio
 import contextlib
+from pathlib import Path
+from typing import cast
 from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
 import aiohttp
@@ -39,11 +41,11 @@ def mock_global_object():
 @pytest.fixture
 def mock_static_dir(tmp_path):
     """Create a temporary static directory for testing"""
-    static_dir = tmp_path / "static"
+    static_dir: Path = cast(Path, tmp_path / "static")
     static_dir.mkdir()
-    index_file = static_dir / "index.html"
+    index_file: Path = cast(Path, static_dir / "index.html")
     index_file.write_text("<html>Test Page</html>")
-    return static_dir
+    return static_dir  # type: ignore[return-value]
 
 
 class TestExportServerInitialization:
@@ -278,7 +280,7 @@ class TestFastAPIEndpoints:
     @pytest.mark.asyncio
     async def test_download_config_file_exists(self, tmp_path):
         """Test download_config returns file when config exists"""
-        config_file = tmp_path / "cync_mesh.yaml"
+        config_file: Path = cast(Path, tmp_path / "cync_mesh.yaml")
         config_file.write_text("test config")
 
         with patch("cync_controller.exporter.CYNC_CONFIG_FILE_PATH", str(config_file)):
@@ -296,7 +298,7 @@ class TestFastAPIEndpoints:
     @pytest.mark.asyncio
     async def test_download_config_file_missing(self, tmp_path):
         """Test download_config raises HTTPException when file missing"""
-        missing_config = tmp_path / "missing.yaml"
+        missing_config: Path = cast(Path, tmp_path / "missing.yaml")
 
         with patch("cync_controller.exporter.CYNC_CONFIG_FILE_PATH", str(missing_config)):
             from cync_controller.exporter import download_config

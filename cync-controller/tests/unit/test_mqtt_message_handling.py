@@ -205,11 +205,11 @@ class TestMQTTClientMessageHandling:
             MQTTClient()
 
             # Create multiple tasks
-            async def dummy_task(task_id):
+            async def dummy_task(task_id: int) -> int:
                 await asyncio.sleep(0.05)
                 return task_id
 
-            tasks = [asyncio.create_task(dummy_task(i)) for i in range(3)]
+            tasks: list[asyncio.Task[int]] = [asyncio.create_task(dummy_task(i)) for i in range(3)]
             results = await asyncio.gather(*tasks)
 
             # Verify all tasks completed

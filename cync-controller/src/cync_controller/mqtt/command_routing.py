@@ -10,8 +10,7 @@ import json
 import random
 import re
 from json import JSONDecodeError
-
-import aiomqtt
+from typing import Any
 
 from cync_controller.const import *
 from cync_controller.logging_abstraction import get_logger
@@ -54,9 +53,9 @@ class CommandRouter:
         """Start listening for MQTT messages on subscribed topics"""
         lp = f"{self.client.lp}rcv:"
         async for message in self.client.client.messages:
-            message: aiomqtt.message.Message
-            topic = message.topic
-            payload = message.payload
+            msg: Any = cast(Any, message)  # type: ignore[reportUnknownVariableType]
+            topic = msg.topic
+            payload = msg.payload
             if (payload is None) or (payload is not None and not payload):
                 logger.debug(
                     "%s Received empty/None payload (%s) for topic: %s , skipping...",
@@ -74,13 +73,13 @@ class CommandRouter:
                 len(payload) if payload else 0,
                 payload.decode() if payload else None,
             )
-            _topic = topic.value.split("/")
-            tasks = []
-            device = None
+            _topic: list[str] = topic.value.split("/")
+            tasks: list[Any] = []
+            device: Any = None
             # cync_topic/(set|status)/device_id(/extra_data)?
             if _topic[0] == CYNC_TOPIC:
                 if _topic[1] == "set":
-                    device_id = _topic[2]
+                    device_id: str = _topic[2]
                     if device_id == "bridge":
                         device = None  # Bridge commands don't target a device
                         group = None  # Bridge commands don't target a group

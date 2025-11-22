@@ -2,6 +2,7 @@
 
 import sys
 from pathlib import Path
+from typing import Any, cast
 
 import pytest
 from playwright.sync_api import Page
@@ -10,7 +11,10 @@ from playwright.sync_api import Page
 scripts_path = Path(__file__).parent.parent.parent.parent / "scripts" / "playwright"
 sys.path.insert(0, str(scripts_path))
 
-from addon_helpers import get_addon_status, restart_addon_and_wait
+from addon_helpers import (  # type: ignore[import-untyped, reportUnknownVariableType]
+    get_addon_status,
+    restart_addon_and_wait,
+)
 
 ADDON_SLUG = "local_cync-controller"
 
@@ -31,7 +35,7 @@ def test_addon_starts_successfully():
 
     # Check status
     print("[Step 2] Checking add-on status...")
-    status = get_addon_status(ADDON_SLUG)
+    status: dict[str, Any] = cast(dict[str, Any], get_addon_status(ADDON_SLUG))  # type: ignore[reportUnknownVariableType]
 
     print(f"  Add-on state: {status.get('state')}")
     print(f"  Add-on version: {status.get('version')}")
@@ -171,7 +175,7 @@ def test_entity_unique_ids_are_consistent(ha_login: Page):
 
     # Note: Would need to query HA API to verify no duplicate entities created
     # For now, verify add-on restarts successfully multiple times
-    status = get_addon_status(ADDON_SLUG)
+    status: dict[str, Any] = cast(dict[str, Any], get_addon_status(ADDON_SLUG))  # type: ignore[reportUnknownVariableType]
     assert status.get("state") == "started", "Add-on failed after multiple restarts"
 
     print("✓ Add-on restarted multiple times successfully")

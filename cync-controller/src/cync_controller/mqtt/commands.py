@@ -5,8 +5,10 @@ Provides command pattern implementation for optimistic updates and device contro
 """
 
 import asyncio
+from typing import Any, cast
 
 from cync_controller.devices import CyncGroup
+from cync_controller.devices.tcp_device import CyncTCPDevice
 from cync_controller.logging_abstraction import get_logger
 from cync_controller.structs import GlobalObject
 
@@ -74,14 +76,14 @@ class CommandProcessor:
             task = asyncio.create_task(self.process_next())
             del task  # Reference stored, allow garbage collection
 
-    async def process_next(self):
+    async def process_next(self):  # noqa: PLR0912, PLR0915
         """Process commands sequentially with mesh refresh."""
         lp = f"{self.lp}process_next:"
         self._processing = True
 
         try:
             while not self._queue.empty():
-                cmd = await self._queue.get()
+                cmd: DeviceCommand = cast(DeviceCommand, await self._queue.get())
 
                 logger.info("%s Processing: %s", lp, cmd)
 
@@ -92,14 +94,61 @@ class CommandProcessor:
 
                     # 2 Send to device and get ACK event + cleanup info
                     logger.debug("%s Executing device command", lp)
-                    result = await cmd.execute()
+                    result: (
+                        tuple[asyncio.Event, list[CyncTCPDevice] | list[tuple[CyncTCPDevice, int]]]
+                        | asyncio.Event
+                        | None
+                    ) = cast(
+                        tuple[asyncio.Event, list[CyncTCPDevice] | list[tuple[CyncTCPDevice, int]]]
+                        | asyncio.Event
+                        | None,
+                        await cmd.execute(),
+                    )
 
                     # Unpack result (may be ack_event only or (ack_event, sent_bridges) tuple)
                     if isinstance(result, tuple):
-                        ack_event, sent_bridges = result
+                        ack_event: asyncio.Event = result[0]
+                        # sent_bridges is actually list[tuple[CyncTCPDevice, int]] despite type annotation
+                        sent_bridges_raw: list[CyncTCPDevice] | list[tuple[CyncTCPDevice, int]] = result[1]
+                        if sent_bridges_raw and isinstance(sent_bridges_raw[0], tuple):
+                            sent_bridges: list[tuple[CyncTCPDevice, int]] = sent_bridges_raw  # type: ignore[assignment]
+                        else:
+                            # Convert list[CyncTCPDevice] to list[tuple[CyncTCPDevice, int]] by extracting msg_id from control messages
+                            # Match callbacks by device_id and ack_event to find the actual message IDs
+                            sent_bridges = []
+                            device_id = cmd.device_id
+                            # Type narrowing: sent_bridges_raw is list[CyncTCPDevice] at this point
+                            bridges_list: list[CyncTCPDevice] = cast(list[CyncTCPDevice], sent_bridges_raw)
+                            for bridge in bridges_list:
+                                msg_id_found: int | None = None
+                                # Search control messages for callback matching this device and ack_event
+                                for ctrl_msg_id, callback in bridge.messages.control.items():
+                                    if (
+                                        callback.device_id == device_id
+                                        and callback.ack_event is ack_event
+                                        and callback.sent_at is not None
+                                        and callback.sent_at > asyncio.get_event_loop().time() - 10.0
+                                    ):
+                                        msg_id_found = ctrl_msg_id
+                                        break
+                                if msg_id_found is not None:
+                                    sent_bridges.append((bridge, msg_id_found))
+                                else:
+                                    # Fallback: log warning but still add bridge for potential cleanup
+                                    bridge_address = bridge.address if bridge.address else "unknown"
+                                    logger.warning(
+                                        "%s Could not find msg_id for bridge %s, device_id=%s - callback cleanup may be incomplete",
+                                        lp,
+                                        bridge_address,
+                                        device_id,
+                                    )
+                                    # Try to clean up all callbacks for this device_id as fallback
+                                    sent_bridges.append(
+                                        (bridge, -1)
+                                    )  # Use -1 as sentinel to trigger device_id-based cleanup
                     else:
                         ack_event = result
-                        sent_bridges = []
+                        sent_bridges: list[tuple[CyncTCPDevice, int]] = []
 
                     # 3 Wait for ACK with timeout (block queue until command confirmed)
                     if ack_event:
@@ -110,8 +159,22 @@ class CommandProcessor:
                         except TimeoutError:
                             logger.warning("%s ACK timeout after 5s - cleaning up callbacks", lp)
                             # Immediately remove orphaned callbacks instead of waiting 30s for cleanup task
-                            for bridge, msg_id in sent_bridges:
-                                if msg_id in bridge.messages.control:
+                            device_id = cmd.device_id
+                            for bridge, msg_id in sent_bridges:  # type: ignore[reportUnknownVariableType]
+                                if msg_id == -1:
+                                    # Fallback: clean up all callbacks for this device_id and ack_event
+                                    callbacks_to_remove: list[int] = []
+                                    for ctrl_msg_id, callback in bridge.messages.control.items():
+                                        if callback.device_id == device_id and callback.ack_event is ack_event:
+                                            callbacks_to_remove.append(ctrl_msg_id)
+                                    for ctrl_msg_id in callbacks_to_remove:
+                                        del bridge.messages.control[ctrl_msg_id]
+                                        logger.debug(
+                                            "%s Removed orphaned callback for msg ID %s (device_id-based cleanup)",
+                                            lp,
+                                            ctrl_msg_id,
+                                        )
+                                elif msg_id in bridge.messages.control:
                                     del bridge.messages.control[msg_id]
                                     logger.debug("%s Removed orphaned callback for msg ID %s", lp, msg_id)
                     else:
@@ -151,13 +214,14 @@ class SetPowerCommand(DeviceCommand):
             pass
         else:
             # For individual devices: publish optimistic state immediately
-            await g.mqtt_client.update_device_state(self.device_or_group, self.state)
+            if g.mqtt_client is not None:
+                await g.mqtt_client.update_device_state(self.device_or_group, self.state)
 
             # If this is a switch, also sync its group
             try:
                 if self.device_or_group.is_switch:
-                    device = self.device_or_group
-                    if g.ncync_server and g.ncync_server.groups:
+                    device: Any = cast(Any, self.device_or_group)
+                    if g.ncync_server and g.ncync_server.groups and g.mqtt_client is not None:
                         for group_id, group in g.ncync_server.groups.items():
                             if device.id in group.member_ids:
                                 # Sync all group devices to match this switch's new state
@@ -165,9 +229,9 @@ class SetPowerCommand(DeviceCommand):
             except Exception as e:
                 logger.warning("Group sync failed for switch: %s", e)
 
-    async def execute(self):
+    async def execute(self) -> tuple[asyncio.Event, list[CyncTCPDevice]] | None:
         """Execute the actual set_power command."""
-        return await self.device_or_group.set_power(self.state)
+        return cast(tuple[asyncio.Event, list[CyncTCPDevice]] | None, await self.device_or_group.set_power(self.state))
 
 
 class SetBrightnessCommand(DeviceCommand):
@@ -192,8 +256,11 @@ class SetBrightnessCommand(DeviceCommand):
             pass
         else:
             # For individual devices: publish optimistic brightness immediately
-            await g.mqtt_client.update_brightness(self.device_or_group, self.brightness)
+            if g.mqtt_client is not None:
+                await g.mqtt_client.update_brightness(self.device_or_group, self.brightness)
 
-    async def execute(self):
+    async def execute(self) -> tuple[asyncio.Event, list[CyncTCPDevice]] | None:
         """Execute the actual set_brightness command."""
-        return await self.device_or_group.set_brightness(self.brightness)
+        return cast(
+            tuple[asyncio.Event, list[CyncTCPDevice]] | None, await self.device_or_group.set_brightness(self.brightness)
+        )

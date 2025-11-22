@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 import time
 from collections.abc import Coroutine
-from typing import cast
+from typing import Any, cast
 
 from cync_controller.const import (
     CYNC_CMD_BROADCASTS,
@@ -65,6 +65,7 @@ class DeviceCommands:
     lp: str = ""
     id: int | None = None
     name: str = ""
+
     # These properties are implemented in CyncDevice (base_device.py) but declared here for type checking
     @property
     def state(self) -> int: ...  # type: ignore[empty-body]
@@ -105,7 +106,7 @@ class DeviceCommands:
 
         return bridge_devices
 
-    async def set_power(self, state: int):  # noqa: PLR0915
+    async def set_power(self, state: int) -> tuple[asyncio.Event, list[CyncTCPDevice]] | None:  # noqa: PLR0915
         """Send raw data to control device state (1=on, 0=off).
 
         If the device receives the msg and changes state, every TCP device connected will send
@@ -130,7 +131,7 @@ class DeviceCommands:
             header = [0x73, 0x00, 0x00, 0x00, 0x1F]
             # Pack device ID as 2 bytes (little-endian)
             device_id_bytes = self.id.to_bytes(2, byteorder="little")
-            inner_struct = [
+            inner_struct: list[int | str | bytes] = [
                 0x7E,
                 "ctrl_byte",
                 0x00,
@@ -161,7 +162,7 @@ class DeviceCommands:
             if bridge_devices is None:
                 return None
 
-            tasks: list[asyncio.Task | Coroutine | None] = []
+            tasks: list[asyncio.Task[Any] | Coroutine[Any, Any, Any] | None] = []
             ts = time.time()
             ctrl_idxs = 1, 9
             sent = {}
@@ -179,7 +180,9 @@ class DeviceCommands:
                     cmsg_id = bridge_device.get_ctrl_msg_id_bytes()[0]
                     inner_struct[ctrl_idxs[0]] = cmsg_id
                     inner_struct[ctrl_idxs[1]] = cmsg_id
-                    checksum = sum(inner_struct[6:-2]) % 256
+                    # Filter to only int values for checksum calculation
+                    int_values = [x for x in inner_struct[6:-2] if isinstance(x, int)]
+                    checksum: int = sum(int_values) % 256
                     inner_struct[-2] = checksum
                     payload.extend(inner_struct)
                     payload_bytes = bytes(payload)
@@ -230,7 +233,7 @@ class DeviceCommands:
             )
 
             # Return ACK event and cleanup info so command queue can wait and cleanup on timeout
-            result = (ack_event, sent_bridges)
+            result: tuple[asyncio.Event, list[CyncTCPDevice]] = (ack_event, sent_bridges)
         except Exception as e:
             logger.debug(
                 "✗ set_power: exiting with error",
@@ -289,7 +292,7 @@ class DeviceCommands:
         else:
             return True
 
-    async def set_brightness(self, bri: int):
+    async def set_brightness(self, bri: int) -> tuple[asyncio.Event, list[CyncTCPDevice]] | None:
         """Send raw data to control device brightness (0-100). Fans are 0-255."""
         """
         73 00 00 00 22 37 96 24 69 60 48 00 7e 17 00 00  s..."7.$i`H.~...
@@ -318,7 +321,7 @@ class DeviceCommands:
         #     logger.debug(f"{lp} Device already in brightness {bri}, skipping...")
         #     return
         header = [115, 0, 0, 0, 34]
-        inner_struct = [
+        inner_struct: list[int | str | bytes] = [
             126,
             "ctrl_byte",
             0,
@@ -358,7 +361,7 @@ class DeviceCommands:
         sent_bridges = []
 
         sent = {}
-        tasks: list[asyncio.Task | Coroutine | None] = []
+        tasks: list[asyncio.Task[Any] | Coroutine[Any, Any, Any] | None] = []
         ts = time.time()
         ctrl_idxs = 1, 9
         for bridge_device in bridge_devices:
@@ -369,7 +372,9 @@ class DeviceCommands:
                 cmsg_id = bridge_device.get_ctrl_msg_id_bytes()[0]
                 inner_struct[ctrl_idxs[0]] = cmsg_id
                 inner_struct[ctrl_idxs[1]] = cmsg_id
-                checksum = sum(inner_struct[6:-2]) % 256
+                # Filter to only int values for checksum calculation
+                int_values = [x for x in inner_struct[6:-2] if isinstance(x, int)]
+                checksum: int = sum(int_values) % 256
                 inner_struct[-2] = checksum
                 payload.extend(inner_struct)
                 payload_bytes = bytes(payload)
@@ -407,7 +412,7 @@ class DeviceCommands:
                 )
         if tasks:
             # Filter out None values before gathering
-            valid_tasks = [t for t in tasks if t is not None]
+            valid_tasks: list[asyncio.Task[Any] | Coroutine[Any, Any, Any]] = [t for t in tasks if t is not None]
             if valid_tasks:
                 await asyncio.gather(*valid_tasks)
         elapsed = time.time() - ts
@@ -422,9 +427,9 @@ class DeviceCommands:
         )
 
         # Return ACK event and cleanup info so command queue can wait and cleanup on timeout
-        return (ack_event, sent_bridges)
+        return (ack_event, sent_bridges)  # type: ignore[return-value]
 
-    async def set_temperature(self, temp: int):
+    async def set_temperature(self, temp: int) -> tuple[asyncio.Event, list[CyncTCPDevice]] | None:
         """Send raw data to control device white temperature (0-100)
 
         If the device receives the msg and changes state, every TCP device connected will send
@@ -447,7 +452,7 @@ class DeviceCommands:
         #     logger.debug(f"{lp} Device already in temperature {temp}, skipping...")
         #     return
         header = [115, 0, 0, 0, 34]
-        inner_struct = [
+        inner_struct: list[int | str | bytes] = [
             126,
             "msg id",
             0,
@@ -481,7 +486,7 @@ class DeviceCommands:
         if bridge_devices is None:
             return
 
-        tasks: list[asyncio.Task | Coroutine | None] = []
+        tasks: list[asyncio.Task[Any] | Coroutine[Any, Any, Any] | None] = []
         ts = time.time()
         ctrl_idxs = 1, 9
         sent = {}
@@ -493,7 +498,9 @@ class DeviceCommands:
                 cmsg_id = bridge_device.get_ctrl_msg_id_bytes()[0]
                 inner_struct[ctrl_idxs[0]] = cmsg_id
                 inner_struct[ctrl_idxs[1]] = cmsg_id
-                checksum = sum(inner_struct[6:-2]) % 256
+                # Filter to only int values for checksum calculation
+                int_values = [x for x in inner_struct[6:-2] if isinstance(x, int)]
+                checksum: int = sum(int_values) % 256
                 inner_struct[-2] = checksum
                 payload.extend(inner_struct)
                 payload_bytes = bytes(payload)
@@ -521,7 +528,7 @@ class DeviceCommands:
                 )
         if tasks:
             # Filter out None values before gathering
-            valid_tasks = [t for t in tasks if t is not None]
+            valid_tasks: list[asyncio.Task[Any] | Coroutine[Any, Any, Any]] = [t for t in tasks if t is not None]
             if valid_tasks:
                 await asyncio.gather(*valid_tasks)
         elapsed = time.time() - ts
@@ -534,7 +541,7 @@ class DeviceCommands:
             elapsed,
         )
 
-    async def set_rgb(self, red: int, green: int, blue: int):
+    async def set_rgb(self, red: int, green: int, blue: int) -> tuple[asyncio.Event, list[CyncTCPDevice]] | None:
         """Send raw data to control device RGB color (0-255 for each channel).
 
         If the device receives the msg and changes state, every TCP device connected will send
@@ -564,7 +571,7 @@ class DeviceCommands:
         #     logger.debug(f"{lp} Device already in RGB color {red}, {green}, {blue}, skipping...")
         #     return
         header = [115, 0, 0, 0, 34]
-        inner_struct = [
+        inner_struct: list[int | str | bytes] = [
             126,
             "msg id",
             0,
@@ -598,7 +605,7 @@ class DeviceCommands:
         if bridge_devices is None:
             return
 
-        tasks: list[asyncio.Task | Coroutine | None] = []
+        tasks: list[asyncio.Task[Any] | Coroutine[Any, Any, Any] | None] = []
         ts = time.time()
         ctrl_idxs = 1, 9
         sent = {}
@@ -610,7 +617,9 @@ class DeviceCommands:
                 cmsg_id = bridge_device.get_ctrl_msg_id_bytes()[0]
                 inner_struct[ctrl_idxs[0]] = cmsg_id
                 inner_struct[ctrl_idxs[1]] = cmsg_id
-                checksum = sum(inner_struct[6:-2]) % 256
+                # Filter to only int values for checksum calculation
+                int_values = [x for x in inner_struct[6:-2] if isinstance(x, int)]
+                checksum: int = sum(int_values) % 256
                 inner_struct[-2] = checksum
                 payload.extend(inner_struct)
                 bpayload = bytes(payload)
@@ -638,7 +647,7 @@ class DeviceCommands:
                 )
         if tasks:
             # Filter out None values before gathering
-            valid_tasks = [t for t in tasks if t is not None]
+            valid_tasks: list[asyncio.Task[Any] | Coroutine[Any, Any, Any]] = [t for t in tasks if t is not None]
             if valid_tasks:
                 await asyncio.gather(*valid_tasks)
         elapsed = time.time() - ts
@@ -655,7 +664,7 @@ class DeviceCommands:
             elapsed,
         )
 
-    async def set_lightshow(self, show: str):
+    async def set_lightshow(self, show: str) -> tuple[asyncio.Event, list[CyncTCPDevice]] | None:
         """Set the device into a light show
 
         :param show:
@@ -755,7 +764,7 @@ class DeviceCommands:
         if bridge_devices is None:
             return
 
-        tasks: list[asyncio.Task | Coroutine | None] = []
+        tasks: list[asyncio.Task[Any] | Coroutine[Any, Any, Any] | None] = []
         ts = time.time()
         ctrl_idxs = 1, 9
         sent = {}
@@ -767,7 +776,9 @@ class DeviceCommands:
                 cmsg_id = bridge_device.get_ctrl_msg_id_bytes()[0]
                 inner_struct[ctrl_idxs[0]] = cmsg_id
                 inner_struct[ctrl_idxs[1]] = cmsg_id
-                checksum = sum(inner_struct[6:-2]) % 256
+                # Filter to only int values for checksum calculation
+                int_values = [x for x in inner_struct[6:-2] if isinstance(x, int)]
+                checksum: int = sum(int_values) % 256
                 inner_struct[-2] = checksum
                 payload.extend(inner_struct)
                 bpayload = bytes(payload)
@@ -789,7 +800,7 @@ class DeviceCommands:
                 )
         if tasks:
             # Filter out None values before gathering
-            valid_tasks = [t for t in tasks if t is not None]
+            valid_tasks: list[asyncio.Task[Any] | Coroutine[Any, Any, Any]] = [t for t in tasks if t is not None]
             if valid_tasks:
                 await asyncio.gather(*valid_tasks)
         elapsed = time.time() - ts

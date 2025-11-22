@@ -5,6 +5,8 @@ Tests utility functions including byte/hex conversions, signal handling, and for
 """
 
 import uuid
+from pathlib import Path
+from typing import Any, cast
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -43,7 +45,7 @@ class TestSignalHandling:
         send_signal(signal.SIGTERM)
 
         mock_kill.assert_called_once()
-        args = mock_kill.call_args[0]
+        args: tuple[Any, ...] = cast(tuple[Any, ...], mock_kill.call_args[0])
         assert args[1] == signal.SIGTERM
 
     @patch("cync_controller.utils.send_signal")
@@ -644,7 +646,7 @@ class TestParseConfig:
             }
         }
 
-        config_file = tmp_path / "config.yaml"
+        config_file: Path = cast(Path, tmp_path / "config.yaml")
         config_file.write_text(yaml.dump(config_data))
 
         devices, groups = await parse_config(config_file)
@@ -674,7 +676,7 @@ class TestParseConfig:
             }
         }
 
-        config_file = tmp_path / "config.yaml"
+        config_file: Path = cast(Path, tmp_path / "config.yaml")
         config_file.write_text(yaml.dump(config_data))
 
         devices, _groups = await parse_config(config_file)
@@ -698,7 +700,7 @@ class TestParseConfig:
             }
         }
 
-        config_file = tmp_path / "config.yaml"
+        config_file: Path = cast(Path, tmp_path / "config.yaml")
         config_file.write_text(yaml.dump(config_data))
 
         devices, groups = await parse_config(config_file)
@@ -726,7 +728,7 @@ class TestParseConfig:
             }
         }
 
-        config_file = tmp_path / "config.yaml"
+        config_file: Path = cast(Path, tmp_path / "config.yaml")
         config_file.write_text(yaml.dump(config_data))
 
         devices, _groups = await parse_config(config_file)
@@ -737,7 +739,7 @@ class TestParseConfig:
     @pytest.mark.asyncio
     async def test_parse_config_error_handling(self, tmp_path):
         """Test that config file errors are handled properly"""
-        config_file = tmp_path / "invalid.yaml"
+        config_file: Path = cast(Path, tmp_path / "invalid.yaml")
         config_file.write_text("invalid: yaml: content: [unclosed")
 
         with pytest.raises(Exception, match=r".*"):

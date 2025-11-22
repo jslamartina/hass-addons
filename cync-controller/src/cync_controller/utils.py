@@ -8,6 +8,7 @@ import struct
 import sys
 import uuid
 from pathlib import Path
+from typing import Any
 
 import yaml
 
@@ -181,8 +182,8 @@ async def parse_config(cfg_file: Path):
         logger.exception("%s Error reading config file", lp)
         raise
 
-    devices = {}
-    groups = {}
+    devices: dict[str, Any] = {}
+    groups: dict[str, Any] = {}
     # parse homes and devices
     for cync_home_name, home_cfg in raw_config["account data"].items():
         home_id = home_cfg["id"]
@@ -191,10 +192,10 @@ async def parse_config(cfg_file: Path):
             continue
         # Create devices
         for cync_id, cync_device in home_cfg["devices"].items():
-            cync_device: dict
-            device_name = cync_device.get("name", f"device_{cync_id}")
-            if "enabled" in cync_device:
-                enabled = cync_device["enabled"]
+            cync_device_dict: dict[str, Any] = cync_device  # type: ignore[assignment]
+            device_name: str = cync_device_dict.get("name", f"device_{cync_id}")  # type: ignore[assignment]
+            if "enabled" in cync_device_dict:
+                enabled: str | bool = cync_device_dict["enabled"]  # type: ignore[assignment]
                 if isinstance(enabled, str):
                     enabled = enabled.casefold()
                     if enabled not in YES_ANSWER:
@@ -205,13 +206,13 @@ async def parse_config(cfg_file: Path):
                 if isinstance(enabled, bool) and enabled is False:
                     logger.debug("%s Device '%s' (ID: %s) is disabled in config, skipping...", lp, device_name, cync_id)
                     continue
-            fw_version = cync_device["fw"] if cync_device.get("fw") else None
-            wmac = None
-            btmac = None
-            dev_type = cync_device["type"] if cync_device.get("type") else None
+            fw_version = cync_device_dict["fw"] if cync_device_dict.get("fw") else None
+            wmac: str | int | None = None
+            btmac: str | int | None = None
+            dev_type = cync_device_dict["type"] if cync_device_dict.get("type") else None
             # 'mac': 26616350814, 'wifi_mac': 26616350815
-            if "mac" in cync_device:
-                btmac = cync_device["mac"]
+            if "mac" in cync_device_dict:
+                btmac = cync_device_dict["mac"]  # type: ignore[assignment]
                 if btmac and isinstance(btmac, int):
                     logger.warning(
                         "IMPORTANT>>> cync device '%s' (ID: %s) 'mac' is somehow an int -> %s, please quote the mac address to force it to a string in the config file",
@@ -220,8 +221,8 @@ async def parse_config(cfg_file: Path):
                         btmac,
                     )
 
-            if "wifi_mac" in cync_device:
-                wmac = cync_device["wifi_mac"]
+            if "wifi_mac" in cync_device_dict:
+                wmac = cync_device_dict["wifi_mac"]  # type: ignore[assignment]
                 if wmac and isinstance(wmac, int):
                     logger.debug(
                         "IMPORTANT>>> cync device '%s' (ID: %s) 'wifi_mac' is somehow an int -> %s, please quote the mac address to force it to a string in the config file",
@@ -262,7 +263,7 @@ async def parse_config(cfg_file: Path):
                     "%s Created group '%s' (ID: %s) with %s devices", lp, group_name, group_id, len(member_ids)
                 )
 
-    return devices, groups
+    return devices, groups  # type: ignore[return-value]
 
 
 def check_python_version():

@@ -10,17 +10,20 @@ import asyncio
 import json
 import uuid
 from collections.abc import Coroutine
+from typing import TYPE_CHECKING, Any
 
 import aiomqtt
 
 from cync_controller.const import *
-from cync_controller.devices import CyncDevice
 from cync_controller.logging_abstraction import get_logger
 from cync_controller.mqtt.command_routing import CommandRouter
 from cync_controller.mqtt.discovery import DiscoveryHelper
 from cync_controller.mqtt.state_updates import StateUpdateHelper
 from cync_controller.structs import DeviceStatus
 from cync_controller.utils import send_sigterm
+
+if TYPE_CHECKING:
+    from cync_controller.devices import CyncDevice
 
 logger = get_logger(__name__)
 
@@ -48,7 +51,7 @@ class MQTTClient:
     lp: str = "mqtt:"
     cync_topic: str
     _refresh_in_progress: bool = False
-    start_task: asyncio.Task | None = None
+    start_task: asyncio.Task[None] | None = None
 
     _instance: MQTTClient | None = None
 
@@ -59,7 +62,7 @@ class MQTTClient:
 
     def __init__(self):
         self._connected = False
-        self.tasks: list[asyncio.Task | Coroutine] | None = None
+        self.tasks: list[asyncio.Task[Any] | Coroutine[Any, Any, Any]] | None = None
         lp = f"{self.lp}init:"
         if not CYNC_TOPIC:
             topic = "cync_lan"
@@ -362,7 +365,7 @@ class MQTTClient:
             return True
         return False
 
-    async def publish_json_msg(self, topic: str, msg_data: dict) -> bool:
+    async def publish_json_msg(self, topic: str, msg_data: dict[str, Any]) -> bool:
         lp = f"{self.lp}publish_msg:"
         try:
             _ = await self.client.publish(topic, json.dumps(msg_data).encode(), qos=0, retain=False)
@@ -509,23 +512,23 @@ class MQTTClient:
         """Publish device online/offline status."""
         return await self.state_updates.pub_online(device_id, status)
 
-    async def update_device_state(self, device: CyncDevice, state: int) -> bool:
+    async def update_device_state(self, device: "CyncDevice", state: int) -> bool:
         """Update the device state and publish to MQTT."""
         return await self.state_updates.update_device_state(device, state)
 
-    async def update_brightness(self, device: CyncDevice, bri: int) -> bool:
+    async def update_brightness(self, device: "CyncDevice", bri: int) -> bool:
         """Update the device brightness and publish to MQTT."""
         return await self.state_updates.update_brightness(device, bri)
 
-    async def update_temperature(self, device: CyncDevice, temp: int) -> bool:
+    async def update_temperature(self, device: "CyncDevice", temp: int) -> bool:
         """Update the device temperature and publish to MQTT."""
         return await self.state_updates.update_temperature(device, temp)
 
-    async def update_rgb(self, device: CyncDevice, rgb: tuple[int, int, int]) -> bool:
+    async def update_rgb(self, device: "CyncDevice", rgb: tuple[int, int, int]) -> bool:
         """Update the device RGB and publish to MQTT."""
         return await self.state_updates.update_rgb(device, rgb)
 
-    async def send_device_status(self, device: CyncDevice, state_bytes: bytes) -> bool:
+    async def send_device_status(self, device: "CyncDevice", state_bytes: bytes) -> bool:
         """Publish device status to MQTT."""
         return await self.state_updates.send_device_status(device, state_bytes)
 
@@ -544,7 +547,7 @@ class MQTTClient:
         """Parse device status and publish to MQTT."""
         return await self.state_updates.parse_device_status(device_id, device_status, *_args, **kwargs)
 
-    async def update_switch_from_subgroup(self, device: CyncDevice, subgroup_state: int, subgroup_name: str) -> bool:
+    async def update_switch_from_subgroup(self, device: "CyncDevice", subgroup_state: int, subgroup_name: str) -> bool:
         """Update a switch device state to match its subgroup state."""
         return await self.state_updates.update_switch_from_subgroup(device, subgroup_state, subgroup_name)
 

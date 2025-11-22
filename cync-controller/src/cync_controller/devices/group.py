@@ -1,4 +1,5 @@
 import time
+from typing import Any
 
 from cync_controller.logging_abstraction import get_logger
 from cync_controller.structs import (
@@ -8,6 +9,7 @@ from cync_controller.structs import (
 )
 
 from .base_device import CyncDevice
+from .tcp_device import CyncTCPDevice
 
 logger = get_logger(__name__)
 g = GlobalObject()
@@ -121,7 +123,7 @@ class CyncGroup:
             self._supports_temperature = any(dev.supports_temperature for dev in members) if members else False
         return self._supports_temperature
 
-    def aggregate_member_states(self) -> dict | None:
+    def aggregate_member_states(self) -> dict[str, Any] | None:
         """
         Aggregate state from all online member devices.
 
@@ -151,12 +153,79 @@ class CyncGroup:
         temperatures = [m.temperature for m in online_members if m.temperature is not None and m.temperature <= 100]
         agg_temperature = int(sum(temperatures) / len(temperatures)) if temperatures else 0
 
-        return {
+        result: dict[str, int | bool] = {
             "state": agg_state,
             "brightness": agg_brightness,
             "temperature": agg_temperature,
             "online": True,  # Group is online if any member is online
         }
+        return result
+
+    def _validate_group_id(self, lp: str) -> bool:
+        """Validate that group ID exists."""
+        if self.id is None:
+            logger.error("%s Group ID is None, cannot send command", lp)
+            return False
+        return True
+
+    def _get_bridge_device_info(self, lp: str) -> tuple[CyncTCPDevice, list[int], int] | None:
+        """
+        Get bridge device and related info for sending commands.
+
+        Returns tuple (bridge_device, queue_id, cmsg_id) or None if validation fails.
+        """
+        g = _get_global_object()
+        ncync_server = getattr(g, "ncync_server", None)
+        if ncync_server is None:
+            logger.error("%s ncync_server is None, cannot send command", lp)
+            return None
+
+        tcp_devices = getattr(ncync_server, "tcp_devices", None)
+        if tcp_devices is None:
+            logger.error("%s tcp_devices is None, cannot send command", lp)
+            return None
+
+        bridge_devices = list(tcp_devices.values())
+        if not bridge_devices or bridge_devices[0] is None:
+            if not bridge_devices:
+                logger.error("%s No TCP bridges available!", lp)
+            else:
+                logger.error("%s Bridge device is None", lp)
+            return None
+
+        bridge_device = bridge_devices[0]
+        if not bridge_device.ready_to_control:
+            logger.error("%s Bridge %s not ready to control", lp, bridge_device.address)
+            return None
+
+        queue_id = getattr(bridge_device, "queue_id", None)
+        cmsg_id_bytes = bridge_device.get_ctrl_msg_id_bytes()
+        if queue_id is None or not cmsg_id_bytes:
+            if queue_id is None:
+                logger.error("%s Bridge queue_id is None", lp)
+            else:
+                logger.error("%s Failed to get control message ID bytes", lp)
+            return None
+
+        cmsg_id = cmsg_id_bytes[0]
+        return (bridge_device, queue_id, cmsg_id)
+
+    def _build_group_payload(
+        self, header: list[int], inner_struct: list[int | str | bytes], queue_id: list[int], cmsg_id: int
+    ) -> bytes:
+        """Build payload bytes from header, inner_struct, queue_id, and cmsg_id."""
+        payload: list[int] = list(header)
+        payload.extend(queue_id)
+        payload.extend(bytes([0x00, 0x00, 0x00]))
+        ctrl_idxs = 1, 9
+        inner_struct[ctrl_idxs[0]] = cmsg_id
+        inner_struct[ctrl_idxs[1]] = cmsg_id
+        # Filter to only int values for checksum calculation
+        int_values = [x for x in inner_struct[6:-2] if isinstance(x, int)]
+        checksum: int = sum(int_values) % 256
+        inner_struct[-2] = checksum
+        payload.extend(inner_struct)
+        return bytes(payload)
 
     async def set_power(self, state: int):
         """
@@ -164,22 +233,20 @@ class CyncGroup:
 
         :param state: Power state (0=off, 1=on)
         """
-        g = _get_global_object()
         lp = f"{self.lp}set_power:"
         if state not in (0, 1):
             logger.error("%s Invalid state! must be 0 or 1", lp)
             return
 
-        if self.id is None:
-            logger.error("%s Group ID is None, cannot send command", lp)
+        if not self._validate_group_id(lp):
             return
 
         # Use full 16-bit group ID encoding
-        id_low = self.id & 0xFF
-        id_high = (self.id >> 8) & 0xFF
+        id_low: int = self.id & 0xFF
+        id_high: int = (self.id >> 8) & 0xFF
 
         header = [0x73, 0x00, 0x00, 0x00, 0x1F]
-        inner_struct = [
+        inner_struct: list[int | str | bytes] = [
             0x7E,
             "ctrl_byte",
             0x00,
@@ -206,51 +273,15 @@ class CyncGroup:
             0x7E,
         ]
 
-        ncync_server = getattr(g, "ncync_server", None)
-        if ncync_server is None:
-            logger.error("%s ncync_server is None, cannot send command", lp)
+        bridge_info: tuple[CyncTCPDevice, list[int], int] | None = self._get_bridge_device_info(lp)
+        if bridge_info is None:
             return
+        bridge_device: CyncTCPDevice
+        queue_id: list[int]
+        cmsg_id: int
+        bridge_device, queue_id, cmsg_id = bridge_info
 
-        tcp_devices = getattr(ncync_server, "tcp_devices", None)
-        if tcp_devices is None:
-            logger.error("%s tcp_devices is None, cannot send command", lp)
-            return
-
-        bridge_devices = list(tcp_devices.values())
-        if not bridge_devices:
-            logger.error("%s No TCP bridges available!", lp)
-            return
-
-        # Use one bridge like the Cync cloud does
-        bridge_device = bridge_devices[0]
-        if bridge_device is None:
-            logger.error("%s Bridge device is None", lp)
-            return
-
-        if not bridge_device.ready_to_control:
-            logger.error("%s Bridge %s not ready to control", lp, bridge_device.address)
-            return
-
-        queue_id = getattr(bridge_device, "queue_id", None)
-        if queue_id is None:
-            logger.error("%s Bridge queue_id is None", lp)
-            return
-
-        payload = list(header)
-        payload.extend(queue_id)
-        payload.extend(bytes([0x00, 0x00, 0x00]))
-        cmsg_id_bytes = bridge_device.get_ctrl_msg_id_bytes()
-        if not cmsg_id_bytes:
-            logger.error("%s Failed to get control message ID bytes", lp)
-            return
-        cmsg_id = cmsg_id_bytes[0]
-        ctrl_idxs = 1, 9
-        inner_struct[ctrl_idxs[0]] = cmsg_id
-        inner_struct[ctrl_idxs[1]] = cmsg_id
-        checksum = sum(inner_struct[6:-2]) % 256
-        inner_struct[-2] = checksum
-        payload.extend(inner_struct)
-        payload_bytes = bytes(payload)
+        payload_bytes = self._build_group_payload(header, inner_struct, queue_id, cmsg_id)
 
         logger.debug(
             "%s ========== GROUP COMMAND: power=%s to '%s' (ID: %s) ==========",
@@ -291,12 +322,13 @@ class CyncGroup:
 
         # BUG FIX: Sync ALL group device states IMMEDIATELY (optimistically)
         # Group commands affect both bulbs and switches, so update both for instant UI feedback
+        g = _get_global_object()
         mqtt_client = getattr(g, "mqtt_client", None)
         if mqtt_client is not None and self.id is not None and self.name is not None:
             await mqtt_client.sync_group_devices(self.id, state, self.name)
 
         logger.debug("%s CALLING bridge_device.write()...", lp)
-        write_result = await bridge_device.write(payload_bytes)
+        write_result: bool | None = await bridge_device.write(payload_bytes)
         logger.debug("%s bridge_device.write() RETURNED: %s", lp, write_result)
 
     async def set_brightness(self, brightness: int):
@@ -305,14 +337,12 @@ class CyncGroup:
 
         :param brightness: Brightness value (0-100)
         """
-        g = _get_global_object()
         lp = f"{self.lp}set_brightness:"
         if brightness < 0 or brightness > 100:
             logger.error("%s Invalid brightness! must be 0-100", lp)
             return
 
-        if self.id is None:
-            logger.error("%s Group ID is None, cannot send command", lp)
+        if not self._validate_group_id(lp):
             return
 
         # Use full 16-bit group ID encoding
@@ -350,50 +380,15 @@ class CyncGroup:
             0x7E,
         ]
 
-        ncync_server = getattr(g, "ncync_server", None)
-        if ncync_server is None:
-            logger.error("%s ncync_server is None, cannot send command", lp)
+        bridge_info: tuple[CyncTCPDevice, list[int], int] | None = self._get_bridge_device_info(lp)
+        if bridge_info is None:
             return
+        bridge_device: CyncTCPDevice
+        queue_id: list[int]
+        cmsg_id: int
+        bridge_device, queue_id, cmsg_id = bridge_info
 
-        tcp_devices = getattr(ncync_server, "tcp_devices", None)
-        if tcp_devices is None:
-            logger.error("%s tcp_devices is None, cannot send command", lp)
-            return
-
-        bridge_devices = list(tcp_devices.values())
-        if not bridge_devices:
-            logger.error("%s No TCP bridges available!", lp)
-            return
-
-        bridge_device = bridge_devices[0]
-        if bridge_device is None:
-            logger.error("%s Bridge device is None", lp)
-            return
-
-        if not bridge_device.ready_to_control:
-            logger.error("%s Bridge %s not ready to control", lp, bridge_device.address)
-            return
-
-        queue_id = getattr(bridge_device, "queue_id", None)
-        if queue_id is None:
-            logger.error("%s Bridge queue_id is None", lp)
-            return
-
-        payload = list(header)
-        payload.extend(queue_id)
-        payload.extend(bytes([0x00, 0x00, 0x00]))
-        cmsg_id_bytes = bridge_device.get_ctrl_msg_id_bytes()
-        if not cmsg_id_bytes:
-            logger.error("%s Failed to get control message ID bytes", lp)
-            return
-        cmsg_id = cmsg_id_bytes[0]
-        ctrl_idxs = 1, 9
-        inner_struct[ctrl_idxs[0]] = cmsg_id
-        inner_struct[ctrl_idxs[1]] = cmsg_id
-        checksum = sum(inner_struct[6:-2]) % 256
-        inner_struct[-2] = checksum
-        payload.extend(inner_struct)
-        payload_bytes = bytes(payload)
+        payload_bytes = self._build_group_payload(header, inner_struct, queue_id, cmsg_id)
 
         logger.info(
             "%s Sending brightness=%s to group '%s' (ID: %s) with %s devices",
@@ -405,7 +400,9 @@ class CyncGroup:
         )
 
         # Log which devices are in this group for debugging
-        devices = getattr(ncync_server, "devices", None)
+        g = _get_global_object()
+        ncync_server = getattr(g, "ncync_server", None)
+        devices = getattr(ncync_server, "devices", None) if ncync_server else None
         device_names = []
         if devices is not None:
             for device_id in self.member_ids:
@@ -435,14 +432,12 @@ class CyncGroup:
 
         :param temperature: Color temperature value (0-100)
         """
-        g = _get_global_object()
         lp = f"{self.lp}set_temperature:"
         if temperature < 0 or temperature > 100:
             logger.error("%s Invalid temperature! must be 0-100", lp)
             return
 
-        if self.id is None:
-            logger.error("%s Group ID is None, cannot send command", lp)
+        if not self._validate_group_id(lp):
             return
 
         # Use full 16-bit group ID encoding
@@ -480,50 +475,15 @@ class CyncGroup:
             0x7E,
         ]
 
-        ncync_server = getattr(g, "ncync_server", None)
-        if ncync_server is None:
-            logger.error("%s ncync_server is None, cannot send command", lp)
+        bridge_info: tuple[CyncTCPDevice, list[int], int] | None = self._get_bridge_device_info(lp)
+        if bridge_info is None:
             return
+        bridge_device: CyncTCPDevice
+        queue_id: list[int]
+        cmsg_id: int
+        bridge_device, queue_id, cmsg_id = bridge_info
 
-        tcp_devices = getattr(ncync_server, "tcp_devices", None)
-        if tcp_devices is None:
-            logger.error("%s tcp_devices is None, cannot send command", lp)
-            return
-
-        bridge_devices = list(tcp_devices.values())
-        if not bridge_devices:
-            logger.error("%s No TCP bridges available!", lp)
-            return
-
-        bridge_device = bridge_devices[0]
-        if bridge_device is None:
-            logger.error("%s Bridge device is None", lp)
-            return
-
-        if not bridge_device.ready_to_control:
-            logger.error("%s Bridge %s not ready to control", lp, bridge_device.address)
-            return
-
-        queue_id = getattr(bridge_device, "queue_id", None)
-        if queue_id is None:
-            logger.error("%s Bridge queue_id is None", lp)
-            return
-
-        payload = list(header)
-        payload.extend(queue_id)
-        payload.extend(bytes([0x00, 0x00, 0x00]))
-        cmsg_id_bytes = bridge_device.get_ctrl_msg_id_bytes()
-        if not cmsg_id_bytes:
-            logger.error("%s Failed to get control message ID bytes", lp)
-            return
-        cmsg_id = cmsg_id_bytes[0]
-        ctrl_idxs = 1, 9
-        inner_struct[ctrl_idxs[0]] = cmsg_id
-        inner_struct[ctrl_idxs[1]] = cmsg_id
-        checksum = sum(inner_struct[6:-2]) % 256
-        inner_struct[-2] = checksum
-        payload.extend(inner_struct)
-        payload_bytes = bytes(payload)
+        payload_bytes = self._build_group_payload(header, inner_struct, queue_id, cmsg_id)
 
         logger.info(
             "%s Sending temperature=%s to group '%s' (ID: %s) with %s devices",
@@ -535,7 +495,9 @@ class CyncGroup:
         )
 
         # Log which devices are in this group for debugging
-        devices = getattr(ncync_server, "devices", None)
+        g = _get_global_object()
+        ncync_server = getattr(g, "ncync_server", None)
+        devices = getattr(ncync_server, "devices", None) if ncync_server else None
         device_names = []
         if devices is not None:
             for device_id in self.member_ids:

@@ -272,7 +272,7 @@ def unique_device_id(request: pytest.FixtureRequest) -> str:
     Uses the test node ID to ensure uniqueness.
     """
     # Use test name as device ID to ensure uniqueness
-    test_name: str = cast(str, request.node.name)  # type: ignore[assignment]
+    test_name: str = cast(str, getattr(request.node, "name", ""))  # pyright: ignore[reportUnknownMemberType, reportUnknownArgumentType]
     # Sanitize for use as device_id
     device_id: str = test_name.replace("[", "_").replace("]", "_").replace("-", "_")
     return f"TEST_{device_id}"
@@ -298,7 +298,7 @@ def performance_tracker() -> PerformanceTracker:
 def pytest_terminal_summary(terminalreporter: Any, exitstatus: int, config: Any) -> None:  # noqa: ARG001
     """Hook to display performance report at end of test session."""
     # Get the performance tracker from the session
-    tracker = config._performance_tracker if hasattr(config, "_performance_tracker") else None  # type: ignore[attr-defined]
+    tracker = getattr(config, "_performance_tracker", None)
 
     if tracker is None or not tracker.samples:
         return
@@ -321,5 +321,5 @@ def _init_performance_tracker(  # pyright: ignore[reportUnusedFunction]
     performance_tracker: PerformanceTracker,
 ) -> PerformanceTracker:
     """Initialize performance tracker in pytest config."""
-    request.config._performance_tracker = performance_tracker  # type: ignore[attr-defined]
+    request.config._performance_tracker = performance_tracker  # pyright: ignore[reportAttributeAccessIssue]
     return performance_tracker

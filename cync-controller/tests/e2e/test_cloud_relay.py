@@ -2,6 +2,7 @@
 
 import sys
 from pathlib import Path
+from typing import Any, cast
 
 import pytest
 
@@ -9,13 +10,13 @@ import pytest
 scripts_path = Path(__file__).parent.parent.parent.parent / "scripts" / "playwright"
 sys.path.insert(0, str(scripts_path))
 
-from addon_helpers import (
-    apply_addon_preset,
-    filter_logs_by_level,
-    get_addon_config,
-    get_addon_status,
-    read_json_logs,
-    restart_addon_and_wait,
+from addon_helpers import (  # type: ignore[import-untyped, reportUnknownVariableType]
+    apply_addon_preset,  # type: ignore[reportUnknownVariableType]
+    filter_logs_by_level,  # type: ignore[reportUnknownVariableType]
+    get_addon_config,  # type: ignore[reportUnknownVariableType]
+    get_addon_status,  # type: ignore[reportUnknownVariableType]
+    read_json_logs,  # type: ignore[reportUnknownVariableType]
+    restart_addon_and_wait,  # type: ignore[reportUnknownVariableType]
 )
 
 ADDON_SLUG = "local_cync-controller"
@@ -28,7 +29,7 @@ def restore_baseline():
 
     # Only restore if not already in baseline mode
     try:
-        current_config = get_addon_config(ADDON_SLUG)
+        current_config: dict[str, Any] = cast(dict[str, Any], get_addon_config(ADDON_SLUG))
         if not current_config.get("cloud_relay", {}).get("enabled", False):
             print("\n✓ Already in baseline mode")
             return
@@ -57,14 +58,14 @@ def test_apply_baseline_preset():
 
     # Verify config
     print("[Step 2] Verifying configuration...")
-    config = get_addon_config(ADDON_SLUG)
+    config: dict[str, Any] = cast(dict[str, Any], get_addon_config(ADDON_SLUG))
 
     assert config["cloud_relay"]["enabled"] is False, "Cloud relay should be disabled"
     print("  ✓ Cloud relay disabled")
     print("  ✓ Normal local operation mode")
 
     # Verify add-on running
-    status = get_addon_status(ADDON_SLUG)
+    status: dict[str, Any] = cast(dict[str, Any], get_addon_status(ADDON_SLUG))
     assert status.get("state") == "started", "Add-on not running"
 
     print("✓ Baseline preset applied successfully")
@@ -86,7 +87,7 @@ def test_apply_relay_with_forward_preset():
 
     # Verify config
     print("[Step 2] Verifying configuration...")
-    config = get_addon_config(ADDON_SLUG)
+    config: dict[str, Any] = cast(dict[str, Any], get_addon_config(ADDON_SLUG))
 
     assert config["cloud_relay"]["enabled"] is True, "Cloud relay should be enabled"
     assert config["cloud_relay"]["forward_to_cloud"] is True, "Should forward to cloud"
@@ -95,8 +96,8 @@ def test_apply_relay_with_forward_preset():
     print("  ✓ Forwarding to cloud enabled")
 
     # Check logs for relay mode
-    logs = read_json_logs(ADDON_SLUG, lines=100)
-    relay_logs = [log for log in logs if "relay" in log.get("message", "").lower()]
+    logs: list[dict[str, Any]] = cast(list[dict[str, Any]], read_json_logs(ADDON_SLUG, lines=100))
+    relay_logs: list[dict[str, Any]] = [log for log in logs if "relay" in log.get("message", "").lower()]
     print(f"  Found {len(relay_logs)} relay-related log entries")
 
     print("⚠️  NOTE: Commands from HA will NOT work in relay mode (READ-ONLY)")
@@ -119,7 +120,7 @@ def test_apply_relay_debug_preset():
 
     # Verify config
     print("[Step 2] Verifying configuration...")
-    config = get_addon_config(ADDON_SLUG)
+    config: dict[str, Any] = cast(dict[str, Any], get_addon_config(ADDON_SLUG))
 
     assert config["cloud_relay"]["enabled"] is True, "Cloud relay should be enabled"
     assert config["cloud_relay"]["debug_packet_logging"] is True, "Debug logging should be on"
@@ -128,9 +129,9 @@ def test_apply_relay_debug_preset():
 
     # Check for debug logs
     print("[Step 3] Checking for packet debug logs...")
-    logs = read_json_logs(ADDON_SLUG, lines=200)
-    debug_logs = filter_logs_by_level(logs, "DEBUG")
-    packet_logs = [log for log in debug_logs if "packet" in log.get("message", "").lower()]
+    logs: list[dict[str, Any]] = cast(list[dict[str, Any]], read_json_logs(ADDON_SLUG, lines=200))
+    debug_logs: list[dict[str, Any]] = cast(list[dict[str, Any]], filter_logs_by_level(logs, "DEBUG"))
+    packet_logs: list[dict[str, Any]] = [log for log in debug_logs if "packet" in log.get("message", "").lower()]
 
     print(f"  Found {len(packet_logs)} packet debug log entries")
 
@@ -153,7 +154,7 @@ def test_apply_lan_only_preset():
 
     # Verify config
     print("[Step 2] Verifying configuration...")
-    config = get_addon_config(ADDON_SLUG)
+    config: dict[str, Any] = cast(dict[str, Any], get_addon_config(ADDON_SLUG))
 
     assert config["cloud_relay"]["enabled"] is True, "Cloud relay should be enabled"
     assert config["cloud_relay"]["forward_to_cloud"] is False, "Should NOT forward to cloud"
@@ -184,11 +185,11 @@ def test_switch_between_modes():
         assert apply_addon_preset(preset_name), f"Failed to apply {preset_name}"
         # Skip restart for each mode - too many restarts in rapid succession
         # Just verify config was applied
-        config = get_addon_config(ADDON_SLUG)
+        config: dict[str, Any] = cast(dict[str, Any], get_addon_config(ADDON_SLUG))
         assert config["cloud_relay"]["enabled"] == relay_enabled, f"Cloud relay state mismatch for {preset_name}"
 
         # Verify add-on still running
-        status = get_addon_status(ADDON_SLUG)
+        status: dict[str, Any] = cast(dict[str, Any], get_addon_status(ADDON_SLUG))
         assert status.get("state") == "started", f"Add-on failed after {preset_name}"
 
         print(f"  ✓ {preset_name} applied successfully")
@@ -217,8 +218,8 @@ def test_commands_fail_in_relay_mode():
     # Expected: Command fails or shows "unavailable"
 
     # Check logs for "No TCP bridges" error
-    logs = read_json_logs(ADDON_SLUG, lines=100)
-    error_logs = [log for log in logs if "no tcp" in log.get("message", "").lower()]
+    logs: list[dict[str, Any]] = cast(list[dict[str, Any]], read_json_logs(ADDON_SLUG, lines=100))
+    error_logs: list[dict[str, Any]] = [log for log in logs if "no tcp" in log.get("message", "").lower()]
 
     if error_logs:
         print(f"  ✓ Found expected error: {error_logs[0].get('message')}")
@@ -243,7 +244,7 @@ def test_return_to_baseline_restores_commands():
     assert apply_addon_preset("preset-relay-with-forward"), "Failed to apply preset"
     restart_addon_and_wait(ADDON_SLUG, wait_seconds=5)
 
-    config_relay = get_addon_config(ADDON_SLUG)
+    config_relay: dict[str, Any] = cast(dict[str, Any], get_addon_config(ADDON_SLUG))
     assert config_relay["cloud_relay"]["enabled"] is True
 
     # Return to baseline
@@ -251,11 +252,11 @@ def test_return_to_baseline_restores_commands():
     assert apply_addon_preset("preset-baseline"), "Failed to apply baseline"
     restart_addon_and_wait(ADDON_SLUG, wait_seconds=5)
 
-    config_baseline = get_addon_config(ADDON_SLUG)
+    config_baseline: dict[str, Any] = cast(dict[str, Any], get_addon_config(ADDON_SLUG))
     assert config_baseline["cloud_relay"]["enabled"] is False
 
     # Verify add-on running properly
-    status = get_addon_status(ADDON_SLUG)
+    status: dict[str, Any] = cast(dict[str, Any], get_addon_status(ADDON_SLUG))
     assert status.get("state") == "started"
 
     print("✓ Baseline mode restored, commands should work again")

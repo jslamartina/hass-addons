@@ -48,7 +48,7 @@ def browser_context_args():
     return {
         "viewport": {"width": 1920, "height": 1080},
         "ignore_https_errors": True,
-    }
+    }  # type: ignore[return-value]
 
 
 @pytest.fixture(scope="session")

@@ -6,6 +6,7 @@ Tests timing decorators and performance tracking functionality.
 
 import asyncio
 import time
+from typing import cast
 
 import pytest
 
@@ -70,10 +71,10 @@ class TestTimedDecorator:
         """Test that timed decorator works with function arguments"""
 
         @timed("test_operation")
-        def add(a, b):
+        def add(a: int, b: int) -> int:
             return a + b
 
-        result = add(2, 3)
+        result: int = cast(int, add(2, 3))
 
         assert result == 5
 
@@ -107,11 +108,11 @@ class TestTimedAsyncDecorator:
         """Test that timed_async decorator works with async function arguments"""
 
         @timed_async("test_operation")
-        async def async_add(a, b):
+        async def async_add(a: int, b: int) -> int:
             await asyncio.sleep(0.001)
             return a + b
 
-        result = await async_add(5, 7)
+        result: int = cast(int, await async_add(5, 7))
 
         assert result == 12
 

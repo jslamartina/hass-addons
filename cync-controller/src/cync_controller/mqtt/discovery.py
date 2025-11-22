@@ -7,6 +7,7 @@ import asyncio
 import json
 import re
 import unicodedata
+from typing import Any, cast
 
 import aiomqtt
 
@@ -77,7 +78,7 @@ class DiscoveryHelper:
             return False
 
         try:
-            device_uuid = device.hass_id
+            device_uuid: str = cast(str, device.hass_id)
             unique_id = f"{device.home_id}_{device.id}"
             # Generate entity ID from device name (e.g., "Hallway Light" -> "hallway_light")
             entity_slug = slugify(device.name) if device.name else f"device_{device.id}"
@@ -92,7 +93,7 @@ class DiscoveryHelper:
             model_str = "Unknown"
             if device.type in device_type_map:
                 model_str = device_type_map[device.type].model_string
-            dev_connections = [("bluetooth", device.mac.casefold())]
+            dev_connections: list[tuple[str, str]] = [("bluetooth", device.mac.casefold())]
             if not device.bt_only:
                 dev_connections.append(("mac", device.wifi_mac.casefold()))
 
@@ -126,7 +127,7 @@ class DiscoveryHelper:
                     "Outlet",
                     "Fan",
                 ]
-                name_parts = device.name.strip().split()
+                name_parts: list[str] = cast(list[str], device.name.strip().split())
                 # Remove trailing numbers (e.g., "Floodlight 1" -> "Floodlight")
                 if name_parts and name_parts[-1].isdigit():
                     name_parts = name_parts[:-1]
@@ -137,7 +138,7 @@ class DiscoveryHelper:
                         break
                 # The first word is the area name
                 if name_parts:
-                    suggested_area = name_parts[0]
+                    suggested_area: str = name_parts[0]
                     logger.debug(
                         "%s Extracted area '%s' from device name '%s' (fallback, not in any room group)",
                         lp,
@@ -314,7 +315,7 @@ class DiscoveryHelper:
                     device.name,
                     device.id,
                 )
-                _ = await self.client.client.publish(
+                _: Any = await self.client.client.publish(  # type: ignore[reportUnknownVariableType]
                     tpc,
                     json_payload.encode(),
                     qos=0,
@@ -323,7 +324,7 @@ class DiscoveryHelper:
 
                 # For fan entities, publish initial preset mode based on current brightness
                 if device.is_fan_controller and device.brightness is not None:
-                    bri = device.brightness
+                    bri: int = cast(int, device.brightness)
                     # Map brightness (1-100 scale) to preset mode
                     if bri == 0:
                         preset_mode = "off"
@@ -616,7 +617,7 @@ class DiscoveryHelper:
                         tpc = tpc_str_template.format(self.client.ha_topic, dev_type, device_uuid)
                         try:
                             json_payload = json.dumps(entity_registry_struct, indent=2)
-                            _ = await self.client.client.publish(
+                            _: Any = await self.client.client.publish(  # type: ignore[reportUnknownVariableType]
                                 tpc,
                                 json_payload.encode(),
                                 qos=0,
@@ -632,7 +633,7 @@ class DiscoveryHelper:
 
                             # For fan entities, publish initial preset mode state
                             if device.is_fan_controller and device.brightness is not None:
-                                bri = device.brightness
+                                bri: int = cast(int, device.brightness)
                                 # Map brightness (1-100 scale) to preset mode
                                 if bri == 0:
                                     preset_mode = "off"
@@ -768,7 +769,7 @@ class DiscoveryHelper:
                             group.name,
                             tpc,
                         )
-                        publish_result = await self.client.client.publish(
+                        publish_result: Any = await self.client.client.publish(  # type: ignore[reportUnknownVariableType]
                             tpc,
                             json_payload.encode(),
                             qos=0,
@@ -816,12 +817,12 @@ class DiscoveryHelper:
         # sensors to show if MQTT is connected, if the Cync Controller server is running, etc.
         # input_number to submit OTP for export
         lp = f"{self.client.lp}create_bridge_device:"
-        ret = False
+        ret: bool = False
 
         logger.debug("%s Creating Cync Controller bridge device...", lp)
         bridge_base_unique_id = "cync_lan_bridge"
         ver_str = CYNC_VERSION
-        pub_tasks: list[asyncio.Task] = []
+        pub_tasks: list[asyncio.Task[None]] = []
         # Bridge device config
         bridge_device_reg_struct = {
             "identifiers": [str(g.uuid)],
@@ -849,10 +850,13 @@ class DiscoveryHelper:
             "origin": ORIGIN_STRUCT,
             "device": bridge_device_reg_struct,
         }
-        ret = await self.client.publish_json_msg(
-            template_tpc.format(self.client.ha_topic, entity_type, entity_unique_id),
-            restart_btn_entity_struct,
-        )
+        ret: bool = cast(
+            bool,
+            await self.client.publish_json_msg(
+                template_tpc.format(self.client.ha_topic, entity_type, entity_unique_id),
+                restart_btn_entity_struct,
+            ),
+        )  # type: ignore[reportUnknownVariableType]
         if ret is False:
             logger.error("%s Failed to publish restart button entity config", lp)
 
@@ -863,10 +867,13 @@ class DiscoveryHelper:
         xport_btn_entity_conf["state_topic"] = f"{self.client.topic}/status/bridge/export/start"
         xport_btn_entity_conf["name"] = "Start Export"
         xport_btn_entity_conf["unique_id"] = entity_unique_id
-        ret = await self.client.publish_json_msg(
-            template_tpc.format(self.client.ha_topic, entity_type, entity_unique_id),
-            xport_btn_entity_conf,
-        )
+        ret: bool = cast(
+            bool,
+            await self.client.publish_json_msg(
+                template_tpc.format(self.client.ha_topic, entity_type, entity_unique_id),
+                xport_btn_entity_conf,
+            ),
+        )  # type: ignore[reportUnknownVariableType]
         if ret is False:
             logger.error("%s Failed to publish start export button entity config", lp)
 
@@ -878,10 +885,13 @@ class DiscoveryHelper:
         refresh_btn_entity_conf["state_topic"] = f"{self.client.topic}/status/bridge/refresh_status"
         refresh_btn_entity_conf["name"] = "Refresh Device Status"
         refresh_btn_entity_conf["unique_id"] = entity_unique_id
-        ret = await self.client.publish_json_msg(
-            template_tpc.format(self.client.ha_topic, entity_type, entity_unique_id),
-            refresh_btn_entity_conf,
-        )
+        ret: bool = cast(
+            bool,
+            await self.client.publish_json_msg(
+                template_tpc.format(self.client.ha_topic, entity_type, entity_unique_id),
+                refresh_btn_entity_conf,
+            ),
+        )  # type: ignore[reportUnknownVariableType]
         if ret is False:
             logger.error("%s Failed to publish refresh status button entity config", lp)
 
@@ -892,10 +902,13 @@ class DiscoveryHelper:
         submit_otp_btn_entity_conf["state_topic"] = f"{self.client.topic}/status/bridge/otp/submit"
         submit_otp_btn_entity_conf["name"] = "Submit OTP"
         submit_otp_btn_entity_conf["unique_id"] = entity_unique_id
-        ret = await self.client.publish_json_msg(
-            template_tpc.format(self.client.ha_topic, entity_type, entity_unique_id),
-            submit_otp_btn_entity_conf,
-        )
+        ret: bool = cast(
+            bool,
+            await self.client.publish_json_msg(
+                template_tpc.format(self.client.ha_topic, entity_type, entity_unique_id),
+                submit_otp_btn_entity_conf,
+            ),
+        )  # type: ignore[reportUnknownVariableType]
         if ret is False:
             logger.error("%s Failed to publish submit OTP button entity config", lp)
 
@@ -916,10 +929,13 @@ class DiscoveryHelper:
             "origin": ORIGIN_STRUCT,
             "device": bridge_device_reg_struct,
         }
-        ret = await self.client.publish_json_msg(
-            template_tpc.format(self.client.ha_topic, entity_type, entity_unique_id),
-            tcp_server_entity_conf,
-        )
+        ret: bool = cast(
+            bool,
+            await self.client.publish_json_msg(
+                template_tpc.format(self.client.ha_topic, entity_type, entity_unique_id),
+                tcp_server_entity_conf,
+            ),
+        )  # type: ignore[reportUnknownVariableType]
         if ret is False:
             logger.error("%s Failed to publish TCP server running entity config", lp)
         status = "ON" if g.ncync_server and g.ncync_server.running is True else "OFF"
@@ -932,10 +948,13 @@ class DiscoveryHelper:
         export_server_entity_conf["state_topic"] = f"{self.client.topic}/status/bridge/export_server/running"
         export_server_entity_conf["unique_id"] = entity_unique_id
         export_server_entity_conf["icon"] = "mdi:export-variant"
-        ret = await self.client.publish_json_msg(
-            template_tpc.format(self.client.ha_topic, entity_type, entity_unique_id),
-            export_server_entity_conf,
-        )
+        ret: bool = cast(
+            bool,
+            await self.client.publish_json_msg(
+                template_tpc.format(self.client.ha_topic, entity_type, entity_unique_id),
+                export_server_entity_conf,
+            ),
+        )  # type: ignore[reportUnknownVariableType]
         if ret is False:
             logger.error("%s Failed to publish export server running entity config", lp)
         status = "ON" if g.export_server and g.export_server.running is True else "OFF"
@@ -951,10 +970,13 @@ class DiscoveryHelper:
         mqtt_client_entity_conf["unique_id"] = entity_unique_id
         mqtt_client_entity_conf["icon"] = "mdi:connection"
         mqtt_client_entity_conf["device_class"] = "connectivity"
-        ret = await self.client.publish_json_msg(
-            template_tpc.format(self.client.ha_topic, entity_type, entity_unique_id),
-            mqtt_client_entity_conf,
-        )
+        ret: bool = cast(
+            bool,
+            await self.client.publish_json_msg(
+                template_tpc.format(self.client.ha_topic, entity_type, entity_unique_id),
+                mqtt_client_entity_conf,
+            ),
+        )  # type: ignore[reportUnknownVariableType]
         if ret is False:
             logger.error("%s Failed to publish MQTT client connected entity config", lp)
 
@@ -977,10 +999,13 @@ class DiscoveryHelper:
             "name": "Cync emailed OTP",
             "unique_id": entity_unique_id,
         }
-        ret = await self.client.publish_json_msg(
-            template_tpc.format(self.client.ha_topic, entity_type, entity_unique_id),
-            otp_num_entity_cfg,
-        )
+        ret: bool = cast(
+            bool,
+            await self.client.publish_json_msg(
+                template_tpc.format(self.client.ha_topic, entity_type, entity_unique_id),
+                otp_num_entity_cfg,
+            ),
+        )  # type: ignore[reportUnknownVariableType]
         if ret is False:
             logger.error("%s Failed to publish OTP input number entity config", lp)
 
@@ -1000,10 +1025,13 @@ class DiscoveryHelper:
             "origin": ORIGIN_STRUCT,
             "device": bridge_device_reg_struct,
         }
-        ret = await self.client.publish_json_msg(
-            template_tpc.format(self.client.ha_topic, entity_type, entity_unique_id),
-            num_tcp_devices_entity_conf,
-        )
+        ret: bool = cast(
+            bool,
+            await self.client.publish_json_msg(
+                template_tpc.format(self.client.ha_topic, entity_type, entity_unique_id),
+                num_tcp_devices_entity_conf,
+            ),
+        )  # type: ignore[reportUnknownVariableType]
         if ret is False:
             logger.warning("%s Failed to publish number of TCP devices connected entity config", lp)
         pub_tasks.append(
@@ -1021,10 +1049,13 @@ class DiscoveryHelper:
         total_cync_devs_entity_conf["state_topic"] = f"{self.client.topic}/status/bridge/cync_devices/total"
         total_cync_devs_entity_conf["unique_id"] = entity_unique_id
         # total_cync_devs_entity_conf["unit_of_measurement"] = "Cync device(s)"
-        ret = await self.client.publish_json_msg(
-            template_tpc.format(self.client.ha_topic, entity_type, entity_unique_id),
-            total_cync_devs_entity_conf,
-        )
+        ret: bool = cast(
+            bool,
+            await self.client.publish_json_msg(
+                template_tpc.format(self.client.ha_topic, entity_type, entity_unique_id),
+                total_cync_devs_entity_conf,
+            ),
+        )  # type: ignore[reportUnknownVariableType]
         if ret is False:
             logger.warning("%s Failed to publish total Cync devices managed entity config", lp)
         pub_tasks.append(
@@ -1036,4 +1067,4 @@ class DiscoveryHelper:
 
         await asyncio.gather(*pub_tasks, return_exceptions=True)
         logger.debug("%s Bridge device config published and seeded", lp)
-        return ret
+        return cast(bool, ret)

@@ -4,6 +4,7 @@ Unit tests for devices module.
 Tests CyncDevice, CyncGroup, and CyncTCPDevice classes.
 """
 
+from typing import Any, cast
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -518,7 +519,7 @@ class TestCyncDeviceTemperatureCommands:
 
             # Verify callback was registered with correct message ID
             assert 0x42 in mock_tcp_device.messages.control
-            callback = mock_tcp_device.messages.control[0x42]
+            callback: Any = cast(Any, mock_tcp_device.messages.control[0x42])
             assert callback.device_id == device.id
             assert callback.id == 0x42
 
@@ -616,7 +617,7 @@ class TestCyncDeviceRGBCommands:
 
             # Verify callback was registered
             assert 0x55 in mock_tcp_device.messages.control
-            callback = mock_tcp_device.messages.control[0x55]
+            callback: Any = cast(Any, mock_tcp_device.messages.control[0x55])
             assert callback.device_id == device.id
 
 
@@ -793,7 +794,7 @@ class TestCyncDeviceCommandErrorPaths:
             # Test negative brightness - should log error and return early
             await device.set_brightness(-1)
             # The error log happens BEFORE "No TCP bridges" so check for it
-            log_text = caplog.text
+            log_text: str = cast(str, caplog.text)
             if "Invalid brightness" in log_text:
                 # Error logged before attempting to send
                 pass

@@ -3,6 +3,7 @@
 import sys
 import time
 from pathlib import Path
+from typing import Any, cast
 
 import pytest
 from playwright.sync_api import Page, expect
@@ -11,7 +12,7 @@ from playwright.sync_api import Page, expect
 scripts_path = Path(__file__).parent.parent.parent.parent / "scripts" / "playwright"
 sys.path.insert(0, str(scripts_path))
 
-from addon_helpers import read_json_logs
+from addon_helpers import read_json_logs  # type: ignore[import-untyped, reportUnknownVariableType]
 
 ADDON_SLUG = "local_cync-controller"
 
@@ -308,10 +309,12 @@ def test_command_latency_acceptable(ha_login: Page):
     print("\n=== Test: Command Latency ===")
 
     # Read recent logs
-    logs = read_json_logs(ADDON_SLUG, lines=100)
+    logs: list[dict[str, Any]] = cast(list[dict[str, Any]], read_json_logs(ADDON_SLUG, lines=100))  # type: ignore[reportUnknownVariableType]
 
     # Look for command-related log entries
-    command_logs = [log for log in logs if "command" in log.get("message", "").lower()]
+    command_logs: list[dict[str, Any]] = [
+        cast(dict[str, Any], log) for log in logs if "command" in cast(dict[str, Any], log).get("message", "").lower()
+    ]  # type: ignore[reportUnknownVariableType]
 
     print(f"  Found {len(command_logs)} command-related log entries")
     print("  Note: Full latency testing requires active device commands")

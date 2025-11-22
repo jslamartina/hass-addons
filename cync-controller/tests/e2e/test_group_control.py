@@ -1,5 +1,7 @@
 """E2E tests for group control - Bug 4: Switches don't sync when group is controlled."""
 
+from typing import cast
+
 import pytest
 from playwright.sync_api import Page, expect
 
@@ -295,8 +297,8 @@ def test_individual_switch_toggle_no_flicker(ha_login: Page, ha_base_url: str):
     # Look for unwanted flicker: transitions that go back to initial state after clicking
     flicker_detected = False
     for i in range(1, len(state_transitions) - 1):
-        prev_state = state_transitions[i - 1]["state"]
-        curr_state = state_transitions[i]["state"]
+        prev_state: str | None = cast(str | None, state_transitions[i - 1]["state"])
+        curr_state: str | None = cast(str | None, state_transitions[i]["state"])
 
         # Detect pattern: TARGET  INITIAL  TARGET (the flicker)
         # This happens when we click but then a stale status packet reverses the state
@@ -415,15 +417,15 @@ def test_comprehensive_flicker_detection(ha_login: Page, ha_base_url: str):
         print(f"[Test] {scenario['name']}")
         print("-" * 60)
 
-        entity_name = scenario["entity_name"]
+        entity_name: str = cast(str, scenario["entity_name"])
         # Group entity names are used directly, individual devices use "Hallway {name}" format
-        control_name = entity_name if scenario["type"] == "group" else f"Hallway {entity_name}"
+        control_name: str = entity_name if scenario["type"] == "group" else f"Hallway {entity_name}"
 
         try:
             # Test each transition
-            for i, transition in enumerate(scenario["transitions"]):
-                target_state = transition["to"]
-                description = transition["description"]
+            for i, transition in enumerate(scenario["transitions"]):  # type: ignore[reportUnknownVariableType]
+                target_state: str = cast(str, transition["to"])
+                description: str = cast(str, transition["description"])
 
                 print(f"\n  [{i + 1}/{len(scenario['transitions'])}] {description}")
 
@@ -484,11 +486,11 @@ def test_comprehensive_flicker_detection(ha_login: Page, ha_base_url: str):
 
                 # Analyze for flicker
                 flicker_detected = False
-                print(f"    State transitions: {[(t['state'], t['time_ms']) for t in state_transitions]}")
+                print(f"    State transitions: {[(t['state'], t['time_ms']) for t in state_transitions]}")  # type: ignore[reportUnknownVariableType]
 
                 for i in range(len(state_transitions) - 1):
-                    curr = state_transitions[i]["state"]
-                    next_state = state_transitions[i + 1]["state"]
+                    curr: str | None = cast(str | None, state_transitions[i]["state"])
+                    next_state: str | None = cast(str | None, state_transitions[i + 1]["state"])
 
                     # Detect flicker: Target  Opposite  Target
                     if curr == target_state and next_state != target_state and next_state != "UNKNOWN":

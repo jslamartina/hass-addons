@@ -4,6 +4,7 @@ TCP connection management utilities for CyncTCPDevice.
 
 import asyncio
 import time
+from typing import Any
 
 from cync_controller.logging_abstraction import get_logger
 
@@ -56,8 +57,9 @@ class TCPConnectionManager:
     def get_connection_stats(self):
         """Get connection statistics."""
         uptime = time.time() - self.connection_start_time
-        return {
+        result: dict[str, Any] = {
             "uptime_seconds": uptime,
             "last_heartbeat": self.last_heartbeat,
             "is_healthy": time.time() - self.last_heartbeat < self.connection_timeout,
         }
+        return result

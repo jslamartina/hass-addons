@@ -8,6 +8,7 @@ import asyncio
 import contextlib
 import json
 import time
+from typing import cast
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -891,9 +892,9 @@ class TestCommandProcessor:
             await processor.enqueue(cmd3)
 
             # Dequeue and verify FIFO order
-            dequeued1 = await processor._queue.get()
-            dequeued2 = await processor._queue.get()
-            dequeued3 = await processor._queue.get()
+            dequeued1: DeviceCommand = cast(DeviceCommand, await processor._queue.get())
+            dequeued2: DeviceCommand = cast(DeviceCommand, await processor._queue.get())
+            dequeued3: DeviceCommand = cast(DeviceCommand, await processor._queue.get())
 
             assert dequeued1.cmd_type == "set_power"
             assert dequeued2.cmd_type == "set_brightness"

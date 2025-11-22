@@ -6,6 +6,7 @@ Tests NCyncServer and CloudRelayConnection classes.
 
 import asyncio
 import contextlib
+from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -1258,7 +1259,7 @@ class TestServerParseStatus:
             mock_subgroup._blue = 0
 
             # Mock aggregate_member_states
-            def mock_aggregate():
+            def mock_aggregate() -> dict[str, Any]:
                 return {"state": 1, "brightness": 50, "temperature": 100, "online": True}
 
             mock_subgroup.aggregate_member_states = MagicMock(return_value=mock_aggregate())

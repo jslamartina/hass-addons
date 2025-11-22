@@ -73,7 +73,7 @@ class DeviceTypeInfo:
                 add_str += f"{kelvin_data}"
         if add_str:
             add_str = f" [{add_str}]"
-        return base_str + add_str
+        return str(base_str + add_str)
 
 
 """Maps a device type ID to its corresponding DeviceTypeInfo."""

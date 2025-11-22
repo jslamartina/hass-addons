@@ -8,6 +8,7 @@ Tests cover:
 
 import asyncio
 import contextlib
+from typing import Any, cast
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -58,7 +59,9 @@ class TestPeriodicStatusRefresh:
                 if not mock_server.running:
                     break
 
-                bridge_devices = [dev for dev in mock_server.tcp_devices.values() if dev and dev.ready_to_control]
+                bridge_devices: list[Any] = [
+                    dev for dev in mock_server.tcp_devices.values() if dev and dev.ready_to_control
+                ]  # type: ignore[reportUnknownVariableType]
 
                 if not bridge_devices:
                     continue
@@ -163,7 +166,9 @@ class TestPeriodicStatusRefresh:
                     if not mock_server.running:
                         break
 
-                    bridge_devices = [dev for dev in mock_server.tcp_devices.values() if dev and dev.ready_to_control]
+                    bridge_devices: list[Any] = [
+                        dev for dev in mock_server.tcp_devices.values() if dev and dev.ready_to_control
+                    ]  # type: ignore[reportUnknownVariableType]
 
                     for bridge_device in bridge_devices:
                         with contextlib.suppress(Exception):
@@ -223,21 +228,23 @@ class TestPeriodicPoolStatusLogging:
         """Test pool monitoring logs connection metrics."""
         # Arrange
         mock_server.tcp_devices = {"dev1": mock_bridge_device}
-        logged_metrics = None
+        logged_metrics: dict[str, Any] | None = None
 
         async def mock_sleep(seconds):
             mock_server.running = False
 
-        def mock_logger_info(*args, **kwargs):
+        def mock_logger_info(*args: Any, **kwargs: Any):
             nonlocal logged_metrics
             if "extra" in kwargs:
-                logged_metrics = kwargs["extra"]
+                logged_metrics = cast(dict[str, Any] | None, kwargs["extra"])
 
         with patch("asyncio.sleep", side_effect=mock_sleep):
             with patch("cync_controller.server.logger.info", side_effect=mock_logger_info):
                 # Act
                 total_connections = len(mock_server.tcp_devices)
-                ready_connections = [dev for dev in mock_server.tcp_devices.values() if dev and dev.ready_to_control]
+                ready_connections: list[Any] = [
+                    dev for dev in mock_server.tcp_devices.values() if dev and dev.ready_to_control
+                ]  # type: ignore[reportUnknownVariableType]
 
                 # Assert
                 assert total_connections == 1
@@ -251,7 +258,7 @@ class TestPeriodicPoolStatusLogging:
 
         # Act
         total_connections = len(mock_server.tcp_devices)
-        ready_connections = [dev for dev in mock_server.tcp_devices.values() if dev and dev.ready_to_control]
+        ready_connections: list[Any] = [dev for dev in mock_server.tcp_devices.values() if dev and dev.ready_to_control]  # type: ignore[reportUnknownVariableType]
 
         # Assert
         assert total_connections == 0
@@ -273,7 +280,7 @@ class TestPeriodicPoolStatusLogging:
 
         # Act
         total_connections = len(mock_server.tcp_devices)
-        ready_connections = [dev for dev in mock_server.tcp_devices.values() if dev and dev.ready_to_control]
+        ready_connections: list[Any] = [dev for dev in mock_server.tcp_devices.values() if dev and dev.ready_to_control]  # type: ignore[reportUnknownVariableType]
 
         # Assert
         assert total_connections == 3
@@ -425,7 +432,7 @@ class TestTaskIntegration:
 
         # Act
         total_devices = len(mock_server.tcp_devices)
-        ready_devices = [dev for dev in mock_server.tcp_devices.values() if dev and dev.ready_to_control]
+        ready_devices: list[Any] = [dev for dev in mock_server.tcp_devices.values() if dev and dev.ready_to_control]  # type: ignore[reportUnknownVariableType]
 
         # Assert
         assert total_devices == 1

@@ -9,8 +9,6 @@ Tests for mesh info and device info request/response handling with:
 Test data uses fixtures from Phase 0.5 packet captures where available.
 """
 
-# pyright: reportPrivateUsage=false
-
 from __future__ import annotations
 
 import uuid
@@ -671,7 +669,7 @@ class TestDeviceOperationsCache:
         """Test that cache evicts oldest entries when over limit."""
         # Temporarily reduce cache size for testing
         original_max = device_ops.MAX_CACHE_SIZE
-        device_ops.MAX_CACHE_SIZE = 3  # type: ignore[assignment]  # Small cache for testing
+        device_ops.MAX_CACHE_SIZE = 3  # pyright: ignore[reportAttributeAccessIssue]  # Small cache for testing
 
         try:
             # Create 4 device structs (one more than cache limit)
@@ -701,7 +699,7 @@ class TestDeviceOperationsCache:
         """Test that accessing cached device moves it to end (most recent)."""
         # Temporarily reduce cache size for testing
         original_max = device_ops.MAX_CACHE_SIZE
-        device_ops.MAX_CACHE_SIZE = 2  # type: ignore[assignment]
+        device_ops.MAX_CACHE_SIZE = 2  # pyright: ignore[reportAttributeAccessIssue]
 
         try:
             # Add 2 devices

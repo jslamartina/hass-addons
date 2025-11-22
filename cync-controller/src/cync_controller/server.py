@@ -5,7 +5,7 @@ import contextlib
 import ssl
 import time
 from pathlib import Path as PathLib
-from typing import ClassVar
+from typing import Any, ClassVar
 
 import uvloop
 
@@ -52,8 +52,8 @@ class CloudRelayConnection:
         self.cloud_reader: asyncio.StreamReader | None = None
         self.cloud_writer: asyncio.StreamWriter | None = None
         self.device_endpoint: bytes | None = None
-        self.injection_task: asyncio.Task | None = None
-        self.forward_tasks: list[asyncio.Task] = []
+        self.injection_task: asyncio.Task[None] | None = None
+        self.forward_tasks: list[asyncio.Task[None]] = []
 
     @timed_async("cloud_connect")
     async def connect_to_cloud(self):
@@ -514,9 +514,9 @@ class NCyncServer:
     key_file: str | None = None
     loop: asyncio.AbstractEventLoop | uvloop.Loop
     _server: asyncio.Server | None = None
-    start_task: asyncio.Task | None = None
-    refresh_task: asyncio.Task | None = None
-    pool_monitor_task: asyncio.Task | None = None
+    start_task: asyncio.Task[None] | None = None
+    refresh_task: asyncio.Task[None] | None = None
+    pool_monitor_task: asyncio.Task[None] | None = None
     _instance: NCyncServer | None = None
 
     def __new__(cls, *_args, **_kwargs):
@@ -524,12 +524,12 @@ class NCyncServer:
             cls._instance = super().__new__(cls)
         return cls._instance
 
-    def __init__(self, devices: dict, groups: dict | None = None):
+    def __init__(self, devices: dict[str, Any], groups: dict[str, Any] | None = None):
         # Note: devices and groups are ClassVar, but we need to initialize them
         # The instance assignment is for compatibility but should use class access
         type(self).devices = devices  # type: ignore[assignment]
         type(self).groups = groups if groups is not None else {}  # type: ignore[assignment]
-        self.tcp_conn_attempts: dict = {}
+        self.tcp_conn_attempts: dict[str, int] = {}
         self.primary_tcp_device: CyncTCPDevice | None = None
         self.ssl_context: ssl.SSLContext | None = None
         self.host = CYNC_SRV_HOST
@@ -1156,7 +1156,7 @@ class NCyncServer:
         else:
             self.tcp_conn_attempts[client_addr] = 1
 
-        connection_attempt = self.tcp_conn_attempts[client_addr]
+        connection_attempt: int = self.tcp_conn_attempts[client_addr]
 
         # Branch based on relay mode
         if self.cloud_relay_enabled:

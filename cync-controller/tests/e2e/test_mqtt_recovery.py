@@ -4,6 +4,7 @@ import subprocess
 import sys
 import time
 from pathlib import Path
+from typing import Any, cast
 
 import pytest
 from playwright.sync_api import Page
@@ -12,12 +13,12 @@ from playwright.sync_api import Page
 scripts_path = Path(__file__).parent.parent.parent.parent / "scripts" / "playwright"
 sys.path.insert(0, str(scripts_path))
 
-from addon_helpers import (
-    get_addon_status,
-    read_json_logs,
-    restart_addon_and_wait,
-    start_addon,
-    stop_addon,
+from addon_helpers import (  # type: ignore[import-untyped, reportUnknownVariableType]
+    get_addon_status,  # type: ignore[reportUnknownVariableType]
+    read_json_logs,  # type: ignore[reportUnknownVariableType]
+    restart_addon_and_wait,  # type: ignore[reportUnknownVariableType]
+    start_addon,  # type: ignore[reportUnknownVariableType]
+    stop_addon,  # type: ignore[reportUnknownVariableType]
 )
 
 ADDON_SLUG = "local_cync-controller"
@@ -56,7 +57,7 @@ def test_addon_handles_mqtt_disconnect():
 
     # Verify add-on running
     print("[Step 1] Verifying add-on running...")
-    status = get_addon_status(ADDON_SLUG)
+    status: dict[str, Any] = cast(dict[str, Any], get_addon_status(ADDON_SLUG))
     assert status.get("state") == "started", "Add-on not running"
 
     # Stop MQTT broker
@@ -66,12 +67,12 @@ def test_addon_handles_mqtt_disconnect():
 
     # Verify add-on still running (should handle disconnect gracefully)
     print("[Step 3] Verifying add-on still running...")
-    status = get_addon_status(ADDON_SLUG)
+    status = cast(dict[str, Any], get_addon_status(ADDON_SLUG))
     assert status.get("state") == "started", "Add-on crashed after MQTT disconnect"
 
     # Check logs for connection errors
-    logs = read_json_logs(ADDON_SLUG, lines=100)
-    mqtt_logs = [log for log in logs if "mqtt" in log.get("message", "").lower()]
+    logs: list[dict[str, Any]] = cast(list[dict[str, Any]], read_json_logs(ADDON_SLUG, lines=100))
+    mqtt_logs: list[dict[str, Any]] = [log for log in logs if "mqtt" in log.get("message", "").lower()]
     print(f"  Found {len(mqtt_logs)} MQTT-related log entries")
 
     print("✓ Add-on handled MQTT disconnect gracefully")
@@ -99,17 +100,17 @@ def test_addon_reconnects_after_mqtt_recovery():
 
     # Check logs for reconnection
     print("[Step 3] Checking logs for reconnection...")
-    logs = read_json_logs(ADDON_SLUG, lines=150)
+    logs: list[dict[str, Any]] = cast(list[dict[str, Any]], read_json_logs(ADDON_SLUG, lines=150))
 
     # Look for connection-related logs
-    connect_logs = [
+    connect_logs: list[dict[str, Any]] = [
         log for log in logs if any(word in log.get("message", "").lower() for word in ["connect", "reconnect", "mqtt"])
     ]
 
     print(f"  Found {len(connect_logs)} connection-related log entries")
 
     # Verify add-on still healthy
-    status = get_addon_status(ADDON_SLUG)
+    status: dict[str, Any] = cast(dict[str, Any], get_addon_status(ADDON_SLUG))
     assert status.get("state") == "started", "Add-on not running after MQTT recovery"
 
     print("✓ Add-on reconnected after MQTT recovery")
@@ -164,9 +165,9 @@ def test_addon_mqtt_retry_logic():
 
     # Check logs for connection attempts
     print("[Step 2] Checking logs for connection attempts...")
-    logs = read_json_logs(ADDON_SLUG, lines=200)
+    logs: list[dict[str, Any]] = cast(list[dict[str, Any]], read_json_logs(ADDON_SLUG, lines=200))
 
-    mqtt_connect_logs = [
+    mqtt_connect_logs: list[dict[str, Any]] = [
         log for log in logs if "mqtt" in log.get("message", "").lower() and "connect" in log.get("message", "").lower()
     ]
 
@@ -205,7 +206,7 @@ def test_rapid_mqtt_disconnect_reconnect():
         time.sleep(5)
 
         # Verify add-on still healthy
-        status = get_addon_status(ADDON_SLUG)
+        status: dict[str, Any] = cast(dict[str, Any], get_addon_status(ADDON_SLUG))
         assert status.get("state") == "started", f"Add-on failed during cycle {i + 1}"
         print(f"  ✓ Add-on stable after cycle {i + 1}")
 
@@ -221,21 +222,21 @@ def test_mqtt_connection_status_in_logs():
     print("\n=== Test: MQTT Connection Status Logging ===")
 
     # Read logs
-    logs = read_json_logs(ADDON_SLUG, lines=200)
+    logs: list[dict[str, Any]] = cast(list[dict[str, Any]], read_json_logs(ADDON_SLUG, lines=200))
 
     # Look for MQTT-related logs
-    mqtt_logs = [
+    mqtt_logs: list[dict[str, Any]] = [
         log for log in logs if "mqtt" in log.get("logger", "").lower() or "mqtt" in log.get("message", "").lower()
     ]
 
     print(f"  Found {len(mqtt_logs)} MQTT-related log entries")
 
     # Check for important connection states
-    connection_states = ["connect", "disconnect", "publish", "subscribe"]
-    found_states = set()
+    connection_states: list[str] = ["connect", "disconnect", "publish", "subscribe"]
+    found_states: set[str] = set()
 
     for log in mqtt_logs:
-        message = log.get("message", "").lower()
+        message: str = cast(str, log.get("message", "")).lower()
         for state in connection_states:
             if state in message:
                 found_states.add(state)

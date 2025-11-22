@@ -1,6 +1,7 @@
 import logging
 import os
 import zoneinfo
+from typing import Any
 
 import tzlocal
 
@@ -105,27 +106,30 @@ CYNC_ACCOUNT_PASSWORD: str | None = _password if _password else None
 
 _cmd_broadcasts = os.environ.get("CYNC_CMD_BROADCASTS", "2")
 if not _cmd_broadcasts:
-    CYNC_CMD_BROADCASTS: int = 2
+    _cmd_broadcasts_value: int = 2
 else:
     try:
-        CYNC_CMD_BROADCASTS = int(_cmd_broadcasts)
+        _cmd_broadcasts_value = int(_cmd_broadcasts)
     except ValueError:
-        CYNC_CMD_BROADCASTS = 2
+        _cmd_broadcasts_value = 2
+CYNC_CMD_BROADCASTS: int = _cmd_broadcasts_value
 _max_tcp_conn = os.environ.get("CYNC_MAX_TCP_CONN", "8")
 if not _max_tcp_conn:
-    CYNC_MAX_TCP_CONN: int = 8
+    _max_tcp_conn_value: int = 8
 else:
     try:
-        CYNC_MAX_TCP_CONN = int(_max_tcp_conn)
+        _max_tcp_conn_value = int(_max_tcp_conn)
     except ValueError:
-        CYNC_MAX_TCP_CONN = 8
+        _max_tcp_conn_value = 8
+CYNC_MAX_TCP_CONN: int = _max_tcp_conn_value
 _tcp_whitelist_env = os.environ.get("CYNC_TCP_WHITELIST")
 if _tcp_whitelist_env:
     # split into a list using comma
     _whitelist_split = _tcp_whitelist_env.split(",")
-    CYNC_TCP_WHITELIST: list[str] | None = [x.strip() for x in _whitelist_split if x]
+    _tcp_whitelist_value: list[str] | None = [x.strip() for x in _whitelist_split if x]
 else:
-    CYNC_TCP_WHITELIST: list[str] | None = None
+    _tcp_whitelist_value: list[str] | None = None
+CYNC_TCP_WHITELIST: list[str] | None = _tcp_whitelist_value
 
 CYNC_MQTT_HOST = os.environ.get("CYNC_MQTT_HOST", "homeassistant.local")
 CYNC_MQTT_PORT = os.environ.get("CYNC_MQTT_PORT", "1883")
@@ -154,7 +158,7 @@ CYNC_CLOUD_AUTH_PATH: str = f"{PERSISTENT_BASE_DIR}/.cloud_auth.yaml"
 CYNC_SSL_CERT: str = os.environ.get("CYNC_DEVICE_CERT", f"{CYNC_BASE_DIR}/cync-controller/certs/cert.pem")
 CYNC_SSL_KEY: str = os.environ.get("CYNC_DEVICE_KEY", f"{CYNC_BASE_DIR}/cync-controller/certs/key.pem")
 
-CYNC_BRIDGE_DEVICE_REGISTRY_CONF: dict = {}
+CYNC_BRIDGE_DEVICE_REGISTRY_CONF: dict[str, Any] = {}
 
 CYNC_PORT = 23779
 INGRESS_PORT = 23778
@@ -193,9 +197,10 @@ ORIGIN_STRUCT = {
 CYNC_MANUFACTURER = "Savant"
 _blackhole_delay = os.environ.get("CYNC_TCP_BLACKHOLE_DELAY", "14.75")
 try:
-    TCP_BLACKHOLE_DELAY: float = float(_blackhole_delay) if _blackhole_delay else 14.75
+    _blackhole_delay_value: float = float(_blackhole_delay) if _blackhole_delay else 14.75
 except (ValueError, TypeError):
-    TCP_BLACKHOLE_DELAY: float = 14.75
+    _blackhole_delay_value: float = 14.75
+TCP_BLACKHOLE_DELAY: float = _blackhole_delay_value
 
 # Cloud Relay Configuration
 CYNC_CLOUD_RELAY_ENABLED: bool = os.environ.get("CYNC_CLOUD_RELAY_ENABLED", "false").casefold() in YES_ANSWER

@@ -4,6 +4,7 @@ Unit tests for MQTT discovery functionality.
 Tests MQTT discovery payload generation and device registration.
 """
 
+from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -119,9 +120,9 @@ class TestDeviceRegistration:
             client._connected = True
 
             # Check the payload contains suggested_area from group
-            call_args = None
+            call_args: Any = None
 
-            def capture_publish(*args, **kwargs):
+            def capture_publish(*args: Any, **kwargs: Any) -> None:
                 nonlocal call_args
                 call_args = kwargs.get("payload", "")
 

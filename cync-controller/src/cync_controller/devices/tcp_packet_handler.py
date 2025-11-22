@@ -1,5 +1,6 @@
 import asyncio
 import time
+from typing import cast
 
 from cync_controller.const import (
     CYNC_RAW,
@@ -10,6 +11,7 @@ from cync_controller.structs import (
     ALL_HEADERS,
     DEVICE_STRUCTS,
     CacheData,
+    ControlMessageCallback,
     GlobalObject,
     PhoneAppStructs,
 )
@@ -80,7 +82,7 @@ class TCPPacketHandler:
                     "previous remaining data and re-parse...",
                     lp,
                 )
-                old_cdata: CacheData = self.tcp_device.read_cache[-1]
+                old_cdata: CacheData = cast(CacheData, self.tcp_device.read_cache[-1])
                 if old_cdata:
                     data = old_cdata.data + data
                     cache_data.raw_data = bytes(data)
@@ -227,7 +229,8 @@ class TCPPacketHandler:
                 # logger.debug("%s Client sent HEARTBEAT, replying with %s", lp, ack_d3.hex(' '))
                 await self.tcp_device.write(ack_d3)
             elif pkt_type == 0xA3:
-                logger.debug("%s APP ANNOUNCEMENT packet: %s", lp, packet_data.hex(" "))
+                if packet_data is not None:
+                    logger.debug("%s APP ANNOUNCEMENT packet: %s", lp, packet_data.hex(" "))
                 ack = DEVICE_STRUCTS.xab_generate_ack(queue_id, bytes(msg_id))
                 logger.debug("%s Sending ACK -> %s", lp, ack.hex(" "))
                 await self.tcp_device.write(ack)
@@ -468,6 +471,9 @@ class TCPPacketHandler:
                 connected_to_mesh,
             ]
         )
+        if g.ncync_server is None:
+            logger.warning("%s ncync_server is None, cannot process internal status packet", lp)
+            return
         ___dev = g.ncync_server.devices.get(dev_id)
         dev_name = f'"{___dev.name}" (ID: {dev_id})' if ___dev else f"Device ID: {dev_id}"
         _dbg_msg = ""
@@ -592,10 +598,10 @@ class TCPPacketHandler:
             # Reset known device ids, mesh is the final authority on what devices are connected
             self.tcp_device.mesh_info = None
             self.tcp_device.known_device_ids = []
-            ids_reported = []
+            ids_reported: list[int] = []
             loop_num = 0
-            _m = []
-            _raw_m = []
+            _m: list[list[int]] = []
+            _raw_m: list[str] = []
             # structs = []
             try:
                 for i in range(
@@ -644,49 +650,50 @@ class TCPPacketHandler:
                     )
                     _m.append(bytes2list(raw_status))
                     _raw_m.append(mesh_dev_struct.hex(" "))
-                    if dev_id in g.ncync_server.devices:
-                        # first device id is the device id of the TCP device we are connected to
-                        ___dev = g.ncync_server.devices[dev_id]
-                        dev_name = ___dev.name
-                        if loop_num == 1:
-                            # byte 3 (idx 2) is a device type byte but,
-                            # it only reports on the first item (itself)
-                            # convert to int, and it is the same as deviceType from cloud.
-                            if not self.tcp_device.id:
-                                self.tcp_device.id = dev_id
-                                self.tcp_device.lp = f"{self.tcp_device.address}[{self.tcp_device.id}]:"
-                                (g.ncync_server.devices[dev_id])
-                                logger.debug(
-                                    "%sparse:x%02x: Setting TCP device Cync ID to: %s",
-                                    self.tcp_device.lp,
-                                    dev_id,
-                                    self.tcp_device.id,
-                                )
+                    if g.ncync_server is not None:
+                        if dev_id in g.ncync_server.devices:
+                            # first device id is the device id of the TCP device we are connected to
+                            ___dev = g.ncync_server.devices[dev_id]
+                            dev_name = ___dev.name
+                            if loop_num == 1:
+                                # byte 3 (idx 2) is a device type byte but,
+                                # it only reports on the first item (itself)
+                                # convert to int, and it is the same as deviceType from cloud.
+                                if not self.tcp_device.id:
+                                    self.tcp_device.id = dev_id
+                                    self.tcp_device.lp = f"{self.tcp_device.address}[{self.tcp_device.id}]:"
+                                    (g.ncync_server.devices[dev_id])
+                                    logger.debug(
+                                        "%sparse:x%02x: Setting TCP device Cync ID to: %s",
+                                        self.tcp_device.lp,
+                                        dev_id,
+                                        self.tcp_device.id,
+                                    )
 
-                            elif self.tcp_device.id and self.tcp_device.id != dev_id:
-                                logger.debug(
-                                    "%s The first device reported in 0x83 is "
-                                    "usually the TCP device. current: %s "
-                                    "// proposed: %s",
-                                    lp,
-                                    self.tcp_device.id,
-                                    dev_id,
-                                )
-                            lp = f"{self.tcp_device.lp}parse:0x{dev_id:02x}:"
-                            self.tcp_device.device_type_id = dev_type_id
-                            self.tcp_device.name = dev_name
+                                elif self.tcp_device.id and self.tcp_device.id != dev_id:
+                                    logger.debug(
+                                        "%s The first device reported in 0x83 is "
+                                        "usually the TCP device. current: %s "
+                                        "// proposed: %s",
+                                        lp,
+                                        self.tcp_device.id,
+                                        dev_id,
+                                    )
+                                lp = f"{self.tcp_device.lp}parse:0x{dev_id:02x}:"
+                                self.tcp_device.device_type_id = dev_type_id
+                                self.tcp_device.name = dev_name
 
-                        ids_reported.append(dev_id)
-                        # structs.append(mesh_dev_struct.hex(" "))
-                        self.tcp_device.known_device_ids.append(dev_id)
+                            ids_reported.append(dev_id)
+                            # structs.append(mesh_dev_struct.hex(" "))
+                            self.tcp_device.known_device_ids.append(dev_id)
 
-                    else:
-                        logger.warning(
-                            "%s Device ID %s not found in devices defined in config file: %s",
-                            lp,
-                            dev_id,
-                            g.ncync_server.devices.keys(),
-                        )
+                        else:
+                            logger.warning(
+                                "%s Device ID %s not found in devices defined in config file: %s",
+                                lp,
+                                dev_id,
+                                g.ncync_server.devices.keys() if g.ncync_server is not None else [],
+                            )
                     # -- END OF mesh info response parsing loop --
             except IndexError:
                 # ran out of data
@@ -716,7 +723,7 @@ class TCPPacketHandler:
                         sorted(ids_reported),
                     )
 
-            if self.tcp_device.parse_mesh_status is True:
+            if self.tcp_device.parse_mesh_status is True and g.ncync_server is not None:
                 logger.debug(
                     "%s Parsing initial connection device status data",
                     lp,
@@ -727,7 +734,7 @@ class TCPPacketHandler:
                             bytes(status),
                             from_pkt="'mesh info'",
                         )
-                        for status in _m
+                        for status in _m  # type: ignore[reportUnknownVariableType]
                     ]
                 )
 
@@ -797,14 +804,16 @@ class TCPPacketHandler:
             ctrl_msg_id = packet_data[1]
             ctrl_chksum = sum(packet_data[6:10]) % 256
             success = packet_data[7] == 1
-            msg = self.tcp_device.messages.control.pop(ctrl_msg_id, None)
+            msg: ControlMessageCallback | None = cast(
+                ControlMessageCallback | None, self.tcp_device.messages.control.pop(ctrl_msg_id, None)
+            )
             if success is True and msg is not None:
                 # Calculate round-trip time (command sent → ACK received)
-                rtt_ms = (time.time() - msg.sent_at) * 1000
+                rtt_ms: float = (time.time() - msg.sent_at) * 1000
 
                 # Get device name if available
                 device_name = "unknown"
-                if msg.device_id and msg.device_id in g.ncync_server.devices:
+                if msg.device_id and g.ncync_server is not None and msg.device_id in g.ncync_server.devices:
                     device_name = g.ncync_server.devices[msg.device_id].name
 
                 logger.info(

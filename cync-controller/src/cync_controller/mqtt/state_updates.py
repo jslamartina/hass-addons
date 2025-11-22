@@ -9,6 +9,7 @@ import asyncio
 import json
 import time
 import traceback
+from typing import Any
 
 import aiomqtt
 
@@ -65,7 +66,7 @@ class StateUpdateHelper:
             device_uuid = f"{device.home_id}-{device_id}"
             # logger.debug("%s Publishing availability: %s", lp, availability)
             try:
-                _ = await self.client.client.publish(
+                _: Any = await self.client.client.publish(  # type: ignore[reportUnknownVariableType]
                     f"{self.client.topic}/availability/{device_uuid}", availability, qos=0
                 )
             except aiomqtt.MqttError as mqtt_code_exc:

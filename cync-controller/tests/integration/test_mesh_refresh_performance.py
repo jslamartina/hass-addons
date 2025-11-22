@@ -5,6 +5,7 @@ import json
 import re
 import subprocess
 import time
+from typing import Any, cast
 
 import pytest
 
@@ -21,14 +22,14 @@ def get_json_logs():
     return result.stdout
 
 
-def parse_json_logs(json_output):
+def parse_json_logs(json_output: str) -> list[dict[str, Any]]:
     """Parse JSON logs and extract relevant entries."""
-    entries = []
+    entries: list[dict[str, Any]] = []
     for line in json_output.strip().split("\n"):
         if not line:
             continue
         with contextlib.suppress(json.JSONDecodeError):
-            entries.append(json.loads(line))
+            entries.append(cast(dict[str, Any], json.loads(line)))
     return entries
 
 
@@ -68,10 +69,10 @@ def measure_mesh_refresh_performance():
     entries = parse_json_logs(logs)
 
     # Find MESH_REFRESH_REQ and MESH_REFRESH_DONE pairs with same correlation_id
-    refresh_dones = {}
+    refresh_dones: dict[str, dict[str, Any]] = {}
 
     for entry in entries:
-        msg = entry.get("message", "")
+        msg: str = cast(str, entry.get("message", ""))
 
         # Look for [MESH_REFRESH_DONE] with total_ms and parse_ms
         if "[MESH_REFRESH_DONE]" in msg:
@@ -87,19 +88,22 @@ def measure_mesh_refresh_performance():
                 }
 
     if refresh_dones:
-        totals = [data["total_ms"] for data in refresh_dones.values()]
-        parses = [data["parse_ms"] for data in refresh_dones.values()]
+        totals: list[float] = [data["total_ms"] for data in refresh_dones.values()]
+        parses: list[float] = [data["parse_ms"] for data in refresh_dones.values()]
 
-        return {
-            "count": len(refresh_dones),
-            "avg_total_ms": sum(totals) / len(totals),
-            "max_total_ms": max(totals),
-            "min_total_ms": min(totals),
-            "avg_parse_ms": sum(parses) / len(parses),
-            "max_parse_ms": max(parses),
-            "min_parse_ms": min(parses),
-            "samples": refresh_dones,
-        }
+        return cast(
+            dict[str, Any],
+            {
+                "count": len(refresh_dones),
+                "avg_total_ms": sum(totals) / len(totals),
+                "max_total_ms": max(totals),
+                "min_total_ms": min(totals),
+                "avg_parse_ms": sum(parses) / len(parses),
+                "max_parse_ms": max(parses),
+                "min_parse_ms": min(parses),
+                "samples": refresh_dones,
+            },
+        )
 
     return None
 
@@ -170,7 +174,7 @@ def test_mesh_refresh_performance_group_commands():
         print(f"   Max parse time: {perf['max_parse_ms']:.1f}ms")
 
         print("\n   Detailed timing per sample:")
-        for i, (_, data) in enumerate(perf["samples"].items(), 1):
+        for i, (_, data) in enumerate(perf["samples"].items(), 1):  # type: ignore[reportUnknownVariableType]
             print(f"      Sample {i}: {data['total_ms']:.1f}ms (parse: {data['parse_ms']:.1f}ms)")
 
         # Verify within threshold

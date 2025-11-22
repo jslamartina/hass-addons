@@ -43,7 +43,7 @@ class JSONFormatter(logging.Formatter):
 
         # Add structured extra data if present
         if hasattr(record, "extra_data") and record.extra_data:
-            log_data["context"] = record.extra_data
+            log_data["context"] = record.extra_data  # type: ignore[assignment]
 
         # Add exception info if present
         if record.exc_info:
@@ -79,7 +79,8 @@ class HumanReadableFormatter(logging.Formatter):
         formatted = super().format(record)
 
         if hasattr(record, "extra_data") and record.extra_data:
-            context_str = " | ".join(f"{k}={v}" for k, v in record.extra_data.items())
+            extra_data: dict[str, Any] = record.extra_data  # type: ignore[assignment]
+            context_str = " | ".join(f"{k}={v}" for k, v in extra_data.items())
             formatted = f"{formatted} | {context_str}"
 
         return formatted

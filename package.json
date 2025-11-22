@@ -18,7 +18,6 @@
     "lint": "./scripts/lint-all.sh",
     "lint:python": "ruff check .",
     "lint:python:fix": "ruff check . --fix",
-    "lint:pyright": "pyright --project python-rebuild-tcp-comm/pyrightconfig.json",
     "lint:shell": "git ls-files '*.sh' | xargs -r shellcheck",
     "lint:typescript": "eslint . --ext .ts,.tsx",
     "lint:typescript:fix": "eslint . --ext .ts,.tsx --fix",

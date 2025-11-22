@@ -1,4 +1,5 @@
 import asyncio
+from typing import Any
 
 from cync_controller.logging_abstraction import get_logger
 from cync_controller.metadata.model_info import (
@@ -72,7 +73,7 @@ class CyncDevice(DeviceCommands):
     _is_hvac: bool | None = None
     _mac: str | None = None
     wifi_mac: str | None = None
-    hvac: dict | None = None
+    hvac: dict[str, Any] | None = None
     _online: bool = False
     metadata: DeviceTypeInfo | None = None
 
@@ -85,7 +86,7 @@ class CyncDevice(DeviceCommands):
         wifi_mac: str | None = None,
         fw_version: str | None = None,
         home_id: int | None = None,
-        hvac: dict | None = None,
+        hvac: dict[str, Any] | None = None,
     ):
         self.control_bytes = bytes([0x00, 0x00])
         if cync_id is None:

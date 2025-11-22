@@ -93,8 +93,7 @@ def test_notify_observers_packet_calls_all_observers(
     data = b"\x73\x00\x00\x00\x1e"
     connection_id = 1
 
-    proxy._notify_observers_packet(PacketDirection.DEVICE_TO_CLOUD, data, connection_id)  # pyright: ignore[reportPrivateUsage]
-
+    proxy._notify_observers_packet(PacketDirection.DEVICE_TO_CLOUD, data, connection_id)
     # Both observers should be called
     mock_observer.on_packet_received.assert_called_once_with(
         PacketDirection.DEVICE_TO_CLOUD, data, connection_id
@@ -112,8 +111,7 @@ def test_notify_observers_packet_device_to_cloud(
     data = b"\x73\x00\x00\x00\x1e"
     connection_id = 42
 
-    proxy._notify_observers_packet(PacketDirection.DEVICE_TO_CLOUD, data, connection_id)  # pyright: ignore[reportPrivateUsage]
-
+    proxy._notify_observers_packet(PacketDirection.DEVICE_TO_CLOUD, data, connection_id)
     mock_observer.on_packet_received.assert_called_once_with(
         PacketDirection.DEVICE_TO_CLOUD, data, connection_id
     )
@@ -127,8 +125,7 @@ def test_notify_observers_packet_cloud_to_device(
     data = b"\x7b\x00\x00\x00\x0a"
     connection_id = 99
 
-    proxy._notify_observers_packet(PacketDirection.CLOUD_TO_DEVICE, data, connection_id)  # pyright: ignore[reportPrivateUsage]
-
+    proxy._notify_observers_packet(PacketDirection.CLOUD_TO_DEVICE, data, connection_id)
     mock_observer.on_packet_received.assert_called_once_with(
         PacketDirection.CLOUD_TO_DEVICE, data, connection_id
     )
@@ -144,8 +141,7 @@ def test_notify_observers_connection_established(
 
     connection_id = 1
 
-    proxy._notify_observers_connection_established(connection_id)  # pyright: ignore[reportPrivateUsage]
-
+    proxy._notify_observers_connection_established(connection_id)
     mock_observer.on_connection_established.assert_called_once_with(connection_id)
     observer2.on_connection_established.assert_called_once_with(connection_id)
 
@@ -158,8 +154,7 @@ def test_notify_observers_connection_closed(proxy: MITMProxy, mock_observer: Mag
 
     connection_id = 1
 
-    proxy._notify_observers_connection_closed(connection_id)  # pyright: ignore[reportPrivateUsage]
-
+    proxy._notify_observers_connection_closed(connection_id)
     mock_observer.on_connection_closed.assert_called_once_with(connection_id)
     observer2.on_connection_closed.assert_called_once_with(connection_id)
 
@@ -183,8 +178,7 @@ def test_observer_exception_doesnt_break_proxy(
     connection_id = 1
 
     # Should not raise - proxy catches exceptions
-    proxy._notify_observers_packet(PacketDirection.DEVICE_TO_CLOUD, data, connection_id)  # pyright: ignore[reportPrivateUsage]
-
+    proxy._notify_observers_packet(PacketDirection.DEVICE_TO_CLOUD, data, connection_id)
     # First observer was called (and failed)
     mock_observer.on_packet_received.assert_called_once()
 
@@ -206,8 +200,7 @@ def test_observer_exception_is_logged(
     data = b"\x73\x00\x00\x00\x1e"
     connection_id = 1
 
-    proxy._notify_observers_packet(PacketDirection.DEVICE_TO_CLOUD, data, connection_id)  # pyright: ignore[reportPrivateUsage]
-
+    proxy._notify_observers_packet(PacketDirection.DEVICE_TO_CLOUD, data, connection_id)
     # Error should be printed to stderr
     assert mock_stderr.write.called
 
@@ -215,9 +208,9 @@ def test_observer_exception_is_logged(
 def test_no_observers_registered(proxy: MITMProxy) -> None:
     """Test notification methods work with no observers registered."""
     # Should not raise errors
-    proxy._notify_observers_packet(PacketDirection.DEVICE_TO_CLOUD, b"\x73", 1)  # pyright: ignore[reportPrivateUsage]
-    proxy._notify_observers_connection_established(1)  # pyright: ignore[reportPrivateUsage]
-    proxy._notify_observers_connection_closed(1)  # pyright: ignore[reportPrivateUsage]
+    proxy._notify_observers_packet(PacketDirection.DEVICE_TO_CLOUD, b"\x73", 1)
+    proxy._notify_observers_connection_established(1)
+    proxy._notify_observers_connection_closed(1)
 
 
 def test_observer_receives_correct_data(proxy: MITMProxy, mock_observer: MagicMock) -> None:
@@ -234,8 +227,7 @@ def test_observer_receives_correct_data(proxy: MITMProxy, mock_observer: MagicMo
     ]
 
     for data, conn_id in test_cases:
-        proxy._notify_observers_packet(PacketDirection.DEVICE_TO_CLOUD, data, conn_id)  # pyright: ignore[reportPrivateUsage]
-
+        proxy._notify_observers_packet(PacketDirection.DEVICE_TO_CLOUD, data, conn_id)
     # Verify all calls received correct data
     assert mock_observer.on_packet_received.call_count == len(test_cases)
     for idx, (data, conn_id) in enumerate(test_cases):
@@ -268,7 +260,6 @@ def test_observer_list_order_preserved(proxy: MITMProxy) -> None:
     proxy.register_observer(observer3)
 
     # Notify all observers
-    proxy._notify_observers_packet(PacketDirection.DEVICE_TO_CLOUD, b"\x73", 1)  # pyright: ignore[reportPrivateUsage]
-
+    proxy._notify_observers_packet(PacketDirection.DEVICE_TO_CLOUD, b"\x73", 1)
     # Verify they were called in registration order
     assert call_order == [1, 2, 3]

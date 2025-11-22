@@ -11,6 +11,8 @@ Tests cover:
 """
 
 import ssl
+from pathlib import Path
+from typing import cast
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -111,7 +113,7 @@ class TestCloudConnection:
             mock_open.return_value = (mock_cloud_reader, mock_cloud_writer)
 
             # Act
-            result = await cloud_relay_connection.connect_to_cloud()
+            result: bool = cast(bool, await cloud_relay_connection.connect_to_cloud())
 
             # Assert
             assert result is True
@@ -127,7 +129,7 @@ class TestCloudConnection:
             mock_open.side_effect = Exception("Connection refused")
 
             # Act
-            result = await cloud_relay_connection.connect_to_cloud()
+            result: bool = cast(bool, await cloud_relay_connection.connect_to_cloud())
 
             # Assert
             assert result is False
@@ -141,7 +143,7 @@ class TestCloudConnection:
             mock_open.side_effect = TimeoutError()
 
             # Act
-            result = await cloud_relay_connection.connect_to_cloud()
+            result: bool = cast(bool, await cloud_relay_connection.connect_to_cloud())
 
             # Assert
             assert result is False
@@ -167,7 +169,7 @@ class TestCloudConnection:
             mock_open.return_value = (AsyncMock(), MagicMock())
 
             # Act
-            result = await relay.connect_to_cloud()
+            result: bool = cast(bool, await relay.connect_to_cloud())
 
             # Assert
             assert result is True
@@ -280,17 +282,17 @@ class TestPacketInjection:
         cloud_relay_connection.device_writer = mock_writer
 
         # Create injection file path
-        inject_file = tmp_path / "cync_inject_raw_bytes.txt"
+        inject_file: Path = cast(Path, tmp_path / "cync_inject_raw_bytes.txt")
         raw_hex = "ff fe fd fc fb fa"
         inject_file.write_text(raw_hex)
 
         # Act - Simulate injection checker logic
         if inject_file.exists():
             with inject_file.open() as f:
-                hex_content = f.read().strip()
+                hex_content: str = f.read().strip()
             inject_file.unlink()
 
-            hex_bytes = hex_content.replace(" ", "").replace("\n", "")
+            hex_bytes: str = hex_content.replace(" ", "").replace("\n", "")
             packet = bytes.fromhex(hex_bytes)
 
             # Assert
@@ -301,14 +303,14 @@ class TestPacketInjection:
     async def test_injection_checker_mode_injection_smart(self, cloud_relay_connection, tmp_path):
         """Test mode injection for smart mode."""
         # Arrange
-        inject_file = tmp_path / "cync_inject_command.txt"
+        inject_file: Path = cast(Path, tmp_path / "cync_inject_command.txt")
         inject_file.write_text("smart")
 
         cloud_relay_connection.device_endpoint = bytes([0x12, 0x34, 0x56, 0x78])
 
         # Act - Simulate injection checking
         if inject_file.exists():
-            mode = inject_file.read_text().strip().lower()
+            mode: str = inject_file.read_text().strip().lower()
             inject_file.unlink()
 
             if mode in ["smart", "traditional"]:
@@ -321,14 +323,14 @@ class TestPacketInjection:
     async def test_injection_checker_mode_injection_traditional(self, cloud_relay_connection, tmp_path):
         """Test mode injection for traditional mode."""
         # Arrange
-        inject_file = tmp_path / "cync_inject_command.txt"
+        inject_file: Path = cast(Path, tmp_path / "cync_inject_command.txt")
         inject_file.write_text("traditional")
 
         cloud_relay_connection.device_endpoint = bytes([0x12, 0x34, 0x56, 0x78])
 
         # Act
         if inject_file.exists():
-            mode = inject_file.read_text().strip().lower()
+            mode: str = inject_file.read_text().strip().lower()
             inject_file.unlink()
 
             if mode in ["smart", "traditional"]:
@@ -341,12 +343,13 @@ class TestPacketInjection:
     async def test_injection_checker_invalid_mode(self, cloud_relay_connection, tmp_path):
         """Test invalid mode injection is ignored."""
         # Arrange
-        inject_file = tmp_path / "cync_inject_command.txt"
+        inject_file: Path = cast(Path, tmp_path / "cync_inject_command.txt")
         inject_file.write_text("invalid_mode")
 
         # Act - Simulate injection checking
+        injected: bool = False
         if inject_file.exists():
-            mode = inject_file.read_text().strip().lower()
+            mode: str = inject_file.read_text().strip().lower()
             inject_file.unlink()
 
             valid_modes = ["smart", "traditional"]
@@ -360,13 +363,13 @@ class TestPacketInjection:
     async def test_injection_checker_file_cleanup(self, tmp_path):
         """Test injection files are cleaned up after use."""
         # Arrange
-        inject_file = tmp_path / "cync_inject_command.txt"
+        inject_file: Path = cast(Path, tmp_path / "cync_inject_command.txt")
         inject_file.write_text("smart")
         assert inject_file.exists()
 
         # Act
         with inject_file.open() as f:
-            f.read()
+            f.read()  # type: ignore[reportUnknownVariableType]
         inject_file.unlink()
 
         # Assert
@@ -406,7 +409,7 @@ class TestRelayErrorHandling:
             mock_open.side_effect = OSError("Network unreachable")
 
             # Act
-            result = await cloud_relay_connection.connect_to_cloud()
+            result: bool = cast(bool, await cloud_relay_connection.connect_to_cloud())
 
             # Assert
             assert result is False
@@ -419,7 +422,7 @@ class TestRelayErrorHandling:
             mock_open.side_effect = ssl.SSLError("Certificate verification failed")
 
             # Act
-            result = await cloud_relay_connection.connect_to_cloud()
+            result: bool = cast(bool, await cloud_relay_connection.connect_to_cloud())
 
             # Assert
             assert result is False

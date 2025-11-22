@@ -7,6 +7,7 @@ Tests cover:
 - Fan controller commands (lines 544-604)
 """
 
+from typing import Any, cast
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -63,14 +64,14 @@ class TestGroupCommandRouting:
 
         mock_global_object.ncync_server.groups = {1: mock_group}
 
-        msg = mock_mqtt_message("cync/set/cync-group-1", "ON")
+        msg: Any = cast(Any, mock_mqtt_message("cync/set/cync-group-1", "ON"))  # type: ignore[reportUnknownVariableType]
 
         with patch("cync_controller.mqtt_client.g", mock_global_object):
             mqtt = MQTTClient()
             mqtt.lp = "test:"
 
             # Act - Parse topic to extract group ID
-            topic_parts = msg.topic.value.split("/")
+            topic_parts: list[str] = cast(list[str], msg.topic.value.split("/"))
             if "-group-" in topic_parts[2]:
                 group_id = int(topic_parts[2].split("-group-")[1])
                 # Assert
@@ -82,10 +83,10 @@ class TestGroupCommandRouting:
         """Test invalid group ID logs warning and skips."""
         # Arrange
         mock_global_object.ncync_server.groups = {}  # No groups
-        msg = mock_mqtt_message("cync/set/cync-group-999", "ON")
+        msg: Any = cast(Any, mock_mqtt_message("cync/set/cync-group-999", "ON"))  # type: ignore[reportUnknownVariableType]
 
         # Act
-        topic_parts = msg.topic.value.split("/")
+        topic_parts: list[str] = cast(list[str], msg.topic.value.split("/"))
         if "-group-" in topic_parts[2]:
             group_id = int(topic_parts[2].split("-group-")[1])
             if group_id not in mock_global_object.ncync_server.groups:
@@ -122,10 +123,10 @@ class TestDeviceCommandRouting:
 
         mock_global_object.ncync_server.devices = {100: mock_device}
 
-        msg = mock_mqtt_message("cync/set/cync-100", "ON")
+        msg: Any = cast(Any, mock_mqtt_message("cync/set/cync-100", "ON"))  # type: ignore[reportUnknownVariableType]
 
         # Act
-        topic_parts = msg.topic.value.split("/")
+        topic_parts: list[str] = cast(list[str], msg.topic.value.split("/"))
         if "cync-" in topic_parts[2] and "-group-" not in topic_parts[2]:
             device_id = int(topic_parts[2].split("-")[1])
 
@@ -138,10 +139,10 @@ class TestDeviceCommandRouting:
         """Test invalid device ID logs warning and skips."""
         # Arrange
         mock_global_object.ncync_server.devices = {}  # No devices
-        msg = mock_mqtt_message("cync/set/cync-999", "ON")
+        msg: Any = cast(Any, mock_mqtt_message("cync/set/cync-999", "ON"))  # type: ignore[reportUnknownVariableType]
 
         # Act
-        topic_parts = msg.topic.value.split("/")
+        topic_parts: list[str] = cast(list[str], msg.topic.value.split("/"))
         if "cync-" in topic_parts[2] and "-group-" not in topic_parts[2]:
             device_id = int(topic_parts[2].split("-")[1])
 

@@ -76,7 +76,7 @@ class TestPacketValidation:
         assert any("Phase 1a codec validated" in record.message for record in caplog.records)
         # Check that type is logged correctly
         success_record = next(r for r in caplog.records if "Phase 1a codec validated" in r.message)
-        assert success_record.type == "0x23"  # type: ignore[attr-defined]
+        assert getattr(success_record, "type", None) == "0x23"
 
     def test_decode_valid_data_packet(self, caplog: pytest.LogCaptureFixture) -> None:
         """Test decoding valid data packet logs success."""
@@ -93,7 +93,7 @@ class TestPacketValidation:
         # Check that validation success was logged
         assert any("Phase 1a codec validated" in record.message for record in caplog.records)
         success_record = next(r for r in caplog.records if "Phase 1a codec validated" in r.message)
-        assert success_record.type == "0x73"  # type: ignore[attr-defined]
+        assert getattr(success_record, "type", None) == "0x73"
 
     def test_decode_valid_status_broadcast(self, caplog: pytest.LogCaptureFixture) -> None:
         """Test decoding valid status broadcast packet logs success."""
@@ -110,7 +110,7 @@ class TestPacketValidation:
         # Check that validation success was logged
         assert any("Phase 1a codec validated" in record.message for record in caplog.records)
         success_record = next(r for r in caplog.records if "Phase 1a codec validated" in r.message)
-        assert success_record.type == "0x83"  # type: ignore[attr-defined]
+        assert getattr(success_record, "type", None) == "0x83"
 
     def test_decode_invalid_packet(self, caplog: pytest.LogCaptureFixture) -> None:
         """Test decoding invalid packet logs error without crashing."""

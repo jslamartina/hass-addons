@@ -46,9 +46,9 @@ try:
     from mitm.validation.codec_validator import CodecValidatorPlugin
 except ModuleNotFoundError:
     # For direct execution as script
-    from interfaces.packet_observer import PacketDirection, PacketObserver  # type: ignore
+    from interfaces.packet_observer import PacketDirection, PacketObserver
 
-    CodecValidatorPlugin = None  # type: ignore[assignment, misc]
+    CodecValidatorPlugin = None
 
 
 @dataclass

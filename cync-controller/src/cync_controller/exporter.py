@@ -6,6 +6,7 @@ import asyncio
 import os
 import uuid
 from pathlib import Path
+from typing import Any
 
 import aiohttp
 import uvicorn
@@ -72,9 +73,11 @@ def _masked_http_exception(operation: str, exc: Exception, user_message: str) ->
 
 
 @app.get("/api/export/start")
-async def start_export():
+async def start_export() -> dict[str, Any]:
     """Start the device configuration export process."""
     ret_msg = "Export started successfully"
+    if g.cloud_api is None:
+        return {"success": False, "message": "Cloud API not initialized"}
     try:
         succ = await g.cloud_api.check_token()
         if not succ:
@@ -97,7 +100,7 @@ async def start_export():
 
 
 @app.get("/api/export/otp/request")
-async def request_otp():
+async def request_otp() -> dict[str, Any]:
     """Request OTP for export."""
     ret_msg = "OTP requested successfully"
     try:
@@ -117,7 +120,7 @@ async def request_otp():
 
 
 @app.post("/api/restart")
-async def restart():
+async def restart() -> dict[str, Any]:
     """Restart the add-on via Supervisor API."""
     lp = "ExportServer:restart:"
     supervisor_token = os.environ.get("SUPERVISOR_TOKEN")
@@ -181,10 +184,12 @@ async def restart():
 
 
 @app.post("/api/export/otp/submit")
-async def submit_otp(otp_request: OTPRequest):
+async def submit_otp(otp_request: OTPRequest) -> dict[str, Any]:
     """Submit OTP code and complete the export process."""
     ret_msg = "Export completed successfully"
     export_succ = False
+    if g.cloud_api is None:
+        return {"success": False, "message": "Cloud API not initialized"}
     try:
         otp_succ = await g.cloud_api.send_otp(otp_request.otp)
         if otp_succ:
@@ -227,7 +232,7 @@ class ExportServer:
     lp = "ExportServer:"
     enabled: bool = False
     running: bool = False
-    start_task: asyncio.Task | None = None
+    start_task: asyncio.Task[None] | None = None
     _instance: ExportServer | None = None
 
     def __new__(cls, *_args, **_kwargs):
