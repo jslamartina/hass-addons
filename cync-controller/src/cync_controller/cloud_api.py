@@ -440,10 +440,10 @@ class CyncCloudAPI:
         else:
             return True
 
-    def _validate_otp_code(self, otp_code: int, lp: str) -> int | None:
+    def _validate_otp_code(self, otp_code: int | str | None, lp: str) -> int | None:
         """Validate and convert OTP code to integer."""
         logger.debug("→ Validating OTP code", extra={"lp": lp})
-        if not otp_code:
+        if otp_code is None:
             logger.error("OTP code must be provided", extra={"lp": lp})
             logger.debug("✗ OTP validation failed: no code provided", extra={"lp": lp})
             return None

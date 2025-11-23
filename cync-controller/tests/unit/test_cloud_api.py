@@ -323,11 +323,43 @@ class TestCyncCloudAPIAuthentication:
         """Test OTP submission with invalid code"""
         api = CyncCloudAPI()
 
-        # send_otp requires int, but _validate_otp_code handles None internally
-        # Pass 0 which is falsy and will be rejected
-        result = await api.send_otp(0)
+        # send_otp requires int, but _validate_otp_code will reject non-numeric input
+        # Pass a clearly invalid non-numeric value which cannot be converted to int
+        result = await api.send_otp("invalid")  # type: ignore[arg-type]
 
         assert result is False
+
+    @pytest.mark.asyncio
+    async def test_send_otp_zero_code_accepted(self):
+        """Test OTP submission with 0 code (represents '000000')"""
+        with (
+            patch("cync_controller.cloud_api.CYNC_ACCOUNT_USERNAME", "test@example.com"),
+            patch("cync_controller.cloud_api.CYNC_ACCOUNT_PASSWORD", "password123"),
+        ):
+            api = CyncCloudAPI()
+
+            # Mock HTTP session
+            mock_session = AsyncMock()
+            mock_response = AsyncMock()
+            mock_response.raise_for_status = MagicMock()
+            mock_response.json = AsyncMock(
+                return_value={
+                    "user_id": "test-user",
+                    "access_token": "test-token",
+                    "authorize": "test-auth",
+                    "expire_in": 604800,
+                    "refresh_token": "test-refresh-token",
+                },
+            )
+            mock_session.post = AsyncMock(return_value=mock_response)
+            api.http_session = mock_session
+
+            api._check_session = AsyncMock()
+            api.write_token_cache = AsyncMock(return_value=True)
+
+            result = await api.send_otp(0)
+
+            assert result is True
 
     @pytest.mark.asyncio
     async def test_send_otp_string_conversion(self):

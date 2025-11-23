@@ -407,7 +407,7 @@ class CyncDevice(DeviceCommands):
         return self._state
 
     @state.setter
-    def state(self, value: int) -> None:
+    def state(self, value: bool | str | float) -> None:
         """Set the state of the device.
         Accepts int, bool, str, or float. 0, 'f', 'false', 'off', 'no', 'n' are off. 1, 't', 'true', 'on', 'yes', 'y' are on.
         """
