@@ -6,7 +6,7 @@ Tests current status, state conversion, status objects, and version handling.
 
 import pytest
 
-from cync_controller.devices import CyncDevice
+from cync_controller.devices.base_device import CyncDevice
 
 
 class TestCyncDeviceCurrentStatus:
@@ -83,7 +83,7 @@ class TestCyncDeviceStateConversion:
         device = CyncDevice(cync_id=0x1234)
 
         with pytest.raises(TypeError, match="Invalid type for state"):
-            device.state = {"not": "valid"}
+            device.state = {"not": "valid"}  # type: ignore[assignment]
 
 
 class TestCyncDeviceStatusObject:
@@ -154,13 +154,13 @@ class TestCyncDevicePropertyEdgeCases:
     def test_is_light_setter_with_non_boolean(self):
         """Test is_light setter logs error with non-boolean value"""
         device = CyncDevice(cync_id=0x12)
-        device.is_light = "not a boolean"
+        device.is_light = "not a boolean"  # type: ignore[assignment]
         assert device.is_light is False
 
     def test_is_switch_setter_with_non_boolean(self):
         """Test is_switch setter logs error with non-boolean value"""
         device = CyncDevice(cync_id=0x12)
-        device.is_switch = "not a boolean"
+        device.is_switch = "not a boolean"  # type: ignore[assignment]
         assert device.is_switch is False
 
     def test_version_setter_with_invalid_string(self):
@@ -172,7 +172,7 @@ class TestCyncDevicePropertyEdgeCases:
     def test_mac_setter_with_conversion(self):
         """Test mac setter converts non-string to string"""
         device = CyncDevice(cync_id=0x12)
-        device.mac = 12345
+        device.mac = 12345  # type: ignore[assignment]
         assert device.mac == "12345"
 
     def test_has_wifi_property_without_metadata(self):

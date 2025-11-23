@@ -548,10 +548,7 @@ class MQTTClient:
             # Any single bridge can see all 43 devices via mesh network
             # Single-bridge is 2.7x faster than dual-bridge (0.2s vs 0.6s average)
             bridge_devices = bridge_devices[:1]
-            total_available = len([
-                dev for dev in tcp_devices.values()
-                if dev is not None and dev.ready_to_control
-            ])
+            total_available = len([dev for dev in tcp_devices.values() if dev is not None and dev.ready_to_control])
             logger.debug(
                 "%s [%s] Using %d bridge for refresh (oldest of %d available)",
                 lp,
@@ -676,7 +673,9 @@ class MQTTClient:
         result = await self.state_updates.parse_device_status(device_id, device_status, *args, **kwargs)
         return bool(result)
 
-    async def update_switch_from_subgroup(self, device: CyncDeviceProtocol, subgroup_state: int, subgroup_name: str) -> bool:
+    async def update_switch_from_subgroup(
+        self, device: CyncDeviceProtocol, subgroup_state: int, subgroup_name: str
+    ) -> bool:
         """Update a switch device state to match its subgroup state."""
         assert self.state_updates is not None, "state_updates must be initialized"
         result = await self.state_updates.update_switch_from_subgroup(device, subgroup_state, subgroup_name)  # type: ignore

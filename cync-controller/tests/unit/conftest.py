@@ -1,5 +1,4 @@
-"""
-Shared fixtures for unit tests.
+"""Shared fixtures for unit tests.
 
 This module provides reusable fixtures for testing Cync LAN components.
 """
@@ -11,8 +10,7 @@ import pytest
 
 @pytest.fixture
 def mock_tcp_device():
-    """
-    Mock CyncTCPDevice for testing.
+    """Mock CyncTCPDevice for testing.
 
     Returns a MagicMock configured with common CyncTCPDevice attributes and methods.
     """
@@ -41,8 +39,7 @@ def mock_tcp_device():
 
 @pytest.fixture
 def mock_mqtt_client():
-    """
-    Mock MQTT client for testing.
+    """Mock MQTT client for testing.
 
     Returns an AsyncMock configured with common MQTT client methods.
     """
@@ -57,8 +54,7 @@ def mock_mqtt_client():
 
 @pytest.fixture
 def sample_control_packet():
-    """
-    Sample 0x73 control packet for testing.
+    """Sample 0x73 control packet for testing.
 
     This is a representative control packet (turn on command).
     """
@@ -69,8 +65,7 @@ def sample_control_packet():
 
 @pytest.fixture
 def sample_mesh_info_packet():
-    """
-    Sample 0x83 mesh info packet for testing.
+    """Sample 0x83 mesh info packet for testing.
 
     This is a representative mesh info response packet.
     """
@@ -79,14 +74,13 @@ def sample_mesh_info_packet():
     return bytes.fromhex(
         "83 00 00 00 2c 00 00 00 6e fc b9 57 0f 01 00 00 00 "
         "00 00 00 00 01 02 03 04 05 06 07 08 09 0a 0b 0c 0d 0e 0f "
-        "ab cd"
+        "ab cd",
     )
 
 
 @pytest.fixture
 def sample_broadcast_packet():
-    """
-    Sample 0x43 broadcast packet for testing.
+    """Sample 0x43 broadcast packet for testing.
 
     This is a representative broadcast state update packet.
     """
@@ -97,8 +91,7 @@ def sample_broadcast_packet():
 
 @pytest.fixture
 def sample_device_data():
-    """
-    Sample device configuration data for testing.
+    """Sample device configuration data for testing.
 
     Returns a dictionary with typical device configuration.
     """
@@ -115,8 +108,7 @@ def sample_device_data():
 
 @pytest.fixture
 def sample_group_data():
-    """
-    Sample group configuration data for testing.
+    """Sample group configuration data for testing.
 
     Returns a dictionary with typical group configuration.
     """
@@ -131,8 +123,7 @@ def sample_group_data():
 
 @pytest.fixture
 def mock_device():
-    """
-    Mock CyncDevice for testing.
+    """Mock CyncDevice for testing.
 
     Returns a MagicMock configured with common CyncDevice attributes.
     """
@@ -159,8 +150,7 @@ def mock_device():
 
 @pytest.fixture
 def mock_group():
-    """
-    Mock CyncGroup for testing.
+    """Mock CyncGroup for testing.
 
     Returns a MagicMock configured with common CyncGroup attributes.
     """
@@ -180,8 +170,7 @@ def mock_group():
 
 @pytest.fixture
 def mock_global_object():
-    """
-    Mock GlobalObject for testing.
+    """Mock GlobalObject for testing.
 
     Returns a MagicMock configured with common GlobalObject attributes.
     """
@@ -231,7 +220,7 @@ def stream_writer():
 @pytest.fixture
 def real_tcp_device():
     """Create a real CyncTCPDevice instance for testing"""
-    from cync_controller.devices import CyncTCPDevice
+    from cync_controller.devices.tcp_device import CyncTCPDevice
 
     # Create reader and writer with proper sync/async methods
     reader = MagicMock()

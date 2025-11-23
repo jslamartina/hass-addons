@@ -12,7 +12,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from cync_controller.const import CYNC_MAX_TCP_CONN
-from cync_controller.devices import CyncTCPDevice
+from cync_controller.devices.tcp_device import CyncTCPDevice
 
 
 @pytest.fixture

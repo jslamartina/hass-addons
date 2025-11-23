@@ -10,7 +10,7 @@ In normal operation, the Cync Controller add-on acts as a **local replacement** 
 
 With **Cloud Relay Mode** enabled, the add-on acts as a **transparent proxy**:
 
-````
+```text
 Device ←→ Cync Controller Relay ←→ Cync Cloud
               ↓
           MQTT/HA

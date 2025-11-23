@@ -11,7 +11,7 @@ import logging
 import sys
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 __all__ = [
     "CyncLogger",
@@ -41,8 +41,8 @@ class JSONFormatter(logging.Formatter):
         }
 
         # Add structured extra data if present
-        if hasattr(record, "extra_data") and record.extra_data:
-            log_data["context"] = record.extra_data  # type: ignore[assignment]
+        if hasattr(record, "extra_data") and getattr(record, "extra_data"):
+            log_data["context"] = getattr(record, "extra_data")
 
         # Add exception info if present
         if record.exc_info:
@@ -77,8 +77,8 @@ class HumanReadableFormatter(logging.Formatter):
         # Add structured extra data to message if present
         formatted = super().format(record)
 
-        if hasattr(record, "extra_data") and record.extra_data:
-            extra_data: dict[str, Any] = record.extra_data  # type: ignore[assignment]
+        if hasattr(record, "extra_data") and getattr(record, "extra_data"):
+            extra_data: dict[str, Any] = getattr(record, "extra_data")
             context_str = " | ".join(f"{k}={v}" for k, v in extra_data.items())
             formatted = f"{formatted} | {context_str}"
 
@@ -134,7 +134,7 @@ class CyncLogger:
         # JSON handler (file output)
         if self.log_format in ("json", "both") and json_file:
             try:
-                json_path = Path(json_file)
+                json_path = Path(cast("str | Path", json_file))
                 json_path.parent.mkdir(parents=True, exist_ok=True)
                 json_handler = logging.FileHandler(json_path, mode="a")
                 json_handler.setFormatter(JSONFormatter())
@@ -153,7 +153,7 @@ class CyncLogger:
             else:
                 # File path specified
                 try:
-                    human_path = Path(human_output)
+                    human_path = Path(cast("str | Path", human_output))
                     human_path.parent.mkdir(parents=True, exist_ok=True)
                     human_handler = logging.FileHandler(human_path, mode="a")
                 except (OSError, PermissionError) as e:

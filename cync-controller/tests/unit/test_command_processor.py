@@ -7,10 +7,11 @@ optimistic updates, error handling, and mesh refresh orchestration.
 
 import asyncio
 import contextlib
+from typing import override
 
 import pytest
 
-from cync_controller.mqtt_client import CommandProcessor, DeviceCommand
+from cync_controller.mqtt.commands import CommandProcessor, DeviceCommand
 
 # Filter RuntimeWarning about unawaited AsyncMockMixin coroutines from test cleanup
 pytestmark = pytest.mark.filterwarnings(
@@ -42,9 +43,11 @@ class TestCommandProcessorExecution:
                 self.cmd_id = cmd_id
                 super().__init__(f"test_{cmd_id}", cmd_id)
 
+            @override
             async def publish_optimistic(self):
                 pass
 
+            @override
             async def execute(self):
                 executed_order.append(self.cmd_id)
                 await asyncio.sleep(0.01)
@@ -78,9 +81,11 @@ class TestCommandProcessorExecution:
             def __init__(self):
                 super().__init__("test", 0)
 
+            @override
             async def publish_optimistic(self):
                 call_order.append("optimistic")
 
+            @override
             async def execute(self):
                 call_order.append("execute")
 
@@ -110,9 +115,11 @@ class TestCommandProcessorExecution:
             def __init__(self):
                 super().__init__("fail", 0)
 
+            @override
             async def publish_optimistic(self):
                 pass
 
+            @override
             async def execute(self):
                 executed.append("fail")
                 raise Exception("Command failed")
@@ -121,9 +128,11 @@ class TestCommandProcessorExecution:
             def __init__(self):
                 super().__init__("good", 1)
 
+            @override
             async def publish_optimistic(self):
                 pass
 
+            @override
             async def execute(self):
                 executed.append("good")
 
@@ -154,9 +163,11 @@ class TestCommandProcessorExecution:
             def __init__(self, cmd_id):
                 super().__init__(f"test_{cmd_id}", cmd_id)
 
+            @override
             async def publish_optimistic(self):
                 pass
 
+            @override
             async def execute(self):
                 nonlocal executed_count
                 executed_count += 1
@@ -189,9 +200,11 @@ class TestCommandProcessorExecution:
             def __init__(self, cmd_id):
                 super().__init__(f"test_{cmd_id}", cmd_id)
 
+            @override
             async def publish_optimistic(self):
                 pass
 
+            @override
             async def execute(self):
                 nonlocal executed_count
                 executed_count += 1
@@ -225,9 +238,11 @@ class TestCommandProcessorExecution:
             def __init__(self):
                 super().__init__("test", 0)
 
+            @override
             async def publish_optimistic(self):
                 pass
 
+            @override
             async def execute(self):
                 await asyncio.sleep(0.05)
 
@@ -256,10 +271,12 @@ class TestCommandProcessorExecution:
             def __init__(self):
                 super().__init__("test", 0)
 
+            @override
             async def publish_optimistic(self):
                 timing_log.append(("optimistic", 1))
                 await asyncio.sleep(0.01)
 
+            @override
             async def execute(self):
                 timing_log.append(("execute", 2))
                 await asyncio.sleep(0.01)
@@ -291,9 +308,11 @@ class TestCommandProcessorExecution:
             def __init__(self):
                 super().__init__("fail", 0)
 
+            @override
             async def publish_optimistic(self):
                 pass
 
+            @override
             async def execute(self):
                 results.append("fail")
                 raise RuntimeError("Test error")
@@ -302,9 +321,11 @@ class TestCommandProcessorExecution:
             def __init__(self):
                 super().__init__("success", 1)
 
+            @override
             async def publish_optimistic(self):
                 pass
 
+            @override
             async def execute(self):
                 results.append("success")
 

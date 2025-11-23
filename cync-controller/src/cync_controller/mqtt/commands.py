@@ -22,7 +22,7 @@ g = GlobalObject()
 class DeviceCommand:
     """Base class for device commands."""
 
-    def __init__(self, cmd_type: str, device_id: str | int, **kwargs) -> None:
+    def __init__(self, cmd_type: str, device_id: str | int, **kwargs: Any) -> None:
         """Initialize a device command.
 
         Args:
@@ -232,7 +232,9 @@ class SetPowerCommand(DeviceCommand):
 
     async def execute(self) -> tuple[asyncio.Event, list[CyncTCPDevice]] | None:
         """Execute the actual set_power command."""
-        return cast("tuple[asyncio.Event, list[CyncTCPDevice]] | None", await self.device_or_group.set_power(self.state))
+        return cast(
+            "tuple[asyncio.Event, list[CyncTCPDevice]] | None", await self.device_or_group.set_power(self.state)
+        )
 
 
 class SetBrightnessCommand(DeviceCommand):
@@ -262,5 +264,6 @@ class SetBrightnessCommand(DeviceCommand):
     async def execute(self) -> tuple[asyncio.Event, list[CyncTCPDevice]] | None:
         """Execute the actual set_brightness command."""
         return cast(
-            "tuple[asyncio.Event, list[CyncTCPDevice]] | None", await self.device_or_group.set_brightness(self.brightness),
+            "tuple[asyncio.Event, list[CyncTCPDevice]] | None",
+            await self.device_or_group.set_brightness(self.brightness),
         )

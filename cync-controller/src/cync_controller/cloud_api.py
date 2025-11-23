@@ -40,6 +40,7 @@ CYNC_ERROR_CODE_NOT_FOUND = 4041009
 # Maximum size for JSON cache files (10MB) - prevents memory exhaustion
 MAX_JSON_SIZE = 10 * 1024 * 1024
 
+
 # Constants for mesh data field names
 class MeshFieldNames:
     """Constants for mesh data field names."""

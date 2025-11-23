@@ -53,8 +53,7 @@ def _get_global_object():
 
 
 class CyncGroup:
-    """A class to represent a Cync group (room) from the config. Groups can control multiple devices with a single command.
-    """
+    """A class to represent a Cync group (room) from the config. Groups can control multiple devices with a single command."""
 
     lp: str = "CyncGroup:"
     id: int | None = None
@@ -208,7 +207,11 @@ class CyncGroup:
         return (bridge_device, queue_id, cmsg_id)
 
     def _build_group_payload(
-        self, header: list[int], inner_struct: list[int | str | bytes], queue_id: list[int], cmsg_id: int,
+        self,
+        header: list[int],
+        inner_struct: list[int | str | bytes],
+        queue_id: list[int],
+        cmsg_id: int,
     ) -> bytes:
         """Build payload bytes from header, inner_struct, queue_id, and cmsg_id."""
         payload: list[int] = list(header)

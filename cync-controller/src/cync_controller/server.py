@@ -24,7 +24,10 @@ if TYPE_CHECKING:
         """Protocol for MQTT client methods used in server.py."""
 
         async def parse_device_status(
-            self, device_id: int, device_status: DeviceStatus, from_pkt: str | None = None,
+            self,
+            device_id: int,
+            device_status: DeviceStatus,
+            from_pkt: str | None = None,
         ) -> bool:
             """Parse device status and publish to MQTT."""
             ...
@@ -819,7 +822,9 @@ class NCyncServer:
     loop: asyncio.AbstractEventLoop | uvloop.Loop
 
     def __new__(
-        cls, devices: dict[int, CyncDevice], groups: dict[int, CyncGroup] | None = None,
+        cls,
+        devices: dict[int, CyncDevice],
+        groups: dict[int, CyncGroup] | None = None,
     ) -> NCyncServer:
         if cls._instance is None:
             cls._instance = super().__new__(cls)

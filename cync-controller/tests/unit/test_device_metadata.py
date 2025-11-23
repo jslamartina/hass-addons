@@ -4,7 +4,7 @@ Unit tests for device metadata and classification.
 Tests device metadata access and property classification.
 """
 
-from cync_controller.devices import CyncDevice
+from cync_controller.devices.base_device import CyncDevice
 from cync_controller.metadata.model_info import DeviceClassification, device_type_map
 
 

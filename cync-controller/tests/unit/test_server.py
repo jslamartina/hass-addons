@@ -11,7 +11,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from cync_controller.devices import CyncTCPDevice
+from cync_controller.devices.tcp_device import CyncTCPDevice
 from cync_controller.server import CloudRelayConnection, NCyncServer
 
 
@@ -315,7 +315,7 @@ class TestNCyncServerTCPDeviceManagement:
             server = NCyncServer(devices={})
 
             # Import CyncTCPDevice to create proper instance
-            from cync_controller.devices import CyncTCPDevice
+            from cync_controller.devices.tcp_device import CyncTCPDevice
 
             mock_reader = AsyncMock()
             mock_writer = AsyncMock()
@@ -355,7 +355,7 @@ class TestNCyncServerTCPDeviceManagement:
             server = NCyncServer(devices={})
 
             # Import CyncTCPDevice to create proper instance
-            from cync_controller.devices import CyncTCPDevice
+            from cync_controller.devices.tcp_device import CyncTCPDevice
 
             mock_reader = AsyncMock()
             mock_writer = AsyncMock()
@@ -571,7 +571,7 @@ class TestPrimaryDeviceSelection:
 
             server = NCyncServer(devices={})
 
-            from cync_controller.devices import CyncTCPDevice
+            from cync_controller.devices.tcp_device import CyncTCPDevice
 
             mock_reader = AsyncMock()
             mock_writer = AsyncMock()
@@ -605,7 +605,7 @@ class TestPrimaryDeviceSelection:
 
             server = NCyncServer(devices={})
 
-            from cync_controller.devices import CyncTCPDevice
+            from cync_controller.devices.tcp_device import CyncTCPDevice
 
             # Add first device
             mock_reader1 = AsyncMock()
@@ -646,7 +646,7 @@ class TestPrimaryDeviceSelection:
 
             server = NCyncServer(devices={})
 
-            from cync_controller.devices import CyncTCPDevice
+            from cync_controller.devices.tcp_device import CyncTCPDevice
 
             # Add first device (becomes primary)
             mock_reader1 = AsyncMock()
@@ -698,7 +698,7 @@ class TestPrimaryDeviceSelection:
             server.tcp_devices.clear()
             server.primary_tcp_device = None
 
-            from cync_controller.devices import CyncTCPDevice
+            from cync_controller.devices.tcp_device import CyncTCPDevice
 
             # Add and remove only device
             mock_reader = AsyncMock()
@@ -742,7 +742,7 @@ class TestTCPDeviceCleanup:
 
             server = NCyncServer(devices={})
 
-            from cync_controller.devices import CyncTCPDevice
+            from cync_controller.devices.tcp_device import CyncTCPDevice
 
             mock_reader = AsyncMock()
             mock_writer = AsyncMock()
@@ -775,7 +775,7 @@ class TestTCPDeviceCleanup:
 
             server = NCyncServer(devices={})
 
-            from cync_controller.devices import CyncTCPDevice
+            from cync_controller.devices.tcp_device import CyncTCPDevice
 
             mock_reader = AsyncMock()
             mock_writer = AsyncMock()
@@ -902,7 +902,7 @@ class TestConnectionRegistration:
             server = NCyncServer(devices={})
 
             # Add existing device
-            from cync_controller.devices import CyncTCPDevice
+            from cync_controller.devices.tcp_device import CyncTCPDevice
 
             mock_reader_old = AsyncMock()
             mock_writer_old = AsyncMock()

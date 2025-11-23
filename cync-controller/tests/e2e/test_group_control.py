@@ -268,7 +268,7 @@ def test_individual_switch_toggle_no_flicker(ha_login: Page, ha_base_url: str):
 
     # Step 3: Monitor state transitions for the next 3 seconds
     print("\n[Step 3] Monitoring state for unwanted transitions over 3 seconds...")
-    state_transitions = []
+    state_transitions: list[dict[str, str | int | float | None]] = []
 
     # Check state at regular intervals
     for i in range(30):  # Check every 100ms for 3 seconds
@@ -424,8 +424,8 @@ def test_comprehensive_flicker_detection(ha_login: Page, ha_base_url: str):
         try:
             # Test each transition
             for i, transition in enumerate(scenario["transitions"]):  # type: ignore[reportUnknownVariableType]
-                target_state: str = cast(str, transition["to"])
-                description: str = cast(str, transition["description"])
+                target_state = transition["to"]
+                description = transition["description"]
 
                 print(f"\n  [{i + 1}/{len(scenario['transitions'])}] {description}")
 
@@ -456,7 +456,7 @@ def test_comprehensive_flicker_detection(ha_login: Page, ha_base_url: str):
                 print(f"    Initial state: {initial_state}")
 
                 # Record state transitions during the command
-                state_transitions = []
+                state_transitions: list[dict[str, str | float]] = []
                 start_time = page.evaluate("() => Date.now()")
 
                 # Click the target switch

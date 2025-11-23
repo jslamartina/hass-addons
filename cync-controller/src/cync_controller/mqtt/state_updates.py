@@ -125,7 +125,9 @@ class StateUpdateHelper:
             mqtt_dev_state = json.dumps(mqtt_dev_state).encode()  # send JSON
         return await self.send_device_status(device, mqtt_dev_state)
 
-    async def update_switch_from_subgroup(self, device: CyncDeviceProtocol, subgroup_state: int, subgroup_name: str) -> bool:  # type: ignore[valid-type]
+    async def update_switch_from_subgroup(
+        self, device: CyncDeviceProtocol, subgroup_state: int, subgroup_name: str
+    ) -> bool:  # type: ignore[valid-type]
         """Update a switch device state to match its subgroup state.
 
         Only updates switches that don't have pending commands (individual commands take precedence).

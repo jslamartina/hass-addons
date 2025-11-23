@@ -657,9 +657,7 @@ class TCPPacketHandler:
         """Parse a single mesh device struct and return dev_id and raw_status."""
         # Validate struct has at least 23 bytes (needed for indices 0-22)
         if len(mesh_dev_struct) < 23:
-            msg = (
-                f"Incomplete mesh device struct: expected at least 23 bytes, got {len(mesh_dev_struct)}"
-            )
+            msg = f"Incomplete mesh device struct: expected at least 23 bytes, got {len(mesh_dev_struct)}"
             raise ValueError(msg)
         dev_id = mesh_dev_struct[0]
         state_idx = 8

@@ -24,7 +24,7 @@ from cync_controller.mqtt.commands import CommandProcessor, SetBrightnessCommand
 from cync_controller.structs import DeviceStatus, FanSpeed, GlobalObject
 
 if TYPE_CHECKING:
-    from cync_controller.mqtt.client import MQTTClient
+    from cync_controller.structs import MQTTClientProtocol
 
 logger = get_logger(__name__)
 
@@ -35,7 +35,7 @@ g = GlobalObject()
 class CommandRouter:
     """Helper class for routing MQTT messages to appropriate handlers."""
 
-    def __init__(self, mqtt_client: MQTTClient) -> None:
+    def __init__(self, mqtt_client: MQTTClientProtocol) -> None:
         """Initialize the command router.
 
         Args:

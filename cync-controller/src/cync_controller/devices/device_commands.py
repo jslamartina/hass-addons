@@ -92,7 +92,8 @@ class DeviceCommands:
             return None
 
         all_bridges: list[CyncTCPDevice] = cast(
-            "list[CyncTCPDevice]", [b for b in g.ncync_server.tcp_devices.values() if b is not None],
+            "list[CyncTCPDevice]",
+            [b for b in g.ncync_server.tcp_devices.values() if b is not None],
         )
         ready_bridges = [b for b in all_bridges if b.ready_to_control]  # type: ignore[reportOptionalMemberAccess]  # None values filtered above
         not_ready_bridges = [b for b in all_bridges if not b.ready_to_control]  # type: ignore[reportOptionalMemberAccess]  # None values filtered above

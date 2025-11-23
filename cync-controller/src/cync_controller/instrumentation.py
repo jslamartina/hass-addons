@@ -1,5 +1,4 @@
-"""
-Performance instrumentation and timing for network operations.
+"""Performance instrumentation and timing for network operations.
 
 Provides decorators and utilities for automatic timing of operations with
 configurable thresholds and on/off toggles.
@@ -7,11 +6,10 @@ configurable thresholds and on/off toggles.
 
 from __future__ import annotations
 
-import asyncio
 import functools
 import time
-from collections.abc import Callable
-from typing import Any, ParamSpec, TypeVar, cast
+from collections.abc import Callable, Coroutine
+from typing import Any, ParamSpec, TypeVar
 
 __all__ = [
     "measure_time",
@@ -24,21 +22,20 @@ T = TypeVar("T")
 
 
 def measure_time(start_time: float) -> float:
-    """
-    Calculate elapsed time in milliseconds.
+    """Calculate elapsed time in milliseconds.
 
     Args:
         start_time: Start time from time.perf_counter()
 
     Returns:
         Elapsed time in milliseconds
+
     """
     return (time.perf_counter() - start_time) * 1000
 
 
-def timed(operation_name: str | None = None) -> Callable[..., Any]:
-    """
-    Decorator for timing synchronous functions with configurable threshold warnings.
+def timed(operation_name: str | None = None) -> Callable[[Callable[P, T]], Callable[P, T]]:
+    """Decorator for timing synchronous functions with configurable threshold warnings.
 
     Logs execution time and warns if operation exceeds configured threshold.
     Can be disabled via CYNC_PERF_TRACKING environment variable.
@@ -51,6 +48,7 @@ def timed(operation_name: str | None = None) -> Callable[..., Any]:
         def publish_message(topic, payload):
             # ... operation ...
             pass
+
     """
 
     def decorator(func: Callable[P, T]) -> Callable[P, T]:
@@ -82,9 +80,10 @@ def timed(operation_name: str | None = None) -> Callable[..., Any]:
     return decorator
 
 
-def timed_async(operation_name: str | None = None) -> Callable[..., Any]:
-    """
-    Decorator for timing async functions with configurable threshold warnings.
+def timed_async(
+    operation_name: str | None = None,
+) -> Callable[[Callable[P, Coroutine[Any, Any, T]]], Callable[P, Coroutine[Any, Any, T]]]:
+    """Decorator for timing async functions with configurable threshold warnings.
 
     Logs execution time and warns if operation exceeds configured threshold.
     Can be disabled via CYNC_PERF_TRACKING environment variable.
@@ -97,11 +96,12 @@ def timed_async(operation_name: str | None = None) -> Callable[..., Any]:
         async def read_packet(reader):
             # ... async operation ...
             pass
+
     """
 
     def decorator(
-        func: Callable[P, asyncio.coroutines.Coroutine[Any, Any, T]],
-    ) -> Callable[P, asyncio.coroutines.Coroutine[Any, Any, T]]:
+        func: Callable[P, Coroutine[Any, Any, T]],
+    ) -> Callable[P, Coroutine[Any, Any, T]]:
         @functools.wraps(func)
         async def wrapper(*args: P.args, **kwargs: P.kwargs) -> T:
             # Import here to avoid circular dependency
@@ -113,7 +113,7 @@ def timed_async(operation_name: str | None = None) -> Callable[..., Any]:
 
             # Skip timing if performance tracking is disabled
             if not CYNC_PERF_TRACKING:
-                result: T = cast(T, await func(*args, **kwargs))
+                result: T = await func(*args, **kwargs)
                 return result
 
             logger = get_logger(__name__)
@@ -121,26 +121,26 @@ def timed_async(operation_name: str | None = None) -> Callable[..., Any]:
 
             start_time = time.perf_counter()
             try:
-                result: T = cast(T, await func(*args, **kwargs))
+                result: T = await func(*args, **kwargs)
                 return result
             finally:
                 elapsed_ms = measure_time(start_time)
                 _log_timing(logger, op_name, elapsed_ms, CYNC_PERF_THRESHOLD_MS)
 
-        return wrapper  # type: ignore[return-value]
+        return wrapper
 
-    return decorator  # type: ignore[return-value]
+    return decorator
 
 
 def _log_timing(logger: Any, operation_name: str, elapsed_ms: float, threshold_ms: int):
-    """
-    Log timing information with appropriate level based on threshold.
+    """Log timing information with appropriate level based on threshold.
 
     Args:
         logger: Logger instance
         operation_name: Name of the operation
         elapsed_ms: Elapsed time in milliseconds
         threshold_ms: Warning threshold in milliseconds
+
     """
     if elapsed_ms > threshold_ms:
         logger.warning(

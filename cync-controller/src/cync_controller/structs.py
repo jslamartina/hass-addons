@@ -21,8 +21,12 @@ if TYPE_CHECKING:
 
     from cync_controller.cloud_api import CyncCloudAPI
     from cync_controller.exporter import ExportServer
-    from cync_controller.main import CyncController
-    from cync_controller.mqtt.client import MQTTClient
+
+    class CyncControllerProtocol(Protocol):
+        """Protocol for CyncController to break circular dependency."""
+
+        async def start(self) -> None: ...
+        async def stop(self) -> None: ...
 
     class CyncDeviceProtocol(Protocol):
         """Protocol for CyncDevice to break circular dependency."""
@@ -158,6 +162,7 @@ if TYPE_CHECKING:
         tcp_devices: dict[str, CyncTCPDeviceProtocol | None]
         running: bool
 
+
 from cync_controller.const import *
 
 logger = logging.getLogger(CYNC_LOG_NAME)
@@ -193,9 +198,9 @@ class GlobalObjEnv(BaseModel):
 
 
 class GlobalObject:
-    cync_lan: CyncController | None = None
+    cync_lan: CyncControllerProtocol | None = None  # type: ignore[assignment]
     ncync_server: NCyncServerProtocol | None = None  # type: ignore[assignment]
-    mqtt_client: MQTTClient | None = None
+    mqtt_client: MQTTClientProtocol | None = None  # type: ignore[assignment]
     loop: uvloop.Loop | asyncio.AbstractEventLoop | None = None
     export_server: ExportServer | None = None
     cloud_api: CyncCloudAPI | None = None
@@ -230,7 +235,8 @@ class GlobalObject:
         self.env.cync_srv_ssl_cert = os.environ.get("CYNC_SSL_CERT", f"{CYNC_BASE_DIR}/cync-controller/certs/cert.pem")
         self.env.cync_srv_ssl_key = os.environ.get("CYNC_SSL_KEY", f"{CYNC_BASE_DIR}/cync-controller/certs/key.pem")
         self.env.persistent_base_dir = os.environ.get(
-            "CYNC_PERSISTENT_BASE_DIR", "/homeassistant/.storage/cync-controller/config",
+            "CYNC_PERSISTENT_BASE_DIR",
+            "/homeassistant/.storage/cync-controller/config",
         )
 
         # Cloud relay configuration

@@ -11,7 +11,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from cync_controller.devices import ControlMessageCallback, CyncTCPDevice
+from cync_controller.devices.tcp_device import CyncTCPDevice
+from cync_controller.structs import ControlMessageCallback
 
 
 class TestCyncTCPDeviceAsyncTasks:

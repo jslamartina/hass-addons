@@ -1,12 +1,12 @@
-"""
-Unit tests for device edge cases and error paths.
+"""Unit tests for device edge cases and error paths.
 
 Tests error handling, edge value handling, and group aggregation with edge cases.
 """
 
 from unittest.mock import MagicMock, patch
 
-from cync_controller.devices import CyncDevice, CyncGroup
+from cync_controller.devices.base_device import CyncDevice
+from cync_controller.devices.group import CyncGroup
 from cync_controller.metadata.model_info import device_type_map
 
 

@@ -8,7 +8,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from cync_controller.devices import CyncTCPDevice
+from cync_controller.devices.tcp_device import CyncTCPDevice
 from tests.unit.test_helpers import create_packet
 
 
