@@ -69,10 +69,24 @@ USER ubuntu
 # Set working directory to user's home
 WORKDIR /home/ubuntu
 
-# Note: Python tools (pip, ruff, poetry) and Playwright installation
-# are now consolidated in .cursor/setup-worktree.sh, which should be called
-# after the repository is cloned by the background agent:
-#   cd /path/to/cloned/repo && .cursor/setup-worktree.sh
+# Install auto-setup hook in bashrc
+# This automatically runs setup-worktree.sh when entering a hass-addons repo
+RUN echo '' >> ~/.bashrc && \
+    echo '# Auto-setup hass-addons worktree when entering repo directory' >> ~/.bashrc && \
+    echo 'auto_setup_worktree() {' >> ~/.bashrc && \
+    echo '  # Check if we are in a hass-addons repo and setup-worktree.sh exists' >> ~/.bashrc && \
+    echo '  if [ -f ".cursor/setup-worktree.sh" ] && [ -f "package.json" ] && [ -d "cync-controller" ]; then' >> ~/.bashrc && \
+    echo '    # Check if already set up (venv exists)' >> ~/.bashrc && \
+    echo '    if [ ! -d ".venv" ]; then' >> ~/.bashrc && \
+    echo '      echo "🔧 Auto-detected hass-addons repo - running setup-worktree.sh..."' >> ~/.bashrc && \
+    echo '      bash .cursor/setup-worktree.sh' >> ~/.bashrc && \
+    echo '    fi' >> ~/.bashrc && \
+    echo '  fi' >> ~/.bashrc && \
+    echo '}' >> ~/.bashrc && \
+    echo '# Run auto-setup on directory change' >> ~/.bashrc && \
+    echo 'cd() { command cd "$@" && auto_setup_worktree; }' >> ~/.bashrc && \
+    echo '# Run on initial shell start if already in repo' >> ~/.bashrc && \
+    echo 'auto_setup_worktree' >> ~/.bashrc
 
 # Set default shell to bash
 SHELL ["/bin/bash", "-c"]

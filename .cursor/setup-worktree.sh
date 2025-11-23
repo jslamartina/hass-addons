@@ -112,6 +112,7 @@ setup_python_environment() {
     pytest-xdist \
     pre-commit \
     uv \
+    basedpyright \
     > /dev/null
 
   # Install dependencies from all Python projects
