@@ -265,7 +265,7 @@ class TestDeviceErrorPaths:
         """Test device rejects out-of-range brightness values"""
         with patch("cync_controller.devices.shared.g") as mock_g:
             mock_g.ncync_server = MagicMock()
-            mock_g.ncync_server.tcp_devices = {}  # type: ignore[reportAny]
+            mock_g.ncync_server.tcp_devices = {}
             mock_g.mqtt_client = AsyncMock()
 
             device = CyncDevice(cync_id=0x1234)
