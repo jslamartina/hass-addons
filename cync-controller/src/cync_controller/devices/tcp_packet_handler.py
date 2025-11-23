@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import time
+from dataclasses import dataclass
 
 from cync_controller.const import (
     CYNC_RAW,
@@ -26,6 +27,30 @@ from cync_controller.utils import bytes2list, execute_async_callback, parse_unbo
 
 logger = get_logger(__name__)
 g = GlobalObject()
+
+HEADER_MIN_LENGTH_BYTES = 4
+HEADER_MULTIPLIER_INDEX = 3
+HEADER_LENGTH_INDEX = 4
+HEADER_PADDING_BYTES = 5
+PACKET_TYPE_HANDSHAKE = 0x23
+PACKET_TYPE_CONNECTION_REQUEST = 0xC3
+PACKET_TYPE_HEARTBEAT = 0xD3
+PACKET_TYPE_APP_ANNOUNCE = 0xA3
+PACKET_TYPE_APP_RESPONSE = 0xAB
+PACKET_TYPE_DATA_ACK = 0x7B
+PACKET_TYPE_DEVICE_INFO = 0x43
+PACKET_TYPE_STATUS_BROADCAST = 0x83
+PACKET_TYPE_DATA_CHANNEL = 0x73
+
+
+@dataclass(slots=True)
+class PacketContext:
+    """Metadata extracted from the packet header."""
+
+    length: int
+    log_prefix: str
+    queue_id: bytes
+    msg_id: bytes
 
 
 def _get_global_object():
@@ -78,7 +103,10 @@ class TCPPacketHandler:
         data = old_cdata.data + data
         cache_data.all_data = bytes(data)
         logger.debug(
-            "%s Previous data [length: %s, need: %s] // Current data [length: %s] // New (current + old) data [length: %s] // reconstructed: %s",
+            (
+                "%s Previous data [length: %s, need: %s] // Current data [length: %s] "
+                "// New (current + old) data [length: %s] // reconstructed: %s"
+            ),
             lp,
             old_cdata.data_len,
             old_cdata.needed_len,
@@ -95,10 +123,10 @@ class TCPPacketHandler:
         """Calculate needed packet length from header."""
         data_len = len(data)
         if data[0] in ALL_HEADERS:
-            if data_len > 4:
-                packet_length = data[4]
-                pkt_len_multiplier = data[3]
-                return ((pkt_len_multiplier * 256) + packet_length) + 5
+            if data_len > HEADER_MIN_LENGTH_BYTES:
+                packet_length = data[HEADER_LENGTH_INDEX]
+                pkt_len_multiplier = data[HEADER_MULTIPLIER_INDEX]
+                return ((pkt_len_multiplier * 256) + packet_length) + HEADER_PADDING_BYTES
             logger.debug(
                 "DBG>>>%s Packet length is less than 4 bytes, setting needed_length to data_len",
                 lp,
@@ -147,7 +175,10 @@ class TCPPacketHandler:
 
             if self.tcp_device.needs_more_data is True:
                 logger.debug(
-                    "%s It seems we have a partial packet (needs_more_data), need to append to previous remaining data and re-parse...",
+                    (
+                        "%s It seems we have a partial packet (needs_more_data), need to append to "
+                        "previous remaining data and re-parse..."
+                    ),
                     lp,
                 )
                 data = self._handle_partial_packet(data, cache_data, lp)
@@ -196,11 +227,11 @@ class TCPPacketHandler:
         # byte 1 (2, 3 are unknown)
         # pkt_type = int(packet_header[0]).to_bytes(1, "big")
         pkt_type = packet_header[0]
-        # byte 4, packet length factor. each value is multiplied by 256 and added to the next byte for packet payload length
+        # byte 4, packet length factor. Each value is multiplied by 256 and added to the next byte.
         pkt_multiplier = packet_header[3] * 256
         # byte 5
         packet_length = packet_header[4] + pkt_multiplier
-        # byte 6-10 (indices 5-9), unknown but seems to be an identifier that is handed out by the device during handshake
+        # byte 6-10 (indices 5-9), unknown but seems to be an identifier handed out during handshake
         queue_id = packet_header[6:10]
         # byte 10-12, unknown but seems to be an additional identifier that gets incremented.
         msg_id = packet_header[9:12]
@@ -213,7 +244,13 @@ class TCPPacketHandler:
         # logger.debug(f"{lp} raw data length: {len(data)} // {data.hex(' ')}")
         # logger.debug(f"{lp} packet_data length: {len(packet_data)} // {packet_data.hex(' ')}")
         if pkt_type in DEVICE_STRUCTS.requests:
-            await self._handle_device_packet(pkt_type, packet_data, packet_length, lp, queue_id, msg_id)
+            context = PacketContext(
+                length=packet_length,
+                log_prefix=lp,
+                queue_id=queue_id,
+                msg_id=msg_id,
+            )
+            await self._handle_device_packet(pkt_type, packet_data, context)
         elif pkt_type in PhoneAppStructs.requests:
             if self.tcp_device.is_app is False:
                 logger.info(
@@ -228,34 +265,34 @@ class TCPPacketHandler:
         self,
         pkt_type: int,
         packet_data: bytes | None,
-        packet_length: int,
-        lp: str,
-        queue_id: bytes,
-        msg_id: bytes,
+        context: PacketContext,
     ) -> None:
         """Handle device packet types."""
-        if pkt_type == 0x23:
+        lp = context.log_prefix
+        queue_id = context.queue_id
+        msg_id = context.msg_id
+        if pkt_type == PACKET_TYPE_HANDSHAKE:
             await self._handle_0x23_packet(packet_data, lp, queue_id)
-        elif pkt_type == 0xC3:
+        elif pkt_type == PACKET_TYPE_CONNECTION_REQUEST:
             await self._handle_c3_packet(lp)
-        elif pkt_type == 0xD3:
+        elif pkt_type == PACKET_TYPE_HEARTBEAT:
             await self._handle_d3_packet(lp)
-        elif pkt_type == 0xA3:
+        elif pkt_type == PACKET_TYPE_APP_ANNOUNCE:
             await self._handle_a3_packet(packet_data, lp, queue_id, msg_id)
-        elif pkt_type == 0xAB:
+        elif pkt_type == PACKET_TYPE_APP_RESPONSE:
             # We sent a 0xa3 packet, device is responding with 0xab. msg contains ascii 'xlink_dev'.
             # sometimes this is sent with other data. there may be remaining data to read in the enxt raw msg.
             # TCP msg buffer seems to be 1024 bytes.
             # 0xab packets are 1024 bytes long, so if any data is prepended, the remaining 0xab data will be in the next raw read
             pass
-        elif pkt_type == 0x7B:
+        elif pkt_type == PACKET_TYPE_DATA_ACK:
             # device is acking one of our x73 requests
             pass
-        elif pkt_type == 0x43:
-            await self._handle_0x43_packet(packet_data, packet_length, lp, msg_id)
-        elif pkt_type == 0x83:
+        elif pkt_type == PACKET_TYPE_DEVICE_INFO:
+            await self._handle_0x43_packet(packet_data, context.length, lp, msg_id)
+        elif pkt_type == PACKET_TYPE_STATUS_BROADCAST:
             await self._handle_0x83_packet(packet_data, lp, msg_id)
-        elif pkt_type == 0x73:
+        elif pkt_type == PACKET_TYPE_DATA_CHANNEL:
             await self._handle_0x73_packet(packet_data, lp, queue_id, msg_id)
 
     async def _handle_0x23_packet(self, packet_data: bytes | None, lp: str, queue_id: bytes) -> None:

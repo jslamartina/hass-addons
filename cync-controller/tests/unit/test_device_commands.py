@@ -4,7 +4,8 @@ Tests fan commands, lightshow commands, and error path handling.
 """
 # pyright: reportCallIssue=false, reportAttributeAccessIssue=false, reportUnknownVariableType=false, reportUnknownMemberType=false, reportAny=false, reportExplicitAny=false, reportUnusedParameter=false, reportUnusedCallResult=false
 
-from typing import Any
+import logging
+from typing import Any, cast
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -53,6 +54,22 @@ class TestCyncDeviceFanCommands:
             _ = await device.set_fan_speed(FanSpeed.HIGH)  # type: ignore[reportAny, reportUnknownVariableType, reportUnknownMemberType, reportAttributeAccessIssue]
 
             assert "is not a fan controller" in caplog.text  # type: ignore[reportAny]
+
+    @pytest.mark.asyncio
+    async def test_set_fan_speed_invalid_value_returns_false(self, caplog: Any) -> None:  # type: ignore[assignment, reportExplicitAny]
+        """Test set_fan_speed logs error and returns False for invalid speeds."""
+        from cync_controller.structs import FanSpeed
+
+        device = CyncDevice(cync_id=0x1234)  # type: ignore[call-arg, reportCallIssue]
+        device.is_fan_controller = True  # type: ignore[assignment, reportAttributeAccessIssue]
+
+        caplog.set_level(logging.ERROR)  # type: ignore[reportAny]
+        invalid_speed = cast(FanSpeed, "turbo")
+
+        result = await device.set_fan_speed(invalid_speed)  # type: ignore[reportAny, reportUnknownVariableType, reportUnknownMemberType, reportAttributeAccessIssue]
+
+        assert result is False
+        assert "Invalid fan speed" in caplog.text  # type: ignore[reportAny]
 
 
 class TestCyncDeviceLightshowCommand:

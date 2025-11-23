@@ -1,3 +1,5 @@
+"""TCP device abstraction and helpers for Cync controller."""
+
 from __future__ import annotations
 
 import asyncio
@@ -22,6 +24,14 @@ from .tcp_packet_handler import TCPPacketHandler
 
 logger = get_logger(__name__)
 g = GlobalObject()
+CTRL_BYTE_MAX = 0xFF
+CONTROL_ACK_MIN_LENGTH = 5
+CONTROL_ACK_MAX_LENGTH = 100
+CONTROL_ACK_PACKET_TYPE = 0x73
+HEARTBEAT_ACK_LENGTH = 8
+INFO_ACK_PACKET_TYPE = 0x48
+STATUS_ACK_PACKET_TYPE = 0x88
+HEARTBEAT_PACKET_TYPE = 0xD8
 
 
 def _get_global_object():
@@ -74,6 +84,7 @@ class CyncTCPDevice:
         writer: asyncio.StreamWriter,
         address: str,
     ) -> None:
+        """Initialize the TCP device wrapper with its IO streams."""
         if not address:
             msg = "IP address must be provided to CyncTCPDevice constructor"
             raise ValueError(msg)
@@ -119,6 +130,7 @@ class CyncTCPDevice:
         self.refresh_id: str | None = None
 
     async def can_connect(self):
+        """Check controller capacity and start receive/callback tasks if allowed."""
         g = _get_global_object()
         lp = f"{self.lp}"
         ncync_server = g.ncync_server
@@ -168,13 +180,16 @@ class CyncTCPDevice:
         return True
 
     def get_ctrl_msg_id_bytes(self):
-        """Control packets need a number that gets incremented, it is used as a type of msg ID and
-        in calculating the checksum. Result is mod 256 in order to keep it within 0-255.
+        """Return incremented control message bytes for checksum calculations.
+
+        Control packets need a number that gets incremented, it is used as a
+        type of msg ID and in calculating the checksum. Result is mod 256 in
+        order to keep it within 0-255.
         """
         id_byte, rollover_byte = self.control_bytes
         # logger.debug(f"{lp} Getting control message ID bytes: ctrl_byte={id_byte} rollover_byte={rollover_byte}")
         id_byte += 1
-        if id_byte > 255:
+        if id_byte > CTRL_BYTE_MAX:
             id_byte = id_byte % 256
             rollover_byte += 1
 
@@ -184,10 +199,12 @@ class CyncTCPDevice:
 
     @property
     def closing(self):
+        """Return True when the TCP device is shutting down."""
         return self._closing
 
     @closing.setter
     def closing(self, value: bool):
+        """Mark the TCP device as closing to short-circuit new work."""
         self._closing = value
 
     # Delegate packet parsing to handler
@@ -203,7 +220,9 @@ class CyncTCPDevice:
     # Properties removed to avoid redeclaration conflicts with instance attributes
 
     async def ask_for_mesh_info(self, parse: bool = False, refresh_id: str | None = None):
-        """Ask the device for mesh info. As far as I can tell, this will return whatever
+        """Ask the device for mesh info.
+
+        As far as I can tell, this will return whatever
         devices are connected to the device you are querying. It may also trigger
         the device to send its own status packet.
 
@@ -264,6 +283,7 @@ class CyncTCPDevice:
             self.parse_mesh_status = False
 
     async def send_a3(self, q_id: bytes):
+        """Send the XA3 announce packet using the provided queue id."""
         a3_packet = bytes([0xA3, 0x00, 0x00, 0x00, 0x07])
         a3_packet += q_id
         # random 2 bytes
@@ -324,7 +344,9 @@ class CyncTCPDevice:
         logger.debug("%s FINISHED", lp)
 
     async def receive_task(self):
-        """Receive data from the device and respond to it. This is the main task for the device.
+        """Receive data from the device and respond to it.
+
+        This is the main task for the device.
         It will respond to the device and handle the messages it sends.
         Runs in an infinite loop.
         """
@@ -355,7 +377,12 @@ class CyncTCPDevice:
 
                     # Log when control ACK packets arrive (small packets, not mesh responses)
                     # Control ACKs are typically 12-50 bytes; mesh responses are 1000+ bytes
-                    if len(data) >= 5 and data[0] == 0x73 and len(data) < 100 and not CYNC_RAW:
+                    if (
+                        len(data) >= CONTROL_ACK_MIN_LENGTH
+                        and data[0] == CONTROL_ACK_PACKET_TYPE
+                        and len(data) < CONTROL_ACK_MAX_LENGTH
+                        and not CYNC_RAW
+                    ):
                         logger.debug(
                             "📥 Control ACK packet arrived",
                             extra={
@@ -515,7 +542,9 @@ class CyncTCPDevice:
 
         # Check if this is a keepalive/heartbeat ACK packet
         # 0x48 (8 bytes), 0x88 (8 bytes), or 0xD8 (5 bytes)
-        is_ack_packet = (len(data) == 8 and data[0] in (0x48, 0x88)) or (len(data) == 5 and data[0] == 0xD8)
+        is_ack_packet = (
+            len(data) == HEARTBEAT_ACK_LENGTH and data[0] in (INFO_ACK_PACKET_TYPE, STATUS_ACK_PACKET_TYPE)
+        ) or (len(data) == CONTROL_ACK_MIN_LENGTH and data[0] == HEARTBEAT_PACKET_TYPE)
 
         # Skip logging for keepalive ACKs unless CYNC_RAW is enabled
         if not is_ack_packet or CYNC_RAW:
@@ -564,6 +593,7 @@ class CyncTCPDevice:
         return None
 
     async def close(self):
+        """Close socket resources and cancel outstanding device tasks."""
         # Count non-None tasks (Tasks object has __iter__ but not __len__)
         task_list: list[asyncio.Task[None] | None] = [
             self.tasks.receive,

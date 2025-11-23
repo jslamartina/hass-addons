@@ -53,9 +53,13 @@
     "cursorpyright.analysis.autoImportCompletions": true,
     "cursorpyright.analysis.typeCheckingMode": "strict",
     "cursorpyright.analysis.extraPaths": [
+      "typings",
       "cync-controller/src",
+      "scripts/playwright",
       "python-rebuild-tcp-comm",
-      "python-rebuild-tcp-comm/src"
+      "python-rebuild-tcp-comm/src",
+      "python-rebuild-tcp-comm/mitm",
     ],
+    "cursorpyright.analysis.stubPath": "typings",
   },
 }

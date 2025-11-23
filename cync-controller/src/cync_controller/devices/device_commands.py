@@ -311,6 +311,15 @@ class DeviceCommands:
                 _ = await self.set_brightness(75)
             elif speed == FanSpeed.MAX:
                 _ = await self.set_brightness(100)
+            else:
+                logger.error(
+                    "%s Invalid fan speed '%s' for device '%s' (%s)",
+                    lp,
+                    speed,
+                    self.name,
+                    self.id,
+                )
+                return False
         except asyncio.CancelledError:
             raise
         except Exception as e:

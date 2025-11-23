@@ -42,8 +42,8 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 try:
-    from mitm.interfaces.packet_observer import PacketDirection, PacketObserver
-    from mitm.validation.codec_validator import CodecValidatorPlugin
+    from interfaces.packet_observer import PacketDirection, PacketObserver
+    from validation.codec_validator import CodecValidatorPlugin
 except ModuleNotFoundError:
     # For direct execution as script
     from interfaces.packet_observer import PacketDirection, PacketObserver

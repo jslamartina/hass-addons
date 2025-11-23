@@ -10,6 +10,10 @@ from pathlib import Path
 from typing import Any, cast
 
 import pytest
+from _pytest.config import Config
+from _pytest.fixtures import FixtureRequest
+from _pytest.nodes import Node
+from _pytest.terminal import TerminalReporter
 
 from .performance import PerformanceTracker
 
@@ -266,13 +270,14 @@ async def mock_tcp_server_timeout() -> AsyncGenerator[MockTCPServer]:
 
 
 @pytest.fixture
-def unique_device_id(request: pytest.FixtureRequest) -> str:
+def unique_device_id(request: FixtureRequest) -> str:
     """Generate unique device ID for each test to avoid metric collisions.
 
     Uses the test node ID to ensure uniqueness.
     """
     # Use test name as device ID to ensure uniqueness
-    test_name: str = cast(str, getattr(request.node, "name", ""))  # pyright: ignore[reportUnknownMemberType, reportUnknownArgumentType]
+    node = cast(Node, request.node)
+    test_name = node.name
     # Sanitize for use as device_id
     device_id: str = test_name.replace("[", "_").replace("]", "_").replace("-", "_")
     return f"TEST_{device_id}"
@@ -295,7 +300,11 @@ def performance_tracker() -> PerformanceTracker:
     return PerformanceTracker()
 
 
-def pytest_terminal_summary(terminalreporter: Any, exitstatus: int, config: Any) -> None:  # noqa: ARG001
+def pytest_terminal_summary(
+    terminalreporter: TerminalReporter,
+    exitstatus: int,
+    config: Config,
+) -> None:
     """Hook to display performance report at end of test session."""
     # Get the performance tracker from the session
     tracker = getattr(config, "_performance_tracker", None)
@@ -317,9 +326,10 @@ def pytest_terminal_summary(terminalreporter: Any, exitstatus: int, config: Any)
 
 @pytest.fixture(scope="session", autouse=True)
 def _init_performance_tracker(  # pyright: ignore[reportUnusedFunction]
-    request: pytest.FixtureRequest,
+    request: FixtureRequest,
     performance_tracker: PerformanceTracker,
 ) -> PerformanceTracker:
     """Initialize performance tracker in pytest config."""
-    request.config._performance_tracker = performance_tracker  # pyright: ignore[reportAttributeAccessIssue]
+    config: Config = request.config
+    setattr(config, "_performance_tracker", performance_tracker)
     return performance_tracker

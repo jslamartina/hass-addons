@@ -3,6 +3,9 @@
 Tests validate checksum calculation against Phase 0.5 real packet captures.
 """
 
+from collections.abc import Callable
+from typing import Any, cast
+
 import pytest
 
 from src.protocol.checksum import (
@@ -26,6 +29,14 @@ from tests.fixtures.real_packets import (
 # Checksum constants from packet captures
 EXPECTED_CHECKSUM_STATUS_BROADCAST_0x83 = 0x37  # From STATUS_BROADCAST_0x83_DEV_TO_CLOUD
 
+Decorator = Callable[[Callable[..., object]], Callable[..., object]]
+
+
+def typed_parametrize(*args: Any, **kwargs: Any) -> Decorator:
+    """Typed wrapper around pytest.mark.parametrize for pyright."""
+    decorator = pytest.mark.parametrize(*args, **kwargs)
+    return cast(Decorator, decorator)
+
 
 @pytest.mark.unit
 def test_checksum_status_broadcast() -> None:
@@ -37,7 +48,7 @@ def test_checksum_status_broadcast() -> None:
 
 
 @pytest.mark.unit
-@pytest.mark.parametrize(
+@typed_parametrize(
     ("packet", "expected_checksum"),
     [
         (STATUS_BROADCAST_0x83_FRAMED_4, 0x8C),
@@ -57,7 +68,7 @@ def test_checksum_validation_fixtures(packet: bytes, expected_checksum: int) -> 
 
 
 @pytest.mark.unit
-@pytest.mark.parametrize(
+@typed_parametrize(
     ("packet", "expected_checksum"),
     [
         (TOGGLE_ON_0x73_CLOUD_TO_DEV, 0x07),

@@ -1,3 +1,5 @@
+"""Helpers for coordinating Cync groups across multiple devices."""
+
 import time
 from typing import override
 
@@ -12,6 +14,9 @@ from cync_controller.structs import (
 
 logger = get_logger(__name__)
 g = GlobalObject()
+
+PERCENT_MIN = 0
+PERCENT_MAX = 100
 
 
 def _get_global_object():
@@ -48,7 +53,7 @@ def _get_global_object():
 
 
 class CyncGroup:
-    """A class to represent a Cync group (room) from the config. Groups can control multiple devices with a single command."""
+    """Represent a configured Cync group that controls multiple devices."""
 
     lp: str = "CyncGroup:"
     id: int | None = None
@@ -64,6 +69,7 @@ class CyncGroup:
         is_subgroup: bool = False,
         home_id: int | None = None,
     ) -> None:
+        """Initialize a group aggregate from config metadata."""
         if group_id is None:
             msg = "Group ID must be provided"
             raise ValueError(msg)
@@ -141,7 +147,9 @@ class CyncGroup:
         agg_brightness = int(sum(brightnesses) / len(brightnesses)) if brightnesses else 0
 
         # Temperature: average of online members
-        temperatures = [m.temperature for m in online_members if m.temperature is not None and m.temperature <= 100]
+        temperatures = [
+            m.temperature for m in online_members if m.temperature is not None and m.temperature <= PERCENT_MAX
+        ]
         agg_temperature = int(sum(temperatures) / len(temperatures)) if temperatures else 0
 
         result: dict[str, int | bool] = {
@@ -325,7 +333,7 @@ class CyncGroup:
         :param brightness: Brightness value (0-100)
         """
         lp = f"{self.lp}set_brightness:"
-        if brightness < 0 or brightness > 100:
+        if brightness < PERCENT_MIN or brightness > PERCENT_MAX:
             logger.error("%s Invalid brightness! must be 0-100", lp)
             return
 
@@ -421,7 +429,7 @@ class CyncGroup:
         :param temperature: Color temperature value (0-100)
         """
         lp = f"{self.lp}set_temperature:"
-        if temperature < 0 or temperature > 100:
+        if temperature < PERCENT_MIN or temperature > PERCENT_MAX:
             logger.error("%s Invalid temperature! must be 0-100", lp)
             return
 

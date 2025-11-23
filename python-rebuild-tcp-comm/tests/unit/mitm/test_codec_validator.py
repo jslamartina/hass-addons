@@ -2,7 +2,7 @@
 
 import logging
 
-import pytest
+from _pytest.logging import LogCaptureFixture
 
 from mitm.interfaces.packet_observer import PacketDirection
 from mitm.validation.codec_validator import CodecValidatorPlugin
@@ -60,7 +60,7 @@ class TestConnectionLifecycle:
 class TestPacketValidation:
     """Test packet decoding and validation."""
 
-    def test_decode_valid_handshake(self, caplog: pytest.LogCaptureFixture) -> None:
+    def test_decode_valid_handshake(self, caplog: LogCaptureFixture) -> None:
         """Test decoding valid handshake packet logs success."""
         plugin = CodecValidatorPlugin()
         connection_id = 1
@@ -78,7 +78,7 @@ class TestPacketValidation:
         success_record = next(r for r in caplog.records if "Phase 1a codec validated" in r.message)
         assert getattr(success_record, "type", None) == "0x23"
 
-    def test_decode_valid_data_packet(self, caplog: pytest.LogCaptureFixture) -> None:
+    def test_decode_valid_data_packet(self, caplog: LogCaptureFixture) -> None:
         """Test decoding valid data packet logs success."""
         plugin = CodecValidatorPlugin()
         connection_id = 2
@@ -95,7 +95,7 @@ class TestPacketValidation:
         success_record = next(r for r in caplog.records if "Phase 1a codec validated" in r.message)
         assert getattr(success_record, "type", None) == "0x73"
 
-    def test_decode_valid_status_broadcast(self, caplog: pytest.LogCaptureFixture) -> None:
+    def test_decode_valid_status_broadcast(self, caplog: LogCaptureFixture) -> None:
         """Test decoding valid status broadcast packet logs success."""
         plugin = CodecValidatorPlugin()
         connection_id = 3
@@ -112,7 +112,7 @@ class TestPacketValidation:
         success_record = next(r for r in caplog.records if "Phase 1a codec validated" in r.message)
         assert getattr(success_record, "type", None) == "0x83"
 
-    def test_decode_invalid_packet(self, caplog: pytest.LogCaptureFixture) -> None:
+    def test_decode_invalid_packet(self, caplog: LogCaptureFixture) -> None:
         """Test decoding invalid packet logs error without crashing."""
         plugin = CodecValidatorPlugin()
         connection_id = 4
@@ -120,18 +120,20 @@ class TestPacketValidation:
         # Create a packet with valid header but invalid data (missing 0x7e markers for 0x73)
         # Header: type=0x73, length=10
         malformed_data = bytes([0x73, 0x00, 0x00, 0x00, 0x0A]) + bytes(
-            10
+            10,
         )  # 10 random bytes without proper structure
 
         with caplog.at_level(logging.ERROR):
             plugin.on_packet_received(
-                PacketDirection.CLOUD_TO_DEVICE, malformed_data, connection_id
+                PacketDirection.CLOUD_TO_DEVICE,
+                malformed_data,
+                connection_id,
             )
 
         # Plugin should log error but not crash
         assert any("Phase 1a validation failed" in record.message for record in caplog.records)
 
-    def test_partial_packet_buffering(self, caplog: pytest.LogCaptureFixture) -> None:
+    def test_partial_packet_buffering(self, caplog: LogCaptureFixture) -> None:
         """Test that partial packets are buffered until complete."""
         plugin = CodecValidatorPlugin()
         connection_id = 5

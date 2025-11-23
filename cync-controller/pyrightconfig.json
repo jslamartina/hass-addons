@@ -1,17 +1,12 @@
 {
-  "typeCheckingMode": "strict",
+  "extends": "../pyrightconfig.json",
   "include": ["."],
-  "extraPaths": ["src", "../scripts/playwright", "typings"],
   "venvPath": "..",
   "venv": ".venv",
-  "useLibraryCodeForTypes": true,
-  "reportMissingImports": "error",
-  "reportPrivateUsage": "error",
-  "stubPath": "typings",
   "executionEnvironments": [
     {
       "root": ".",
-      "extraPaths": ["src", "../scripts/playwright", "typings"]
+      "extraPaths": ["src", "../scripts/playwright"]
     }
   ]
 }

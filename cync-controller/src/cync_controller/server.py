@@ -5,7 +5,7 @@ import contextlib
 import ssl
 import time
 from pathlib import Path as PathLib
-from typing import TYPE_CHECKING, ClassVar, Protocol, cast
+from typing import TYPE_CHECKING, ClassVar, cast
 
 import uvloop
 
@@ -16,35 +16,6 @@ if TYPE_CHECKING:
     from cync_controller.devices.base_device import CyncDevice
     from cync_controller.devices.group import CyncGroup
     from cync_controller.devices.tcp_device import CyncTCPDevice
-    from cync_controller.mqtt.client import MQTTClient
-    from cync_controller.mqtt.state_updates import StateUpdateHelper
-    from cync_controller.structs import DeviceStatus
-
-    class MQTTClientProtocol(Protocol):
-        """Protocol for MQTT client methods used in server.py."""
-
-        async def parse_device_status(
-            self,
-            device_id: int,
-            device_status: DeviceStatus,
-            from_pkt: str | None = None,
-        ) -> bool:
-            """Parse device status and publish to MQTT."""
-            ...
-
-    class StateUpdateHelperProtocol(Protocol):
-        """Protocol for StateUpdateHelper methods used in server.py."""
-
-        async def publish_group_state(
-            self,
-            group: CyncGroup,
-            state: int | None = None,
-            brightness: int | None = None,
-            temperature: int | None = None,
-            origin: str | None = None,
-        ) -> None:
-            """Publish group state to MQTT."""
-            ...
 else:
     from cync_controller.devices.base_device import CyncDevice
     from cync_controller.devices.group import CyncGroup
@@ -53,13 +24,23 @@ from cync_controller.instrumentation import timed_async
 from cync_controller.logging_abstraction import get_logger
 from cync_controller.packet_checksum import calculate_checksum_between_markers
 from cync_controller.packet_parser import format_packet_log, parse_cync_packet
-from cync_controller.structs import DeviceStatus, GlobalObject
+from cync_controller.structs import (
+    DeviceStatus,
+    GlobalObject,
+    MQTTClientProtocol,
+    StateUpdateHelperProtocol,
+)
 
 __all__ = [
     "NCyncServer",
 ]
 logger = get_logger(__name__)
 g = GlobalObject()
+
+
+def _get_mqtt_client() -> MQTTClientProtocol | None:
+    """Return the global MQTT client with protocol typing."""
+    return cast("MQTTClientProtocol | None", g.mqtt_client)
 
 
 class CloudRelayConnection:
@@ -308,9 +289,7 @@ class CloudRelayConnection:
                     statuses_obj = parsed.get("device_statuses")
                     if isinstance(statuses_obj, list):
                         status_dicts: list[dict[str, object]] = [
-                            cast(dict[str, object], status)
-                            for status in statuses_obj
-                            if isinstance(status, dict)
+                            cast("dict[str, object]", status) for status in statuses_obj if isinstance(status, dict)
                         ]
                         for status_entry in status_dicts:
                             device_id_obj = status_entry.get("device_id")
@@ -643,8 +622,9 @@ class NCyncServer:
             blue=device.blue,
         )
 
-        if g.mqtt_client and device.id is not None:
-            _ = await g.mqtt_client.parse_device_status(device.id, new_state, from_pkt=from_pkt)
+        mqtt_client = _get_mqtt_client()
+        if mqtt_client and device.id is not None:
+            _ = await mqtt_client.parse_device_status(device.id, new_state, from_pkt=from_pkt)
         if g.ncync_server and device.id is not None:
             g.ncync_server.devices[device.id] = device
 
@@ -661,10 +641,10 @@ class NCyncServer:
             if subgroup.is_subgroup and device.id in subgroup.member_ids:
                 aggregated = subgroup.aggregate_member_states()
                 if aggregated:
-                    subgroup.state = aggregated["state"]
-                    subgroup.brightness = aggregated["brightness"]
-                    subgroup.temperature = aggregated["temperature"]
-                    subgroup.online = aggregated["online"]
+                    subgroup.state = int(aggregated["state"])
+                    subgroup.brightness = int(aggregated["brightness"])
+                    subgroup.temperature = int(aggregated["temperature"])
+                    subgroup.online = bool(aggregated["online"])
 
                     subgroup.status = DeviceStatus(
                         state=subgroup.state,
@@ -687,9 +667,9 @@ class NCyncServer:
                             "timestamp": time.time(),
                         },
                     )
-                    mqtt_client: MQTTClient | None = g.mqtt_client
+                    mqtt_client = _get_mqtt_client()
                     if mqtt_client:
-                        state_updates: StateUpdateHelper | None = mqtt_client.state_updates
+                        state_updates = cast("StateUpdateHelperProtocol | None", mqtt_client.state_updates)
                         if state_updates:
                             logger.debug(
                                 "Publishing subgroup state to MQTT",
@@ -702,7 +682,7 @@ class NCyncServer:
                                 },
                             )
                             try:
-                                helper: StateUpdateHelperProtocol = cast("StateUpdateHelperProtocol", state_updates)
+                                helper = cast("StateUpdateHelperProtocol", state_updates)
                                 await helper.publish_group_state(
                                     subgroup,
                                     state=subgroup.state,
@@ -777,9 +757,9 @@ class NCyncServer:
                 "from_pkt": from_pkt,
             },
         )
-        mqtt_client: MQTTClient | None = g.mqtt_client
+        mqtt_client = _get_mqtt_client()
         if mqtt_client:
-            state_updates: StateUpdateHelper | None = mqtt_client.state_updates
+            state_updates = cast("StateUpdateHelperProtocol | None", mqtt_client.state_updates)
             if state_updates:
                 logger.debug(
                     "Publishing group state to MQTT",
@@ -792,7 +772,7 @@ class NCyncServer:
                     },
                 )
                 try:
-                    helper: StateUpdateHelperProtocol = cast("StateUpdateHelperProtocol", state_updates)
+                    helper = cast("StateUpdateHelperProtocol", state_updates)
                     await helper.publish_group_state(
                         group,
                         state=state,
@@ -950,8 +930,9 @@ class NCyncServer:
                         "remaining_devices": len(self.tcp_devices),
                     },
                 )
-                if g.mqtt_client is not None:
-                    _ = await g.mqtt_client.publish(
+                mqtt_client = _get_mqtt_client()
+                if mqtt_client is not None:
+                    _ = await mqtt_client.publish(
                         f"{g.env.mqtt_topic}/status/bridge/tcp_devices/connected",
                         str(len(self.tcp_devices)).encode(),
                     )
@@ -987,8 +968,9 @@ class NCyncServer:
                 "is_primary": device == self.primary_tcp_device,
             },
         )
-        if g.mqtt_client is not None:
-            _ = await g.mqtt_client.publish(
+        mqtt_client = _get_mqtt_client()
+        if mqtt_client is not None:
+            _ = await mqtt_client.publish(
                 f"{g.env.mqtt_topic}/status/bridge/tcp_devices/connected",
                 str(len(self.tcp_devices)).encode(),
             )
@@ -1247,8 +1229,9 @@ class NCyncServer:
             self.running = True
             try:
                 # Publish server running status
-                if g.mqtt_client:
-                    _ = await g.mqtt_client.publish(
+                mqtt_client = _get_mqtt_client()
+                if mqtt_client:
+                    _ = await mqtt_client.publish(
                         f"{g.env.mqtt_topic}/status/bridge/tcp_server/running",
                         b"ON",
                     )
@@ -1306,8 +1289,9 @@ class NCyncServer:
         self._server.close()
         await self._server.wait_closed()
 
-        if g.mqtt_client:
-            _ = await g.mqtt_client.publish(
+        mqtt_client = _get_mqtt_client()
+        if mqtt_client:
+            _ = await mqtt_client.publish(
                 f"{g.env.mqtt_topic}/status/bridge/tcp_server/running",
                 b"OFF",
             )

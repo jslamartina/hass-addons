@@ -14,7 +14,7 @@ if str(_src_path) not in sys.path:
     sys.path.insert(0, str(_src_path))
 
 try:
-    from mitm.interfaces.packet_observer import PacketDirection
+    from interfaces.packet_observer import PacketDirection
 except ModuleNotFoundError:  # pragma: no cover
     from interfaces.packet_observer import PacketDirection
 

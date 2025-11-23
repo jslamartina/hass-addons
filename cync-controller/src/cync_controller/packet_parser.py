@@ -242,12 +242,12 @@ def _format_device_statuses(parsed: PacketDict) -> list[str]:
     """Format device statuses section."""
     lines: list[str] = []
     if "device_statuses" in parsed:
-        device_statuses = parsed["device_statuses"]
-        if isinstance(device_statuses, list):
+        raw_statuses = parsed["device_statuses"]
+        if isinstance(raw_statuses, list):
             typed_statuses: list[PacketDict] = []
-            for status in device_statuses:
+            for status in raw_statuses:
                 if isinstance(status, dict):
-                    typed_statuses.append(status)
+                    typed_statuses.append(cast("PacketDict", status))
             if not typed_statuses:
                 return lines
             lines.append(f"  Device Statuses ({len(typed_statuses)} devices):")

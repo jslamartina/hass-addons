@@ -17,6 +17,7 @@ from protocol.packet_types import (
     PACKET_TYPE_HELLO_ACK,
     CyncPacket,
 )
+from tests.helpers.expectations import expect_async_exception
 from transport.connection_manager import ConnectionManager, ConnectionState
 from transport.exceptions import CyncConnectionError
 from transport.retry_policy import TimeoutConfig
@@ -382,10 +383,8 @@ class TestConnectionManagerReconnect:
         mgr.endpoint = b""
         mgr.auth_code = b""
 
-        with pytest.raises(CyncConnectionError) as exc_info:
-            await mgr.reconnect("test_reason")
-
-        assert "no credentials stored" in str(exc_info.value)
+        err = await expect_async_exception(mgr.reconnect, CyncConnectionError, "test_reason")
+        assert "no credentials stored" in str(err)
 
 
 class TestConnectionManagerDisconnect:
@@ -450,10 +449,10 @@ class TestConnectionManagerWithStateCheck:
 
         action = AsyncMock()
 
-        with pytest.raises(CyncConnectionError) as exc_info:
-            await mgr.with_state_check("test_operation", action)
-
-        assert "CONNECTED state" in str(exc_info.value)
+        err = await expect_async_exception(
+            mgr.with_state_check, CyncConnectionError, "test_operation", action
+        )
+        assert "CONNECTED state" in str(err)
         action.assert_not_called()
 
     @pytest.mark.asyncio

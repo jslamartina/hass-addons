@@ -18,6 +18,7 @@ class TCPConnectionManager:
     """Manages TCP connection lifecycle and health monitoring."""
 
     def __init__(self, tcp_device: CyncTCPDevice) -> None:
+        """Initialize the manager for a specific TCP device instance."""
         self.tcp_device: CyncTCPDevice = tcp_device
         self.connection_start_time: float = time.time()
         self.last_heartbeat: float = time.time()

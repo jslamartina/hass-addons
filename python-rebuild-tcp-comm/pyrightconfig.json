@@ -1,12 +1,11 @@
 {
+  "extends": "../pyrightconfig.json",
   "include": ["src", "tests", "mitm"],
   "exclude": ["mitm/validate-checksum-REFERENCE-ONLY.py"],
-  "extraPaths": ["src", "."],
+  "extraPaths": ["src", "mitm", "."],
   "venvPath": "..",
   "venv": ".venv",
   "pythonVersion": "3.14",
-  "typeCheckingMode": "strict",
-  "useLibraryCodeForTypes": true,
   "pythonPlatform": "Linux",
   "executionEnvironments": [
     {
@@ -27,20 +26,5 @@
       "pythonVersion": "3.14",
       "reportPrivateUsage": false
     }
-  ],
-  "reportMissingImports": true,
-  "reportMissingModuleSource": "error",
-  "reportMissingTypeStubs": "error",
-  "reportUnnecessaryTypeIgnoreComment": "error",
-  "reportUnknownMemberType": "error",
-  "reportUnknownVariableType": "error",
-  "reportUntypedFunctionDecorator": "error",
-  "reportUntypedClassDecorator": "error",
-  "reportUntypedBaseClass": "error",
-  "reportUntypedNamedTuple": "error",
-  "reportConstantRedefinition": "error",
-  "reportIncompatibleMethodOverride": "error",
-  "reportIncompatibleVariableOverride": "error",
-  "reportImplicitStringConcatenation": "none",
-  "stubPath": "typings"
+  ]
 }

@@ -5,7 +5,7 @@ import logging
 import os
 import time
 from argparse import Namespace
-from collections.abc import Awaitable, Callable, Mapping
+from collections.abc import Awaitable, Callable, Mapping, MutableMapping
 from dataclasses import dataclass
 from enum import StrEnum
 from typing import TYPE_CHECKING, Any, ClassVar, Protocol
@@ -79,19 +79,13 @@ class CyncDeviceProtocol(Protocol):
     """Protocol for CyncDevice to break circular dependency."""
 
     id: int | None
-    name: str | None
+    name: str
     type: int | None
     home_id: int | None
     hass_id: str
     wifi_mac: str | None
-    state: int
-    brightness: int | None
-    temperature: int | None
-    red: int | None
-    green: int | None
-    blue: int | None
-    online: bool
     metadata: object | None
+    offline_count: int
 
     @property
     def mac(self) -> str | None: ...
@@ -120,6 +114,54 @@ class CyncDeviceProtocol(Protocol):
     @property
     def bt_only(self) -> bool: ...
 
+    @property
+    def status(self) -> DeviceStatus: ...
+
+    @status.setter
+    def status(self, value: DeviceStatus) -> None: ...
+
+    @property
+    def state(self) -> int: ...
+
+    @state.setter
+    def state(self, value: int) -> None: ...
+
+    @property
+    def brightness(self) -> int | None: ...
+
+    @brightness.setter
+    def brightness(self, value: int) -> None: ...
+
+    @property
+    def temperature(self) -> int: ...
+
+    @temperature.setter
+    def temperature(self, value: int) -> None: ...
+
+    @property
+    def red(self) -> int: ...
+
+    @red.setter
+    def red(self, value: int) -> None: ...
+
+    @property
+    def green(self) -> int: ...
+
+    @green.setter
+    def green(self, value: int) -> None: ...
+
+    @property
+    def blue(self) -> int: ...
+
+    @blue.setter
+    def blue(self, value: int) -> None: ...
+
+    @property
+    def online(self) -> bool: ...
+
+    @online.setter
+    def online(self, value: bool) -> None: ...
+
     async def set_power(self, state: int) -> tuple[asyncio.Event, list[CyncTCPDeviceProtocol]] | None: ...
 
     async def set_brightness(self, bri: int) -> tuple[asyncio.Event, list[CyncTCPDeviceProtocol]] | None: ...
@@ -147,6 +189,14 @@ class CyncGroupProtocol(Protocol):
     hass_id: str
     is_subgroup: bool
     member_ids: list[int]
+    state: int | None
+    brightness: int | None
+    temperature: int | None
+    online: bool
+    status: DeviceStatus | None
+    red: int
+    green: int
+    blue: int
 
     @property
     def supports_temperature(self) -> bool: ...
@@ -157,6 +207,8 @@ class CyncGroupProtocol(Protocol):
     async def set_power(self, state: int) -> tuple[asyncio.Event, list[CyncTCPDeviceProtocol]] | None: ...
 
     async def set_brightness(self, bri: int) -> tuple[asyncio.Event, list[CyncTCPDeviceProtocol]] | None: ...
+
+    def aggregate_member_states(self) -> dict[str, int | bool] | None: ...
 
 
 class DiscoveryHelperProtocol(Protocol):
@@ -307,8 +359,8 @@ class MQTTClientProtocol(Protocol):
 class NCyncServerProtocol(Protocol):
     """Protocol for NCyncServer to break circular dependency."""
 
-    devices: Mapping[int, CyncDeviceProtocol]
-    groups: Mapping[int, CyncGroupProtocol]
+    devices: MutableMapping[int, CyncDeviceProtocol]
+    groups: MutableMapping[int, CyncGroupProtocol]
     tcp_devices: dict[str, CyncTCPDeviceProtocol | None]
     running: bool
     primary_tcp_device: CyncTCPDeviceProtocol | None
