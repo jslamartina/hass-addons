@@ -1,36 +1,383 @@
 from __future__ import annotations
 
 import asyncio
-import datetime
 import logging
 import os
 import time
 from argparse import Namespace
-from collections.abc import Coroutine
+from collections.abc import Awaitable, Callable, Mapping, MutableMapping
+from dataclasses import dataclass
 from enum import StrEnum
-from typing import TYPE_CHECKING, ClassVar
+from typing import TYPE_CHECKING, Any, ClassVar, Protocol
 from uuid import UUID
 
 import uvloop
-from pydantic import BaseModel, ConfigDict, computed_field
-from dataclasses import dataclass
+from pydantic import BaseModel
 
 from cync_controller.const import *
 
 if TYPE_CHECKING:
-    from cync_controller.cloud_api import CyncCloudAPI
-    from cync_controller.exporter import ExportServer
-    from cync_controller.main import CyncController
-    from cync_controller.mqtt_client import MQTTClient
-    from cync_controller.server import NCyncServer
+    import aiomqtt
+
+
+class CyncCloudAPIProtocol(Protocol):
+    """Protocol for CyncCloudAPI to avoid circular imports."""
+
+    lp: str
+
+    async def check_token(self) -> bool: ...
+
+    async def request_otp(self) -> bool: ...
+
+    async def send_otp(self, otp_code: int) -> bool: ...
+
+    async def export_config_file(self) -> bool: ...
+
+    async def close(self) -> None: ...
+
+
+class CyncControllerProtocol(Protocol):
+    """Protocol for CyncController to break circular dependency."""
+
+    async def start(self) -> None: ...
+    async def stop(self) -> None: ...
+
+
+class CyncTCPDeviceProtocol(Protocol):
+    """Protocol for CyncTCPDevice to break circular dependency."""
+
+    connected_at: float
+    ready_to_control: bool
+    address: str | None
+    lp: str
+    needs_more_data: bool
+    read_cache: list[CacheData]
+    is_app: bool
+    queue_id: bytes
+    version: int | None
+    version_str: str | None
+    network_version: int | None
+    network_version_str: str | None
+    device_timestamp: str | None
+    device_type_id: int | None
+    name: str | None
+    known_device_ids: list[int | None]
+    mesh_info: MeshInfo | None
+    parse_mesh_status: bool
+    id: int | None
+    refresh_id: str | None
+    messages: Messages
+
+    async def write(self, data: object, broadcast: bool = False) -> bool | None: ...
+
+    async def send_a3(self, q_id: bytes) -> None: ...
+
+    def get_ctrl_msg_id_bytes(self) -> list[int]: ...
+
+
+class CyncDeviceProtocol(Protocol):
+    """Protocol for CyncDevice to break circular dependency."""
+
+    id: int | None
+    name: str
+    type: int | None
+    home_id: int | None
+    hass_id: str
+    wifi_mac: str | None
+    metadata: object | None
+    offline_count: int
+
+    @property
+    def mac(self) -> str | None: ...
+
+    @property
+    def version(self) -> int | None: ...
+
+    @property
+    def is_switch(self) -> bool: ...
+
+    @property
+    def is_light(self) -> bool: ...
+
+    @property
+    def is_plug(self) -> bool: ...
+
+    @property
+    def is_fan_controller(self) -> bool: ...
+
+    @property
+    def supports_temperature(self) -> bool: ...
+
+    @property
+    def supports_rgb(self) -> bool: ...
+
+    @property
+    def bt_only(self) -> bool: ...
+
+    @property
+    def status(self) -> DeviceStatus: ...
+
+    @status.setter
+    def status(self, value: DeviceStatus) -> None: ...
+
+    @property
+    def state(self) -> int: ...
+
+    @state.setter
+    def state(self, value: int) -> None: ...
+
+    @property
+    def brightness(self) -> int | None: ...
+
+    @brightness.setter
+    def brightness(self, value: int) -> None: ...
+
+    @property
+    def temperature(self) -> int: ...
+
+    @temperature.setter
+    def temperature(self, value: int) -> None: ...
+
+    @property
+    def red(self) -> int: ...
+
+    @red.setter
+    def red(self, value: int) -> None: ...
+
+    @property
+    def green(self) -> int: ...
+
+    @green.setter
+    def green(self, value: int) -> None: ...
+
+    @property
+    def blue(self) -> int: ...
+
+    @blue.setter
+    def blue(self, value: int) -> None: ...
+
+    @property
+    def online(self) -> bool: ...
+
+    @online.setter
+    def online(self, value: bool) -> None: ...
+
+    async def set_power(self, state: int) -> tuple[asyncio.Event, list[CyncTCPDeviceProtocol]] | None: ...
+
+    async def set_brightness(self, bri: int) -> tuple[asyncio.Event, list[CyncTCPDeviceProtocol]] | None: ...
+
+    async def set_temperature(self, temp: int) -> tuple[asyncio.Event, list[CyncTCPDeviceProtocol]] | None: ...
+
+    async def set_rgb(
+        self,
+        red: int,
+        green: int,
+        blue: int,
+    ) -> tuple[asyncio.Event, list[CyncTCPDeviceProtocol]] | None: ...
+
+    async def set_fan_speed(self, speed: FanSpeed) -> bool: ...
+
+    async def set_lightshow(self, show: str) -> None: ...
+
+
+class CyncGroupProtocol(Protocol):
+    """Protocol defining CyncGroup attributes accessed in discovery."""
+
+    id: int | None
+    name: str | None
+    home_id: int | None
+    hass_id: str
+    is_subgroup: bool
+    member_ids: list[int]
+    state: int | None
+    brightness: int | None
+    temperature: int | None
+    online: bool
+    status: DeviceStatus | None
+    red: int
+    green: int
+    blue: int
+
+    @property
+    def supports_temperature(self) -> bool: ...
+
+    @property
+    def supports_rgb(self) -> bool: ...
+
+    async def set_power(self, state: int) -> tuple[asyncio.Event, list[CyncTCPDeviceProtocol]] | None: ...
+
+    async def set_brightness(self, bri: int) -> tuple[asyncio.Event, list[CyncTCPDeviceProtocol]] | None: ...
+
+    def aggregate_member_states(self) -> dict[str, int | bool] | None: ...
+
+
+class DiscoveryHelperProtocol(Protocol):
+    """Protocol for DiscoveryHelper to avoid circular imports."""
+
+    async def register_single_device(self, device: CyncDeviceProtocol) -> None: ...
+    async def trigger_device_rediscovery(self) -> None: ...
+    async def homeassistant_discovery(self) -> None: ...
+    async def create_bridge_device(self) -> None: ...
+
+
+class StateUpdateHelperProtocol(Protocol):
+    """Protocol for StateUpdateHelper to avoid circular imports."""
+
+    async def pub_online(self, device_id: int, status: bool) -> bool: ...
+    async def update_device_state(self, device: CyncDeviceProtocol, state: int) -> bool: ...
+    async def update_brightness(self, device: CyncDeviceProtocol, bri: int) -> bool: ...
+    async def update_temperature(self, device: CyncDeviceProtocol, temp: int) -> bool: ...
+    async def update_rgb(self, device: CyncDeviceProtocol, rgb: tuple[int, int, int]) -> bool: ...
+    async def send_device_status(self, device: CyncDeviceProtocol, state_bytes: bytes) -> bool: ...
+    async def publish_group_state(
+        self,
+        group: CyncGroupProtocol,
+        state: int | None = None,
+        brightness: int | None = None,
+        temperature: int | None = None,
+        origin: str | None = None,
+    ) -> None: ...
+
+    async def parse_device_status(
+        self,
+        device_id: int,
+        device_status: DeviceStatus,
+        *args: object,
+        **kwargs: object,
+    ) -> bool: ...
+
+    async def update_switch_from_subgroup(
+        self,
+        device: CyncDeviceProtocol,
+        subgroup_state: int,
+        subgroup_name: str,
+    ) -> bool: ...
+
+    async def sync_group_switches(self, group_id: int, group_state: int, group_name: str) -> int: ...
+    async def sync_group_devices(self, group_id: int, group_state: int, group_name: str) -> int: ...
+
+
+class CommandRouterProtocol(Protocol):
+    """Protocol for CommandRouter helper."""
+
+    async def start_receiver_task(self) -> None: ...
+
+
+class ExportServerProtocol(Protocol):
+    """Protocol defining ExportServer attributes accessed in discovery."""
+
+    running: bool
+    start_task: asyncio.Task[None] | None
+
+    async def start(self) -> None: ...
+
+    async def stop(self) -> None: ...
+
+
+class MQTTClientProtocol(Protocol):
+    """Protocol for MQTTClient to break circular dependency."""
+
+    lp: str
+    topic: str
+    ha_topic: str
+    client: aiomqtt.Client | None
+    discovery: object | None
+    state_updates: object | None
+    command_router: object | None
+    start_task: asyncio.Task[None] | None
+
+    async def start(self) -> None: ...
+
+    @property
+    def is_connected(self) -> bool: ...
+
+    def set_connected(self, connected: bool) -> None: ...
+
+    def kelvin2cync(self, k: float) -> int: ...
+
+    def cync2kelvin(self, ct: int) -> int: ...
+
+    async def publish(self, topic: str, msg_data: bytes) -> bool: ...
+
+    async def publish_json_msg(self, topic: str, msg_data: Mapping[str, object]) -> bool: ...
+
+    async def trigger_status_refresh(self) -> None: ...
+
+    async def trigger_device_rediscovery(self) -> bool: ...
+
+    async def homeassistant_discovery(self) -> bool: ...
+
+    async def create_bridge_device(self) -> bool: ...
+
+    async def start_receiver_task(self) -> None: ...
+
+    async def send_birth_msg(self) -> bool: ...
+
+    async def send_will_msg(self) -> bool: ...
+
+    async def pub_online(self, device_id: int, status: bool) -> bool: ...
+
+    async def update_device_state(self, device: CyncDeviceProtocol, state: int) -> bool: ...
+
+    async def update_brightness(self, device: CyncDeviceProtocol, bri: int) -> bool: ...
+
+    async def update_temperature(self, device: CyncDeviceProtocol, temp: int) -> bool: ...
+
+    async def update_rgb(self, device: CyncDeviceProtocol, rgb: tuple[int, int, int]) -> bool: ...
+
+    async def send_device_status(self, device: CyncDeviceProtocol, state_bytes: bytes) -> bool: ...
+
+    async def publish_group_state(
+        self,
+        group: CyncGroupProtocol,
+        state: int | None = None,
+        brightness: int | None = None,
+        temperature: int | None = None,
+        origin: str | None = None,
+    ) -> bool: ...
+
+    async def parse_device_status(
+        self,
+        device_id: int,
+        device_status: DeviceStatus,
+        *args: object,
+        **kwargs: object,
+    ) -> bool: ...
+
+    async def update_switch_from_subgroup(
+        self,
+        device: CyncDeviceProtocol,
+        subgroup_state: int,
+        subgroup_name: str,
+    ) -> bool: ...
+
+    async def sync_group_switches(self, group_id: int, group_state: int, group_name: str) -> int: ...
+
+    async def sync_group_devices(self, group_id: int, group_state: int, group_name: str) -> int: ...
+
+
+class NCyncServerProtocol(Protocol):
+    """Protocol for NCyncServer to break circular dependency."""
+
+    devices: MutableMapping[int, CyncDeviceProtocol]
+    groups: MutableMapping[int, CyncGroupProtocol]
+    tcp_devices: dict[str, CyncTCPDeviceProtocol | None]
+    running: bool
+    primary_tcp_device: CyncTCPDeviceProtocol | None
+    start_task: asyncio.Task[object] | None
+
+    async def start(self) -> None: ...
+
+    async def remove_tcp_device(self, dev: CyncTCPDeviceProtocol) -> CyncTCPDeviceProtocol | None: ...
+
+    async def parse_status(self, raw_status: bytes, from_pkt: str) -> None: ...
 
 
 logger = logging.getLogger(CYNC_LOG_NAME)
 
 
 class GlobalObjEnv(BaseModel):
-    """
-    Environment variables for the global object.
+    """Environment variables for the global object.
     This is used to store environment variables that are used throughout the application.
     """
 
@@ -59,51 +406,45 @@ class GlobalObjEnv(BaseModel):
 
 
 class GlobalObject:
-    cync_lan: CyncController | None = None
-    ncync_server: NCyncServer | None = None
-    mqtt_client: MQTTClient | None = None
+    cync_lan: CyncControllerProtocol | None = None  # type: ignore[assignment]
+    ncync_server: NCyncServerProtocol | None = None  # type: ignore[assignment]
+    mqtt_client: MQTTClientProtocol | None = None  # type: ignore[assignment]
     loop: uvloop.Loop | asyncio.AbstractEventLoop | None = None
-    export_server: ExportServer | None = None
-    cloud_api: CyncCloudAPI | None = None
-    tasks: ClassVar[list[asyncio.Task]] = []
+    export_server: ExportServerProtocol | None = None
+    cloud_api: CyncCloudAPIProtocol | None = None
+    tasks: ClassVar[list[asyncio.Task[Any]]] = []
     env: GlobalObjEnv = GlobalObjEnv()
     uuid: UUID | None = None
     cli_args: Namespace | None = None
 
     _instance: GlobalObject | None = None
 
-    def __new__(cls, *_args, **_kwargs):
+    def __new__(cls, *_args: Any, **_kwargs: Any) -> GlobalObject:
         if cls._instance is None:
             cls._instance = super().__new__(cls)
         return cls._instance
 
     def reload_env(self):
         """Re-evaluate environment variables to update constants."""
-        global CYNC_MQTT_HOST, CYNC_MQTT_PORT, CYNC_MQTT_USER, CYNC_MQTT_PASS
-        global CYNC_TOPIC, CYNC_HASS_TOPIC, CYNC_HASS_STATUS_TOPIC
-        global CYNC_HASS_BIRTH_MSG, CYNC_HASS_WILL_MSG, CYNC_SRV_HOST
-        global CYNC_SSL_CERT, CYNC_SSL_KEY, CYNC_ACCOUNT_USERNAME, CYNC_ACCOUNT_PASSWORD, PERSISTENT_BASE_DIR
-
-        self.env.account_username = CYNC_ACCOUNT_USERNAME = os.environ.get("CYNC_ACCOUNT_USERNAME", None)
-        self.env.account_password = CYNC_ACCOUNT_PASSWORD = os.environ.get("CYNC_ACCOUNT_PASSWORD", None)
-        self.env.mqtt_host = CYNC_MQTT_HOST = os.environ.get("CYNC_MQTT_HOST", "homeassistant.local")
-        self.env.mqtt_port = CYNC_MQTT_PORT = int(os.environ.get("CYNC_MQTT_PORT", "1883"))
-        self.env.mqtt_user = CYNC_MQTT_USER = os.environ.get("CYNC_MQTT_USER")
-        self.env.mqtt_pass = CYNC_MQTT_PASS = os.environ.get("CYNC_MQTT_PASS")
-        self.env.mqtt_topic = CYNC_TOPIC = os.environ.get("CYNC_TOPIC", "cync_lan_NEW")
-        self.env.mqtt_hass_topic = CYNC_HASS_TOPIC = os.environ.get("CYNC_HASS_TOPIC", "homeassistant")
-        self.env.mqtt_hass_status_topic = CYNC_HASS_STATUS_TOPIC = os.environ.get("CYNC_HASS_STATUS_TOPIC", "status")
-        self.env.mqtt_hass_birth_msg = CYNC_HASS_BIRTH_MSG = os.environ.get("CYNC_HASS_BIRTH_MSG", "online")
-        self.env.mqtt_hass_will_msg = CYNC_HASS_WILL_MSG = os.environ.get("CYNC_HASS_WILL_MSG", "offline")
-        self.env.cync_srv_host = CYNC_SRV_HOST = os.environ.get("CYNC_SRV_HOST", "0.0.0.0")
-        self.env.cync_srv_ssl_cert = CYNC_SSL_CERT = os.environ.get(
-            "CYNC_SSL_CERT", f"{CYNC_BASE_DIR}/cync-controller/certs/cert.pem"
-        )
-        self.env.cync_srv_ssl_key = CYNC_SSL_KEY = os.environ.get(
-            "CYNC_SSL_KEY", f"{CYNC_BASE_DIR}/cync-controller/certs/key.pem"
-        )
-        self.env.persistent_base_dir = PERSISTENT_BASE_DIR = os.environ.get(
-            "CYNC_PERSISTENT_BASE_DIR", "/homeassistant/.storage/cync-controller/config"
+        # Update env attributes only - do not reassign module-level constants
+        # as they are treated as constants by type checkers
+        self.env.account_username = os.environ.get("CYNC_ACCOUNT_USERNAME", None)
+        self.env.account_password = os.environ.get("CYNC_ACCOUNT_PASSWORD", None)
+        self.env.mqtt_host = os.environ.get("CYNC_MQTT_HOST", "homeassistant.local")
+        self.env.mqtt_port = int(os.environ.get("CYNC_MQTT_PORT", "1883"))
+        self.env.mqtt_user = os.environ.get("CYNC_MQTT_USER")
+        self.env.mqtt_pass = os.environ.get("CYNC_MQTT_PASS")
+        self.env.mqtt_topic = os.environ.get("CYNC_TOPIC", "cync_lan_NEW")
+        self.env.mqtt_hass_topic = os.environ.get("CYNC_HASS_TOPIC", "homeassistant")
+        self.env.mqtt_hass_status_topic = os.environ.get("CYNC_HASS_STATUS_TOPIC", "status")
+        self.env.mqtt_hass_birth_msg = os.environ.get("CYNC_HASS_BIRTH_MSG", "online")
+        self.env.mqtt_hass_will_msg = os.environ.get("CYNC_HASS_WILL_MSG", "offline")
+        self.env.cync_srv_host = os.environ.get("CYNC_SRV_HOST", "0.0.0.0")
+        self.env.cync_srv_ssl_cert = os.environ.get("CYNC_SSL_CERT", f"{CYNC_BASE_DIR}/cync-controller/certs/cert.pem")
+        self.env.cync_srv_ssl_key = os.environ.get("CYNC_SSL_KEY", f"{CYNC_BASE_DIR}/cync-controller/certs/key.pem")
+        self.env.persistent_base_dir = os.environ.get(
+            "CYNC_PERSISTENT_BASE_DIR",
+            "/homeassistant/.storage/cync-controller/config",
         )
 
         # Cloud relay configuration
@@ -120,19 +461,23 @@ class GlobalObject:
 # and pyright understands standard dataclasses better
 @dataclass
 class Tasks:
-    receive: asyncio.Task | None = None
-    send: asyncio.Task | None = None
-    callback_cleanup: asyncio.Task | None = None
+    receive: asyncio.Task[None] | None = None
+    send: asyncio.Task[None] | None = None
+    callback_cleanup: asyncio.Task[None] | None = None
 
-    def __iter__(self):
+    def __iter__(self) -> Any:  # type: ignore[return-value]
         return iter([self.receive, self.send, self.callback_cleanup])
+
+
+CallbackReturn = Awaitable[Any] | None
+CallbackType = CallbackReturn | Callable[[], CallbackReturn | Any]
 
 
 class ControlMessageCallback:
     id: int
     message: None | str | bytes | list[int] = None
     sent_at: float | None = None
-    callback: asyncio.Task | Coroutine | None = None
+    callback: CallbackType | None = None
     device_id: int | None = None
     retry_count: int = 0
     max_retries: int = 3
@@ -143,11 +488,11 @@ class ControlMessageCallback:
         msg_id: int,
         message: None | str | bytes | list[int],
         sent_at: float,
-        callback: asyncio.Task | Coroutine,
+        callback: CallbackType | None,
         device_id: int | None = None,
         max_retries: int = 3,
         ack_event: asyncio.Event | None = None,
-    ):
+    ) -> None:
         self.id = msg_id
         self.message = message
         self.sent_at = sent_at
@@ -178,9 +523,9 @@ class ControlMessageCallback:
     def __hash__(self):
         return hash(self.id)
 
-    def __call__(self):
+    def __call__(self) -> CallbackType | None:  # type: ignore[return-value]
         if self.callback:
-            return self.callback
+            return self.callback  # type: ignore[return-value]
         logger.debug("%s No callback set, skipping...", self.lp)
         return None
 
@@ -188,7 +533,7 @@ class ControlMessageCallback:
 class Messages:
     control: dict[int, ControlMessageCallback]
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.control = {}
 
 
@@ -202,8 +547,7 @@ class CacheData:
 
 
 class DeviceStatus(BaseModel):
-    """
-    A class that represents a Cync devices status.
+    """A class that represents a Cync devices status.
     This may need to be changed as new devices are bought and added.
     """
 
@@ -253,7 +597,7 @@ class DeviceStructs:
 
     @dataclass
     class DeviceRequests:
-        """These are packets devices send to the server"""
+        """These are packets devices send to the server."""
 
         x23: tuple[int, ...] = (0x23,)
         xc3: tuple[int, ...] = (0xC3,)
@@ -271,7 +615,7 @@ class DeviceStructs:
 
     @dataclass
     class DeviceResponses:
-        """These are the packets the server sends to the device"""
+        """These are the packets the server sends to the device."""
 
         auth_ack: tuple[int, ...] = (0x28, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00)
         # NOTE: Connection acknowledgment bytes - may need protocol analysis to verify correctness
@@ -305,9 +649,8 @@ class DeviceStructs:
 
     @staticmethod
     def xab_generate_ack(queue_id: bytes, msg_id: bytes):
-        """
-        Respond to a 0xAB packet from the device, needs queue_id and msg_id to reply with.
-        Has ascii 'xlink_dev' in reply
+        """Respond to a 0xAB packet from the device, needs queue_id and msg_id to reply with.
+        Has ascii 'xlink_dev' in reply.
         """
         _x = bytes([0xAB, 0x00, 0x00, 0x03])
         hex_str = (
@@ -350,14 +693,14 @@ class DeviceStructs:
 
     @staticmethod
     def x88_generate_ack(msg_id: bytes):
-        """Respond to a 0x83 packet from the device, needs a msg_id to reply with"""
+        """Respond to a 0x83 packet from the device, needs a msg_id to reply with."""
         _x = bytes([0x88, 0x00, 0x00, 0x00, 0x03])
         _x += msg_id
         return _x
 
     @staticmethod
     def x48_generate_ack(msg_id: bytes):
-        """Respond to a 0x43 packet from the device, needs a queue and msg id to reply with"""
+        """Respond to a 0x43 packet from the device, needs a queue and msg id to reply with."""
         # set last msg_id digit to 0
         msg_id = msg_id[:-1] + b"\x00"
         _x = bytes([0x48, 0x00, 0x00, 0x00, 0x03])
@@ -366,8 +709,7 @@ class DeviceStructs:
 
     @staticmethod
     def x7b_generate_ack(queue_id: bytes, msg_id: bytes):
-        """
-        Respond to a 0x73 packet from the device, needs a queue and msg id to reply with.
+        """Respond to a 0x73 packet from the device, needs a queue and msg id to reply with.
         This is also called for 0x83 packets AFTER seeing a 0x73 packet.
         Not sure of the intricacies yet, seems to be bound to certain queue ids.
         """
@@ -380,49 +722,6 @@ class DeviceStructs:
 APP_HEADERS = PhoneAppStructs()
 DEVICE_STRUCTS = DeviceStructs()
 ALL_HEADERS = list(DEVICE_STRUCTS.headers) + list(APP_HEADERS.headers)
-
-
-class RawTokenData(BaseModel):
-    """
-    Model for cloud token data.
-    """
-
-    # API Auth Response:
-    # {
-    # 'access_token': '1007d2ad150c4000-2407d4d081dbea53DAwQjkzNUM2RDE4QjE0QTIzMjNGRjAwRUU4ODNEQUE5RTFCMjhBOQ==',
-    # 'refresh_token': 'REY3NjVENEQwQTM4NjE2OEM3QjNGMUZEQjQyQzU0MEIzRTU4NzMyRDdFQzZFRUYyQTUxNzE4RjAwNTVDQ0Y3Mw==',
-    # 'user_id': 769963474,
-    # 'expire_in': 604800,
-    # 'authorize': '2207d2c8d2c9e406'
-    # }
-    access_token: str
-    user_id: str | int
-    expire_in: str | int
-    refresh_token: str
-    authorize: str
-
-
-class ComputedTokenData(RawTokenData):
-    issued_at: datetime.datetime
-
-    @computed_field
-    @property
-    def expires_at(self) -> datetime.datetime | None:
-        """
-        Calculate the expiration time of the token based on the issued time and expires_in.
-        Returns:
-            datetime.datetime: The expiration time in UTC.
-        """
-        if self.issued_at and self.expire_in:
-            expire_seconds = float(self.expire_in) if isinstance(self.expire_in, (str, int)) else 0.0
-            return self.issued_at + datetime.timedelta(seconds=expire_seconds)
-        return None
-
-    # expires_at: Optional[datetime] = None
-
-    # def model_post_init(self, __context) -> None:
-    #     if self.expires_in:
-    #         self.expires_at = datetime.datetime.now(datetime.UTC) + datetime.timedelta(seconds=self.expires_in)
 
 
 class FanSpeed(StrEnum):

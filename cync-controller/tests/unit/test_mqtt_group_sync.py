@@ -1,11 +1,10 @@
-"""
-Unit tests for MQTTClient group synchronization.
+"""Unit tests for MQTTClient group synchronization.
 
 Tests for group member state synchronization, sync_group_devices(),
 sync_group_switches(), and aggregate state calculations.
 """
 
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -13,18 +12,18 @@ from cync_controller.mqtt_client import MQTTClient
 
 
 class TestMQTTClientGroupSync:
-    """Tests for MQTTClient group synchronization"""
+    """Tests for MQTTClient group synchronization."""
 
     @pytest.fixture(autouse=True)
     def reset_mqtt_singleton(self):
-        """Reset MQTTClient singleton between tests"""
+        """Reset MQTTClient singleton between tests."""
         MQTTClient._instance = None
         yield
         MQTTClient._instance = None
 
     @pytest.mark.asyncio
     async def test_sync_group_devices_all_on(self):
-        """Test group sync when all members on"""
+        """Test group sync when all members on."""
         with (
             patch("cync_controller.mqtt_client.g") as mock_g,
             patch("cync_controller.mqtt_client.aiomqtt.Client"),
@@ -50,7 +49,12 @@ class TestMQTTClientGroupSync:
             mock_g.ncync_server.groups = {100: mock_group}
 
             client = MQTTClient()
-            client.update_device_state = AsyncMock()
+
+            # Async stub to avoid AsyncMock GC warnings
+            async def _update_device_state_stub(device, state):  # pragma: no cover - behavior tested elsewhere
+                return True
+
+            client.update_device_state = _update_device_state_stub  # type: ignore[assignment]
 
             # Simulate group sync
             synced_count = 0
@@ -64,7 +68,7 @@ class TestMQTTClientGroupSync:
 
     @pytest.mark.asyncio
     async def test_sync_group_devices_mixed_state(self):
-        """Test group sync with mixed member states"""
+        """Test group sync with mixed member states."""
         with (
             patch("cync_controller.mqtt_client.g") as mock_g,
             patch("cync_controller.mqtt_client.aiomqtt.Client"),
@@ -88,7 +92,12 @@ class TestMQTTClientGroupSync:
             mock_g.ncync_server.groups = {101: mock_group}
 
             client = MQTTClient()
-            client.update_device_state = AsyncMock()
+
+            # Async stub to avoid AsyncMock GC warnings
+            async def _update_device_state_stub(device, state):  # pragma: no cover - behavior tested elsewhere
+                return True
+
+            client.update_device_state = _update_device_state_stub  # type: ignore[assignment]
 
             # Count on/off states
             on_count = sum(1 for d in devices.values() if d.power == 1)
@@ -99,7 +108,7 @@ class TestMQTTClientGroupSync:
 
     @pytest.mark.asyncio
     async def test_sync_group_devices_empty_group(self):
-        """Test syncing empty group"""
+        """Test syncing empty group."""
         with (
             patch("cync_controller.mqtt_client.g") as mock_g,
             patch("cync_controller.mqtt_client.aiomqtt.Client"),
@@ -117,7 +126,12 @@ class TestMQTTClientGroupSync:
             mock_g.ncync_server.groups = {102: mock_group}
 
             client = MQTTClient()
-            client.update_device_state = AsyncMock()
+
+            # Async stub to avoid AsyncMock GC warnings
+            async def _update_device_state_stub(device, state):  # pragma: no cover - behavior tested elsewhere
+                return True
+
+            client.update_device_state = _update_device_state_stub  # type: ignore[assignment]
 
             # Sync empty group
             synced_count = 0
@@ -131,7 +145,7 @@ class TestMQTTClientGroupSync:
 
     @pytest.mark.asyncio
     async def test_sync_group_devices_publishes_states(self):
-        """Test individual state publishing after group sync"""
+        """Test individual state publishing after group sync."""
         with (
             patch("cync_controller.mqtt_client.g") as mock_g,
             patch("cync_controller.mqtt_client.aiomqtt.Client"),
@@ -154,7 +168,12 @@ class TestMQTTClientGroupSync:
 
             client = MQTTClient()
             client.client = MagicMock()
-            client.client.publish = AsyncMock()
+
+            # Async stub publish to avoid AsyncMock GC warnings
+            async def _publish_stub(*args, **kwargs):  # pragma: no cover - behavior tested elsewhere
+                return None
+
+            client.client.publish = _publish_stub  # type: ignore[assignment]
 
             # Verify publish can be called for each device
             publish_count = 0
@@ -167,7 +186,7 @@ class TestMQTTClientGroupSync:
 
     @pytest.mark.asyncio
     async def test_sync_group_switches_after_group_command(self):
-        """Test switch sync after group control"""
+        """Test switch sync after group control."""
         with (
             patch("cync_controller.mqtt_client.g") as mock_g,
             patch("cync_controller.mqtt_client.aiomqtt.Client"),
@@ -189,7 +208,12 @@ class TestMQTTClientGroupSync:
             mock_g.ncync_server.groups = {104: mock_group}
 
             client = MQTTClient()
-            client.update_device_state = AsyncMock()
+
+            # Async stub to avoid AsyncMock GC warnings
+            async def _update_device_state_stub(device, state):  # pragma: no cover - behavior tested elsewhere
+                return True
+
+            client.update_device_state = _update_device_state_stub  # type: ignore[assignment]
 
             # Verify switches can be accessed
             switch_count = sum(1 for d in switches.values() if d.is_switch)
@@ -197,7 +221,7 @@ class TestMQTTClientGroupSync:
 
     @pytest.mark.asyncio
     async def test_sync_group_devices_with_unavailable_members(self):
-        """Test sync with offline devices"""
+        """Test sync with offline devices."""
         with (
             patch("cync_controller.mqtt_client.g") as mock_g,
             patch("cync_controller.mqtt_client.aiomqtt.Client"),
@@ -220,7 +244,12 @@ class TestMQTTClientGroupSync:
             mock_g.ncync_server.groups = {105: mock_group}
 
             client = MQTTClient()
-            client.update_device_state = AsyncMock()
+
+            # Async stub to avoid AsyncMock GC warnings
+            async def _update_device_state_stub(device, state):  # pragma: no cover - behavior tested elsewhere
+                return True
+
+            client.update_device_state = _update_device_state_stub  # type: ignore[assignment]
 
             # Count online/offline
             online_count = sum(1 for d in devices.values() if d.online)
@@ -231,7 +260,7 @@ class TestMQTTClientGroupSync:
 
     @pytest.mark.asyncio
     async def test_sync_group_returns_sync_count(self):
-        """Test that sync returns count of synced devices"""
+        """Test that sync returns count of synced devices."""
         with (
             patch("cync_controller.mqtt_client.g") as mock_g,
             patch("cync_controller.mqtt_client.aiomqtt.Client"),
@@ -250,7 +279,12 @@ class TestMQTTClientGroupSync:
             mock_g.ncync_server.groups = {106: mock_group}
 
             client = MQTTClient()
-            client.update_device_state = AsyncMock()
+
+            # Async stub to avoid AsyncMock GC warnings
+            async def _update_device_state_stub(device, state):  # pragma: no cover - behavior tested elsewhere
+                return True
+
+            client.update_device_state = _update_device_state_stub  # type: ignore[assignment]
 
             # Count synced
             synced = 0

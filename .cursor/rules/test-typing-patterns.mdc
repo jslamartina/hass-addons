@@ -1,0 +1,202 @@
+---
+globs: */tests/**/*.py
+alwaysApply: false
+---
+# Test Typing Patterns
+
+## Overview
+
+This document defines the recommended pattern for creating typed mocks in Python unit tests that balance type safety with flexible mocking capabilities.
+
+## Core Pattern
+
+### Factory Functions
+
+Create factory functions at the top of test files to standardize mock creation:
+
+```python
+from typing import Any, cast
+from unittest.mock import AsyncMock, MagicMock, create_autospec
+import asyncio
+
+# Factory for typed mocks (autospec + cast)
+def create_typed_stream_reader() -> asyncio.StreamReader:
+    """Create a typed mock StreamReader using create_autospec."""
+    return cast(asyncio.StreamReader, create_autospec(asyncio.StreamReader, instance=True))
+
+def create_typed_stream_writer() -> asyncio.StreamWriter:
+    """Create a typed mock StreamWriter using create_autospec."""
+    return cast(asyncio.StreamWriter, create_autospec(asyncio.StreamWriter, instance=True))
+
+# Factory for fully mockable objects (MagicMock with Any)
+def create_mock_task() -> Any:
+    """
+    Create a fully mockable Task mock.
+
+    Returns Any to allow flexible mocking while maintaining type safety elsewhere.
+    """
+    return MagicMock()
+```
+
+## When to Use Each Pattern
+
+### Use `create_autospec` + `cast` when
+
+- The mock needs to match a real type signature
+- Type checking should catch incorrect method calls
+- You can override specific methods with `MagicMock` for assertions
+
+**Example:**
+
+```python
+reader = create_typed_stream_reader()
+writer = create_typed_stream_writer()
+
+# Override specific methods with MagicMock for assertion capabilities
+writer.write = MagicMock()  # type: ignore[assignment]
+writer.drain = AsyncMock()  # type: ignore[assignment]
+writer.is_closing = MagicMock(return_value=False)  # type: ignore[assignment]
+```
+
+### Use `MagicMock` with `Any` return type when
+
+- You need to set `return_value` on mock methods
+- Full mockability is required (e.g., `Task` mocks)
+- `create_autospec` is too restrictive
+
+**Example:**
+
+```python
+mock_task = create_mock_task()
+mock_task.done.return_value = False  # type: ignore[reportAny]
+mock_task.get_name.return_value = "task1"  # type: ignore[reportAny]
+mock_task.cancel.called  # type: ignore[reportAny]
+```
+
+## Type Ignore Comments
+
+Use targeted `# type: ignore` comments with specific error codes:
+
+- `# type: ignore[assignment]` - When assigning MagicMock to typed attributes
+- `# type: ignore[attr-defined]` - When accessing mock-specific attributes (deprecated, prefer reportAny)
+- `# type: ignore[reportAny]` - When intentionally using Any types for flexible mocking
+
+**Prefer `reportAny` over `attr-defined`** for MagicMock usage:
+
+```python
+# ✅ Good
+mock_task.done.return_value = False  # type: ignore[reportAny]
+
+# ❌ Avoid (deprecated)
+mock_task.done.return_value = False  # type: ignore[attr-defined]
+```
+
+## Benefits
+
+- **Type Safety**: Real types are enforced where possible
+- **Flexibility**: `Any` return types allow full mockability when needed
+- **Consistency**: Factory functions standardize mock creation across tests
+- **Clarity**: Comments explain when and why `Any` is used
+
+## Anti-Patterns
+
+### ❌ Don't use `create_autospec` for mocks that need `return_value`
+
+```python
+# ❌ BAD: create_autospec creates MethodType objects that can't have return_value
+task = create_autospec(asyncio.Task, instance=True)
+task.done.return_value = False  # ERROR: Cannot assign to attribute "return_value" for class "MethodType"
+
+# ✅ GOOD: Use MagicMock with Any return type
+task = create_mock_task()
+task.done.return_value = False  # type: ignore[reportAny]
+```
+
+### ❌ Don't suppress all type checking
+
+```python
+# ❌ BAD: Suppressing all type checking
+mock = MagicMock()  # type: ignore
+
+# ✅ GOOD: Targeted suppression with specific error codes
+mock = MagicMock()  # type: ignore[reportAny]
+```
+
+### ❌ Don't mix patterns inconsistently
+
+```python
+# ❌ BAD: Inconsistent mock creation
+reader1 = MagicMock()
+reader2 = create_autospec(asyncio.StreamReader, instance=True)
+
+# ✅ GOOD: Use factory functions consistently
+reader1 = create_typed_stream_reader()
+reader2 = create_typed_stream_reader()
+```
+
+## Example: Complete Test Pattern
+
+```python
+import asyncio
+from typing import Any, cast
+from unittest.mock import AsyncMock, MagicMock, create_autospec, patch
+import pytest
+
+from cync_controller.devices.tcp_device import CyncTCPDevice
+
+# Factory functions
+def create_typed_stream_reader() -> asyncio.StreamReader:
+    return cast(asyncio.StreamReader, create_autospec(asyncio.StreamReader, instance=True))
+
+def create_typed_stream_writer() -> asyncio.StreamWriter:
+    return cast(asyncio.StreamWriter, create_autospec(asyncio.StreamWriter, instance=True))
+
+def create_mock_task() -> Any:
+    return MagicMock()
+
+class TestCyncTCPDevice:
+    @pytest.mark.asyncio
+    async def test_write_success(self) -> None:
+        """Test write method successfully sends data"""
+        # Use typed mocks
+        reader = create_typed_stream_reader()
+        writer = create_typed_stream_writer()
+
+        # Override methods for assertions
+        writer.write = MagicMock()  # type: ignore[assignment]
+        writer.drain = AsyncMock()  # type: ignore[assignment]
+        writer.is_closing = MagicMock(return_value=False)  # type: ignore[assignment]
+
+        tcp_device = CyncTCPDevice(reader=reader, writer=writer, address="192.168.1.100")
+
+        result = await tcp_device.write(b"test data")
+
+        assert result is True
+        writer.write.assert_called_once_with(b"test data")  # type: ignore[reportAny]
+        writer.drain.assert_called_once()  # type: ignore[reportAny]
+
+    @pytest.mark.asyncio
+    async def test_close_cancels_tasks(self) -> None:
+        """Test close method cancels pending tasks"""
+        reader = create_typed_stream_reader()
+        writer = create_typed_stream_writer()
+
+        tcp_device = CyncTCPDevice(reader=reader, writer=writer, address="192.168.1.100")
+
+        # Use fully mockable task mocks
+        mock_task1 = create_mock_task()
+        mock_task1.done.return_value = False  # type: ignore[reportAny]
+        mock_task1.get_name.return_value = "task1"  # type: ignore[reportAny]
+
+        tcp_device.tasks.receive = mock_task1  # type: ignore[assignment]
+
+        await tcp_device.close()
+
+        assert mock_task1.cancel.called  # type: ignore[reportAny]
+```
+
+## References
+
+- See `cync-controller/tests/unit/test_tcp_device_basic.py` for a complete working example
+- Python `unittest.mock` documentation: <https://docs.python.org/3/library/unittest.mock.html>
+- Pyright type checking: <https://github.com/microsoft/pyright>

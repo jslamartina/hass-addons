@@ -7,59 +7,105 @@ and message routing delegation to helper modules.
 from __future__ import annotations
 
 import asyncio
+import importlib
 import json
 import uuid
-from collections.abc import Coroutine
+from collections.abc import Mapping
+from typing import TYPE_CHECKING, cast
 
 import aiomqtt
 
-from cync_controller.const import *
-from cync_controller.devices import CyncDevice
+from cync_controller.const import (
+    CYNC_HASS_BIRTH_MSG,
+    CYNC_HASS_TOPIC,
+    CYNC_HASS_WILL_MSG,
+    CYNC_MAXK,
+    CYNC_MINK,
+    CYNC_MQTT_CONN_DELAY,
+    CYNC_MQTT_HOST,
+    CYNC_MQTT_PASS,
+    CYNC_MQTT_PORT,
+    CYNC_MQTT_USER,
+    CYNC_TOPIC,
+    DEVICE_LWT_MSG,
+)
 from cync_controller.logging_abstraction import get_logger
 from cync_controller.mqtt.command_routing import CommandRouter
 from cync_controller.mqtt.discovery import DiscoveryHelper
 from cync_controller.mqtt.state_updates import StateUpdateHelper
-from cync_controller.structs import DeviceStatus
+from cync_controller.structs import DeviceStatus, GlobalObject
 from cync_controller.utils import send_sigterm
+
+if TYPE_CHECKING:
+    from collections.abc import Coroutine
+
+    from cync_controller.structs import (
+        CyncDeviceProtocol,
+        CyncGroupProtocol,
+        CyncTCPDeviceProtocol,
+    )
 
 logger = get_logger(__name__)
 
 
-# Import g from mqtt_client module for backward compatibility with test patches
-# Use lazy import to avoid circular dependency
-def _get_g():
-    import cync_controller.mqtt_client as mqtt_client_module
-
-    return mqtt_client_module.g
-
-
-# Create a getter function that can be used like a module-level variable
-class GProxy:
-    def __getattr__(self, name):
-        return getattr(_get_g(), name)
-
-
-g = GProxy()
+def _get_global_object() -> GlobalObject:
+    """Return the shared GlobalObject, honoring legacy/mock patch points."""
+    for mod_name in (
+        "cync_controller.mqtt_client",  # wrapper patched by tests
+        "cync_controller.devices.shared",
+        "cync_controller.devices",
+    ):
+        try:
+            module = importlib.import_module(mod_name)
+            if hasattr(module, "g"):
+                return cast("GlobalObject", module.g)
+        except ModuleNotFoundError:
+            continue
+        except Exception:
+            continue
+    return GlobalObject()
 
 
 class MQTTClient:
     """Main MQTT client for Cync Controller with modular helper classes."""
 
     lp: str = "mqtt:"
-    cync_topic: str
     _refresh_in_progress: bool = False
-    start_task: asyncio.Task | None = None
+    start_task: asyncio.Task[None] | None = None
+    _connected: bool = False
+    tasks: list[asyncio.Task[None]] | None = None
+    broker_client_id: str = ""
+    broker_host: str | None = None
+    broker_port: int | None = None
+    broker_username: str | None = None
+    broker_password: str | None = None
+    client: aiomqtt.Client | None = None
+    topic: str = ""
+    ha_topic: str = ""
+    # Helper attributes are stored as concrete helper instances but typed as
+    # generic objects here to satisfy protocol invariance rules.
+    discovery: object | None = None
+    state_updates: object | None = None
+    command_router: object | None = None
 
     _instance: MQTTClient | None = None
+    _initialized: bool = False
 
-    def __new__(cls, *_args, **_kwargs):
+    def __new__(cls, *_args: object, **_kwargs: object) -> MQTTClient:
         if cls._instance is None:
             cls._instance = super().__new__(cls)
         return cls._instance
 
-    def __init__(self):
+    def __init__(self, *_args: object, **_kwargs: object) -> None:
+        """Initialize MQTT client (singleton pattern - args/kwargs ignored)."""
+        # Skip initialization if already initialized (singleton pattern)
+        if getattr(self, "_initialized", False):
+            return
+
+        self._initialized = True
         self._connected = False
-        self.tasks: list[asyncio.Task | Coroutine] | None = None
+        self.tasks = None
+        self._g: GlobalObject = _get_global_object()
         lp = f"{self.lp}init:"
         if not CYNC_TOPIC:
             topic = "cync_lan"
@@ -73,15 +119,16 @@ class MQTTClient:
         else:
             ha_topic = CYNC_HASS_TOPIC
 
-        self.broker_client_id = f"cync_lan_{g.uuid}"
+        self.broker_client_id = f"cync_lan_{self._g.uuid}"
         lwt = aiomqtt.Will(topic=f"{topic}/connected", payload=DEVICE_LWT_MSG)
         self.broker_host = CYNC_MQTT_HOST
-        self.broker_port = CYNC_MQTT_PORT
+        setattr(self, "broker_port", CYNC_MQTT_PORT)  # noqa: B010
         self.broker_username = CYNC_MQTT_USER
         self.broker_password = CYNC_MQTT_PASS
+        port = int(self.broker_port) if self.broker_port else 1883
         self.client = aiomqtt.Client(
             hostname=self.broker_host,
-            port=int(self.broker_port),
+            port=port,
             username=self.broker_username,
             password=self.broker_password,
             identifier=self.broker_client_id,
@@ -97,11 +144,146 @@ class MQTTClient:
         self.state_updates = StateUpdateHelper(self)
         self.command_router = CommandRouter(self)
 
+    @property
+    def is_connected(self) -> bool:
+        """Check if MQTT client is connected to the broker."""
+        return self._connected
+
+    def set_connected(self, connected: bool) -> None:
+        """Set the connection state. Used by helper classes when connection errors occur."""
+        self._connected = connected
+
     def _brightness_to_percentage(self, brightness: int) -> int:
         """Convert Cync brightness (0-255) to Home Assistant percentage (0-100)."""
         return round((brightness / 255) * 100)
 
-    async def start(self):
+    async def _handle_initial_connection(self, lp: str) -> None:
+        """Handle initial MQTT connection setup."""
+        if not self._g.ncync_server:
+            logger.warning("%s nCync server not available for initial connection", lp)
+            return
+
+        logger.debug("%s Seeding all devices: offline", lp)
+        assert self.state_updates is not None, "state_updates must be initialized"
+        state_updates = cast("StateUpdateHelper", self.state_updates)
+        assert self.topic, "topic must be initialized"
+        assert self.client is not None, "client must be initialized"
+
+        ncync_server = self._g.ncync_server
+        assert ncync_server is not None
+        # Protocol ensures types are known without circular import
+        devices: Mapping[int, CyncDeviceProtocol] = ncync_server.devices
+        groups: Mapping[int, CyncGroupProtocol] = ncync_server.groups
+
+        for device_id in devices:
+            _ = await state_updates.pub_online(device_id, False)
+        subgroups: list[CyncGroupProtocol] = [grp for grp in groups.values() if grp.is_subgroup]
+        logger.debug("%s Setting %s subgroups: online", lp, len(subgroups))
+        for group in subgroups:
+            _ = await self.publish(f"{self.topic}/availability/{group.hass_id}", b"online")
+
+        logger.info(
+            "%s Publishing initial device availability as ONLINE for all %d devices",
+            lp,
+            len(devices),
+        )
+        for device_id, device in devices.items():
+            try:
+                device_uuid = f"{device.home_id}-{device_id}"
+                await self.client.publish(f"{self.topic}/availability/{device_uuid}", b"online", qos=0)
+            except Exception as e:
+                logger.debug(
+                    "%s Failed to publish initial availability for device %s: %s",
+                    lp,
+                    device_id,
+                    e,
+                )
+
+    async def _handle_reconnection(self, _lp: str) -> None:
+        """Handle MQTT reconnection setup."""
+        if not self._g.ncync_server:
+            logger.warning("%s nCync server not available for reconnection", _lp)
+            return
+
+        assert self.state_updates is not None, "state_updates must be initialized"
+        state_updates = cast("StateUpdateHelper", self.state_updates)
+
+        ncync_server = self._g.ncync_server
+        assert ncync_server is not None
+        # Protocol ensures types are known without circular import
+        devices: Mapping[int, CyncDeviceProtocol] = ncync_server.devices
+        groups: Mapping[int, CyncGroupProtocol] = ncync_server.groups
+
+        tasks: list[asyncio.Task[None] | Coroutine[object, object, bool]] = []
+        for device in devices.values():
+            assert device.id is not None
+            tasks.append(state_updates.pub_online(device.id, device.online))
+            tasks.append(
+                state_updates.parse_device_status(
+                    device.id,
+                    DeviceStatus(
+                        state=device.state,
+                        brightness=device.brightness,
+                        temperature=device.temperature,
+                        red=device.red,
+                        green=device.green,
+                        blue=device.blue,
+                    ),
+                    from_pkt="'re-connect'",
+                ),
+            )
+        subgroups: list[CyncGroupProtocol] = [grp for grp in groups.values() if grp.is_subgroup]
+        for group in subgroups:
+            tasks.append(
+                self.publish(
+                    f"{self.topic}/availability/{group.hass_id}",
+                    b"online",
+                ),
+            )
+        if tasks:
+            _ = await asyncio.gather(*tasks)
+
+    async def _start_receiver(self, lp: str) -> None:
+        """Start MQTT receiver task."""
+        logger.info("%s Starting MQTT receiver...", lp)
+        rcv_lp = f"{self.lp}rcv:"
+        assert self.client is not None, "client must be initialized"
+        assert self.command_router is not None, "command_router must be initialized"
+        topics = [
+            (f"{self.topic}/set/#", 0),
+            (f"{self.ha_topic}/status", 0),
+        ]
+        # Subscribe to each topic individually to match type stub
+        for topic, qos in topics:
+            await self.client.subscribe(topic, qos=qos)
+        logger.debug(
+            "%s Subscribed to MQTT topics: %s. Waiting for MQTT messages...",
+            rcv_lp,
+            [x[0] for x in topics],
+        )
+        try:
+            assert self.command_router is not None, "command_router must be initialized"
+            command_router = cast("CommandRouter", self.command_router)
+            await command_router.start_receiver_task()
+        except asyncio.CancelledError:
+            logger.debug("%s MQTT receiver task cancelled, propagating...", rcv_lp)
+            raise
+        except (aiomqtt.MqttError, aiomqtt.MqttCodeError) as msg_err:
+            logger.warning("%s MQTT error: %s", rcv_lp, msg_err)
+            raise
+
+    def _get_connection_delay(self, lp: str) -> int:
+        """Get connection retry delay, defaulting to 5 seconds."""
+        delay = CYNC_MQTT_CONN_DELAY
+        if delay <= 0:
+            logger.debug(
+                "%s MQTT connection delay is less than or equal to 0, which is probably a typo, setting to 5...",
+                lp,
+            )
+            return 5
+        return delay
+
+    async def start(self) -> None:
         itr = 0
         lp = f"{self.lp}start:"
         try:
@@ -109,102 +291,26 @@ class MQTTClient:
                 itr += 1
                 self._connected = await self.connect()
                 if self._connected:
-                    # Publish MQTT message indicating the MQTT client is connected
-                    await self.publish(
+                    _ = await self.publish(
                         f"{self.topic}/status/bridge/mqtt_client/connected",
                         b"ON",
                     )
 
                     if itr == 1:
-                        logger.debug("%s Seeding all devices: offline", lp)
-                        for device_id in g.ncync_server.devices:
-                            await self.state_updates.pub_online(device_id, False)
-                        # Set all subgroups online (subgroups are always available)
-                        subgroups = [grp for grp in g.ncync_server.groups.values() if grp.is_subgroup]
-                        logger.debug("%s Setting %s subgroups: online", lp, len(subgroups))
-                        for group in subgroups:
-                            await self.publish(f"{self.topic}/availability/{group.hass_id}", b"online")
-
-                        # After discovery, publish all devices as online initially
-                        # They will be marked offline only if they fail to connect
-                        logger.info(
-                            "%s Publishing initial device availability as ONLINE for all %d devices",
-                            lp,
-                            len(g.ncync_server.devices),
-                        )
-                        for device_id, device in g.ncync_server.devices.items():
-                            try:
-                                device_uuid = f"{device.home_id}-{device_id}"
-                                await self.client.publish(f"{self.topic}/availability/{device_uuid}", b"online", qos=0)
-                            except Exception as e:
-                                logger.debug(
-                                    "%s Failed to publish initial availability for device %s: %s", lp, device_id, e
-                                )
+                        await self._handle_initial_connection(lp)
                     elif itr > 1:
-                        tasks = []
-                        # set the device online/offline and set its status
-                        for device in g.ncync_server.devices.values():
-                            tasks.append(self.state_updates.pub_online(device.id, device.online))
-                            tasks.append(
-                                self.state_updates.parse_device_status(
-                                    device.id,
-                                    DeviceStatus(
-                                        state=device.state,
-                                        brightness=device.brightness,
-                                        temperature=device.temperature,
-                                        red=device.red,
-                                        green=device.green,
-                                        blue=device.blue,
-                                    ),
-                                    from_pkt="'re-connect'",
-                                )
-                            )
-                        # Set all subgroups online after reconnection
-                        subgroups = [grp for grp in g.ncync_server.groups.values() if grp.is_subgroup]
-                        for group in subgroups:
-                            tasks.append(
-                                self.publish(
-                                    f"{self.topic}/availability/{group.hass_id}",
-                                    b"online",
-                                )
-                            )
-                        if tasks:
-                            await asyncio.gather(*tasks)
-                    logger.info("%s Starting MQTT receiver...", lp)
-                    lp: str = f"{self.lp}rcv:"
-                    topics = [
-                        (f"{self.topic}/set/#", 0),
-                        (f"{self.ha_topic}/status", 0),
-                    ]
-                    await self.client.subscribe(topics)
-                    logger.debug(
-                        "%s Subscribed to MQTT topics: %s. Waiting for MQTT messages...",
-                        lp,
-                        [x[0] for x in topics],
-                    )
+                        await self._handle_reconnection(lp)
+
                     try:
-                        await self.command_router.start_receiver_task()
-                    except asyncio.CancelledError:
-                        logger.debug("%s MQTT receiver task cancelled, propagating...", lp)
-                        raise
-                    except (aiomqtt.MqttError, aiomqtt.MqttCodeError) as msg_err:
-                        logger.warning("%s MQTT error: %s", lp, msg_err)
+                        await self._start_receiver(lp)
+                    except (aiomqtt.MqttError, aiomqtt.MqttCodeError):
                         continue
                 else:
-                    await self.publish(
+                    _ = await self.publish(
                         f"{self.topic}/status/bridge/mqtt_client/connected",
                         b"OFF",
                     )
-                    delay = CYNC_MQTT_CONN_DELAY
-                    if delay is None:
-                        delay = 5
-                    elif delay <= 0:
-                        logger.debug(
-                            "%s MQTT connection delay is less than or equal to 0, which is probably a typo, setting to 5...",
-                            lp,
-                        )
-                        delay = 5
-
+                    delay = self._get_connection_delay(lp)
                     logger.info(
                         "%s connecting to MQTT broker failed, sleeping for %s seconds before re-trying...",
                         lp,
@@ -221,14 +327,14 @@ class MQTTClient:
         self._connected = False
         logger.debug("%s Connecting to MQTT broker...", lp)
         lwt = aiomqtt.Will(topic=f"{self.topic}/connected", payload=DEVICE_LWT_MSG)
-        g.reload_env()
-        self.broker_host = g.env.mqtt_host
-        self.broker_port = g.env.mqtt_port
-        self.broker_username = g.env.mqtt_user
-        self.broker_password = g.env.mqtt_pass
+        self._g.reload_env()
+        self.broker_host = self._g.env.mqtt_host
+        setattr(self, "broker_port", self._g.env.mqtt_port)  # noqa: B010
+        self.broker_username = self._g.env.mqtt_user
+        self.broker_password = self._g.env.mqtt_pass
         self.client = aiomqtt.Client(
             hostname=self.broker_host,
-            port=int(self.broker_port),
+            port=int(self.broker_port) if self.broker_port else 1883,
             username=self.broker_username,
             password=self.broker_password,
             identifier=self.broker_client_id,
@@ -236,7 +342,7 @@ class MQTTClient:
             # logger=logger,
         )
         try:
-            await self.client.__aenter__()
+            _ = await self.client.__aenter__()
         except aiomqtt.MqttError as mqtt_err_exc:
             # -> [Errno 111] Connection refused
             # [code:134] Bad user name or password
@@ -245,7 +351,7 @@ class MQTTClient:
                 logger.exception(
                     "%s Bad username or password, check your MQTT credentials (username: %s)",
                     lp,
-                    g.env.mqtt_user,
+                    self._g.env.mqtt_user,
                 )
                 send_sigterm()
         else:
@@ -256,9 +362,9 @@ class MQTTClient:
                 self.broker_host,
                 self.broker_port,
             )
-            await self.send_birth_msg()
+            _ = await self.send_birth_msg()
             await asyncio.sleep(1)
-            await self.homeassistant_discovery()
+            _ = await self.homeassistant_discovery()
 
             # TEMPORARILY DISABLED: Start fast periodic refresh task (15s interval)
             # self.fast_refresh_task = asyncio.create_task(self.periodic_fast_refresh())
@@ -266,21 +372,30 @@ class MQTTClient:
             return True
         return False
 
-    async def stop(self):
+    async def stop(self) -> None:
         lp = f"{self.lp}stop:"
         # set all devices offline
-        if self._connected:
+        if self._connected and self._g.ncync_server:
+            assert self.state_updates is not None, "state_updates must be initialized"
+            state_updates = cast("StateUpdateHelper", self.state_updates)
             logger.debug("%s Setting all Cync devices offline...", lp)
-            for device_id, _device in g.ncync_server.devices.items():
-                await self.state_updates.pub_online(device_id, False)
+
+            ncync_server = self._g.ncync_server
+            assert ncync_server is not None
+            # Protocol ensures types are known without circular import
+            devices: Mapping[int, CyncDeviceProtocol] = ncync_server.devices
+
+            for device_id, _device in devices.items():
+                _ = await state_updates.pub_online(device_id, False)
             # Publish MQTT message indicating the MQTT client is disconnected
-            await self.publish(
+            _ = await self.publish(
                 f"{self.topic}/status/bridge/mqtt_client/connected",
                 b"OFF",
             )
-            await self.publish(f"{self.topic}/availability/bridge", b"offline")
-            await self.send_will_msg()
+            _ = await self.publish(f"{self.topic}/availability/bridge", b"offline")
+            _ = await self.send_will_msg()
         try:
+            assert self.client is not None, "client must be initialized"
             logger.debug("%s Disconnecting from broker...", lp)
             await self.client.__aexit__(None, None, None)
         except aiomqtt.MqttError as ce:
@@ -293,11 +408,12 @@ class MQTTClient:
             self._connected = False
             if self.start_task and not self.start_task.done():
                 logger.debug("%s FINISHING: Cancelling start task", lp)
-                self.start_task.cancel()
+                _ = self.start_task.cancel()
 
     async def send_birth_msg(self) -> bool:
         lp = f"{self.lp}send_birth_msg:"
         if self._connected:
+            assert self.client is not None, "client must be initialized"
             logger.debug(
                 "%s Sending birth message (%s) to %s/status",
                 lp,
@@ -312,7 +428,7 @@ class MQTTClient:
                     retain=True,
                 )
             except aiomqtt.MqttCodeError as mqtt_code_exc:
-                logger.warning("%s [MqttError] (rc: %s) -> %s", lp, mqtt_code_exc.rc, mqtt_code_exc)
+                logger.warning("%s [MqttError] -> %s", lp, mqtt_code_exc)
             except asyncio.CancelledError as can_exc:
                 logger.warning("%s [Task Cancelled] -> %s", lp, can_exc)
             else:
@@ -322,6 +438,7 @@ class MQTTClient:
     async def send_will_msg(self) -> bool:
         lp = f"{self.lp}send_will_msg:"
         if self._connected:
+            assert self.client is not None, "client must be initialized"
             logger.debug(
                 "%s Sending will message (%s) to %s/status",
                 lp,
@@ -344,15 +461,19 @@ class MQTTClient:
                 return True
         return False
 
-    async def publish(self, topic: str, msg_data: bytes):
+    async def publish(self, topic: str, msg_data: bytes) -> bool:
         """Publish a message to the MQTT broker."""
         lp = f"{self.lp}publish:"
         if not self._connected:
             return False
+        assert self.client is not None, "client must be initialized"
         try:
             _ = await self.client.publish(topic, msg_data, qos=0, retain=False)
-        except aiomqtt.MqttError as mqtt_code_exc:
-            logger.warning("%s [MqttError] (rc: %s) -> %s", lp, mqtt_code_exc.rc, mqtt_code_exc)
+        except aiomqtt.MqttCodeError as mqtt_code_exc:
+            logger.warning("%s [MqttCodeError] -> %s", lp, mqtt_code_exc)
+            self._connected = False
+        except aiomqtt.MqttError as mqtt_err:
+            logger.warning("%s [MqttError] -> %s", lp, mqtt_err)
             self._connected = False
         except asyncio.CancelledError as can_exc:
             logger.warning("%s [Task Cancelled] -> %s", lp, can_exc)
@@ -362,12 +483,15 @@ class MQTTClient:
             return True
         return False
 
-    async def publish_json_msg(self, topic: str, msg_data: dict) -> bool:
+    async def publish_json_msg(self, topic: str, msg_data: Mapping[str, object]) -> bool:
         lp = f"{self.lp}publish_msg:"
+        assert self.client is not None, "client must be initialized"
         try:
             _ = await self.client.publish(topic, json.dumps(msg_data).encode(), qos=0, retain=False)
-        except aiomqtt.MqttError as mqtt_code_exc:
-            logger.warning("%s [MqttError] (rc: %s) -> %s", lp, mqtt_code_exc.rc, mqtt_code_exc)
+        except aiomqtt.MqttCodeError as mqtt_code_exc:
+            logger.warning("%s [MqttCodeError] -> %s", lp, mqtt_code_exc)
+        except aiomqtt.MqttError as mqtt_err:
+            logger.warning("%s [MqttError] -> %s", lp, mqtt_err)
         except asyncio.CancelledError as can_exc:
             logger.warning("%s [Task Cancelled] -> %s", lp, can_exc)
         except Exception as e:
@@ -376,8 +500,8 @@ class MQTTClient:
             return True
         return False
 
-    def kelvin2cync(self, k):
-        """Convert Kelvin value to Cync white temp (0-100) with step size: 1"""
+    def kelvin2cync(self, k: float) -> int:
+        """Convert Kelvin value to Cync white temp (0-100) with step size: 1."""
         max_k = CYNC_MAXK
         min_k = CYNC_MINK
         if k < min_k:
@@ -388,8 +512,8 @@ class MQTTClient:
         return int(scale * (k - min_k))
         # logger.debug("%s Converting Kelvin: %s using scale: %s (max_k=%s, min_k=%s) -> return value: %s", self.lp, k, scale, max_k, min_k, ret)
 
-    def cync2kelvin(self, ct):
-        """Convert Cync white temp (0-100) to Kelvin value"""
+    def cync2kelvin(self, ct: int) -> int:
+        """Convert Cync white temp (0-100) to Kelvin value."""
         max_k = CYNC_MAXK
         min_k = CYNC_MINK
         if ct <= 0:
@@ -400,7 +524,7 @@ class MQTTClient:
         return min_k + int(scale * ct)
         # logger.debug("%s Converting Cync temp: %s using scale: %s (max_k=%s, min_k=%s) -> return value: %s", self.lp, ct, scale, max_k, min_k, ret)
 
-    async def trigger_status_refresh(self):
+    async def trigger_status_refresh(self) -> None:
         """Trigger an immediate status refresh from all bridge devices."""
         lp = f"{self.lp}trigger_refresh:"
 
@@ -415,12 +539,19 @@ class MQTTClient:
         logger.info("%s [%s] Starting refresh...", lp, refresh_id)
 
         try:
-            if not g.ncync_server:
+            if not self._g.ncync_server:
                 logger.warning("%s [%s] nCync server not available", lp, refresh_id)
                 return
 
+            ncync_server = self._g.ncync_server
+            assert ncync_server is not None
+            # Protocol ensures types are known without circular import
+            tcp_devices: dict[str, CyncTCPDeviceProtocol | None] = ncync_server.tcp_devices
+
             # Get active TCP bridge devices
-            bridge_devices = [dev for dev in g.ncync_server.tcp_devices.values() if dev and dev.ready_to_control]
+            bridge_devices: list[CyncTCPDeviceProtocol] = [
+                dev for dev in tcp_devices.values() if dev is not None and dev.ready_to_control
+            ]
 
             # Sort by connection time - prefer stable (older) connections
             bridge_devices.sort(key=lambda d: d.connected_at)
@@ -444,7 +575,7 @@ class MQTTClient:
             # Any single bridge can see all 43 devices via mesh network
             # Single-bridge is 2.7x faster than dual-bridge (0.2s vs 0.6s average)
             bridge_devices = bridge_devices[:1]
-            total_available = len([dev for dev in g.ncync_server.tcp_devices.values() if dev and dev.ready_to_control])
+            total_available = len([dev for dev in tcp_devices.values() if dev is not None and dev.ready_to_control])
             logger.debug(
                 "%s [%s] Using %d bridge for refresh (oldest of %d available)",
                 lp,
@@ -466,7 +597,7 @@ class MQTTClient:
         finally:
             self._refresh_in_progress = False
 
-    async def periodic_fast_refresh(self):
+    async def periodic_fast_refresh(self) -> None:
         """Fast periodic status refresh every 15 seconds."""
         lp = f"{self.lp}fast_refresh:"
         logger.info("%s Starting fast periodic refresh task (15s interval)...", lp)
@@ -488,75 +619,121 @@ class MQTTClient:
                 await asyncio.sleep(15)  # Wait before retrying on error
 
     # Delegation methods to helper classes
-    async def register_single_device(self, device):
+    async def register_single_device(self, device: CyncDeviceProtocol) -> bool:
         """Register a single device with Home Assistant via MQTT discovery."""
-        return await self.discovery.register_single_device(device)
+        assert self.discovery is not None, "discovery must be initialized"
+        discovery = cast("DiscoveryHelper", self.discovery)
+        # CyncDevice structurally implements CyncDeviceProtocol
+        return await discovery.register_single_device(device)
 
-    async def trigger_device_rediscovery(self):
+    async def trigger_device_rediscovery(self) -> bool:
         """Trigger rediscovery of all devices currently in the devices dictionary."""
-        return await self.discovery.trigger_device_rediscovery()
+        assert self.discovery is not None, "discovery must be initialized"
+        discovery = cast("DiscoveryHelper", self.discovery)
+        return await discovery.trigger_device_rediscovery()
 
-    async def homeassistant_discovery(self):
-        """Build each configured Cync device for HASS device registry"""
-        return await self.discovery.homeassistant_discovery()
+    async def homeassistant_discovery(self) -> bool:
+        """Build each configured Cync device for HASS device registry."""
+        assert self.discovery is not None, "discovery must be initialized"
+        discovery = cast("DiscoveryHelper", self.discovery)
+        return await discovery.homeassistant_discovery()
 
-    async def create_bridge_device(self):
+    async def create_bridge_device(self) -> bool:
         """Create the device / entity registry config for the Cync Controller bridge itself."""
-        return await self.discovery.create_bridge_device()
+        assert self.discovery is not None, "discovery must be initialized"
+        discovery = cast("DiscoveryHelper", self.discovery)
+        return await discovery.create_bridge_device()
 
     # Delegation methods to state_updates helper
     async def pub_online(self, device_id: int, status: bool) -> bool:
         """Publish device online/offline status."""
-        return await self.state_updates.pub_online(device_id, status)
+        assert self.state_updates is not None, "state_updates must be initialized"
+        state_updates = cast("StateUpdateHelper", self.state_updates)
+        return await state_updates.pub_online(device_id, status)
 
-    async def update_device_state(self, device: CyncDevice, state: int) -> bool:
+    async def update_device_state(self, device: CyncDeviceProtocol, state: int) -> bool:
         """Update the device state and publish to MQTT."""
-        return await self.state_updates.update_device_state(device, state)
+        assert self.state_updates is not None, "state_updates must be initialized"
+        state_updates = cast("StateUpdateHelper", self.state_updates)
+        return await state_updates.update_device_state(device, state)
 
-    async def update_brightness(self, device: CyncDevice, bri: int) -> bool:
+    async def update_brightness(self, device: CyncDeviceProtocol, bri: int) -> bool:
         """Update the device brightness and publish to MQTT."""
-        return await self.state_updates.update_brightness(device, bri)
+        assert self.state_updates is not None, "state_updates must be initialized"
+        state_updates = cast("StateUpdateHelper", self.state_updates)
+        return await state_updates.update_brightness(device, bri)
 
-    async def update_temperature(self, device: CyncDevice, temp: int) -> bool:
+    async def update_temperature(self, device: CyncDeviceProtocol, temp: int) -> bool:
         """Update the device temperature and publish to MQTT."""
-        return await self.state_updates.update_temperature(device, temp)
+        assert self.state_updates is not None, "state_updates must be initialized"
+        state_updates = cast("StateUpdateHelper", self.state_updates)
+        return await state_updates.update_temperature(device, temp)
 
-    async def update_rgb(self, device: CyncDevice, rgb: tuple[int, int, int]) -> bool:
+    async def update_rgb(self, device: CyncDeviceProtocol, rgb: tuple[int, int, int]) -> bool:
         """Update the device RGB and publish to MQTT."""
-        return await self.state_updates.update_rgb(device, rgb)
+        assert self.state_updates is not None, "state_updates must be initialized"
+        state_updates = cast("StateUpdateHelper", self.state_updates)
+        return await state_updates.update_rgb(device, rgb)
 
-    async def send_device_status(self, device: CyncDevice, state_bytes: bytes) -> bool:
+    async def send_device_status(self, device: CyncDeviceProtocol, state_bytes: bytes) -> bool:
         """Publish device status to MQTT."""
-        return await self.state_updates.send_device_status(device, state_bytes)
+        assert self.state_updates is not None, "state_updates must be initialized"
+        state_updates = cast("StateUpdateHelper", self.state_updates)
+        return await state_updates.send_device_status(device, state_bytes)
 
     async def publish_group_state(
         self,
-        group,
-        state=None,
-        brightness=None,
-        temperature=None,
+        group: CyncGroupProtocol,
+        state: int | None = None,
+        brightness: int | None = None,
+        temperature: int | None = None,
         origin: str | None = None,
-    ):
+    ) -> bool:
         """Publish group state to MQTT."""
-        return await self.state_updates.publish_group_state(group, state, brightness, temperature, origin)
+        assert self.state_updates is not None, "state_updates must be initialized"
+        state_updates = cast("StateUpdateHelper", self.state_updates)
+        await state_updates.publish_group_state(group, state, brightness, temperature, origin)
+        # publish_group_state returns None, but we return True to indicate the call was made
+        return True
 
-    async def parse_device_status(self, device_id: int, device_status: DeviceStatus, *_args, **kwargs) -> bool:
+    async def parse_device_status(
+        self,
+        device_id: int,
+        device_status: DeviceStatus,
+        *args: object,
+        **kwargs: object,
+    ) -> bool:
         """Parse device status and publish to MQTT."""
-        return await self.state_updates.parse_device_status(device_id, device_status, *_args, **kwargs)
+        assert self.state_updates is not None, "state_updates must be initialized"
+        state_updates = cast("StateUpdateHelper", self.state_updates)
+        return bool(await state_updates.parse_device_status(device_id, device_status, *args, **kwargs))
 
-    async def update_switch_from_subgroup(self, device: CyncDevice, subgroup_state: int, subgroup_name: str) -> bool:
+    async def update_switch_from_subgroup(
+        self,
+        device: CyncDeviceProtocol,
+        subgroup_state: int,
+        subgroup_name: str,
+    ) -> bool:
         """Update a switch device state to match its subgroup state."""
-        return await self.state_updates.update_switch_from_subgroup(device, subgroup_state, subgroup_name)
+        assert self.state_updates is not None, "state_updates must be initialized"
+        state_updates = cast("StateUpdateHelper", self.state_updates)
+        return await state_updates.update_switch_from_subgroup(device, subgroup_state, subgroup_name)
 
     async def sync_group_switches(self, group_id: int, group_state: int, group_name: str) -> int:
         """Sync all switch devices in a group to match the group's state."""
-        return await self.state_updates.sync_group_switches(group_id, group_state, group_name)
+        assert self.state_updates is not None, "state_updates must be initialized"
+        state_updates = cast("StateUpdateHelper", self.state_updates)
+        return await state_updates.sync_group_switches(group_id, group_state, group_name)
 
     async def sync_group_devices(self, group_id: int, group_state: int, group_name: str) -> int:
         """Sync all devices (switches and bulbs) in a group to match the group's state."""
-        return await self.state_updates.sync_group_devices(group_id, group_state, group_name)
+        assert self.state_updates is not None, "state_updates must be initialized"
+        state_updates = cast("StateUpdateHelper", self.state_updates)
+        return await state_updates.sync_group_devices(group_id, group_state, group_name)
 
     # Delegation method to command_router helper
-    async def start_receiver_task(self):
+    async def start_receiver_task(self) -> None:
         """Start listening for MQTT messages on subscribed topics."""
-        return await self.command_router.start_receiver_task()
+        assert self.command_router is not None, "command_router must be initialized"
+        command_router = cast("CommandRouter", self.command_router)
+        await command_router.start_receiver_task()

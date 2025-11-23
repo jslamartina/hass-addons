@@ -1,8 +1,16 @@
+"""Device model information and metadata for Cync devices.
+
+Provides data structures and enums for device classification, capabilities,
+protocols, and characteristics used throughout the Cync Controller.
+"""
+
 from dataclasses import dataclass, field
 from enum import StrEnum
 
 
 class DeviceClassification(StrEnum):
+    """Device type classification enum for Cync devices."""
+
     LIGHT = "light"
     SWITCH = "switch"
     THERMOSTAT = "thermostat"
@@ -54,7 +62,7 @@ class DeviceTypeInfo:
     @property
     def model_string(self) -> str:
         """Return a string representation of the model name, ID and characteristics."""
-        base_str = self.model_name
+        base_str = self.model_name or "Unknown Device"
         add_str = ""
         if self.model_id:
             add_str = self.model_id
@@ -73,7 +81,7 @@ class DeviceTypeInfo:
                 add_str += f"{kelvin_data}"
         if add_str:
             add_str = f" [{add_str}]"
-        return base_str + add_str
+        return f"{base_str}{add_str}"
 
 
 """Maps a device type ID to its corresponding DeviceTypeInfo."""

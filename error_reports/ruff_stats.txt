@@ -1,0 +1,8 @@
+[1m5[0m	[1;31mPLR0912[0m	too-many-branches
+[1m3[0m	[1;31mARG002 [0m	unused-method-argument
+[1m3[0m	[1;31mN802   [0m	invalid-function-name
+[1m3[0m	[1;31mPLR0915[0m	too-many-statements
+[1m2[0m	[1;31mF841   [0m	unused-variable
+[1m1[0m	[1;31mPLR0911[0m	too-many-return-statements
+Found 17 errors.
+No fixes available (2 hidden fixes can be enabled with the `--unsafe-fixes` option).

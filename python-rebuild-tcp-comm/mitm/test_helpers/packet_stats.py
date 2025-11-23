@@ -61,7 +61,7 @@ def generate_statistics_table(
     Returns:
         Markdown-formatted table
     """
-    lines = []
+    lines: list[str] = []
     lines.append("## Packet Type Distribution\n")
     lines.append("| Packet Type | Classification | Count | Percentage |")
     lines.append("|-------------|----------------|-------|------------|")
@@ -138,7 +138,7 @@ def format_quality_assessment(assessment: dict[str, bool]) -> str:
     Returns:
         Formatted checklist string
     """
-    lines = []
+    lines: list[str] = []
     lines.append("## Validation Quality Assessment\n")
 
     criteria_labels = {

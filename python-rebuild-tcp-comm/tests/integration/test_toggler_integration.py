@@ -8,6 +8,7 @@ import urllib.request
 from typing import TYPE_CHECKING
 
 import pytest
+from _pytest.outcomes import fail
 
 from harness.toggler import toggle_device_with_retry
 from metrics import start_metrics_server
@@ -313,11 +314,12 @@ async def test_metrics_endpoint_accessible(
     # Query metrics endpoint
     metrics_url = f"http://localhost:{unique_metrics_port}/metrics"
 
+    metrics_text = ""
     try:
         with urllib.request.urlopen(metrics_url, timeout=5) as response:  # noqa: S310
             metrics_text = response.read().decode("utf-8")
-    except Exception as e:
-        pytest.fail(f"Failed to access metrics endpoint: {e}")
+    except Exception as err:
+        fail(f"Failed to access metrics endpoint: {err}")
 
     # Verify metrics exist in output
     assert "tcp_comm_packet_sent_total" in metrics_text, "Should have sent packet metric"

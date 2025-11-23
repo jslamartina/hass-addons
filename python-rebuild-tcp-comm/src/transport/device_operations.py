@@ -25,7 +25,9 @@ from collections import OrderedDict
 from collections.abc import Sequence
 from typing import TYPE_CHECKING, Literal, Protocol, cast, overload
 
-from uuid_extensions import uuid7  # type: ignore[import-untyped]
+from uuid_extensions import (
+    uuid7,
+)
 
 from metrics import registry
 from protocol import PACKET_TYPE_DEVICE_INFO, PACKET_TYPE_STATUS_BROADCAST

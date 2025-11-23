@@ -12,10 +12,10 @@ from pathlib import Path
 from typing import TypedDict
 
 # Add src to path for imports
-sys.path.insert(0, str(Path(__file__).parent.parent.parent / "src"))  # type: ignore
+sys.path.insert(0, str(Path(__file__).parent.parent.parent / "src"))
 
-from protocol.cync_protocol import CyncProtocol  # type: ignore
-from protocol.exceptions import PacketDecodeError  # type: ignore
+from protocol.cync_protocol import CyncProtocol
+from protocol.exceptions import PacketDecodeError
 
 # Constants for validation criteria
 MIN_DECODED_PACKETS_REQUIRED = 100
@@ -95,7 +95,7 @@ def validate_packets(
     Returns:
         Statistics dictionary
     """
-    protocol = CyncProtocol()  # type: ignore
+    protocol = CyncProtocol()
     stats: ValidationStats = {
         "total_packets": 0,
         "decoded_successfully": 0,
@@ -114,11 +114,11 @@ def validate_packets(
         stats["direction_counts"][direction] += 1
 
         try:
-            decoded = protocol.decode_packet(packet_bytes)  # type: ignore
+            decoded = protocol.decode_packet(packet_bytes)
             stats["decoded_successfully"] += 1
 
             # Count packet type
-            packet_type_hex = f"0x{decoded.packet_type:02x}"  # type: ignore
+            packet_type_hex = f"0x{decoded.packet_type:02x}"
             stats["packet_types"][packet_type_hex] += 1
 
             # Store sample packet (first of each type)
@@ -127,12 +127,12 @@ def validate_packets(
                     "timestamp": timestamp,
                     "direction": direction,
                     "hex": packet_bytes.hex(" "),
-                    "length": decoded.length,  # type: ignore
+                    "length": decoded.length,
                 }
 
-        except PacketDecodeError as e:  # type: ignore
+        except PacketDecodeError as e:
             stats["decode_errors"] += 1
-            stats["error_reasons"][e.reason] += 1  # type: ignore
+            stats["error_reasons"][e.reason] += 1
 
     # Calculate error rate
     if stats["total_packets"] > 0:

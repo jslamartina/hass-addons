@@ -17,7 +17,7 @@ import sys
 import time
 from datetime import datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 import requests
 
@@ -26,8 +26,8 @@ try:
     from transport.device_info import DEVICE_ID_LENGTH_BYTES, DEVICE_TYPE_LENGTH_BYTES
 except ImportError:
     # Fallback if import fails
-    DEVICE_ID_LENGTH_BYTES = 4
-    DEVICE_TYPE_LENGTH_BYTES = 24
+    DEVICE_ID_LENGTH_BYTES = 4  # pyright: ignore[reportConstantRedefinition]
+    DEVICE_TYPE_LENGTH_BYTES = 24  # pyright: ignore[reportConstantRedefinition]
 
 DEVICE_ID_BYTES = 2
 
@@ -217,7 +217,7 @@ def parse_capture_logs(capture_file: Path, since_time: float | None = None) -> l
     Returns:
         List of packet dicts
     """
-    packets = []
+    packets: list[dict[str, Any]] = []
 
     if not capture_file.exists():
         return packets
@@ -308,7 +308,7 @@ def parse_mesh_info_response(hex_string: str) -> list[dict[str, Any]]:
         device_data_start = 15
 
     # Parse DEVICE_TYPE_LENGTH_BYTES-byte device structures
-    devices = []
+    devices: list[dict[str, Any]] = []
     for i in range(device_data_start, len(inner_struct) - 1, DEVICE_TYPE_LENGTH_BYTES):
         dev_struct = inner_struct[i : i + DEVICE_TYPE_LENGTH_BYTES]
         if len(dev_struct) < DEVICE_TYPE_LENGTH_BYTES:
@@ -349,7 +349,7 @@ async def run_toggle_test(
     Returns:
         Test results dict
     """
-    results = {
+    results: dict[str, Any] = {
         "test": "toggle",
         "iterations": iterations,
         "successes": 0,
@@ -383,9 +383,9 @@ async def run_toggle_test(
         # Inject
         try:
             response = inject_packet(api_url, packet)
-            results["successes"] += 1
+            results["successes"] = cast(int, results["successes"]) + 1
 
-            injection_result = {
+            injection_result: dict[str, Any] = {
                 "msg_id": msg_id,
                 "state": "on" if state else "off",
                 "packet_hex": packet.hex(" "),
@@ -407,8 +407,9 @@ async def run_toggle_test(
 
                     injection_result["ack"] = ack
                     injection_result["latency_ms"] = latency_ms
-                    results["acks_received"] += 1
-                    results["latencies_ms"].append(latency_ms)
+                    results["acks_received"] = cast(int, results["acks_received"]) + 1
+                    latencies_list = cast(list[float], results["latencies_ms"])
+                    latencies_list.append(latency_ms)
 
                     print(f"  ✓ ACK received (latency: {latency_ms:.1f}ms)")
                 else:
@@ -416,10 +417,11 @@ async def run_toggle_test(
             else:
                 print("  ✓ Injected successfully")
 
-            results["packets"].append(injection_result)
+            packets_list = cast(list[dict[str, Any]], results["packets"])
+            packets_list.append(injection_result)
 
         except Exception as e:
-            results["failures"] += 1
+            results["failures"] = cast(int, results["failures"]) + 1
             print(f"  ✗ Injection failed: {e}")
 
         # Wait between iterations
@@ -427,8 +429,9 @@ async def run_toggle_test(
             await asyncio.sleep(0.5)
 
     # Calculate statistics
-    if results["latencies_ms"]:
-        latencies = sorted(results["latencies_ms"])
+    latencies_list = cast(list[float], results["latencies_ms"])
+    if latencies_list:
+        latencies = sorted(latencies_list)
         results["latency_stats"] = {
             "min": min(latencies),
             "max": max(latencies),
@@ -460,7 +463,7 @@ async def run_mesh_info_test(
     Returns:
         Test results dict
     """
-    results = {
+    results: dict[str, Any] = {
         "test": "mesh_info",
         "success": False,
         "ack_received": False,
@@ -520,8 +523,9 @@ async def run_mesh_info_test(
                     # Try to parse devices
                     devices = parse_mesh_info_response(hex_data)
                     if devices:
-                        results["devices"].extend(devices)
-                        results["devices_found"] = len(results["devices"])
+                        devices_list = cast(list[dict[str, Any]], results["devices"])
+                        devices_list.extend(devices)
+                        results["devices_found"] = len(devices_list)
 
                         print(f"✓ Mesh info data received ({len(devices)} devices in this packet)")
                         for dev in devices:

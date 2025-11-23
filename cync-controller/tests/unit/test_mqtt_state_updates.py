@@ -1,12 +1,11 @@
-"""
-Unit tests for MQTTClient state update methods.
+"""Unit tests for MQTTClient state update methods.
 
 Tests for update_switch_from_subgroup(), update_brightness(),
 update_temperature(), update_rgb(), parse_device_status(),
 and offline device state handling.
 """
 
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -14,18 +13,18 @@ from cync_controller.mqtt_client import MQTTClient
 
 
 class TestMQTTClientStateUpdates:
-    """Tests for MQTT client state update methods"""
+    """Tests for MQTT client state update methods."""
 
     @pytest.fixture(autouse=True)
     def reset_mqtt_singleton(self):
-        """Reset MQTTClient singleton between tests"""
+        """Reset MQTTClient singleton between tests."""
         MQTTClient._instance = None
         yield
         MQTTClient._instance = None
 
     @pytest.mark.asyncio
     async def test_update_switch_from_subgroup(self):
-        """Test switch state update from subgroup"""
+        """Test switch state update from subgroup."""
         with (
             patch("cync_controller.mqtt_client.g") as mock_g,
             patch("cync_controller.mqtt_client.aiomqtt.Client"),
@@ -46,21 +45,26 @@ class TestMQTTClientStateUpdates:
             mock_g.ncync_server.devices = {0x1001: mock_switch}
 
             client = MQTTClient()
-            client.update_device_state = AsyncMock()
+
+            # Use a real async stub instead of AsyncMock to avoid GC warnings
+            async def _update_device_state_stub(device, state):  # pragma: no cover - behavior tested elsewhere
+                return True
+
+            client.update_device_state = _update_device_state_stub  # type: ignore[assignment]
 
             # Verify device can be updated
             assert mock_switch.is_switch is True
 
     @pytest.mark.asyncio
     async def test_update_brightness_percentage_conversion(self):
-        """Test 0-255 to 0-100 percentage conversion"""
+        """Test 0-255 to 0-100 percentage conversion."""
         with (
             patch("cync_controller.mqtt_client.g") as mock_g,
             patch("cync_controller.mqtt_client.aiomqtt.Client"),
         ):
             mock_g.uuid = "test-uuid"
 
-            MQTTClient()
+            _ = MQTTClient()
 
             # Test brightness conversions
             test_cases = [
@@ -79,14 +83,14 @@ class TestMQTTClientStateUpdates:
 
     @pytest.mark.asyncio
     async def test_update_temperature_kelvin_conversion(self):
-        """Test Kelvin to mireds conversion"""
+        """Test Kelvin to mireds conversion."""
         with (
             patch("cync_controller.mqtt_client.g") as mock_g,
             patch("cync_controller.mqtt_client.aiomqtt.Client"),
         ):
             mock_g.uuid = "test-uuid"
 
-            MQTTClient()
+            _ = MQTTClient()
 
             # Test temperature conversions (Kelvin to mireds)
             # Formula: mireds = 1,000,000 / kelvin
@@ -105,14 +109,14 @@ class TestMQTTClientStateUpdates:
 
     @pytest.mark.asyncio
     async def test_update_temperature_reverse_conversion(self):
-        """Test mireds to Kelvin reverse conversion"""
+        """Test mireds to Kelvin reverse conversion."""
         with (
             patch("cync_controller.mqtt_client.g") as mock_g,
             patch("cync_controller.mqtt_client.aiomqtt.Client"),
         ):
             mock_g.uuid = "test-uuid"
 
-            MQTTClient()
+            _ = MQTTClient()
 
             # Test round-trip conversion
             original_kelvin = 4000
@@ -123,7 +127,7 @@ class TestMQTTClientStateUpdates:
 
     @pytest.mark.asyncio
     async def test_update_rgb_zero_values(self):
-        """Test RGB (0,0,0) handling"""
+        """Test RGB (0,0,0) handling."""
         with (
             patch("cync_controller.mqtt_client.g") as mock_g,
             patch("cync_controller.mqtt_client.aiomqtt.Client"),
@@ -139,14 +143,19 @@ class TestMQTTClientStateUpdates:
             mock_g.ncync_server.devices = {0x2001: mock_device}
 
             client = MQTTClient()
-            client.update_device_state = AsyncMock()
+
+            # Async stub to avoid unawaited AsyncMock coroutines
+            async def _update_device_state_stub(device, state):  # pragma: no cover - behavior tested elsewhere
+                return True
+
+            client.update_device_state = _update_device_state_stub  # type: ignore[assignment]
 
             # Verify device exists and supports RGB
             assert mock_device.supports_rgb is True
 
     @pytest.mark.asyncio
     async def test_update_rgb_color_values(self):
-        """Test RGB color value handling"""
+        """Test RGB color value handling."""
         with (
             patch("cync_controller.mqtt_client.g") as mock_g,
             patch("cync_controller.mqtt_client.aiomqtt.Client"),
@@ -174,7 +183,7 @@ class TestMQTTClientStateUpdates:
 
     @pytest.mark.asyncio
     async def test_parse_device_status_all_capabilities(self):
-        """Test full device status parsing with all capabilities"""
+        """Test full device status parsing with all capabilities."""
         with (
             patch("cync_controller.mqtt_client.g") as mock_g,
             patch("cync_controller.mqtt_client.aiomqtt.Client"),
@@ -190,7 +199,12 @@ class TestMQTTClientStateUpdates:
             mock_status.fan_speed = 50
 
             client = MQTTClient()
-            client.update_device_state = AsyncMock()
+
+            # Async stub to avoid unawaited AsyncMock coroutines
+            async def _update_device_state_stub(device, state):  # pragma: no cover - behavior tested elsewhere
+                return True
+
+            client.update_device_state = _update_device_state_stub  # type: ignore[assignment]
 
             # Verify all fields can be accessed
             assert mock_status.power == 1
@@ -201,7 +215,7 @@ class TestMQTTClientStateUpdates:
 
     @pytest.mark.asyncio
     async def test_update_device_state_offline_device(self):
-        """Test updating unavailable/offline device state"""
+        """Test updating unavailable/offline device state."""
         with (
             patch("cync_controller.mqtt_client.g") as mock_g,
             patch("cync_controller.mqtt_client.aiomqtt.Client"),
@@ -219,7 +233,12 @@ class TestMQTTClientStateUpdates:
 
             client = MQTTClient()
             client.client = MagicMock()
-            client.client.publish = AsyncMock()
+
+            # Async stub publish to avoid AsyncMock GC warnings
+            async def _publish_stub(*args, **kwargs):  # pragma: no cover - behavior tested elsewhere
+                return None
+
+            client.client.publish = _publish_stub  # type: ignore[assignment]
 
             # Verify device is marked offline
             assert mock_device.online is False
@@ -227,7 +246,7 @@ class TestMQTTClientStateUpdates:
 
     @pytest.mark.asyncio
     async def test_update_device_state_online_device(self):
-        """Test updating online device state"""
+        """Test updating online device state."""
         with (
             patch("cync_controller.mqtt_client.g") as mock_g,
             patch("cync_controller.mqtt_client.aiomqtt.Client"),
@@ -245,7 +264,12 @@ class TestMQTTClientStateUpdates:
 
             client = MQTTClient()
             client.client = MagicMock()
-            client.client.publish = AsyncMock()
+
+            # Async stub publish to avoid AsyncMock GC warnings
+            async def _publish_stub(*args, **kwargs):  # pragma: no cover - behavior tested elsewhere
+                return None
+
+            client.client.publish = _publish_stub  # type: ignore[assignment]
 
             # Verify device is marked online
             assert mock_device.online is True

@@ -1,21 +1,30 @@
 {
-  "include": ["src", "tests"],
-  "exclude": ["mitm", "mitm/validate-checksum-REFERENCE-ONLY.py"],
-  "extraPaths": ["src", "."],
+  "extends": "../pyrightconfig.json",
+  "include": ["src", "tests", "mitm"],
+  "exclude": ["mitm/validate-checksum-REFERENCE-ONLY.py"],
+  "extraPaths": ["src", "mitm", "."],
   "venvPath": "..",
   "venv": ".venv",
   "pythonVersion": "3.14",
-  "typeCheckingMode": "strict",
-  "useLibraryCodeForTypes": true,
   "pythonPlatform": "Linux",
   "executionEnvironments": [
     {
-      "root": ".",
+      "root": "src",
       "extraPaths": ["src", "."],
-      "pythonVersion": "3.14"
+      "pythonVersion": "3.14",
+      "reportPrivateUsage": true
+    },
+    {
+      "root": "tests",
+      "extraPaths": ["src", "."],
+      "pythonVersion": "3.14",
+      "reportPrivateUsage": false
+    },
+    {
+      "root": "mitm",
+      "extraPaths": ["src", "."],
+      "pythonVersion": "3.14",
+      "reportPrivateUsage": false
     }
-  ],
-  "reportMissingImports": true,
-  "reportMissingTypeStubs": true,
-  "stubPath": "typings"
+  ]
 }

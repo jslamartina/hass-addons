@@ -1,6 +1,4 @@
-"""
-Shared objects for the devices package.
-"""
+"""Shared objects for the devices package."""
 
 from cync_controller.structs import GlobalObject
 

@@ -7,15 +7,14 @@ import signal
 import struct
 import sys
 import uuid
+from collections.abc import Awaitable, Callable, Coroutine
 from pathlib import Path
-
-import yaml
+from typing import Any, cast
 
 from cync_controller.const import (
     CYNC_UUID_PATH,
     LOCAL_TZ,
     PERSISTENT_BASE_DIR,
-    YES_ANSWER,
 )
 from cync_controller.logging_abstraction import get_logger
 from cync_controller.structs import GlobalObject
@@ -23,13 +22,16 @@ from cync_controller.structs import GlobalObject
 logger = get_logger(__name__)
 g = GlobalObject()
 
+CallbackReturn = Awaitable[Any] | None
+CallbackType = CallbackReturn | Callable[[], CallbackReturn | Any]
+
 
 def send_signal(signal_num: int):
-    """
-    Send a signal to the current process.
+    """Send a signal to the current process.
 
     Args:
         signal_num (int): The signal number to send.
+
     """
     try:
         logger.debug("Sending signal %s to process %s", signal_num, os.getpid())
@@ -40,8 +42,7 @@ def send_signal(signal_num: int):
 
 
 def send_sigint():
-    """
-    Send a SIGINT signal to the current process.
+    """Send a SIGINT signal to the current process.
     This is typically used to gracefully shut down the application.
     Signal number: 2 on Unix systems.
     """
@@ -50,8 +51,7 @@ def send_sigint():
 
 
 def send_sigterm():
-    """
-    Send a SIGTERM signal to the current process.
+    """Send a SIGTERM signal to the current process.
     This is typically used to request termination of the application.
     """
     send_signal(signal.SIGTERM)
@@ -75,44 +75,46 @@ async def _async_signal_cleanup():
         for task in g.tasks:
             if not task.done():
                 logger.debug(
-                    "Cync Controller: Cancelling task: %s // task.get_coro()=%s", task.get_name(), task.get_coro()
+                    "Cync Controller: Cancelling task: %s // task.get_coro()=%s",
+                    task.get_name(),
+                    task.get_coro(),
                 )
-                task.cancel()
+                _ = task.cancel()
     logger.info("Cync Controller: Signal cleanup completed")
 
 
-def signal_handler(signum):
+def signal_handler(signum: int) -> None:
     logger.info("Cync Controller: Intercepted signal: %s (%s)", signal.Signals(signum).name, signum)
     if g:
         loop = g.loop or asyncio.get_event_loop()
-        loop.create_task(_async_signal_cleanup())
+        _ = loop.create_task(_async_signal_cleanup())
 
 
 def bytes2list(byte_string: bytes) -> list[int]:
-    """Convert a byte string to a list of integers"""
+    """Convert a byte string to a list of integers."""
     # Interpret the byte string as a sequence of unsigned integers (little-endian)
     int_list = struct.unpack("<" + "B" * (len(byte_string)), byte_string)
     return list(int_list)
 
 
 def hex2list(hex_string: str) -> list[int]:
-    """Convert a hex string to a list of integers"""
+    """Convert a hex string to a list of integers."""
     x = b"".fromhex(hex_string)
     return bytes2list(x)
 
 
 def ints2hex(ints: list[int]) -> str:
-    """Convert a list of integers to a hex string with space separators"""
+    """Convert a list of integers to a hex string with space separators."""
     return bytes(ints).hex(" ")
 
 
 def ints2bytes(ints: list[int]) -> bytes:
-    """Convert a list of integers to a byte string representation"""
+    """Convert a list of integers to a byte string representation."""
     return bytes(ints)
 
 
 def parse_unbound_firmware_version(data_struct: bytes, lp: str) -> tuple[str, int, str] | None:
-    """Parse the firmware version from binary hex data. Unbound means not bound by 0x7E boundaries"""
+    """Parse the firmware version from binary hex data. Unbound means not bound by 0x7E boundaries."""
     # LED controller sends this data after cync app connects via BTLE
     # 1f 00 00 00 fa 8e 14 00 50 22 33 08 00 ff ff ea 11 02 08 a1 [01 03 01 00 00 00 00 00 f8
     lp = f"{lp}firmware_version:"
@@ -150,127 +152,12 @@ def parse_unbound_firmware_version(data_struct: bytes, lp: str) -> tuple[str, in
     return firmware_type, firmware_version_int, firmware_str
 
 
-async def parse_config(cfg_file: Path):
-    """Parse the exported Cync device config file and create devices and groups from it."""
-    # Import here to avoid circular dependency
-    from cync_controller.devices import CyncDevice, CyncGroup
-
-    lp = "parse_config:"
-    logger.debug("%s reading devices and groups from Cync config file: %s", lp, cfg_file.as_posix())
-
-    if not cfg_file.exists():
-        logger.error("%s Config file not found: %s", lp, cfg_file.as_posix())
-        error_msg = f"Config file not found: {cfg_file}"
-        raise FileNotFoundError(error_msg)
-
-    try:
-        logger.debug("%s Starting async YAML parsing with timeout...", lp)
-        # wrap synchronous yaml reading in an async function to avoid blocking the event loop
-        # raw_config = yaml.safe_load(cfg_file.read_text())
-        # get an executor
-        raw_config = await asyncio.wait_for(
-            asyncio.get_event_loop().run_in_executor(None, yaml.safe_load, cfg_file.read_text(encoding="utf-8")),
-            timeout=30.0,
-        )
-        logger.debug("%s YAML parsing completed successfully", lp)
-
-    except TimeoutError:
-        logger.exception("%s Config file parsing timed out after 30 seconds", lp)
-        raise
-    except Exception:
-        logger.exception("%s Error reading config file", lp)
-        raise
-
-    devices = {}
-    groups = {}
-    # parse homes and devices
-    for cync_home_name, home_cfg in raw_config["account data"].items():
-        home_id = home_cfg["id"]
-        if "devices" not in home_cfg:
-            logger.warning("%s No devices found in config for: %s (ID: %s), skipping...", lp, cync_home_name, home_id)
-            continue
-        # Create devices
-        for cync_id, cync_device in home_cfg["devices"].items():
-            cync_device: dict
-            device_name = cync_device.get("name", f"device_{cync_id}")
-            if "enabled" in cync_device:
-                enabled = cync_device["enabled"]
-                if isinstance(enabled, str):
-                    enabled = enabled.casefold()
-                    if enabled not in YES_ANSWER:
-                        logger.debug(
-                            "%s Device '%s' (ID: %s) is disabled in config, skipping...", lp, device_name, cync_id
-                        )
-                        continue
-                if isinstance(enabled, bool) and enabled is False:
-                    logger.debug("%s Device '%s' (ID: %s) is disabled in config, skipping...", lp, device_name, cync_id)
-                    continue
-            fw_version = cync_device["fw"] if cync_device.get("fw") else None
-            wmac = None
-            btmac = None
-            dev_type = cync_device["type"] if cync_device.get("type") else None
-            # 'mac': 26616350814, 'wifi_mac': 26616350815
-            if "mac" in cync_device:
-                btmac = cync_device["mac"]
-                if btmac and isinstance(btmac, int):
-                    logger.warning(
-                        "IMPORTANT>>> cync device '%s' (ID: %s) 'mac' is somehow an int -> %s, please quote the mac address to force it to a string in the config file",
-                        device_name,
-                        cync_id,
-                        btmac,
-                    )
-
-            if "wifi_mac" in cync_device:
-                wmac = cync_device["wifi_mac"]
-                if wmac and isinstance(wmac, int):
-                    logger.debug(
-                        "IMPORTANT>>> cync device '%s' (ID: %s) 'wifi_mac' is somehow an int -> %s, please quote the mac address to force it to a string in the config file",
-                        device_name,
-                        cync_id,
-                        wmac,
-                    )
-
-            new_device = CyncDevice(
-                name=device_name,
-                cync_id=cync_id,
-                fw_version=fw_version,
-                home_id=home_id,
-                mac=btmac,
-                wifi_mac=wmac,
-                cync_type=dev_type,
-            )
-            devices[cync_id] = new_device
-            # logger.debug("%s Created device (hass_id: %s) (home_id: %s) (device_id: %s): %s", lp, new_device.hass_id, new_device.home_id, new_device.id, new_device)
-
-        # Parse groups
-        if "groups" in home_cfg:
-            logger.debug("%s Found %s groups in %s", lp, len(home_cfg["groups"]), cync_home_name)
-            for group_id, group_cfg in home_cfg["groups"].items():
-                group_name = group_cfg.get("name", f"Group {group_id}")
-                member_ids = group_cfg.get("members", [])
-                is_subgroup = group_cfg.get("is_subgroup", False)
-
-                new_group = CyncGroup(
-                    group_id=group_id,
-                    name=group_name,
-                    member_ids=member_ids,
-                    is_subgroup=is_subgroup,
-                    home_id=home_id,
-                )
-                groups[group_id] = new_group
-                logger.debug(
-                    "%s Created group '%s' (ID: %s) with %s devices", lp, group_name, group_id, len(member_ids)
-                )
-
-    return devices, groups
-
-
 def check_python_version():
     pass
 
 
 def check_for_uuid():
-    """Check if this is the first run of the Cync Controller server, if so, create the CYNC_ADDON_UUID (UUID4)"""
+    """Check if this is the first run of the Cync Controller server, if so, create the CYNC_ADDON_UUID (UUID4)."""
     lp = "check_uuid:"
     # create dir for cync_mesh.yaml and variable data if it does not exist
     persistent_dir = Path(PERSISTENT_BASE_DIR).expanduser().resolve()
@@ -309,7 +196,7 @@ def check_for_uuid():
         logger.debug("%s Creating and caching a new UUID to be used for the 'Cync Controller' MQTT device", lp)
         g.uuid = uuid.uuid4()
         with uuid_file.open("w") as f:
-            f.write(str(g.uuid))
+            _ = f.write(str(g.uuid))
             logger.info("%s UUID written to disk: %s", lp, uuid_file.as_posix())
 
 
@@ -317,3 +204,63 @@ def utc_to_local(utc_dt: datetime.datetime) -> datetime.datetime:
     # local_tz = zoneinfo.ZoneInfo(str(tzlocal.get_localzone()))
     # utc_time = datetime.datetime.now(datetime.UTC)
     return utc_dt.astimezone(LOCAL_TZ)
+
+
+def _get_event_loop() -> asyncio.AbstractEventLoop:
+    """Return the running loop, or fall back to the current policy loop."""
+    try:
+        return asyncio.get_running_loop()
+    except RuntimeError:
+        return asyncio.get_event_loop()
+
+
+def create_completed_future[T](result: T | None = None) -> asyncio.Future[T | None]:
+    """Create a Future that is already resolved with the provided result."""
+    loop = _get_event_loop()
+    future: asyncio.Future[T | None] = loop.create_future()
+    future.set_result(result)
+    return future
+
+
+async def execute_async_callback(callback: CallbackType | None) -> None:
+    """Execute a callback that may be sync, async, coroutine, or future.
+
+    This helper is used for ACK callbacks and other deferred work. It logs the
+    callback and result shapes at DEBUG level so we can trace unexpected types
+    (for example AsyncMock instances in tests) without changing behavior.
+    """
+    lp = "execute_async_callback:"
+    logger.debug(
+        "%s callback=%r callback_type=%s is_callable=%s",
+        lp,
+        callback,
+        type(callback),
+        callable(callback),
+    )
+    if callback is None:
+        return
+    result = callback() if callable(callback) else callback
+    logger.debug(
+        "%s result=%r result_type=%s is_future=%s is_coroutine=%s is_awaitable=%s",
+        lp,
+        result,
+        type(result),
+        asyncio.isfuture(result),
+        asyncio.iscoroutine(result),
+        isinstance(result, Awaitable),
+    )
+    await _await_if_needed(result)
+
+
+async def _await_if_needed(result: CallbackReturn | Any) -> None:
+    """Await result if it is awaitable-like."""
+    if result is None:
+        return
+    if asyncio.isfuture(result):
+        await cast("asyncio.Future[Any]", result)
+        return
+    if asyncio.iscoroutine(result):
+        await cast("Coroutine[Any, Any, Any]", result)
+        return
+    if isinstance(result, Awaitable):
+        await cast("Awaitable[Any]", result)

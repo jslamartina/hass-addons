@@ -1,5 +1,4 @@
-"""
-Unit tests for MQTTClient message handling.
+"""Unit tests for MQTTClient message handling.
 
 Tests for MQTTClient.start_receiver_task() MQTT message routing,
 command parsing, export button handling, and error recovery.
@@ -15,18 +14,18 @@ from cync_controller.mqtt_client import MQTTClient
 
 
 class TestMQTTClientMessageHandling:
-    """Tests for MQTTClient message handling and MQTT routing"""
+    """Tests for MQTTClient message handling and MQTT routing."""
 
     @pytest.fixture(autouse=True)
     def reset_mqtt_singleton(self):
-        """Reset MQTTClient singleton between tests"""
+        """Reset MQTTClient singleton between tests."""
         MQTTClient._instance = None
         yield
         MQTTClient._instance = None
 
     @pytest.mark.asyncio
     async def test_receiver_handles_set_power_command(self):
-        """Test power command routing from MQTT"""
+        """Test power command routing from MQTT."""
         with (
             patch("cync_controller.mqtt_client.g") as mock_g,
             patch("cync_controller.mqtt_client.aiomqtt.Client"),
@@ -50,7 +49,7 @@ class TestMQTTClientMessageHandling:
 
     @pytest.mark.asyncio
     async def test_receiver_handles_set_brightness_command(self):
-        """Test brightness command routing from MQTT"""
+        """Test brightness command routing from MQTT."""
         with (
             patch("cync_controller.mqtt_client.g") as mock_g,
             patch("cync_controller.mqtt_client.aiomqtt.Client"),
@@ -62,7 +61,7 @@ class TestMQTTClientMessageHandling:
             mock_g.ncync_server = MagicMock()
             mock_g.ncync_server.devices = {0x5678: mock_device}
 
-            MQTTClient()
+            _ = MQTTClient()
 
             # Verify device can be accessed for brightness commands
             device = mock_g.ncync_server.devices.get(0x5678)
@@ -71,7 +70,7 @@ class TestMQTTClientMessageHandling:
 
     @pytest.mark.asyncio
     async def test_receiver_handles_set_rgb_command(self):
-        """Test RGB command routing from MQTT"""
+        """Test RGB command routing from MQTT."""
         with (
             patch("cync_controller.mqtt_client.g") as mock_g,
             patch("cync_controller.mqtt_client.aiomqtt.Client"),
@@ -84,7 +83,7 @@ class TestMQTTClientMessageHandling:
             mock_g.ncync_server = MagicMock()
             mock_g.ncync_server.devices = {0xABCD: mock_device}
 
-            MQTTClient()
+            _ = MQTTClient()
 
             # Verify RGB device can be accessed
             device = mock_g.ncync_server.devices.get(0xABCD)
@@ -93,7 +92,7 @@ class TestMQTTClientMessageHandling:
 
     @pytest.mark.asyncio
     async def test_receiver_handles_malformed_json(self):
-        """Test malformed JSON message handling"""
+        """Test malformed JSON message handling."""
         with (
             patch("cync_controller.mqtt_client.g") as mock_g,
             patch("cync_controller.mqtt_client.aiomqtt.Client"),
@@ -112,7 +111,7 @@ class TestMQTTClientMessageHandling:
 
     @pytest.mark.asyncio
     async def test_receiver_handles_unknown_topic(self):
-        """Test unknown topic graceful handling"""
+        """Test unknown topic graceful handling."""
         with (
             patch("cync_controller.mqtt_client.g") as mock_g,
             patch("cync_controller.mqtt_client.aiomqtt.Client"),
@@ -131,7 +130,7 @@ class TestMQTTClientMessageHandling:
 
     @pytest.mark.asyncio
     async def test_receiver_handles_unknown_device_id(self):
-        """Test command for non-existent device"""
+        """Test command for non-existent device."""
         with (
             patch("cync_controller.mqtt_client.g") as mock_g,
             patch("cync_controller.mqtt_client.aiomqtt.Client"),
@@ -140,7 +139,7 @@ class TestMQTTClientMessageHandling:
             mock_g.ncync_server = MagicMock()
             mock_g.ncync_server.devices = {0x1234: MagicMock()}
 
-            MQTTClient()
+            _ = MQTTClient()
 
             # Try to access non-existent device
             device = mock_g.ncync_server.devices.get(0x9999)
@@ -148,7 +147,7 @@ class TestMQTTClientMessageHandling:
 
     @pytest.mark.asyncio
     async def test_receiver_handles_group_commands(self):
-        """Test group command routing"""
+        """Test group command routing."""
         with (
             patch("cync_controller.mqtt_client.g") as mock_g,
             patch("cync_controller.mqtt_client.aiomqtt.Client"),
@@ -161,7 +160,7 @@ class TestMQTTClientMessageHandling:
             mock_g.ncync_server.groups = {100: mock_group}
             mock_g.ncync_server.devices = {}
 
-            MQTTClient()
+            _ = MQTTClient()
 
             # Verify group can be accessed
             group = mock_g.ncync_server.groups.get(100)
@@ -169,7 +168,7 @@ class TestMQTTClientMessageHandling:
 
     @pytest.mark.asyncio
     async def test_receiver_handles_task_exception(self):
-        """Test task exception doesn't kill receiver"""
+        """Test task exception doesn't kill receiver."""
         with (
             patch("cync_controller.mqtt_client.g") as mock_g,
             patch("cync_controller.mqtt_client.aiomqtt.Client"),
@@ -178,7 +177,7 @@ class TestMQTTClientMessageHandling:
             mock_g.ncync_server = MagicMock()
             mock_g.ncync_server.devices = {}
 
-            MQTTClient()
+            _ = MQTTClient()
 
             async def failing_task():
                 raise RuntimeError("Task error")
@@ -193,7 +192,7 @@ class TestMQTTClientMessageHandling:
 
     @pytest.mark.asyncio
     async def test_receiver_executes_tasks_concurrently(self):
-        """Test multiple commands execute as tasks"""
+        """Test multiple commands execute as tasks."""
         with (
             patch("cync_controller.mqtt_client.g") as mock_g,
             patch("cync_controller.mqtt_client.aiomqtt.Client"),
@@ -202,14 +201,14 @@ class TestMQTTClientMessageHandling:
             mock_g.ncync_server = MagicMock()
             mock_g.ncync_server.devices = {}
 
-            MQTTClient()
+            _ = MQTTClient()
 
             # Create multiple tasks
-            async def dummy_task(task_id):
+            async def dummy_task(task_id: int) -> int:
                 await asyncio.sleep(0.05)
                 return task_id
 
-            tasks = [asyncio.create_task(dummy_task(i)) for i in range(3)]
+            tasks: list[asyncio.Task[int]] = [asyncio.create_task(dummy_task(i)) for i in range(3)]
             results = await asyncio.gather(*tasks)
 
             # Verify all tasks completed
@@ -218,7 +217,7 @@ class TestMQTTClientMessageHandling:
 
     @pytest.mark.asyncio
     async def test_receiver_command_payload_parsing(self):
-        """Test parsing command payloads from MQTT"""
+        """Test parsing command payloads from MQTT."""
         with (
             patch("cync_controller.mqtt_client.g") as mock_g,
             patch("cync_controller.mqtt_client.aiomqtt.Client"),
@@ -227,7 +226,7 @@ class TestMQTTClientMessageHandling:
             mock_g.ncync_server = MagicMock()
             mock_g.ncync_server.devices = {}
 
-            MQTTClient()
+            _ = MQTTClient()
 
             # Test parsing integer payload (0/1 for power)
             payload_on = b"1"

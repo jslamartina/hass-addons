@@ -1,5 +1,4 @@
-"""
-Shared test helper functions for TCP device tests.
+"""Shared test helper functions for TCP device tests.
 
 This module provides reusable test utilities for packet creation and manipulation
 in TCP device unit tests.
@@ -7,7 +6,7 @@ in TCP device unit tests.
 
 
 def create_packet(pkt_type: int, total_length: int, data: bytes = b""):
-    """Helper to create valid packet structure
+    """Helper to create valid packet structure.
 
     Args:
         pkt_type: Packet type byte (0x23, 0xC3, etc.)
@@ -16,6 +15,7 @@ def create_packet(pkt_type: int, total_length: int, data: bytes = b""):
 
     Returns:
         bytes: Complete packet with header and payload
+
     """
     # Calculate payload length (total - header)
     payload_length = total_length - 12

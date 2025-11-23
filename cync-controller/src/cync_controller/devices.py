@@ -1,5 +1,4 @@
-"""
-Cync device classes and TCP communication handlers.
+"""Cync device classes and TCP communication handlers.
 
 This module provides backward compatibility by re-exporting classes from the
 new modular structure. The actual implementations are now in the devices/

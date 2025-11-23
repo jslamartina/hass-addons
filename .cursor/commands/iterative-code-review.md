@@ -1,14 +1,15 @@
 # Iterative Code Review
 
-Review the pending git changes and perform an in-depth technical code review using the following guidelines.
+Review the pending git changes and perform an in-depth technical code review and fix loop that you will iterate on 5 times.
 
 Steps:
 
 1. **CRITICAL**: Start with a clean slate. Assume no knowledge of previous code review or context about the code change.
 2. Perform the Code Review as outlined in the [Code Review Guidelines](#code-review-guidelines).
-3. Generate any artifacts and save to working files according to [conventions](/.cursor/rules/_00-rules-prefix.mdc).
-4. Repeat steps 1-3, ensuring especially that step is adhered to, for a total of **FIVE** iterations.
-5. After **FIVE** iterations, generate a final summary aggregating the results of all **FIVE** iterations.
+3. Fix ALL issues uncovered. Defer to the user for guidance on non-trivial decisions.
+4. Generate extremely brief working docs on an as-needed basis, and save to working files according to [conventions](/.cursor/rules/_00-rules-prefix.mdc).
+5. Repeat steps 1-4 for a total of **FIVE** "review & fix" iterations.
+6. After **FIVE** iterations, output an extremely brief summary to the user.
 
 ## Code Review Guidelines
 
