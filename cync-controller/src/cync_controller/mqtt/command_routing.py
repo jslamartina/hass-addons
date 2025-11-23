@@ -4,6 +4,8 @@ Provides message routing logic for MQTT topics and delegates commands
 to the command processor and state update modules.
 """
 
+from __future__ import annotations
+
 import asyncio
 import json
 import random

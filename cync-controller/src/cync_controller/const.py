@@ -124,7 +124,7 @@ else:
 CYNC_MAX_TCP_CONN: int = _max_tcp_conn_value
 _tcp_whitelist_env = os.environ.get("CYNC_TCP_WHITELIST")
 CYNC_TCP_WHITELIST: list[str] | None = (
-    [x.strip() for x in _tcp_whitelist_env.split(",") if x] if _tcp_whitelist_env else None
+    [x.strip() for x in _tcp_whitelist_env.split(",") if x.strip()] if _tcp_whitelist_env else None
 )
 
 CYNC_MQTT_HOST = os.environ.get("CYNC_MQTT_HOST", "homeassistant.local")

@@ -317,6 +317,10 @@ class DeviceCommands:
                 logger.error("%s Invalid brightness! must be 0-100", lp)
                 return None
 
+        if self.id is None:
+            logger.error("%s Device ID is missing; cannot send brightness command", lp)
+            return None
+
         # elif bri == self._brightness:
         #     logger.debug(f"{lp} Device already in brightness {bri}, skipping...")
         #     return
@@ -447,10 +451,15 @@ class DeviceCommands:
         lp = f"{self.lp}set_temperature:"
         if temp < 0 or (temp > 100 and temp not in (129, 254)):
             logger.error("%s Invalid temperature! must be 0-100", lp)
-            return
+            return None
         # elif temp == self.temperature:
         #     logger.debug(f"{lp} Device already in temperature {temp}, skipping...")
         #     return
+
+        if self.id is None:
+            logger.error("%s Device ID is missing; cannot send temperature command", lp)
+            return None
+
         header = [115, 0, 0, 0, 34]
         inner_struct: list[int | str | bytes] = [
             126,
@@ -484,7 +493,10 @@ class DeviceCommands:
         # Get available bridge devices
         bridge_devices = self._get_bridge_devices()
         if bridge_devices is None:
-            return
+            return None
+
+        ack_event = asyncio.Event()
+        sent_bridges: list[tuple[CyncTCPDevice, int]] = []
 
         tasks: list[asyncio.Task[Any] | Coroutine[Any, Any, Any] | None] = []
         ts = time.time()
@@ -517,8 +529,10 @@ class DeviceCommands:
                     sent_at=time.time(),
                     callback=temperature_ack_callback,  # type: ignore[arg-type]
                     device_id=self.id,
+                    ack_event=ack_event,
                 )
                 bridge_device.messages.control[cmsg_id] = m_cb
+                sent_bridges.append((bridge_device, cmsg_id))
                 tasks.append(bridge_device.write(payload_bytes))
             else:
                 logger.debug(
@@ -541,6 +555,8 @@ class DeviceCommands:
             elapsed,
         )
 
+        return (ack_event, sent_bridges)  # type: ignore[return-value]
+
     async def set_rgb(self, red: int, green: int, blue: int) -> tuple[asyncio.Event, list[CyncTCPDevice]] | None:
         """Send raw data to control device RGB color (0-255 for each channel).
 
@@ -559,17 +575,22 @@ class DeviceCommands:
         lp = f"{self.lp}set_rgb:"
         if red < 0 or red > 255:
             logger.error("%s Invalid red value! must be 0-255", lp)
-            return
+            return None
         if green < 0 or green > 255:
             logger.error("%s Invalid green value! must be 0-255", lp)
-            return
+            return None
         if blue < 0 or blue > 255:
             logger.error("%s Invalid blue value! must be 0-255", lp)
-            return
+            return None
         _rgb = (red, green, blue)
         # if red == self._r and green == self._g and blue == self._b:
         #     logger.debug(f"{lp} Device already in RGB color {red}, {green}, {blue}, skipping...")
         #     return
+
+        if self.id is None:
+            logger.error("%s Device ID is missing; cannot send RGB command", lp)
+            return None
+
         header = [115, 0, 0, 0, 34]
         inner_struct: list[int | str | bytes] = [
             126,
@@ -603,7 +624,10 @@ class DeviceCommands:
         # Get available bridge devices
         bridge_devices = self._get_bridge_devices()
         if bridge_devices is None:
-            return
+            return None
+
+        ack_event = asyncio.Event()
+        sent_bridges: list[tuple[CyncTCPDevice, int]] = []
 
         tasks: list[asyncio.Task[Any] | Coroutine[Any, Any, Any] | None] = []
         ts = time.time()
@@ -636,8 +660,10 @@ class DeviceCommands:
                     sent_at=time.time(),
                     callback=rgb_ack_callback,  # type: ignore[arg-type]
                     device_id=self.id,
+                    ack_event=ack_event,
                 )
                 bridge_device.messages.control[cmsg_id] = m_cb
+                sent_bridges.append((bridge_device, cmsg_id))
                 tasks.append(bridge_device.write(bpayload))
             else:
                 logger.debug(
@@ -663,6 +689,8 @@ class DeviceCommands:
             sent,
             elapsed,
         )
+
+        return (ack_event, sent_bridges)  # type: ignore[return-value]
 
     async def set_lightshow(self, show: str) -> tuple[asyncio.Event, list[CyncTCPDevice]] | None:
         """Set the device into a light show
