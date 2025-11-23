@@ -118,7 +118,7 @@ def fix_unused_call_result(file_path: Path, line_num: int) -> bool:
         and not stripped_line.startswith("yield ")
         and not stripped_line.startswith("raise ")
         and not stripped_line.startswith("assert ")
-        and not "=" in stripped_line.split()[0] if stripped_line.split() else False
+        and "=" not in stripped_line.split()[0] if stripped_line.split() else False
         and not stripped_line.startswith("with ")
         and not stripped_line.startswith("except ")
         and "(" in stripped_line

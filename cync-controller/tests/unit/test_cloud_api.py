@@ -273,9 +273,7 @@ class TestCyncCloudAPIAuthentication:
 
             # Mock HTTP session with error
             mock_session = AsyncMock()
-            from aiohttp import ClientResponseError
-
-            from aiohttp import RequestInfo
+            from aiohttp import ClientResponseError, RequestInfo
             mock_request_info = MagicMock(spec=RequestInfo)
             mock_session.post = AsyncMock(side_effect=ClientResponseError(mock_request_info, ()))
             api.http_session = mock_session

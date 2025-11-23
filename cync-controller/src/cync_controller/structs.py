@@ -20,9 +20,6 @@ if TYPE_CHECKING:
     import aiomqtt
 
     from cync_controller.cloud_api import CyncCloudAPI
-    from cync_controller.devices.base_device import CyncDevice
-    from cync_controller.devices.group import CyncGroup
-    from cync_controller.devices.tcp_device import CyncTCPDevice
     from cync_controller.exporter import ExportServer
     from cync_controller.main import CyncController
     from cync_controller.mqtt.client import MQTTClient

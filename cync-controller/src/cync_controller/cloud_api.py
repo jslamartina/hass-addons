@@ -955,7 +955,7 @@ class CyncCloudAPI:
             if isinstance(hvac_system_val, dict):
                 hvac_cfg = cast("dict[str, object]", hvac_system_val)
                 thermostat_sensors_val: object | None = cfg_bulb.get(
-                    MeshFieldNames.THERMOSTAT_SENSORS
+                    MeshFieldNames.THERMOSTAT_SENSORS,
                 )
                 if thermostat_sensors_val is not None:
                     hvac_cfg["thermostatSensors"] = thermostat_sensors_val

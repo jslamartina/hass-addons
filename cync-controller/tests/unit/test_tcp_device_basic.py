@@ -13,7 +13,6 @@ import pytest
 # Import directly from module to avoid lazy import type issues
 from cync_controller.devices.tcp_device import CyncTCPDevice
 
-
 # ============================================================================
 # Mock Factory Functions
 # ============================================================================

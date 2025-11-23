@@ -89,7 +89,7 @@ class CyncDevice(DeviceCommands):
         home_id: int | None = None,
         hvac: dict[str, Any] | None = None,
     ) -> None:
-        self.control_bytes: bytes = bytes([0x00, 0x00])
+        self.control_bytes: list[int] = [0x00, 0x00]
         if cync_id is None:
             msg = "ID must be provided to constructor"
             raise ValueError(msg)

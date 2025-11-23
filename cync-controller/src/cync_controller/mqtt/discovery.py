@@ -9,7 +9,7 @@ import asyncio
 import json
 import re
 import unicodedata
-from typing import TYPE_CHECKING, Any, Protocol
+from typing import TYPE_CHECKING, Any
 
 import aiomqtt
 
@@ -25,7 +25,7 @@ from cync_controller.const import (
     ORIGIN_STRUCT,
 )
 from cync_controller.logging_abstraction import get_logger
-from cync_controller.metadata.model_info import DeviceClassification, DeviceTypeInfo, device_type_map
+from cync_controller.metadata.model_info import DeviceClassification, device_type_map
 
 # Import g directly from structs to avoid circular dependency with mqtt_client.py
 from cync_controller.structs import GlobalObject
@@ -34,9 +34,7 @@ if TYPE_CHECKING:
     from cync_controller.structs import (
         CyncDeviceProtocol,
         CyncGroupProtocol,
-        ExportServerProtocol,
         MQTTClientProtocol,
-        NCyncServerProtocol,
     )
 
 

@@ -23,7 +23,6 @@ if TYPE_CHECKING:
         CyncDeviceProtocol,
         CyncGroupProtocol,
         MQTTClientProtocol,
-        NCyncServerProtocol,
     )
 
 logger = get_logger(__name__)

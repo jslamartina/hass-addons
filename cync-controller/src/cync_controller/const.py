@@ -97,7 +97,7 @@ CYNC_API_BASE: str = "https://api.gelighting.com/v2/"
 DEVICE_LWT_MSG: bytes = b"offline"
 
 # Binding to 0.0.0.0 is intentional to listen on all interfaces
-CYNC_SRV_HOST = os.environ.get("CYNC_SRV_HOST", "0.0.0.0")  # noqa: S104 intentionally binding to all interfaces
+CYNC_SRV_HOST = os.environ.get("CYNC_SRV_HOST", "0.0.0.0")
 CYNC_ACCOUNT_LANGUAGE: str = os.environ.get("CYNC_ACCOUNT_LANGUAGE", "en-us").casefold()
 _username = os.environ.get("CYNC_ACCOUNT_USERNAME")
 CYNC_ACCOUNT_USERNAME: str | None = _username if _username else None
