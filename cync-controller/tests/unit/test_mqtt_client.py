@@ -165,6 +165,7 @@ class TestMQTTClientInitialization:
             assert client.broker_client_id == "cync_lan_unique-test-uuid"
 
 
+# pyright: reportAny=false
 class TestMQTTClientConnection:
     """Tests for MQTT client connection handling"""
 
@@ -176,10 +177,10 @@ class TestMQTTClientConnection:
             patch("cync_controller.mqtt_client.aiomqtt.Client") as mock_client_class,
         ):
             mock_g.uuid = "test-uuid"
-            mock_g.env.mqtt_host = "localhost"  # type: ignore[reportAny]
-            mock_g.env.mqtt_port = 1883  # type: ignore[reportAny]
-            mock_g.env.mqtt_user = "test"  # type: ignore[reportAny]
-            mock_g.env.mqtt_pass = "test"  # type: ignore[reportAny]
+            mock_g.env.mqtt_host = "localhost"
+            mock_g.env.mqtt_port = 1883
+            mock_g.env.mqtt_user = "test"
+            mock_g.env.mqtt_pass = "test"
             mock_g.reload_env = MagicMock()
 
             # Mock the client instance
@@ -209,10 +210,10 @@ class TestMQTTClientConnection:
             patch("cync_controller.mqtt_client.aiomqtt.Client") as mock_client_class,
         ):
             mock_g.uuid = "test-uuid"
-            mock_g.env.mqtt_host = "localhost"  # type: ignore[reportAny]
-            mock_g.env.mqtt_port = 1883  # type: ignore[reportAny]
-            mock_g.env.mqtt_user = "test"  # type: ignore[reportAny]
-            mock_g.env.mqtt_pass = "test"  # type: ignore[reportAny]
+            mock_g.env.mqtt_host = "localhost"
+            mock_g.env.mqtt_port = 1883
+            mock_g.env.mqtt_user = "test"
+            mock_g.env.mqtt_pass = "test"
             mock_g.reload_env = MagicMock()
 
             # Mock the client to raise MqttError (connection refused)
@@ -236,10 +237,10 @@ class TestMQTTClientConnection:
             patch("cync_controller.mqtt_client.aiomqtt.Client") as mock_client_class,
         ):
             mock_g.uuid = "test-uuid"
-            mock_g.env.mqtt_host = "localhost"  # type: ignore[reportAny]
-            mock_g.env.mqtt_port = 1883  # type: ignore[reportAny]
-            mock_g.env.mqtt_user = "baduser"  # type: ignore[reportAny]
-            mock_g.env.mqtt_pass = "badpass"  # type: ignore[reportAny]
+            mock_g.env.mqtt_host = "localhost"
+            mock_g.env.mqtt_port = 1883
+            mock_g.env.mqtt_user = "baduser"
+            mock_g.env.mqtt_pass = "badpass"
             mock_g.reload_env = MagicMock()
 
             # Simulate bad credentials error
@@ -1744,6 +1745,7 @@ class TestMQTTSyncGroupDevices:
             assert mock_mqtt_client.publish.call_count == 3  # type: ignore[reportAny, reportUnknownMemberType]
 
 
+# pyright: reportAny=false
 class TestMQTTReceiverTask:
     """Tests for start_receiver_task message handling"""
 
@@ -1756,10 +1758,10 @@ class TestMQTTReceiverTask:
         ):
             mock_g.uuid = "test-uuid"
             mock_g.env = MagicMock()
-            mock_g.env.mqtt_host = "localhost"  # type: ignore[reportAny]
-            mock_g.env.mqtt_port = 1883  # type: ignore[reportAny]
-            mock_g.env.mqtt_user = ""  # type: ignore[reportAny]
-            mock_g.env.mqtt_pass = ""  # type: ignore[reportAny]
+            mock_g.env.mqtt_host = "localhost"
+            mock_g.env.mqtt_port = 1883
+            mock_g.env.mqtt_user = ""
+            mock_g.env.mqtt_pass = ""
 
             mock_client = AsyncMock()
             mock_message = MagicMock()
@@ -1790,10 +1792,10 @@ class TestMQTTReceiverTask:
         ):
             mock_g.uuid = "test-uuid"
             mock_g.env = MagicMock()
-            mock_g.env.mqtt_host = "localhost"  # type: ignore[reportAny]
-            mock_g.env.mqtt_port = 1883  # type: ignore[reportAny]
-            mock_g.env.mqtt_user = ""  # type: ignore[reportAny]
-            mock_g.env.mqtt_pass = ""  # type: ignore[reportAny]
+            mock_g.env.mqtt_host = "localhost"
+            mock_g.env.mqtt_port = 1883
+            mock_g.env.mqtt_user = ""
+            mock_g.env.mqtt_pass = ""
 
             mock_client = AsyncMock()
             mock_message = MagicMock()
