@@ -9,7 +9,9 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from cync_controller.devices import CyncDevice, CyncGroup
+# Import directly from source modules to avoid lazy import type issues
+from cync_controller.devices.base_device import CyncDevice
+from cync_controller.devices.group import CyncGroup
 
 
 class TestCyncDeviceFanCommands:
