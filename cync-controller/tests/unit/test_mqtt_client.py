@@ -272,7 +272,7 @@ class TestMQTTClientPublishing:
             result = await client.publish("test/topic", b"test_payload")
 
             assert result is True
-            mock_mqtt_client.publish.assert_called_once_with("test/topic", b"test_payload", qos=0, retain=False)  # type: ignore[reportAny  # type: ignore[reportAny]]
+            mock_mqtt_client.publish.assert_called_once_with("test/topic", b"test_payload", qos=0, retain=False)  # type: ignore[reportAny]
 
     @pytest.mark.asyncio
     async def test_publish_json_msg(self):
@@ -339,7 +339,7 @@ class TestMQTTClientAvailability:
 
             assert result is True
             # Should publish "online" to availability topic (uses home_id-device_id format)
-            mock_mqtt_client.publish.assert_called_once_with("cync_lan/availability/12345-4660", b"online", qos=0)  # type: ignore[reportAny  # type: ignore[reportAny]]
+            mock_mqtt_client.publish.assert_called_once_with("cync_lan/availability/12345-4660", b"online", qos=0)  # type: ignore[reportAny]
 
     @pytest.mark.asyncio
     async def test_pub_online_false(self):
@@ -364,7 +364,7 @@ class TestMQTTClientAvailability:
 
             assert result is True
             # Should publish "offline" to availability topic
-            mock_mqtt_client.publish.assert_called_once_with("cync_lan/availability/12345-4660", b"offline", qos=0)  # type: ignore[reportAny  # type: ignore[reportAny]]
+            mock_mqtt_client.publish.assert_called_once_with("cync_lan/availability/12345-4660", b"offline", qos=0)  # type: ignore[reportAny]
 
     @pytest.mark.asyncio
     async def test_pub_online_device_not_found(self):
@@ -453,7 +453,7 @@ class TestMQTTClientStateUpdates:
 
             assert result is True
             # Should call publish
-            assert mock_mqtt_client.publish.called  # type: ignore[reportAny  # type: ignore[reportAny]]
+            assert mock_mqtt_client.publish.called  # type: ignore[reportAny]
 
     @pytest.mark.asyncio
     async def test_update_brightness(self):
