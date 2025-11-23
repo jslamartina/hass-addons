@@ -4,12 +4,17 @@ Unit tests for CyncDevice command execution.
 Tests fan commands, lightshow commands, and error path handling.
 """
 
-from typing import Any
+from typing import TYPE_CHECKING, Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from cync_controller.devices import CyncDevice, CyncGroup
+# Import directly from source modules to avoid lazy import type issues
+from cync_controller.devices.base_device import CyncDevice
+from cync_controller.devices.group import CyncGroup
+
+if TYPE_CHECKING:
+    from pytest import LogCaptureFixture
 
 
 class TestCyncDeviceFanCommands:
@@ -30,25 +35,25 @@ class TestCyncDeviceFanCommands:
             mock_tcp_device.write = AsyncMock()
             mock_tcp_device.messages.control = {}
 
-            device = CyncDevice(cync_id=0x12)  # pyright: ignore[reportCallIssue]
-            device.is_fan_controller = True  # pyright: ignore[reportAttributeAccessIssue]
+            device = CyncDevice(cync_id=0x12)
+            device.is_fan_controller = True
 
-            _ = await device.set_fan_speed(FanSpeed.MEDIUM)  # pyright: ignore[reportUnknownVariableType,reportUnknownMemberType,reportAttributeAccessIssue]
+            _ = await device.set_fan_speed(FanSpeed.MEDIUM)
 
             assert mock_tcp_device.write.called
 
     @pytest.mark.asyncio
-    async def test_set_fan_speed_not_fan_controller(self, caplog: pytest.LogCaptureFixture) -> None:
+    async def test_set_fan_speed_not_fan_controller(self, caplog: "LogCaptureFixture") -> None:
         """Test set_fan_speed logs warning when device is not a fan controller"""
         from cync_controller.structs import FanSpeed
 
         with patch("cync_controller.devices.shared.g") as mock_g:
             mock_g.ncync_server.tcp_devices = {}
 
-            device = CyncDevice(cync_id=0x1234)  # pyright: ignore[reportCallIssue]
-            device.is_fan_controller = False  # pyright: ignore[reportAttributeAccessIssue]
+            device = CyncDevice(cync_id=0x1234)
+            device.is_fan_controller = False
 
-            _ = await device.set_fan_speed(FanSpeed.HIGH)  # pyright: ignore[reportUnknownVariableType,reportUnknownMemberType,reportAttributeAccessIssue]
+            _ = await device.set_fan_speed(FanSpeed.HIGH)
 
             assert "is not a fan controller" in caplog.text
 
@@ -69,22 +74,22 @@ class TestCyncDeviceLightshowCommand:
             mock_tcp_device.write = AsyncMock()
             mock_tcp_device.messages.control = {}
 
-            device = CyncDevice(cync_id=0x12)  # pyright: ignore[reportCallIssue]
+            device = CyncDevice(cync_id=0x12)
 
-            _ = await device.set_lightshow("candle")  # pyright: ignore[reportUnknownVariableType,reportUnknownMemberType,reportAttributeAccessIssue]
+            _ = await device.set_lightshow("candle")
 
             # Verify write was called
             assert mock_tcp_device.write.called
 
     @pytest.mark.asyncio
-    async def test_set_lightshow_no_tcp_bridges(self, caplog: pytest.LogCaptureFixture) -> None:
+    async def test_set_lightshow_no_tcp_bridges(self, caplog: "LogCaptureFixture") -> None:
         """Test set_lightshow logs error when no TCP bridges available"""
         with patch("cync_controller.devices.shared.g") as mock_g:
             mock_g.ncync_server.tcp_devices = {}
 
-            device = CyncDevice(cync_id=0x1234)  # pyright: ignore[reportCallIssue]
+            device = CyncDevice(cync_id=0x1234)
 
-            _ = await device.set_lightshow("rainbow")  # pyright: ignore[reportUnknownVariableType,reportUnknownMemberType,reportAttributeAccessIssue]
+            _ = await device.set_lightshow("rainbow")
 
             # Should log error about no TCP bridges
             assert "No TCP bridges" in caplog.text
@@ -102,14 +107,14 @@ class TestCyncDeviceLightshowCommand:
             mock_tcp_device.write = AsyncMock()
             mock_tcp_device.messages.control = {}
 
-            device = CyncDevice(cync_id=0x12)  # pyright: ignore[reportCallIssue]
+            device = CyncDevice(cync_id=0x12)
 
             # Test different lightshow types
             shows = ["candle", "rainbow", "cyber", "fireworks", "volcanic"]
 
             for show in shows:
                 mock_tcp_device.write.reset_mock()
-                _ = await device.set_lightshow(show)  # pyright: ignore[reportUnknownVariableType,reportUnknownMemberType,reportAttributeAccessIssue]
+                _ = await device.set_lightshow(show)
                 assert mock_tcp_device.write.called
 
 
@@ -123,13 +128,13 @@ class TestCyncDeviceErrorPathsCommands:
             mock_g.ncync_server.tcp_devices = {}
             mock_g.mqtt_client = AsyncMock()
 
-            device = CyncDevice(cync_id=0x12)  # pyright: ignore[reportCallIssue]
+            device = CyncDevice(cync_id=0x12)
 
             # Should return without error when no bridges
-            _ = await device.set_temperature(50)  # pyright: ignore[reportUnknownVariableType,reportUnknownMemberType,reportAttributeAccessIssue]
+            _ = await device.set_temperature(50)
 
             # Device state should not have changed
-            assert device.temperature == 0  # pyright: ignore[reportUnknownMemberType,reportAttributeAccessIssue]
+            assert device.temperature == 0
 
     @pytest.mark.asyncio
     async def test_set_temperature_invalid_value_returns_early(self, mock_tcp_device: Any) -> None:
@@ -139,13 +144,13 @@ class TestCyncDeviceErrorPathsCommands:
             mock_g.ncync_server.tcp_devices = {"192.168.1.100": mock_tcp_device}
             mock_g.mqtt_client = AsyncMock()
 
-            device = CyncDevice(cync_id=0x12)  # pyright: ignore[reportCallIssue]
+            device = CyncDevice(cync_id=0x12)
 
             # Should return without error for invalid value
-            _ = await device.set_temperature(200)  # pyright: ignore[reportUnknownVariableType,reportUnknownMemberType,reportAttributeAccessIssue]
+            _ = await device.set_temperature(200)
 
             # Device state should not have changed
-            assert device.temperature == 0  # pyright: ignore[reportUnknownMemberType,reportAttributeAccessIssue]
+            assert device.temperature == 0
 
     @pytest.mark.asyncio
     async def test_set_rgb_no_tcp_bridges(self, mock_tcp_device: Any) -> None:
@@ -154,15 +159,15 @@ class TestCyncDeviceErrorPathsCommands:
             mock_g.ncync_server.tcp_devices = {}
             mock_g.mqtt_client = AsyncMock()
 
-            device = CyncDevice(cync_id=0x12)  # pyright: ignore[reportCallIssue]
+            device = CyncDevice(cync_id=0x12)
 
             # Should return without error when no bridges
-            _ = await device.set_rgb(255, 128, 0)  # pyright: ignore[reportUnknownVariableType,reportUnknownMemberType,reportAttributeAccessIssue]
+            _ = await device.set_rgb(255, 128, 0)
 
             # Device RGB should not have changed
-            assert device.red == 0  # pyright: ignore[reportUnknownMemberType,reportAttributeAccessIssue]
-            assert device.green == 0  # pyright: ignore[reportUnknownMemberType,reportAttributeAccessIssue]
-            assert device.blue == 0  # pyright: ignore[reportUnknownMemberType,reportAttributeAccessIssue]
+            assert device.red == 0
+            assert device.green == 0
+            assert device.blue == 0
 
     @pytest.mark.asyncio
     async def test_set_rgb_invalid_color_returns_early(self, mock_tcp_device: Any) -> None:
@@ -172,13 +177,13 @@ class TestCyncDeviceErrorPathsCommands:
             mock_g.ncync_server.tcp_devices = {"192.168.1.100": mock_tcp_device}
             mock_g.mqtt_client = AsyncMock()
 
-            device = CyncDevice(cync_id=0x12)  # pyright: ignore[reportCallIssue]
+            device = CyncDevice(cync_id=0x12)
 
             # Should return without error for invalid values
-            _ = await device.set_rgb(-1, 128, 0)  # pyright: ignore[reportUnknownVariableType,reportUnknownMemberType,reportAttributeAccessIssue]
+            _ = await device.set_rgb(-1, 128, 0)
 
             # Device RGB should not have changed
-            assert device.red == 0  # pyright: ignore[reportUnknownMemberType,reportAttributeAccessIssue]
+            assert device.red == 0
 
     @pytest.mark.asyncio
     async def test_group_set_power_no_bridges(self, mock_tcp_device: Any) -> None:
@@ -188,14 +193,14 @@ class TestCyncDeviceErrorPathsCommands:
             mock_g.mqtt_client = AsyncMock()
 
             # Create a group with a device
-            _ = CyncDevice(cync_id=0x12)  # pyright: ignore[reportCallIssue]
-            group = CyncGroup(group_id=32768, name="Test Group", member_ids=[0x12])  # pyright: ignore[reportCallIssue]
+            _ = CyncDevice(cync_id=0x12)
+            group = CyncGroup(group_id=32768, name="Test Group", member_ids=[0x12])
 
             # Should return without error when no bridges
-            _ = await group.set_power(1)  # pyright: ignore[reportUnknownVariableType,reportUnknownMemberType,reportAttributeAccessIssue]
+            _ = await group.set_power(1)
 
             # Group state should not have changed
-            assert group.state == 0  # pyright: ignore[reportUnknownMemberType,reportAttributeAccessIssue]
+            assert group.state == 0
 
     @pytest.mark.asyncio
     async def test_group_set_power_bridge_not_ready(self, mock_tcp_device: Any) -> None:
@@ -206,14 +211,14 @@ class TestCyncDeviceErrorPathsCommands:
             mock_g.mqtt_client = AsyncMock()
 
             # Create a group with a device
-            _ = CyncDevice(cync_id=0x12)  # pyright: ignore[reportCallIssue]
-            group = CyncGroup(group_id=32768, name="Test Group", member_ids=[0x12])  # pyright: ignore[reportCallIssue]
+            _ = CyncDevice(cync_id=0x12)
+            group = CyncGroup(group_id=32768, name="Test Group", member_ids=[0x12])
 
             # Should return without error when bridge not ready
-            _ = await group.set_power(1)  # pyright: ignore[reportUnknownVariableType,reportUnknownMemberType,reportAttributeAccessIssue]
+            _ = await group.set_power(1)
 
             # Group state should not have changed
-            assert group.state == 0  # pyright: ignore[reportUnknownMemberType,reportAttributeAccessIssue]
+            assert group.state == 0
 
 
 class TestDeviceBridgeSelection:
@@ -243,35 +248,35 @@ class TestDeviceBridgeSelection:
             }
             mock_g.mqtt_client = AsyncMock()
 
-            device = CyncDevice(cync_id=0x1234)  # pyright: ignore[reportCallIssue]
+            device = CyncDevice(cync_id=0x1234)
             device.name = "Test Light"
 
-            _ = await device.set_power(1)  # pyright: ignore[reportUnknownVariableType,reportUnknownMemberType,reportAttributeAccessIssue]
+            _ = await device.set_power(1)
 
             # Should call ready bridge
-            assert ready_bridge.write.called  # pyright: ignore[reportAny]
+            assert ready_bridge.write.called
 
 
 class TestDeviceErrorPaths:
     """Tests for error handling in device commands"""
 
     @pytest.mark.asyncio
-    async def test_device_invalid_brightness_range(self, caplog: pytest.LogCaptureFixture) -> None:
+    async def test_device_invalid_brightness_range(self, caplog: "LogCaptureFixture") -> None:
         """Test device rejects out-of-range brightness values"""
         with patch("cync_controller.devices.shared.g") as mock_g:
             mock_g.ncync_server = MagicMock()
             mock_g.ncync_server.tcp_devices = {}
             mock_g.mqtt_client = AsyncMock()
 
-            device = CyncDevice(cync_id=0x1234)  # pyright: ignore[reportCallIssue]
-            device.is_light = True  # pyright: ignore[reportAttributeAccessIssue]
+            device = CyncDevice(cync_id=0x1234)
+            device.is_light = True
 
             # Test negative brightness
-            _ = await device.set_brightness(-1)  # pyright: ignore[reportUnknownVariableType,reportUnknownMemberType,reportAttributeAccessIssue]
+            _ = await device.set_brightness(-1)
             assert "Invalid brightness" in caplog.text or "must be 0-100" in caplog.text
 
             caplog.clear()
 
             # Test brightness > 100
-            _ = await device.set_brightness(101)  # pyright: ignore[reportUnknownVariableType,reportUnknownMemberType,reportAttributeAccessIssue]
+            _ = await device.set_brightness(101)
             assert "Invalid brightness" in caplog.text or "must be 0-100" in caplog.text
