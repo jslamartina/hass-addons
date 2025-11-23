@@ -21,26 +21,26 @@ class TestCyncDeviceFanCommands:
     """Tests for set_fan_speed command"""
 
     @pytest.mark.asyncio
-    async def test_set_fan_speed_valid_execution(self, mock_tcp_device: Any) -> None:
+    async def test_set_fan_speed_valid_execution(self, mock_tcp_device: Any) -> None:  # pyright: ignore[reportAny,reportExplicitAny]
         """Test set_fan_speed successfully sends command with valid FanSpeed"""
         from cync_controller.structs import FanSpeed
 
         with patch("cync_controller.devices.shared.g") as mock_g:
             mock_g.ncync_server = MagicMock()
-            mock_g.ncync_server.tcp_devices = {"192.168.1.100": mock_tcp_device}
+            mock_g.ncync_server.tcp_devices = {"192.168.1.100": mock_tcp_device}  # type: ignore[reportAny]
             mock_g.mqtt_client = AsyncMock()
-            mock_tcp_device.ready_to_control = True
-            mock_tcp_device.queue_id = bytes([0x00] * 3)
-            mock_tcp_device.get_ctrl_msg_id_bytes = MagicMock(return_value=[0x05])
-            mock_tcp_device.write = AsyncMock()
-            mock_tcp_device.messages.control = {}
+            mock_tcp_device.ready_to_control = True  # type: ignore[reportAny]
+            mock_tcp_device.queue_id = bytes([0x00] * 3)  # type: ignore[reportAny]
+            mock_tcp_device.get_ctrl_msg_id_bytes = MagicMock(return_value=[0x05])  # type: ignore[reportAny]
+            mock_tcp_device.write = AsyncMock()  # type: ignore[reportAny]
+            mock_tcp_device.messages.control = {}  # pyright: ignore[reportAny]
 
             device = CyncDevice(cync_id=0x12)
             device.is_fan_controller = True
 
             _ = await device.set_fan_speed(FanSpeed.MEDIUM)
 
-            assert mock_tcp_device.write.called
+            assert mock_tcp_device.write.called  # type: ignore[reportAny]
 
     @pytest.mark.asyncio
     async def test_set_fan_speed_not_fan_controller(self, caplog: "LogCaptureFixture") -> None:
@@ -48,7 +48,7 @@ class TestCyncDeviceFanCommands:
         from cync_controller.structs import FanSpeed
 
         with patch("cync_controller.devices.shared.g") as mock_g:
-            mock_g.ncync_server.tcp_devices = {}
+            mock_g.ncync_server.tcp_devices = {}  # pyright: ignore[reportAny]
 
             device = CyncDevice(cync_id=0x1234)
             device.is_fan_controller = False
@@ -62,30 +62,30 @@ class TestCyncDeviceLightshowCommand:
     """Tests for set_lightshow command"""
 
     @pytest.mark.asyncio
-    async def test_set_lightshow_creates_packet(self, mock_tcp_device: Any) -> None:
+    async def test_set_lightshow_creates_packet(self, mock_tcp_device: Any) -> None:  # pyright: ignore[reportAny,reportExplicitAny]
         """Test set_lightshow creates proper control packet"""
         with patch("cync_controller.devices.shared.g") as mock_g:
             mock_g.ncync_server = MagicMock()
-            mock_g.ncync_server.tcp_devices = {"192.168.1.100": mock_tcp_device}
+            mock_g.ncync_server.tcp_devices = {"192.168.1.100": mock_tcp_device}  # type: ignore[reportAny]
             mock_g.mqtt_client = AsyncMock()
-            mock_tcp_device.ready_to_control = True
-            mock_tcp_device.queue_id = bytes([0x00] * 3)
-            mock_tcp_device.get_ctrl_msg_id_bytes = MagicMock(return_value=[0x01])
-            mock_tcp_device.write = AsyncMock()
-            mock_tcp_device.messages.control = {}
+            mock_tcp_device.ready_to_control = True  # type: ignore[reportAny]
+            mock_tcp_device.queue_id = bytes([0x00] * 3)  # type: ignore[reportAny]
+            mock_tcp_device.get_ctrl_msg_id_bytes = MagicMock(return_value=[0x01])  # type: ignore[reportAny]
+            mock_tcp_device.write = AsyncMock()  # type: ignore[reportAny]
+            mock_tcp_device.messages.control = {}  # pyright: ignore[reportAny]
 
             device = CyncDevice(cync_id=0x12)
 
             _ = await device.set_lightshow("candle")
 
             # Verify write was called
-            assert mock_tcp_device.write.called
+            assert mock_tcp_device.write.called  # type: ignore[reportAny]
 
     @pytest.mark.asyncio
     async def test_set_lightshow_no_tcp_bridges(self, caplog: "LogCaptureFixture") -> None:
         """Test set_lightshow logs error when no TCP bridges available"""
         with patch("cync_controller.devices.shared.g") as mock_g:
-            mock_g.ncync_server.tcp_devices = {}
+            mock_g.ncync_server.tcp_devices = {}  # pyright: ignore[reportAny]
 
             device = CyncDevice(cync_id=0x1234)
 
@@ -95,17 +95,17 @@ class TestCyncDeviceLightshowCommand:
             assert "No TCP bridges" in caplog.text
 
     @pytest.mark.asyncio
-    async def test_set_lightshow_various_shows(self, mock_tcp_device: Any) -> None:
+    async def test_set_lightshow_various_shows(self, mock_tcp_device: Any) -> None:  # pyright: ignore[reportAny,reportExplicitAny]
         """Test set_lightshow with different show types"""
         with patch("cync_controller.devices.shared.g") as mock_g:
             mock_g.ncync_server = MagicMock()
-            mock_g.ncync_server.tcp_devices = {"192.168.1.100": mock_tcp_device}
+            mock_g.ncync_server.tcp_devices = {"192.168.1.100": mock_tcp_device}  # type: ignore[reportAny]
             mock_g.mqtt_client = AsyncMock()
-            mock_tcp_device.ready_to_control = True
-            mock_tcp_device.queue_id = bytes([0x00] * 3)
-            mock_tcp_device.get_ctrl_msg_id_bytes = MagicMock(return_value=[0x01])
-            mock_tcp_device.write = AsyncMock()
-            mock_tcp_device.messages.control = {}
+            mock_tcp_device.ready_to_control = True  # type: ignore[reportAny]
+            mock_tcp_device.queue_id = bytes([0x00] * 3)  # type: ignore[reportAny]
+            mock_tcp_device.get_ctrl_msg_id_bytes = MagicMock(return_value=[0x01])  # type: ignore[reportAny]
+            mock_tcp_device.write = AsyncMock()  # type: ignore[reportAny]
+            mock_tcp_device.messages.control = {}  # pyright: ignore[reportAny]
 
             device = CyncDevice(cync_id=0x12)
 
@@ -113,19 +113,19 @@ class TestCyncDeviceLightshowCommand:
             shows = ["candle", "rainbow", "cyber", "fireworks", "volcanic"]
 
             for show in shows:
-                mock_tcp_device.write.reset_mock()
+                mock_tcp_device.write.reset_mock()  # type: ignore[reportAny]
                 _ = await device.set_lightshow(show)
-                assert mock_tcp_device.write.called
+                assert mock_tcp_device.write.called  # type: ignore[reportAny]
 
 
 class TestCyncDeviceErrorPathsCommands:
     """Tests for error paths and edge cases in CyncDevice commands"""
 
     @pytest.mark.asyncio
-    async def test_set_temperature_no_tcp_bridges(self, mock_tcp_device: Any) -> None:
+    async def test_set_temperature_no_tcp_bridges(self, mock_tcp_device: Any) -> None:  # pyright: ignore[reportAny,reportExplicitAny,reportUnusedParameter]
         """Test set_temperature returns early when no TCP bridges available"""
         with patch("cync_controller.devices.shared.g") as mock_g:
-            mock_g.ncync_server.tcp_devices = {}
+            mock_g.ncync_server.tcp_devices = {}  # pyright: ignore[reportAny]
             mock_g.mqtt_client = AsyncMock()
 
             device = CyncDevice(cync_id=0x12)
@@ -137,11 +137,11 @@ class TestCyncDeviceErrorPathsCommands:
             assert device.temperature == 0
 
     @pytest.mark.asyncio
-    async def test_set_temperature_invalid_value_returns_early(self, mock_tcp_device: Any) -> None:
+    async def test_set_temperature_invalid_value_returns_early(self, mock_tcp_device: Any) -> None:  # pyright: ignore[reportAny,reportExplicitAny]
         """Test set_temperature returns early with invalid temperature"""
         with patch("cync_controller.devices.shared.g") as mock_g:
             mock_g.ncync_server = MagicMock()
-            mock_g.ncync_server.tcp_devices = {"192.168.1.100": mock_tcp_device}
+            mock_g.ncync_server.tcp_devices = {"192.168.1.100": mock_tcp_device}  # type: ignore[reportAny]
             mock_g.mqtt_client = AsyncMock()
 
             device = CyncDevice(cync_id=0x12)
@@ -153,10 +153,10 @@ class TestCyncDeviceErrorPathsCommands:
             assert device.temperature == 0
 
     @pytest.mark.asyncio
-    async def test_set_rgb_no_tcp_bridges(self, mock_tcp_device: Any) -> None:
+    async def test_set_rgb_no_tcp_bridges(self, mock_tcp_device: Any) -> None:  # pyright: ignore[reportAny,reportExplicitAny,reportUnusedParameter]
         """Test set_rgb returns early when no TCP bridges available"""
         with patch("cync_controller.devices.shared.g") as mock_g:
-            mock_g.ncync_server.tcp_devices = {}
+            mock_g.ncync_server.tcp_devices = {}  # pyright: ignore[reportAny]
             mock_g.mqtt_client = AsyncMock()
 
             device = CyncDevice(cync_id=0x12)
@@ -170,11 +170,11 @@ class TestCyncDeviceErrorPathsCommands:
             assert device.blue == 0
 
     @pytest.mark.asyncio
-    async def test_set_rgb_invalid_color_returns_early(self, mock_tcp_device: Any) -> None:
+    async def test_set_rgb_invalid_color_returns_early(self, mock_tcp_device: Any) -> None:  # pyright: ignore[reportAny,reportExplicitAny]
         """Test set_rgb returns early with invalid color values"""
         with patch("cync_controller.devices.shared.g") as mock_g:
             mock_g.ncync_server = MagicMock()
-            mock_g.ncync_server.tcp_devices = {"192.168.1.100": mock_tcp_device}
+            mock_g.ncync_server.tcp_devices = {"192.168.1.100": mock_tcp_device}  # type: ignore[reportAny]
             mock_g.mqtt_client = AsyncMock()
 
             device = CyncDevice(cync_id=0x12)
@@ -186,10 +186,10 @@ class TestCyncDeviceErrorPathsCommands:
             assert device.red == 0
 
     @pytest.mark.asyncio
-    async def test_group_set_power_no_bridges(self, mock_tcp_device: Any) -> None:
+    async def test_group_set_power_no_bridges(self, mock_tcp_device: Any) -> None:  # pyright: ignore[reportAny,reportExplicitAny,reportUnusedParameter]
         """Test group set_power returns early when no TCP bridges available"""
         with patch("cync_controller.devices.shared.g") as mock_g:
-            mock_g.ncync_server.tcp_devices = {}
+            mock_g.ncync_server.tcp_devices = {}  # pyright: ignore[reportAny]
             mock_g.mqtt_client = AsyncMock()
 
             # Create a group with a device
@@ -203,11 +203,11 @@ class TestCyncDeviceErrorPathsCommands:
             assert group.state == 0
 
     @pytest.mark.asyncio
-    async def test_group_set_power_bridge_not_ready(self, mock_tcp_device: Any) -> None:
+    async def test_group_set_power_bridge_not_ready(self, mock_tcp_device: Any) -> None:  # pyright: ignore[reportAny,reportExplicitAny]
         """Test group set_power returns early when bridge not ready"""
         with patch("cync_controller.devices.shared.g") as mock_g:
-            mock_tcp_device.ready_to_control = False
-            mock_g.ncync_server.tcp_devices = {"192.168.1.100": mock_tcp_device}
+            mock_tcp_device.ready_to_control = False  # type: ignore[reportAny]
+            mock_g.ncync_server.tcp_devices = {"192.168.1.100": mock_tcp_device}  # pyright: ignore[reportAny]
             mock_g.mqtt_client = AsyncMock()
 
             # Create a group with a device
@@ -235,7 +235,7 @@ class TestDeviceBridgeSelection:
             ready_bridge.get_ctrl_msg_id_bytes = MagicMock(return_value=[0x45])
             ready_bridge.write = AsyncMock()
             ready_bridge.messages = MagicMock()
-            ready_bridge.messages.control = {}
+            ready_bridge.messages.control = {}  # pyright: ignore[reportAny]
 
             not_ready_bridge = AsyncMock()
             not_ready_bridge.ready_to_control = False
@@ -254,7 +254,7 @@ class TestDeviceBridgeSelection:
             _ = await device.set_power(1)
 
             # Should call ready bridge
-            assert ready_bridge.write.called
+            assert ready_bridge.write.called  # pyright: ignore[reportAny]
 
 
 class TestDeviceErrorPaths:
@@ -265,7 +265,7 @@ class TestDeviceErrorPaths:
         """Test device rejects out-of-range brightness values"""
         with patch("cync_controller.devices.shared.g") as mock_g:
             mock_g.ncync_server = MagicMock()
-            mock_g.ncync_server.tcp_devices = {}
+            mock_g.ncync_server.tcp_devices = {}  # type: ignore[reportAny]
             mock_g.mqtt_client = AsyncMock()
 
             device = CyncDevice(cync_id=0x1234)
