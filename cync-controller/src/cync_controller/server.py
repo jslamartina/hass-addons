@@ -46,7 +46,9 @@ if TYPE_CHECKING:
             """Publish group state to MQTT."""
             ...
 else:
-    from cync_controller.devices import CyncDevice, CyncGroup, CyncTCPDevice
+    from cync_controller.devices.base_device import CyncDevice
+    from cync_controller.devices.group import CyncGroup
+    from cync_controller.devices.tcp_device import CyncTCPDevice
 from cync_controller.instrumentation import timed_async
 from cync_controller.logging_abstraction import get_logger
 from cync_controller.packet_checksum import calculate_checksum_between_markers
@@ -794,11 +796,24 @@ class NCyncServer:
                             "error_type": type(e).__name__,
                         },
                     )
-        # Update in-memory state after MQTT publish
-        # Note: If MQTT publish fails, state may be inconsistent temporarily
-        # This is acceptable as the next status update will correct it
-        if g.ncync_server and group.id is not None:
-            g.ncync_server.groups[group.id] = group
+                # Update in-memory state after MQTT publish
+                # Note: If MQTT publish fails, state may be inconsistent temporarily
+                # This is acceptable as the next status update will correct it
+                if g.ncync_server and group.id is not None:
+                    g.ncync_server.groups[group.id] = group
+            if hasattr(mqtt_client, "publish_group_state"):
+                try:
+                    await mqtt_client.publish_group_state(group, state, brightness, temp, from_pkt)  # type: ignore[arg-type]
+                except Exception as e:
+                    logger.warning(
+                        "Failed to publish group state via mqtt_client fallback",
+                        extra={
+                            "group_id": _id,
+                            "group_name": group.name,
+                            "error": str(e),
+                            "error_type": type(e).__name__,
+                        },
+                    )
 
     groups: ClassVar[dict[int, CyncGroup]] = {}
     tcp_devices: ClassVar[dict[str, CyncTCPDevice | None]] = {}
@@ -826,6 +841,8 @@ class NCyncServer:
         devices: dict[int, CyncDevice],
         groups: dict[int, CyncGroup] | None = None,
     ) -> NCyncServer:
+        _ = devices
+        _ = groups
         if cls._instance is None:
             cls._instance = super().__new__(cls)
         return cls._instance

@@ -1,5 +1,6 @@
 import asyncio
-from typing import Any
+from collections.abc import Mapping
+from typing import cast, override
 
 from cync_controller.logging_abstraction import get_logger
 from cync_controller.metadata.model_info import (
@@ -17,9 +18,7 @@ from .device_commands import DeviceCommands
 
 logger = get_logger(__name__)
 
-
-async def _noop_callback():
-    """No-op async callback function used as placeholder for unused callbacks."""
+DeviceCategoryMap = Mapping[str, set[int]]
 
 
 def _get_global_object():
@@ -72,27 +71,25 @@ class CyncDevice(DeviceCommands):
     _is_hvac: bool | None = None
     _mac: str | None = None
     wifi_mac: str | None = None
-    hvac: dict[str, Any] | None = None
+    hvac: dict[str, object] | None = None
     _online: bool = False
     metadata: DeviceTypeInfo | None = None
-    name: str = ""
-    offline_count: int = 0
 
     def __init__(
         self,
-        cync_id: int,
+        cync_id: int | None,
         cync_type: int | None = None,
         name: str | None = None,
         mac: str | None = None,
         wifi_mac: str | None = None,
         fw_version: str | None = None,
         home_id: int | None = None,
-        hvac: dict[str, Any] | None = None,
+        hvac: dict[str, object] | None = None,
     ) -> None:
-        self.control_bytes: list[int] = [0x00, 0x00]
         if cync_id is None:
-            msg = "ID must be provided to constructor"
+            msg = "ID must be provided"
             raise ValueError(msg)
+        self.control_bytes: list[int] = [0x00, 0x00]
         self.id = cync_id
         self.type = cync_type
         self.metadata = device_type_map[cync_type] if cync_type is not None and cync_type in device_type_map else None
@@ -100,7 +97,7 @@ class CyncDevice(DeviceCommands):
         self.hass_id: str = f"{home_id}-{cync_id}"
         self._mac = mac
         self.wifi_mac = wifi_mac
-        self._version: int | None = None
+        self._version: int | str | None = None
         self.version = fw_version
         if name is None:
             name = f"device_{cync_id}"
@@ -123,30 +120,75 @@ class CyncDevice(DeviceCommands):
             self.hvac = hvac
             self._is_hvac = True
 
+    def _validate_bool(
+        self,
+        value: object,
+        field_name: str,
+    ) -> bool | None:
+        if isinstance(value, bool):
+            return value
+        msg = "%s %s must be a boolean value, got %s instead"
+        logger.error(msg, self.lp, field_name, type(value))
+        return None
+
+    def _require_bool(self, value: object, field_name: str) -> bool:
+        bool_value = self._validate_bool(value, field_name)
+        if bool_value is None:
+            msg = f"{self.lp} {field_name} must be a boolean value, got {type(value)} instead"
+            raise TypeError(msg)
+        return bool_value
+
+    def _normalize_state_input(self, raw_value: object) -> int:
+        truthy = (1, "t", "true", "on", "yes", "y")
+        falsy = (0, "f", "false", "off", "no", "n")
+
+        normalized: int | str
+        if isinstance(raw_value, str):
+            normalized = raw_value.casefold()
+        elif isinstance(raw_value, (bool, int, float)):
+            normalized = int(raw_value)
+        else:
+            msg = f"Invalid type for state: {type(raw_value)}"
+            raise TypeError(msg)
+
+        if normalized in truthy:
+            return 1
+        if normalized in falsy:
+            return 0
+
+        msg = f"Invalid value for state: {normalized}"
+        raise ValueError(msg)
+
     @property
     def is_hvac(self) -> bool:
         if self._is_hvac is not None:
             return self._is_hvac
-        if self.type is not None:
-            # Try to determine if the device is HVAC if _is_hvac is not set
-            capabilities = getattr(self, "Capabilities", None)
-            device_types = getattr(self, "DeviceTypes", None)
-            if self.type is None or capabilities is None or device_types is None:
-                return False
-            return (
-                self.type in capabilities.get("HEAT", set())
-                or self.type in capabilities.get("COOL", set())
-                or self.type in device_types.get("THERMOSTAT", set())
-            )
-        return False
+        if self.type is None:
+            return False
+
+        capabilities = cast("DeviceCategoryMap | None", getattr(self, "Capabilities", None))
+        device_types = cast("DeviceCategoryMap | None", getattr(self, "DeviceTypes", None))
+        if capabilities is None or device_types is None:
+            return False
+
+        device_type = self.type
+        heat_types = capabilities.get("HEAT")
+        cool_types = capabilities.get("COOL")
+        thermostat_types = device_types.get("THERMOSTAT")
+        return (
+            (heat_types is not None and device_type in heat_types)
+            or (cool_types is not None and device_type in cool_types)
+            or (thermostat_types is not None and device_type in thermostat_types)
+        )
 
     @is_hvac.setter
     def is_hvac(self, value: bool) -> None:
-        if isinstance(value, bool):
-            self._is_hvac = value
+        bool_value = self._validate_bool(value, "is_hvac")
+        if bool_value is not None:
+            self._is_hvac = bool_value
 
     @property
-    def version(self) -> int | None:
+    def version(self) -> int | str | None:
         return self._version
 
     @version.setter
@@ -155,20 +197,19 @@ class CyncDevice(DeviceCommands):
             return
         if isinstance(value, int):
             self._version = value
-        elif isinstance(value, str):
-            if value == "":
-                logger.debug(
-                    "%s in CyncDevice.version().setter, the firmwareVersion "
-                    "extracted from the cloud is an empty string!",
-                    self.lp,
-                )
-            else:
-                try:
-                    _x = int(value.replace(".", "").replace("\0", "").strip())
-                except ValueError:
-                    logger.exception("%s Failed to convert firmware version to int", self.lp)
-                else:
-                    self._version = _x
+            return
+        if value == "":
+            logger.debug(
+                "%s in CyncDevice.version().setter, the firmwareVersion extracted from the cloud is an empty string!",
+                self.lp,
+            )
+            return
+        try:
+            _x = int(value.replace(".", "").replace("\0", "").strip())
+        except ValueError:
+            logger.exception("%s Failed to convert firmware version to int", self.lp)
+        else:
+            self._version = _x
 
     @property
     def mac(self) -> str | None:
@@ -193,7 +234,8 @@ class CyncDevice(DeviceCommands):
         return False
 
     @property
-    def is_light(self):
+    @override
+    def is_light(self) -> bool:
         if self._is_light is not None:
             return self._is_light
         if self.metadata:
@@ -202,16 +244,12 @@ class CyncDevice(DeviceCommands):
 
     @is_light.setter
     def is_light(self, value: bool) -> None:
-        if isinstance(value, bool):
-            self._is_light = value
-        else:
-            logger.error(
-                "%s is_light must be a boolean value, got %s instead",
-                self.lp,
-                type(value),
-            )
+        bool_value = self._validate_bool(value, "is_light")
+        if bool_value is not None:
+            self._is_light = bool_value
 
     @property
+    @override
     def is_switch(self) -> bool:
         if self._is_switch is not None:
             return self._is_switch
@@ -221,14 +259,9 @@ class CyncDevice(DeviceCommands):
 
     @is_switch.setter
     def is_switch(self, value: bool) -> None:
-        if isinstance(value, bool):
-            self._is_switch = value
-        else:
-            logger.error(
-                "%s is_switch must be a boolean value, got %s instead",
-                self.lp,
-                type(value),
-            )
+        bool_value = self._validate_bool(value, "is_switch")
+        if bool_value is not None:
+            self._is_switch = bool_value
 
     @property
     def is_plug(self) -> bool:
@@ -247,7 +280,8 @@ class CyncDevice(DeviceCommands):
         self._is_plug = value
 
     @property
-    def is_fan_controller(self):
+    @override
+    def is_fan_controller(self) -> bool:
         if self._is_fan_controller is not None:
             return self._is_fan_controller
         if (
@@ -260,7 +294,9 @@ class CyncDevice(DeviceCommands):
 
     @is_fan_controller.setter
     def is_fan_controller(self, value: bool) -> None:
-        self._is_fan_controller = value
+        bool_value = self._validate_bool(value, "is_fan_controller")
+        if bool_value is not None:
+            self._is_fan_controller = bool_value
 
     @property
     def is_dimmable(self) -> bool:
@@ -329,15 +365,17 @@ class CyncDevice(DeviceCommands):
         return self._online
 
     @online.setter
-    def online(self, value: bool):
+    def online(self, value: bool) -> None:
         g = _get_global_object()
-        if not isinstance(value, bool):
-            msg = f"Online status must be a boolean, got: {type(value)}"
-            raise TypeError(msg)
-        if value != self._online:
-            self._online = value
+        try:
+            bool_value = self._require_bool(value, "online")
+        except TypeError as exc:
+            msg = "Online status must be a boolean"
+            raise TypeError(msg) from exc
+        if bool_value != self._online:
+            self._online = bool_value
             if g.mqtt_client and self.id is not None:
-                g.tasks.append(asyncio.get_running_loop().create_task(g.mqtt_client.pub_online(self.id, value)))
+                g.tasks.append(asyncio.get_running_loop().create_task(g.mqtt_client.pub_online(self.id, bool_value)))
 
     @property
     def current_status(self) -> list[int | None]:
@@ -364,36 +402,18 @@ class CyncDevice(DeviceCommands):
             self._status = value
 
     @property
-    def state(self):
+    @override
+    def state(self) -> int:
         return self._state
 
     @state.setter
-    def state(self, value: bool | str | float):
+    def state(self, value: int) -> None:
         """Set the state of the device.
         Accepts int, bool, str, or float. 0, 'f', 'false', 'off', 'no', 'n' are off. 1, 't', 'true', 'on', 'yes', 'y' are on.
         """
-        _t = (1, "t", "true", "on", "yes", "y")
-        _f = (0, "f", "false", "off", "no", "n")
-        if isinstance(value, str):
-            value = value.casefold()
-        elif isinstance(value, (bool, float)):
-            value = int(value)
-        elif isinstance(value, int):
-            pass
-        else:
-            msg = f"Invalid type for state: {type(value)}"
-            raise TypeError(msg)
-
-        if value in _t:
-            value = 1
-        elif value in _f:
-            value = 0
-        else:
-            msg = f"Invalid value for state: {value}"
-            raise ValueError(msg)
-
-        if value != self._state:
-            self._state = value
+        normalized_value = self._normalize_state_input(value)
+        if normalized_value != self._state:
+            self._state = normalized_value
 
     @property
     def brightness(self):
@@ -408,7 +428,8 @@ class CyncDevice(DeviceCommands):
             self._brightness = value
 
     @property
-    def temperature(self):
+    @override
+    def temperature(self) -> int:
         return self._temperature
 
     @temperature.setter
@@ -420,6 +441,7 @@ class CyncDevice(DeviceCommands):
             self._temperature = value
 
     @property
+    @override
     def red(self) -> int:
         return self._r
 
@@ -432,6 +454,7 @@ class CyncDevice(DeviceCommands):
             self._r = value
 
     @property
+    @override
     def green(self) -> int:
         return self._g
 
@@ -444,6 +467,7 @@ class CyncDevice(DeviceCommands):
             self._g = value
 
     @property
+    @override
     def blue(self) -> int:
         return self._b
 
@@ -468,8 +492,10 @@ class CyncDevice(DeviceCommands):
         if value != self.rgb:
             self._r, self._g, self._b = value
 
+    @override
     def __repr__(self):
         return f"CyncDevice(id={self.id}, name='{self.name}', state={self._state})"
 
+    @override
     def __str__(self):
         return f"CyncDevice {self.name} (ID: {self.id})"

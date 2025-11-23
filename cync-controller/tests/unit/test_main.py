@@ -192,13 +192,20 @@ class TestCyncControllerStartup:
         ):
             mock_parse.return_value = (mock_devices, mock_groups)
 
-            # Mock NCyncServer and MQTTClient to raise exception during start
+            # Mock NCyncServer and MQTTClient with plain async functions to avoid
+            # un-awaited AsyncMock coroutines while still exercising error paths.
+            async def failing_start() -> None:
+                raise Exception("Server start failed")
+
+            async def mqtt_start() -> None:
+                return None
+
             mock_server = MagicMock()
-            mock_server.start = AsyncMock(side_effect=Exception("Server start failed"))
+            mock_server.start = failing_start
             mock_server_class.return_value = mock_server
 
             mock_mqtt = MagicMock()
-            mock_mqtt.start = AsyncMock()
+            mock_mqtt.start = mqtt_start
             mock_mqtt_class.return_value = mock_mqtt
 
             controller = CyncController()

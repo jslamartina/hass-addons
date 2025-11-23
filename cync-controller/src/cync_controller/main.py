@@ -5,9 +5,9 @@ import asyncio
 import logging
 import signal
 import sys
+from collections.abc import Mapping
 from functools import partial
 from pathlib import Path
-from typing import Any
 
 import uvloop
 import yaml
@@ -71,12 +71,13 @@ g = GlobalObject()
 
 def _parse_device_from_config(
     device_id_str: str,
-    device_data: dict[str, Any],
+    device_data: Mapping[str, object],
     home_id: int,
 ) -> tuple[int, CyncDevice] | None:
     """Parse a single device from config. Returns (device_id, device) or None."""
-    enabled = device_data.get("enabled", True)
-    if enabled is False or enabled == "False":
+    enabled_value = device_data.get("enabled", True)
+    enabled = not ((isinstance(enabled_value, str) and enabled_value.lower() == "false") or enabled_value is False)
+    if not enabled:
         logger.debug("Skipping disabled device: %s", device_id_str)
         return None
 
@@ -86,26 +87,48 @@ def _parse_device_from_config(
         logger.warning("Invalid device ID (not an integer): %s", device_id_str)
         return None
 
-    mac = device_data.get("mac")
-    if isinstance(mac, int):
-        mac = str(mac)
+    mac_value = device_data.get("mac")
+    mac: str | None
+    if isinstance(mac_value, int):
+        mac = str(mac_value)
         logger.warning("Device %s MAC converted from int to string: %s", device_id_str, mac)
+    elif isinstance(mac_value, str):
+        mac = mac_value
+    else:
+        mac = None
 
-    wifi_mac = device_data.get("wifi_mac")
-    if isinstance(wifi_mac, int):
-        wifi_mac = str(wifi_mac)
+    wifi_mac_value = device_data.get("wifi_mac")
+    wifi_mac: str | None
+    if isinstance(wifi_mac_value, int):
+        wifi_mac = str(wifi_mac_value)
         logger.warning("Device %s WiFi MAC converted from int to string: %s", device_id_str, wifi_mac)
+    elif isinstance(wifi_mac_value, str):
+        wifi_mac = wifi_mac_value
+    else:
+        wifi_mac = None
+
+    hvac_raw = device_data.get("hvac")
+    hvac_value: dict[str, object] | None = hvac_raw if isinstance(hvac_raw, Mapping) else None
+
+    fw_value = device_data.get("fw")
+    firmware = fw_value if isinstance(fw_value, str) else None
+
+    cync_type_value = device_data.get("type")
+    cync_type = cync_type_value if isinstance(cync_type_value, int) else None
+
+    name_value = device_data.get("name")
+    name = name_value if isinstance(name_value, str) else None
 
     try:
         device = CyncDevice(
             cync_id=device_id,
-            cync_type=device_data.get("type"),
-            name=device_data.get("name"),
+            cync_type=cync_type,
+            name=name,
             mac=mac,
             wifi_mac=wifi_mac,
-            fw_version=device_data.get("fw"),
+            fw_version=firmware,
             home_id=home_id,
-            hvac=device_data.get("hvac"),
+            hvac=hvac_value,
         )
     except Exception:
         logger.exception("Failed to create device %s", device_id_str)
@@ -116,7 +139,7 @@ def _parse_device_from_config(
 
 def _parse_group_from_config(
     group_id_str: str,
-    group_data: dict[str, Any],
+    group_data: Mapping[str, object],
     home_id: int,
 ) -> tuple[int, CyncGroup] | None:
     """Parse a single group from config. Returns (group_id, group) or None."""
@@ -126,12 +149,27 @@ def _parse_group_from_config(
         logger.warning("Invalid group ID (not an integer): %s", group_id_str)
         return None
 
+    name_value = group_data.get("name")
+    name = name_value if isinstance(name_value, str) else f"Group {group_id}"
+
+    members_raw = group_data.get("members", [])
+    members: list[int] = []
+    if isinstance(members_raw, list):
+        for member in members_raw:
+            if isinstance(member, int):
+                members.append(member)
+            elif isinstance(member, str) and member.isdigit():
+                members.append(int(member))
+
+    is_subgroup_value = group_data.get("is_subgroup", False)
+    is_subgroup = bool(is_subgroup_value)
+
     try:
         group = CyncGroup(
             group_id=group_id,
-            name=group_data.get("name", f"Group {group_id}"),
-            member_ids=group_data.get("members", []),
-            is_subgroup=group_data.get("is_subgroup", False),
+            name=name,
+            member_ids=members,
+            is_subgroup=is_subgroup,
             home_id=home_id,
         )
     except Exception:
@@ -143,29 +181,34 @@ def _parse_group_from_config(
 
 def _process_home_config(
     home_name: str,
-    home_data: dict[str, Any],
+    home_data: Mapping[str, object],
     devices: dict[int, CyncDevice],
     groups: dict[int, CyncGroup],
 ) -> None:
     """Process a single home's config and add devices/groups."""
-    home_id = home_data.get("id")
-    if not home_id:
+    home_id_value = home_data.get("id")
+    if isinstance(home_id_value, int):
+        home_id = home_id_value
+    elif isinstance(home_id_value, str):
+        digits = "".join(ch for ch in home_id_value if ch.isdigit())
+        home_id = int(digits) if digits else 0
+    else:
         logger.debug("Skipping home '%s' - no ID found", home_name)
         return
 
-    home_devices = home_data.get("devices", {})
-    if home_devices:
+    home_devices = home_data.get("devices")
+    if isinstance(home_devices, dict):
         for device_id_str, device_data in home_devices.items():
-            if isinstance(device_data, dict):
+            if isinstance(device_data, Mapping):
                 result = _parse_device_from_config(device_id_str, device_data, home_id)
                 if result:
                     device_id, device = result
                     devices[device_id] = device
 
-    home_groups = home_data.get("groups", {})
-    if home_groups:
+    home_groups = home_data.get("groups")
+    if isinstance(home_groups, dict):
         for group_id_str, group_data in home_groups.items():
-            if isinstance(group_data, dict):
+            if isinstance(group_data, Mapping):
                 result = _parse_group_from_config(group_id_str, group_data, home_id)
                 if result:
                     group_id, group = result
@@ -191,19 +234,24 @@ async def parse_config(config_file: Path) -> tuple[dict[int, CyncDevice], dict[i
 
     try:
         with config_file.open() as f:
-            config_data = yaml.safe_load(f)
+            raw_config_obj: object = yaml.safe_load(f)
     except Exception:
         logger.exception("Failed to parse config file: %s", config_file)
         raise
 
-    if not config_data or "account data" not in config_data:
+    if not isinstance(raw_config_obj, dict):
+        logger.warning("Invalid config structure: expected mapping at root")
+        return devices, groups
+
+    raw_config: Mapping[str, object] = raw_config_obj
+    account_data = raw_config.get("account data")
+    if not isinstance(account_data, Mapping):
         logger.warning("No 'account data' section found in config file")
         return devices, groups
 
-    account_data = config_data["account data"]
     for home_name, home_data in account_data.items():
-        if isinstance(home_data, dict):
-            _process_home_config(home_name, home_data, devices, groups)
+        if isinstance(home_data, Mapping):
+            _process_home_config(str(home_name), home_data, devices, groups)
 
     logger.info("Parsed config: %d devices, %d groups", len(devices), len(groups))
     return devices, groups
@@ -214,12 +262,16 @@ class CyncController:
     config_file: Path | None = None
     _instance: CyncController | None = None
 
-    def __new__(cls, *args: object, **kwargs: object) -> CyncController:
+    def __new__(cls, *_args: object, **_kwargs: object) -> CyncController:
         if cls._instance is None:
             cls._instance = super().__new__(cls)
         return cls._instance
 
-    def __init__(self) -> None:
+    def __init__(self, *_args: object, **_kwargs: object) -> None:
+        if getattr(self, "_initialized", False):
+            return
+        self._initialized = True
+
         check_for_uuid()
         asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
         g.loop = asyncio.new_event_loop()

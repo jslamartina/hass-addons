@@ -5,165 +5,315 @@ import logging
 import os
 import time
 from argparse import Namespace
-from collections.abc import Coroutine
+from collections.abc import Awaitable, Callable, Mapping
 from dataclasses import dataclass
 from enum import StrEnum
-from typing import TYPE_CHECKING, Any, ClassVar
+from typing import TYPE_CHECKING, Any, ClassVar, Protocol
 from uuid import UUID
 
 import uvloop
 from pydantic import BaseModel
 
-if TYPE_CHECKING:
-    from typing import Protocol
+from cync_controller.const import *
 
+if TYPE_CHECKING:
     import aiomqtt
 
-    from cync_controller.cloud_api import CyncCloudAPI
-    from cync_controller.exporter import ExportServer
 
-    class CyncControllerProtocol(Protocol):
-        """Protocol for CyncController to break circular dependency."""
+class CyncCloudAPIProtocol(Protocol):
+    """Protocol for CyncCloudAPI to avoid circular imports."""
 
-        async def start(self) -> None: ...
-        async def stop(self) -> None: ...
+    lp: str
 
-    class CyncDeviceProtocol(Protocol):
-        """Protocol for CyncDevice to break circular dependency."""
+    async def check_token(self) -> bool: ...
 
-        id: int | None
-        name: str | None
-        type: int | None
-        home_id: int | None
-        hass_id: str
-        wifi_mac: str | None
-        state: int
-        brightness: int | None
-        temperature: int | None
-        red: int | None
-        green: int | None
-        blue: int | None
-        online: bool
-        metadata: object | None
+    async def request_otp(self) -> bool: ...
 
-        @property
-        def mac(self) -> str | None:
-            """MAC address property."""
-            ...
+    async def send_otp(self, otp: int) -> bool: ...
 
-        @property
-        def version(self) -> int | None:
-            """Firmware version property."""
-            ...
+    async def export_config_file(self) -> bool: ...
 
-        @property
-        def is_switch(self) -> bool:
-            """Whether device is a switch."""
-            ...
-
-        @property
-        def is_light(self) -> bool:
-            """Whether device is a light."""
-            ...
-
-        @property
-        def is_plug(self) -> bool:
-            """Whether device is a plug."""
-            ...
-
-        @property
-        def is_fan_controller(self) -> bool:
-            """Whether device is a fan controller."""
-            ...
-
-        @property
-        def supports_temperature(self) -> bool:
-            """Whether device supports temperature control."""
-            ...
-
-        @property
-        def supports_rgb(self) -> bool:
-            """Whether device supports RGB color."""
-            ...
-
-        @property
-        def bt_only(self) -> bool:
-            """Whether device is Bluetooth-only."""
-            ...
-
-    class MQTTClientProtocol(Protocol):
-        """Protocol for MQTTClient to break circular dependency."""
-
-        lp: str
-        topic: str
-        ha_topic: str
-        client: aiomqtt.Client | None
-
-        @property
-        def is_connected(self) -> bool:
-            """Check if MQTT client is connected."""
-            ...
-
-        def set_connected(self, connected: bool) -> None:
-            """Set the connection state."""
-            ...
-
-        def cync2kelvin(self, ct: int) -> int:
-            """Convert Cync white temp to Kelvin."""
-            ...
-
-        async def publish(self, topic: str, msg_data: bytes) -> bool:
-            """Publish a message to the MQTT broker."""
-            ...
-
-        async def publish_json_msg(self, topic: str, msg_data: dict[str, object]) -> bool:
-            """Publish a JSON message to the MQTT broker."""
-            ...
-
-    class CyncGroupProtocol(Protocol):
-        """Protocol defining CyncGroup attributes accessed in discovery."""
-
-        id: int | None
-        name: str | None
-        home_id: int | None
-        hass_id: str
-        is_subgroup: bool
-        member_ids: list[int]
-
-        @property
-        def supports_temperature(self) -> bool:
-            """Whether group supports temperature control."""
-            ...
-
-        @property
-        def supports_rgb(self) -> bool:
-            """Whether group supports RGB color."""
-            ...
-
-    class CyncTCPDeviceProtocol(Protocol):
-        """Protocol for CyncTCPDevice to break circular dependency."""
-
-        connected_at: float
-        ready_to_control: bool
-        # Add other attributes/methods of CyncTCPDevice that are accessed
-        # For example:
-        # async def ask_for_mesh_info(self, force_refresh: bool, refresh_id: str) -> None: ...
-
-    class ExportServerProtocol(Protocol):
-        """Protocol defining ExportServer attributes accessed in discovery."""
-
-        running: bool
-
-    class NCyncServerProtocol(Protocol):
-        """Protocol for NCyncServer to break circular dependency."""
-
-        devices: dict[int, CyncDeviceProtocol]
-        groups: dict[int, CyncGroupProtocol]
-        tcp_devices: dict[str, CyncTCPDeviceProtocol | None]
-        running: bool
+    async def close(self) -> None: ...
 
 
-from cync_controller.const import *
+class CyncControllerProtocol(Protocol):
+    """Protocol for CyncController to break circular dependency."""
+
+    async def start(self) -> None: ...
+    async def stop(self) -> None: ...
+
+
+class CyncTCPDeviceProtocol(Protocol):
+    """Protocol for CyncTCPDevice to break circular dependency."""
+
+    connected_at: float
+    ready_to_control: bool
+    address: str | None
+    lp: str
+    needs_more_data: bool
+    read_cache: list[CacheData]
+    is_app: bool
+    queue_id: bytes
+    version: int | None
+    version_str: str | None
+    network_version: int | None
+    network_version_str: str | None
+    device_timestamp: str | None
+    device_type_id: int | None
+    name: str | None
+    known_device_ids: list[int | None]
+    mesh_info: MeshInfo | None
+    parse_mesh_status: bool
+    id: int | None
+    refresh_id: str | None
+    messages: Messages
+
+    async def write(self, data: bytes | bytearray, broadcast: bool = False) -> bool | None: ...
+
+    async def send_a3(self, q_id: bytes) -> None: ...
+
+    def get_ctrl_msg_id_bytes(self) -> list[int]: ...
+
+
+class CyncDeviceProtocol(Protocol):
+    """Protocol for CyncDevice to break circular dependency."""
+
+    id: int | None
+    name: str | None
+    type: int | None
+    home_id: int | None
+    hass_id: str
+    wifi_mac: str | None
+    state: int
+    brightness: int | None
+    temperature: int | None
+    red: int | None
+    green: int | None
+    blue: int | None
+    online: bool
+    metadata: object | None
+
+    @property
+    def mac(self) -> str | None: ...
+
+    @property
+    def version(self) -> int | None: ...
+
+    @property
+    def is_switch(self) -> bool: ...
+
+    @property
+    def is_light(self) -> bool: ...
+
+    @property
+    def is_plug(self) -> bool: ...
+
+    @property
+    def is_fan_controller(self) -> bool: ...
+
+    @property
+    def supports_temperature(self) -> bool: ...
+
+    @property
+    def supports_rgb(self) -> bool: ...
+
+    @property
+    def bt_only(self) -> bool: ...
+
+    async def set_power(self, state: int) -> tuple[asyncio.Event, list[CyncTCPDeviceProtocol]] | None: ...
+
+    async def set_brightness(self, bri: int) -> tuple[asyncio.Event, list[CyncTCPDeviceProtocol]] | None: ...
+
+    async def set_temperature(self, temp: int) -> tuple[asyncio.Event, list[CyncTCPDeviceProtocol]] | None: ...
+
+    async def set_rgb(
+        self,
+        red: int,
+        green: int,
+        blue: int,
+    ) -> tuple[asyncio.Event, list[CyncTCPDeviceProtocol]] | None: ...
+
+    async def set_fan_speed(self, speed: FanSpeed) -> bool: ...
+
+    async def set_lightshow(self, show: str) -> None: ...
+
+
+class CyncGroupProtocol(Protocol):
+    """Protocol defining CyncGroup attributes accessed in discovery."""
+
+    id: int | None
+    name: str | None
+    home_id: int | None
+    hass_id: str
+    is_subgroup: bool
+    member_ids: list[int]
+
+    @property
+    def supports_temperature(self) -> bool: ...
+
+    @property
+    def supports_rgb(self) -> bool: ...
+
+
+class DiscoveryHelperProtocol(Protocol):
+    """Protocol for DiscoveryHelper to avoid circular imports."""
+
+    async def register_single_device(self, device: CyncDeviceProtocol) -> None: ...
+    async def trigger_device_rediscovery(self) -> None: ...
+    async def homeassistant_discovery(self) -> None: ...
+    async def create_bridge_device(self) -> None: ...
+
+
+class StateUpdateHelperProtocol(Protocol):
+    """Protocol for StateUpdateHelper to avoid circular imports."""
+
+    async def pub_online(self, device_id: int, status: bool) -> bool: ...
+    async def update_device_state(self, device: CyncDeviceProtocol, state: int) -> bool: ...
+    async def update_brightness(self, device: CyncDeviceProtocol, bri: int) -> bool: ...
+    async def update_temperature(self, device: CyncDeviceProtocol, temp: int) -> bool: ...
+    async def update_rgb(self, device: CyncDeviceProtocol, rgb: tuple[int, int, int]) -> bool: ...
+    async def send_device_status(self, device: CyncDeviceProtocol, state_bytes: bytes) -> bool: ...
+    async def publish_group_state(
+        self,
+        group: CyncGroupProtocol,
+        state: int | None = None,
+        brightness: int | None = None,
+        temperature: int | None = None,
+        origin: str | None = None,
+    ) -> None: ...
+
+    async def parse_device_status(
+        self,
+        device_id: int,
+        device_status: DeviceStatus,
+        *args: object,
+        **kwargs: object,
+    ) -> bool: ...
+
+    async def update_switch_from_subgroup(
+        self,
+        device: CyncDeviceProtocol,
+        subgroup_state: int,
+        subgroup_name: str,
+    ) -> bool: ...
+
+    async def sync_group_switches(self, group_id: int, group_state: int, group_name: str) -> int: ...
+    async def sync_group_devices(self, group_id: int, group_state: int, group_name: str) -> int: ...
+
+
+class CommandRouterProtocol(Protocol):
+    """Protocol for CommandRouter helper."""
+
+    async def start_receiver_task(self) -> None: ...
+
+
+class ExportServerProtocol(Protocol):
+    """Protocol defining ExportServer attributes accessed in discovery."""
+
+    running: bool
+    start_task: asyncio.Task[None] | None
+
+    async def start(self) -> None: ...
+
+    async def stop(self) -> None: ...
+
+
+class MQTTClientProtocol(Protocol):
+    """Protocol for MQTTClient to break circular dependency."""
+
+    lp: str
+    topic: str
+    ha_topic: str
+    client: aiomqtt.Client | None
+    discovery: DiscoveryHelperProtocol | None
+    state_updates: StateUpdateHelperProtocol | None
+    command_router: CommandRouterProtocol | None
+    start_task: asyncio.Task[object] | None
+
+    @property
+    def is_connected(self) -> bool: ...
+
+    def set_connected(self, connected: bool) -> None: ...
+
+    def kelvin2cync(self, k: float) -> int: ...
+
+    def cync2kelvin(self, ct: int) -> int: ...
+
+    async def publish(self, topic: str, msg_data: bytes) -> bool: ...
+
+    async def publish_json_msg(self, topic: str, msg_data: dict[str, object]) -> bool: ...
+
+    async def trigger_status_refresh(self) -> None: ...
+
+    async def trigger_device_rediscovery(self) -> None: ...
+
+    async def homeassistant_discovery(self) -> None: ...
+
+    async def create_bridge_device(self) -> None: ...
+
+    async def start_receiver_task(self) -> None: ...
+
+    async def send_birth_msg(self) -> bool: ...
+
+    async def send_will_msg(self) -> bool: ...
+
+    async def pub_online(self, device_id: int, status: bool) -> bool: ...
+
+    async def update_device_state(self, device: CyncDeviceProtocol, state: int) -> bool: ...
+
+    async def update_brightness(self, device: CyncDeviceProtocol, bri: int) -> bool: ...
+
+    async def update_temperature(self, device: CyncDeviceProtocol, temp: int) -> bool: ...
+
+    async def update_rgb(self, device: CyncDeviceProtocol, rgb: tuple[int, int, int]) -> bool: ...
+
+    async def send_device_status(self, device: CyncDeviceProtocol, state_bytes: bytes) -> bool: ...
+
+    async def publish_group_state(
+        self,
+        group: CyncGroupProtocol,
+        state: int | None = None,
+        brightness: int | None = None,
+        temperature: int | None = None,
+        origin: str | None = None,
+    ) -> bool: ...
+
+    async def parse_device_status(
+        self,
+        device_id: int,
+        device_status: DeviceStatus,
+        *args: object,
+        **kwargs: object,
+    ) -> bool: ...
+
+    async def update_switch_from_subgroup(
+        self,
+        device: CyncDeviceProtocol,
+        subgroup_state: int,
+        subgroup_name: str,
+    ) -> bool: ...
+
+    async def sync_group_switches(self, group_id: int, group_state: int, group_name: str) -> int: ...
+
+    async def sync_group_devices(self, group_id: int, group_state: int, group_name: str) -> int: ...
+
+
+class NCyncServerProtocol(Protocol):
+    """Protocol for NCyncServer to break circular dependency."""
+
+    devices: Mapping[int, CyncDeviceProtocol]
+    groups: Mapping[int, CyncGroupProtocol]
+    tcp_devices: dict[str, CyncTCPDeviceProtocol | None]
+    running: bool
+    primary_tcp_device: CyncTCPDeviceProtocol | None
+    start_task: asyncio.Task[object] | None
+
+    async def start(self) -> None: ...
+
+    async def remove_tcp_device(self, dev: CyncTCPDeviceProtocol) -> CyncTCPDeviceProtocol | None: ...
+
+    async def parse_status(self, raw_status: bytes, from_pkt: str) -> None: ...
+
 
 logger = logging.getLogger(CYNC_LOG_NAME)
 
@@ -202,9 +352,9 @@ class GlobalObject:
     ncync_server: NCyncServerProtocol | None = None  # type: ignore[assignment]
     mqtt_client: MQTTClientProtocol | None = None  # type: ignore[assignment]
     loop: uvloop.Loop | asyncio.AbstractEventLoop | None = None
-    export_server: ExportServer | None = None
-    cloud_api: CyncCloudAPI | None = None
-    tasks: ClassVar[list[asyncio.Task[None]]] = []
+    export_server: ExportServerProtocol | None = None
+    cloud_api: CyncCloudAPIProtocol | None = None
+    tasks: ClassVar[list[asyncio.Task[Any]]] = []
     env: GlobalObjEnv = GlobalObjEnv()
     uuid: UUID | None = None
     cli_args: Namespace | None = None
@@ -261,11 +411,15 @@ class Tasks:
         return iter([self.receive, self.send, self.callback_cleanup])
 
 
+CallbackReturn = Awaitable[Any] | None
+CallbackType = CallbackReturn | Callable[[], CallbackReturn | Any]
+
+
 class ControlMessageCallback:
     id: int
     message: None | str | bytes | list[int] = None
     sent_at: float | None = None
-    callback: asyncio.Task[Any] | Coroutine[Any, Any, Any] | None = None
+    callback: CallbackType | None = None
     device_id: int | None = None
     retry_count: int = 0
     max_retries: int = 3
@@ -276,7 +430,7 @@ class ControlMessageCallback:
         msg_id: int,
         message: None | str | bytes | list[int],
         sent_at: float,
-        callback: asyncio.Task[Any] | Coroutine[Any, Any, Any],
+        callback: CallbackType | None,
         device_id: int | None = None,
         max_retries: int = 3,
         ack_event: asyncio.Event | None = None,
@@ -311,7 +465,7 @@ class ControlMessageCallback:
     def __hash__(self):
         return hash(self.id)
 
-    def __call__(self) -> asyncio.Task[Any] | Coroutine[Any, Any, Any] | None:  # type: ignore[return-value]
+    def __call__(self) -> CallbackType | None:  # type: ignore[return-value]
         if self.callback:
             return self.callback  # type: ignore[return-value]
         logger.debug("%s No callback set, skipping...", self.lp)

@@ -7,6 +7,7 @@ and message routing delegation to helper modules.
 from __future__ import annotations
 
 import asyncio
+import importlib
 import json
 import uuid
 from typing import TYPE_CHECKING
@@ -45,8 +46,23 @@ if TYPE_CHECKING:
 
 logger = get_logger(__name__)
 
-# Import g directly from structs to avoid circular dependency with mqtt_client.py
-g = GlobalObject()
+
+def _get_global_object() -> GlobalObject:
+    """Return the shared GlobalObject, honoring legacy/mock patch points."""
+    for mod_name in (
+        "cync_controller.mqtt_client",  # wrapper patched by tests
+        "cync_controller.devices.shared",
+        "cync_controller.devices",
+    ):
+        try:
+            module = importlib.import_module(mod_name)
+            if hasattr(module, "g"):
+                return module.g  # type: ignore[return-value]
+        except ModuleNotFoundError:
+            continue
+        except Exception:
+            continue
+    return GlobalObject()
 
 
 class MQTTClient:
@@ -79,11 +95,13 @@ class MQTTClient:
     def __init__(self, *_args: object, **_kwargs: object) -> None:
         """Initialize MQTT client (singleton pattern - args/kwargs ignored)."""
         # Skip initialization if already initialized (singleton pattern)
-        if hasattr(self, "_connected"):
+        if getattr(self, "_initialized", False):
             return
 
+        self._initialized = True
         self._connected = False
         self.tasks = None
+        self._g: GlobalObject = _get_global_object()
         lp = f"{self.lp}init:"
         if not CYNC_TOPIC:
             topic = "cync_lan"
@@ -97,7 +115,7 @@ class MQTTClient:
         else:
             ha_topic = CYNC_HASS_TOPIC
 
-        self.broker_client_id = f"cync_lan_{g.uuid}"
+        self.broker_client_id = f"cync_lan_{self._g.uuid}"
         lwt = aiomqtt.Will(topic=f"{topic}/connected", payload=DEVICE_LWT_MSG)
         self.broker_host = CYNC_MQTT_HOST
         setattr(self, "broker_port", CYNC_MQTT_PORT)  # noqa: B010
@@ -137,7 +155,7 @@ class MQTTClient:
 
     async def _handle_initial_connection(self, lp: str) -> None:
         """Handle initial MQTT connection setup."""
-        if not g.ncync_server:
+        if not self._g.ncync_server:
             logger.warning("%s nCync server not available for initial connection", lp)
             return
 
@@ -146,7 +164,7 @@ class MQTTClient:
         assert self.topic, "topic must be initialized"
         assert self.client is not None, "client must be initialized"
 
-        ncync_server = g.ncync_server
+        ncync_server = self._g.ncync_server
         assert ncync_server is not None
         # Protocol ensures types are known without circular import
         devices: dict[int, CyncDeviceProtocol] = ncync_server.devices
@@ -178,13 +196,13 @@ class MQTTClient:
 
     async def _handle_reconnection(self, _lp: str) -> None:
         """Handle MQTT reconnection setup."""
-        if not g.ncync_server:
+        if not self._g.ncync_server:
             logger.warning("%s nCync server not available for reconnection", _lp)
             return
 
         assert self.state_updates is not None, "state_updates must be initialized"
 
-        ncync_server = g.ncync_server
+        ncync_server = self._g.ncync_server
         assert ncync_server is not None
         # Protocol ensures types are known without circular import
         devices: dict[int, CyncDeviceProtocol] = ncync_server.devices
@@ -301,11 +319,11 @@ class MQTTClient:
         self._connected = False
         logger.debug("%s Connecting to MQTT broker...", lp)
         lwt = aiomqtt.Will(topic=f"{self.topic}/connected", payload=DEVICE_LWT_MSG)
-        g.reload_env()
-        self.broker_host = g.env.mqtt_host
-        setattr(self, "broker_port", g.env.mqtt_port)  # noqa: B010
-        self.broker_username = g.env.mqtt_user
-        self.broker_password = g.env.mqtt_pass
+        self._g.reload_env()
+        self.broker_host = self._g.env.mqtt_host
+        setattr(self, "broker_port", self._g.env.mqtt_port)  # noqa: B010
+        self.broker_username = self._g.env.mqtt_user
+        self.broker_password = self._g.env.mqtt_pass
         self.client = aiomqtt.Client(
             hostname=self.broker_host,
             port=int(self.broker_port) if self.broker_port else 1883,
@@ -325,7 +343,7 @@ class MQTTClient:
                 logger.exception(
                     "%s Bad username or password, check your MQTT credentials (username: %s)",
                     lp,
-                    g.env.mqtt_user,
+                    self._g.env.mqtt_user,
                 )
                 send_sigterm()
         else:
@@ -349,11 +367,11 @@ class MQTTClient:
     async def stop(self) -> None:
         lp = f"{self.lp}stop:"
         # set all devices offline
-        if self._connected and g.ncync_server:
+        if self._connected and self._g.ncync_server:
             assert self.state_updates is not None, "state_updates must be initialized"
             logger.debug("%s Setting all Cync devices offline...", lp)
 
-            ncync_server = g.ncync_server
+            ncync_server = self._g.ncync_server
             assert ncync_server is not None
             # Protocol ensures types are known without circular import
             devices: dict[int, CyncDeviceProtocol] = ncync_server.devices
@@ -512,11 +530,11 @@ class MQTTClient:
         logger.info("%s [%s] Starting refresh...", lp, refresh_id)
 
         try:
-            if not g.ncync_server:
+            if not self._g.ncync_server:
                 logger.warning("%s [%s] nCync server not available", lp, refresh_id)
                 return
 
-            ncync_server = g.ncync_server
+            ncync_server = self._g.ncync_server
             assert ncync_server is not None
             # Protocol ensures types are known without circular import
             tcp_devices: dict[str, CyncTCPDeviceProtocol | None] = ncync_server.tcp_devices
@@ -596,22 +614,22 @@ class MQTTClient:
         """Register a single device with Home Assistant via MQTT discovery."""
         assert self.discovery is not None, "discovery must be initialized"
         # CyncDevice structurally implements CyncDeviceProtocol
-        _ = await self.discovery.register_single_device(device)  # type: ignore[arg-type]
+        return await self.discovery.register_single_device(device)  # type: ignore[arg-type]
 
     async def trigger_device_rediscovery(self) -> None:
         """Trigger rediscovery of all devices currently in the devices dictionary."""
         assert self.discovery is not None, "discovery must be initialized"
-        _ = await self.discovery.trigger_device_rediscovery()
+        return await self.discovery.trigger_device_rediscovery()
 
     async def homeassistant_discovery(self) -> None:
         """Build each configured Cync device for HASS device registry"""
         assert self.discovery is not None, "discovery must be initialized"
-        _ = await self.discovery.homeassistant_discovery()
+        return await self.discovery.homeassistant_discovery()
 
     async def create_bridge_device(self) -> None:
         """Create the device / entity registry config for the Cync Controller bridge itself."""
         assert self.discovery is not None, "discovery must be initialized"
-        _ = await self.discovery.create_bridge_device()
+        return await self.discovery.create_bridge_device()
 
     # Delegation methods to state_updates helper
     async def pub_online(self, device_id: int, status: bool) -> bool:
@@ -623,32 +641,27 @@ class MQTTClient:
         """Update the device state and publish to MQTT."""
         assert self.state_updates is not None, "state_updates must be initialized"
         # Type checker can't fully resolve method signature due to circular dependency
-        result = await self.state_updates.update_device_state(device, state)  # type: ignore
-        return result
+        return await self.state_updates.update_device_state(device, state)  # type: ignore
 
     async def update_brightness(self, device: CyncDeviceProtocol, bri: int) -> bool:
         """Update the device brightness and publish to MQTT."""
         assert self.state_updates is not None, "state_updates must be initialized"
-        result = await self.state_updates.update_brightness(device, bri)  # type: ignore
-        return result
+        return await self.state_updates.update_brightness(device, bri)  # type: ignore
 
     async def update_temperature(self, device: CyncDeviceProtocol, temp: int) -> bool:
         """Update the device temperature and publish to MQTT."""
         assert self.state_updates is not None, "state_updates must be initialized"
-        result = await self.state_updates.update_temperature(device, temp)  # type: ignore
-        return result
+        return await self.state_updates.update_temperature(device, temp)  # type: ignore
 
     async def update_rgb(self, device: CyncDeviceProtocol, rgb: tuple[int, int, int]) -> bool:
         """Update the device RGB and publish to MQTT."""
         assert self.state_updates is not None, "state_updates must be initialized"
-        result = await self.state_updates.update_rgb(device, rgb)  # type: ignore
-        return result
+        return await self.state_updates.update_rgb(device, rgb)  # type: ignore
 
     async def send_device_status(self, device: CyncDeviceProtocol, state_bytes: bytes) -> bool:
         """Publish device status to MQTT."""
         assert self.state_updates is not None, "state_updates must be initialized"
-        result = await self.state_updates.send_device_status(device, state_bytes)  # type: ignore
-        return result
+        return await self.state_updates.send_device_status(device, state_bytes)  # type: ignore
 
     async def publish_group_state(
         self,
@@ -678,8 +691,7 @@ class MQTTClient:
     ) -> bool:
         """Update a switch device state to match its subgroup state."""
         assert self.state_updates is not None, "state_updates must be initialized"
-        result = await self.state_updates.update_switch_from_subgroup(device, subgroup_state, subgroup_name)  # type: ignore
-        return result
+        return await self.state_updates.update_switch_from_subgroup(device, subgroup_state, subgroup_name)  # type: ignore
 
     async def sync_group_switches(self, group_id: int, group_state: int, group_name: str) -> int:
         """Sync all switch devices in a group to match the group's state."""

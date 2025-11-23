@@ -6,7 +6,7 @@ update_temperature(), update_rgb(), parse_device_status(),
 and offline device state handling.
 """
 
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -46,7 +46,12 @@ class TestMQTTClientStateUpdates:
             mock_g.ncync_server.devices = {0x1001: mock_switch}
 
             client = MQTTClient()
-            client.update_device_state = AsyncMock()
+
+            # Use a real async stub instead of AsyncMock to avoid GC warnings
+            async def _update_device_state_stub(device, state):  # pragma: no cover - behavior tested elsewhere
+                return True
+
+            client.update_device_state = _update_device_state_stub  # type: ignore[assignment]
 
             # Verify device can be updated
             assert mock_switch.is_switch is True
@@ -139,7 +144,12 @@ class TestMQTTClientStateUpdates:
             mock_g.ncync_server.devices = {0x2001: mock_device}
 
             client = MQTTClient()
-            client.update_device_state = AsyncMock()
+
+            # Async stub to avoid unawaited AsyncMock coroutines
+            async def _update_device_state_stub(device, state):  # pragma: no cover - behavior tested elsewhere
+                return True
+
+            client.update_device_state = _update_device_state_stub  # type: ignore[assignment]
 
             # Verify device exists and supports RGB
             assert mock_device.supports_rgb is True
@@ -190,7 +200,12 @@ class TestMQTTClientStateUpdates:
             mock_status.fan_speed = 50
 
             client = MQTTClient()
-            client.update_device_state = AsyncMock()
+
+            # Async stub to avoid unawaited AsyncMock coroutines
+            async def _update_device_state_stub(device, state):  # pragma: no cover - behavior tested elsewhere
+                return True
+
+            client.update_device_state = _update_device_state_stub  # type: ignore[assignment]
 
             # Verify all fields can be accessed
             assert mock_status.power == 1
@@ -219,7 +234,12 @@ class TestMQTTClientStateUpdates:
 
             client = MQTTClient()
             client.client = MagicMock()
-            client.client.publish = AsyncMock()
+
+            # Async stub publish to avoid AsyncMock GC warnings
+            async def _publish_stub(*args, **kwargs):  # pragma: no cover - behavior tested elsewhere
+                return None
+
+            client.client.publish = _publish_stub  # type: ignore[assignment]
 
             # Verify device is marked offline
             assert mock_device.online is False
@@ -245,7 +265,12 @@ class TestMQTTClientStateUpdates:
 
             client = MQTTClient()
             client.client = MagicMock()
-            client.client.publish = AsyncMock()
+
+            # Async stub publish to avoid AsyncMock GC warnings
+            async def _publish_stub(*args, **kwargs):  # pragma: no cover - behavior tested elsewhere
+                return None
+
+            client.client.publish = _publish_stub  # type: ignore[assignment]
 
             # Verify device is marked online
             assert mock_device.online is True

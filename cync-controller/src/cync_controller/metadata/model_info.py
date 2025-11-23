@@ -62,7 +62,7 @@ class DeviceTypeInfo:
     @property
     def model_string(self) -> str:
         """Return a string representation of the model name, ID and characteristics."""
-        base_str = self.model_name
+        base_str = self.model_name or "Unknown Device"
         add_str = ""
         if self.model_id:
             add_str = self.model_id
@@ -81,7 +81,7 @@ class DeviceTypeInfo:
                 add_str += f"{kelvin_data}"
         if add_str:
             add_str = f" [{add_str}]"
-        return str(base_str + add_str)
+        return f"{base_str}{add_str}"
 
 
 """Maps a device type ID to its corresponding DeviceTypeInfo."""

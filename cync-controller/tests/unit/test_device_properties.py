@@ -1,5 +1,4 @@
-"""
-Unit tests for device properties and state handling.
+"""Unit tests for device properties and state handling.
 
 Tests current status, state conversion, status objects, and version handling.
 """
@@ -76,7 +75,7 @@ class TestCyncDeviceStateConversion:
         device = CyncDevice(cync_id=0x1234)
 
         with pytest.raises(ValueError, match="Invalid value for state"):
-            device.state = "invalid"
+            device.state = "invalid"  # type: ignore[assignment]
 
     def test_state_setter_invalid_type(self):
         """Test state setter rejects invalid types"""

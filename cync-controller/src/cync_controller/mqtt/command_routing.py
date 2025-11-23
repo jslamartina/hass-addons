@@ -10,8 +10,9 @@ import asyncio
 import json
 import random
 import re
+from collections.abc import Callable, Coroutine, Mapping
 from json import JSONDecodeError
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Literal, cast
 
 from cync_controller.const import (
     CYNC_HASS_BIRTH_MSG,
@@ -24,12 +25,45 @@ from cync_controller.mqtt.commands import CommandProcessor, SetBrightnessCommand
 from cync_controller.structs import DeviceStatus, FanSpeed, GlobalObject
 
 if TYPE_CHECKING:
-    from cync_controller.structs import MQTTClientProtocol
+    from collections.abc import AsyncIterable
+    from typing import Protocol
+
+    from cync_controller.structs import (
+        CyncDeviceProtocol,
+        CyncGroupProtocol,
+        MQTTClientProtocol,
+        NCyncServerProtocol,
+    )
+
+    class MQTTMessageProtocol(Protocol):
+        topic: object
+        payload: bytes | bytearray | memoryview | None
+
+    CommandTarget = CyncDeviceProtocol | CyncGroupProtocol | None
+else:
+    CommandTarget = object
+
+TargetType = Literal["DEVICE", "GROUP", "UNKNOWN"]
+type CommandTasks = list[Coroutine[object, object, object]]
 
 logger = get_logger(__name__)
 
 # Import g directly from structs to avoid circular dependency with mqtt_client.py
 g = GlobalObject()
+
+
+def _to_int(value: object) -> int:
+    """Convert a loosely-typed JSON value to an integer."""
+    if isinstance(value, bool):
+        return int(value)
+    if isinstance(value, (int, float)):
+        return int(value)
+    if isinstance(value, str):
+        try:
+            return int(value.strip())
+        except ValueError:
+            return 0
+    return 0
 
 
 class CommandRouter:
@@ -42,17 +76,33 @@ class CommandRouter:
             mqtt_client: MQTTClient instance to access connection, topic, and helper methods
 
         """
-        self.client = mqtt_client
+        self.client: MQTTClientProtocol = mqtt_client
 
-    def _parse_topic_and_get_target(self, topic_parts: list[str], lp: str) -> tuple[Any, Any, str]:
+    def _get_ncync_server(self, lp: str) -> NCyncServerProtocol | None:
+        """Return the active nCync server instance or log a warning."""
+        ncync_server = g.ncync_server
+        if ncync_server is None:
+            logger.warning("%s nCync server not available", lp)
+            return None
+        return ncync_server
+
+    def _parse_topic_and_get_target(
+        self,
+        topic_parts: list[str],
+        lp: str,
+    ) -> tuple[CyncDeviceProtocol | None, CyncGroupProtocol | None, TargetType]:
         """Parse topic and get device/group target.
 
         Returns:
             Tuple of (device, group, target_type)
 
         """
-        device: Any = None
-        group: Any = None
+        ncync_server = self._get_ncync_server(lp)
+        if ncync_server is None:
+            return None, None, "UNKNOWN"
+
+        device: CyncDeviceProtocol | None = None
+        group: CyncGroupProtocol | None = None
         device_id: str = topic_parts[2]
 
         if device_id == "bridge":
@@ -60,10 +110,10 @@ class CommandRouter:
             group = None
         elif "-group-" in topic_parts[2]:
             group_id = int(topic_parts[2].split("-group-")[1])
-            if group_id not in g.ncync_server.groups:
+            if group_id not in ncync_server.groups:
                 logger.warning("%s Group ID %s not found in config", lp, group_id)
                 return None, None, "UNKNOWN"
-            group = g.ncync_server.groups[group_id]
+            group = ncync_server.groups[group_id]
             device = None
             logger.info(
                 "%s [BUG4-TRACE] Group command detected: group_id=%s, group_name='%s', topic=%s",
@@ -74,14 +124,14 @@ class CommandRouter:
             )
         else:
             device_id_int = int(topic_parts[2].split("-")[1])
-            if device_id_int not in g.ncync_server.devices:
+            if device_id_int not in ncync_server.devices:
                 logger.warning(
                     "%s Device ID %s not found, device is disabled in config file or have you deleted / added any devices recently?",
                     lp,
                     device_id_int,
                 )
                 return None, None, "UNKNOWN"
-            device = g.ncync_server.devices[device_id_int]
+            device = ncync_server.devices[device_id_int]
             group = None
             logger.debug(
                 "%s Device identified: name='%s', id=%s, is_fan_controller=%s",
@@ -91,10 +141,16 @@ class CommandRouter:
                 device.is_fan_controller,
             )
 
-        target_type = "GROUP" if group else "DEVICE" if device else "UNKNOWN"
+        target_type: TargetType = "GROUP" if group else "DEVICE" if device else "UNKNOWN"
         return device, group, target_type
 
-    async def _handle_fan_percentage(self, percentage: int, device: Any, lp: str, tasks: list[Any]) -> None:
+    async def _handle_fan_percentage(
+        self,
+        percentage: int,
+        device: CyncDeviceProtocol,
+        lp: str,
+        tasks: CommandTasks,
+    ) -> None:
         """Handle fan percentage command."""
         logger.info(
             "%s >>> FAN PERCENTAGE COMMAND: device='%s' (ID=%s), percentage=%s",
@@ -116,7 +172,13 @@ class CommandRouter:
         logger.info("%s Fan percentage %s%% mapped to brightness %s", lp, percentage, brightness)
         tasks.append(device.set_brightness(brightness))
 
-    async def _handle_fan_preset(self, preset_mode: str, device: Any, lp: str, tasks: list[Any]) -> None:
+    async def _handle_fan_preset(
+        self,
+        preset_mode: str,
+        device: CyncDeviceProtocol,
+        lp: str,
+        tasks: CommandTasks,
+    ) -> None:
         """Handle fan preset command."""
         logger.info(
             "%s >>> FAN PRESET COMMAND: device='%s' (ID=%s), preset=%s",
@@ -141,9 +203,9 @@ class CommandRouter:
         self,
         extra_data: list[str],
         norm_pl: str,
-        device: Any,
+        device: CyncDeviceProtocol,
         lp: str,
-        tasks: list[Any],
+        tasks: CommandTasks,
     ) -> None:
         """Handle fan-specific extra_data commands."""
         if extra_data[0] == "percentage":
@@ -188,9 +250,9 @@ class CommandRouter:
         self,
         extra_data: list[str],
         payload: bytes,
-        device: Any,
+        device: CyncDeviceProtocol | None,
         lp: str,
-        tasks: list[Any],
+        tasks: CommandTasks,
     ) -> None:
         """Handle extra_data commands from topic."""
         norm_pl = payload.decode().casefold()
@@ -211,18 +273,19 @@ class CommandRouter:
 
     async def _handle_json_state(
         self,
-        json_data: dict[str, Any],
-        target: Any,
-        target_type: str,
-        device: Any,
+        json_data: Mapping[str, object],
+        target: CommandTarget,
+        target_type: TargetType,
+        device: CyncDeviceProtocol | None,
         lp: str,
-        tasks: list[Any],
+        tasks: CommandTasks,
     ) -> None:
         """Handle state commands in JSON payload."""
         if "effect" in json_data and device:
-            effect = json_data["effect"]
+            effect = str(json_data["effect"])
             tasks.append(device.set_lightshow(effect))
-        elif json_data["state"].upper() == "ON":
+        state_value = str(json_data.get("state", ""))
+        if state_value.upper() == "ON" and target:
             logger.info(
                 "%s [BUG4-TRACE] Calling set_power(1) on %s '%s'",
                 lp,
@@ -231,7 +294,7 @@ class CommandRouter:
             )
             cmd = SetPowerCommand(target, 1)
             await CommandProcessor().enqueue(cmd)
-        else:
+        elif target:
             logger.info(
                 "%s [BUG4-TRACE] Calling set_power(0) on %s '%s'",
                 lp,
@@ -240,57 +303,89 @@ class CommandRouter:
             )
             cmd = SetPowerCommand(target, 0)
             await CommandProcessor().enqueue(cmd)
+        else:
+            logger.warning("%s No valid target available for state payload", lp)
 
     async def _handle_json_color(
         self,
-        json_data: dict[str, Any],
-        target: Any,
-        device: Any,
-        _lp: str,
-        tasks: list[Any],
+        json_data: Mapping[str, object],
+        target: CommandTarget,
+        target_type: TargetType,
+        device: CyncDeviceProtocol | None,
+        lp: str,
+        tasks: CommandTasks,
     ) -> None:
         """Handle color commands in JSON payload."""
         if "color_temp" in json_data:
-            tasks.append(target.set_temperature(self.client.kelvin2cync(int(json_data["color_temp"]))))
-        elif "color" in json_data and device:
-            color = []
-            for rgb in ("r", "g", "b"):
-                if rgb in json_data["color"]:
-                    color.append(int(json_data["color"][rgb]))
-                else:
-                    color.append(0)
-            tasks.append(device.set_rgb(*color))
+            temp_value = _to_int(json_data["color_temp"])
+            cync_temp = self.client.kelvin2cync(temp_value)
+
+            if device:
+                tasks.append(device.set_temperature(cync_temp))
+            elif target and hasattr(target, "set_temperature"):
+                set_temp = cast(
+                    "Callable[[int], Coroutine[object, object, object]]",
+                    target.set_temperature,
+                )
+                tasks.append(set_temp(cync_temp))
+            else:
+                logger.warning(
+                    "%s Color temperature command missing target (type=%s), skipping",
+                    lp,
+                    target_type,
+                )
+
+        if "color" in json_data:
+            color_payload = cast("dict[str, object]", json_data["color"])
+            color_values = [_to_int(color_payload.get(rgb, 0)) for rgb in ("r", "g", "b")]
+
+            if device:
+                tasks.append(device.set_rgb(*color_values))
+            elif target and hasattr(target, "set_rgb"):
+                set_rgb = cast(
+                    "Callable[[int, int, int], Coroutine[object, object, object]]",
+                    target.set_rgb,
+                )
+                tasks.append(set_rgb(*color_values))
+            else:
+                logger.warning(
+                    "%s Color command missing RGB-capable target (type=%s), skipping",
+                    lp,
+                    target_type,
+                )
 
     async def _handle_json_payload(
         self,
-        json_data: dict[str, Any],
+        json_data: Mapping[str, object],
         _payload: bytes,
-        target: Any,
-        target_type: str,
-        device: Any,
+        target: CommandTarget,
+        target_type: TargetType,
+        device: CyncDeviceProtocol | None,
         lp: str,
-        tasks: list[Any],
+        tasks: CommandTasks,
     ) -> None:
         """Handle JSON payload commands."""
         if "state" in json_data and "brightness" not in json_data:
             await self._handle_json_state(json_data, target, target_type, device, lp, tasks)
-        if "brightness" in json_data:
-            lum = int(json_data["brightness"])
+        if "brightness" in json_data and target:
+            lum = _to_int(json_data["brightness"])
             cmd = SetBrightnessCommand(target, lum)
             await CommandProcessor().enqueue(cmd)
-        await self._handle_json_color(json_data, target, device, lp, tasks)
+        elif "brightness" in json_data:
+            logger.warning("%s Brightness command missing target, skipping", lp)
+        await self._handle_json_color(json_data, target, target_type, device, lp, tasks)
 
     async def _handle_binary_payload(
         self,
         payload: bytes,
-        target: Any,
-        target_type: str,
+        target: CommandTarget,
+        target_type: TargetType,
         lp: str,
     ) -> None:
         """Handle binary (non-JSON) payload commands."""
         str_payload = payload.decode("utf-8").strip()
         pattern = re.compile(r"^\w+$")
-        if pattern.match(str_payload):
+        if pattern.match(str_payload) and target:
             if str_payload.casefold() == "on":
                 logger.info(
                     "%s [BUG4-TRACE] Calling set_power(1) on %s '%s' (non-JSON)",
@@ -310,7 +405,7 @@ class CommandRouter:
                 cmd = SetPowerCommand(target, 0)
                 await CommandProcessor().enqueue(cmd)
         else:
-            logger.warning("%s Unknown payload: %s, skipping...", lp, payload)
+            logger.warning("%s Unknown payload or missing target: %s, skipping...", lp, payload)
 
     async def _handle_hass_birth_message(self, lp: str) -> None:
         """Handle HASS birth message - re-announce discovery and status."""
@@ -323,9 +418,19 @@ class CommandRouter:
         await asyncio.sleep(birth_delay)
         await self.client.homeassistant_discovery()
         await asyncio.sleep(2)
-        for device in g.ncync_server.devices.values():
-            await self.client.state_updates.pub_online(device.id, device.online)
-            await self.client.state_updates.parse_device_status(
+        ncync_server = self._get_ncync_server(lp)
+        state_updates = self.client.state_updates
+        mqtt_client = self.client.client
+        if ncync_server is None or state_updates is None or mqtt_client is None:
+            logger.warning("%s Cannot process HASS birth without server, state helper, and MQTT client", lp)
+            return
+
+        for device in ncync_server.devices.values():
+            if device.id is None:
+                logger.debug("%s Skipping device without ID during HASS birth publish", lp)
+                continue
+            _ = await state_updates.pub_online(device.id, device.online)
+            _ = await state_updates.parse_device_status(
                 device.id,
                 DeviceStatus(
                     state=device.state,
@@ -337,9 +442,9 @@ class CommandRouter:
                 ),
                 from_pkt="'hass_birth'",
             )
-        subgroups = [grp for grp in g.ncync_server.groups.values() if grp.is_subgroup]
+        subgroups = [grp for grp in ncync_server.groups.values() if grp.is_subgroup]
         for subgroup in subgroups:
-            await self.client.client.publish(
+            await mqtt_client.publish(
                 f"{self.client.topic}/availability/{subgroup.hass_id}",
                 b"online",
                 qos=0,
@@ -350,7 +455,7 @@ class CommandRouter:
         topic_parts: list[str],
         payload: bytes,
         lp: str,
-        tasks: list[Any],
+        tasks: CommandTasks,
     ) -> bool:
         """Handle messages on CYNC_TOPIC. Returns True if tasks were added."""
         if topic_parts[1] != "set":
@@ -379,7 +484,7 @@ class CommandRouter:
 
         if payload.startswith(b"{"):
             try:
-                json_data = json.loads(payload)
+                json_data = cast("dict[str, object]", json.loads(payload))
             except JSONDecodeError:
                 logger.exception("%s bad json message: {%s} EXCEPTION", lp, payload)
                 return False
@@ -409,37 +514,55 @@ class CommandRouter:
         else:
             logger.warning("%s Unknown HASS status message: %s", lp, payload)
 
-    async def start_receiver_task(self):
+    async def start_receiver_task(self) -> None:
         """Start listening for MQTT messages on subscribed topics."""
         lp = f"{self.client.lp}rcv:"
-        async for message in self.client.client.messages:
-            msg: Any = cast("Any", message)  # type: ignore[reportUnknownVariableType]
-            topic = msg.topic
-            payload = msg.payload
-            if (payload is None) or (payload is not None and not payload):
+        mqtt_client = self.client.client
+        if mqtt_client is None:
+            logger.warning("%s MQTT client connection not available", lp)
+            return
+
+        message_stream = cast("AsyncIterable[MQTTMessageProtocol]", mqtt_client.messages)
+        async for message in message_stream:
+            topic = getattr(message, "topic", "")
+            topic_value = getattr(topic, "value", topic)
+            topic_text = (
+                topic_value.decode(errors="ignore") if isinstance(topic_value, (bytes, bytearray)) else str(topic_value)
+            )
+            payload = getattr(message, "payload", None)
+            if not isinstance(payload, (bytes, bytearray, memoryview)):
+                logger.debug(
+                    "%s Received payload with unexpected type (%s) for topic: %s , skipping...",
+                    lp,
+                    type(payload).__name__,
+                    topic_text,
+                )
+                continue
+            if len(payload) == 0:
                 logger.debug(
                     "%s Received empty/None payload (%s) for topic: %s , skipping...",
                     lp,
                     payload,
-                    topic,
+                    topic_text,
                 )
                 continue
 
+            payload_bytes = bytes(payload)
             logger.info(
                 "%s >>> MQTT MESSAGE RECEIVED: topic=%s, payload_len=%d, payload=%s",
                 lp,
-                topic.value,
-                len(payload) if payload else 0,
-                payload.decode() if payload else None,
+                topic_text,
+                len(payload_bytes),
+                payload_bytes.decode(errors="ignore"),
             )
-            _topic: list[str] = topic.value.split("/")
-            tasks: list[Any] = []
+            _topic: list[str] = topic_text.split("/")
+            tasks: CommandTasks = []
 
             if _topic[0] == CYNC_TOPIC:
-                has_tasks = await self._handle_cync_topic(_topic, payload, lp, tasks)
+                has_tasks = await self._handle_cync_topic(_topic, payload_bytes, lp, tasks)
                 if has_tasks:
-                    logger.debug("%s Executing %d task(s) for topic: %s", lp, len(tasks), topic)
+                    logger.debug("%s Executing %d task(s) for topic: %s", lp, len(tasks), topic_text)
                     _ = await asyncio.gather(*tasks)
-                    logger.debug("%s Task(s) completed for topic: %s", lp, topic)
+                    logger.debug("%s Task(s) completed for topic: %s", lp, topic_text)
             elif _topic[0] == self.client.ha_topic:
-                await self._handle_hass_topic(_topic, payload, lp)
+                await self._handle_hass_topic(_topic, payload_bytes, lp)

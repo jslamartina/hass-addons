@@ -7,7 +7,9 @@ import signal
 import struct
 import sys
 import uuid
+from collections.abc import Awaitable, Callable, Coroutine
 from pathlib import Path
+from typing import Any, cast
 
 from cync_controller.const import (
     CYNC_UUID_PATH,
@@ -19,6 +21,9 @@ from cync_controller.structs import GlobalObject
 
 logger = get_logger(__name__)
 g = GlobalObject()
+
+CallbackReturn = Awaitable[Any] | None
+CallbackType = CallbackReturn | Callable[[], CallbackReturn | Any]
 
 
 def send_signal(signal_num: int):
@@ -78,7 +83,7 @@ async def _async_signal_cleanup():
     logger.info("Cync Controller: Signal cleanup completed")
 
 
-def signal_handler(signum):
+def signal_handler(signum: int) -> None:
     logger.info("Cync Controller: Intercepted signal: %s (%s)", signal.Signals(signum).name, signum)
     if g:
         loop = g.loop or asyncio.get_event_loop()
@@ -199,3 +204,63 @@ def utc_to_local(utc_dt: datetime.datetime) -> datetime.datetime:
     # local_tz = zoneinfo.ZoneInfo(str(tzlocal.get_localzone()))
     # utc_time = datetime.datetime.now(datetime.UTC)
     return utc_dt.astimezone(LOCAL_TZ)
+
+
+def _get_event_loop() -> asyncio.AbstractEventLoop:
+    """Return the running loop, or fall back to the current policy loop."""
+    try:
+        return asyncio.get_running_loop()
+    except RuntimeError:
+        return asyncio.get_event_loop()
+
+
+def create_completed_future[T](result: T | None = None) -> asyncio.Future[T | None]:
+    """Create a Future that is already resolved with the provided result."""
+    loop = _get_event_loop()
+    future: asyncio.Future[T | None] = loop.create_future()
+    future.set_result(result)
+    return future
+
+
+async def execute_async_callback(callback: CallbackType | None) -> None:
+    """Execute a callback that may be sync, async, coroutine, or future.
+
+    This helper is used for ACK callbacks and other deferred work. It logs the
+    callback and result shapes at DEBUG level so we can trace unexpected types
+    (for example AsyncMock instances in tests) without changing behavior.
+    """
+    lp = "execute_async_callback:"
+    logger.debug(
+        "%s callback=%r callback_type=%s is_callable=%s",
+        lp,
+        callback,
+        type(callback),
+        callable(callback),
+    )
+    if callback is None:
+        return
+    result = callback() if callable(callback) else callback
+    logger.debug(
+        "%s result=%r result_type=%s is_future=%s is_coroutine=%s is_awaitable=%s",
+        lp,
+        result,
+        type(result),
+        asyncio.isfuture(result),
+        asyncio.iscoroutine(result),
+        isinstance(result, Awaitable),
+    )
+    await _await_if_needed(result)
+
+
+async def _await_if_needed(result: CallbackReturn | Any) -> None:
+    """Await result if it is awaitable-like."""
+    if result is None:
+        return
+    if asyncio.isfuture(result):
+        await cast("asyncio.Future[Any]", result)
+        return
+    if asyncio.iscoroutine(result):
+        await cast("Coroutine[Any, Any, Any]", result)
+        return
+    if isinstance(result, Awaitable):
+        await cast("Awaitable[Any]", result)

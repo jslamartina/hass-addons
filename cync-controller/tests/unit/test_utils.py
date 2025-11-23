@@ -3,15 +3,17 @@
 Tests utility functions including byte/hex conversions, signal handling, and formatting functions.
 """
 
+import asyncio
 import uuid
+from collections.abc import Awaitable, Callable
 from pathlib import Path
-from typing import Any, cast
-from unittest.mock import AsyncMock, MagicMock, patch
+from typing import cast
+from unittest.mock import AsyncMock, MagicMock, create_autospec, patch
 
 import pytest
 
+from cync_controller import utils
 from cync_controller.utils import (
-    _async_signal_cleanup,
     bytes2list,
     check_for_uuid,
     check_python_version,
@@ -22,9 +24,23 @@ from cync_controller.utils import (
     send_sigint,
     send_signal,
     send_sigterm,
-    signal_handler,
     utc_to_local,
 )
+
+SignalHandlerFunc = Callable[[int], None]
+signal_handler_fn: SignalHandlerFunc = cast(SignalHandlerFunc, utils.signal_handler)  # type: ignore[reportUnknownMemberType]
+
+
+async def run_async_cleanup() -> None:
+    """Call the private async cleanup with typing to satisfy pyright."""
+    cleanup_func = cast(Callable[[], Awaitable[None]], utils._async_signal_cleanup)  # type: ignore[reportPrivateUsage]
+    await cleanup_func()
+
+
+def create_mock_task() -> MagicMock:
+    """Create a fully mockable task object."""
+    return MagicMock()
+
 
 # Filter RuntimeWarning about unawaited AsyncMockMixin coroutines from test cleanup
 pytestmark = pytest.mark.filterwarnings(
@@ -35,19 +51,19 @@ pytestmark = pytest.mark.filterwarnings(
 class TestSignalHandling:
     """Tests for signal handling functions"""
 
-    @patch("cync_controller.utils.os.kill")
-    def test_send_signal_sends_signal(self, mock_kill):
+    def test_send_signal_sends_signal(self) -> None:
         """Test that send_signal calls os.kill with correct signal"""
         import signal
 
-        send_signal(signal.SIGTERM)
+        with patch("cync_controller.utils.os.kill", autospec=True) as mock_kill:
+            send_signal(signal.SIGTERM)
 
-        mock_kill.assert_called_once()
-        args: tuple[Any, ...] = cast("tuple[Any, ...]", mock_kill.call_args[0])
-        assert args[1] == signal.SIGTERM
+            mock_kill.assert_called_once()
+            args: tuple[object, ...] = cast("tuple[object, ...]", mock_kill.call_args[0])
+            assert args[1] == signal.SIGTERM
 
     @patch("cync_controller.utils.send_signal")
-    def test_send_sigterm_calls_send_signal(self, mock_send_signal):
+    def test_send_sigterm_calls_send_signal(self, mock_send_signal: MagicMock) -> None:
         """Test that send_sigterm calls send_signal with SIGTERM"""
         import signal
 
@@ -56,7 +72,7 @@ class TestSignalHandling:
         mock_send_signal.assert_called_once_with(signal.SIGTERM)
 
     @patch("cync_controller.utils.send_signal")
-    def test_send_sigint_calls_send_signal(self, mock_send_signal):
+    def test_send_sigint_calls_send_signal(self, mock_send_signal: MagicMock) -> None:
         """Test that send_sigint calls send_signal with SIGINT"""
         import signal
 
@@ -65,10 +81,11 @@ class TestSignalHandling:
         mock_send_signal.assert_called_once_with(signal.SIGINT)
 
     @patch("cync_controller.utils.os.kill", side_effect=OSError("Permission denied"))
-    def test_send_signal_handles_os_error(self, mock_kill):
+    def test_send_signal_handles_os_error(self, mock_kill: MagicMock) -> None:
         """Test that send_signal raises OSError properly"""
         import signal
 
+        _ = mock_kill
         with pytest.raises(OSError, match="Permission denied"):
             send_signal(signal.SIGTERM)
 
@@ -76,48 +93,48 @@ class TestSignalHandling:
 class TestByteConversions:
     """Tests for byte/hex conversion functions"""
 
-    def test_bytes2list_basic(self):
+    def test_bytes2list_basic(self) -> None:
         """Test basic byte to list conversion"""
         byte_data = bytes([0x01, 0x02, 0x03, 0x04])
         result = bytes2list(byte_data)
 
         assert result == [1, 2, 3, 4]
 
-    def test_bytes2list_empty(self):
+    def test_bytes2list_empty(self) -> None:
         """Test byte to list conversion with empty bytes"""
         result = bytes2list(b"")
 
         assert result == []
 
-    def test_bytes2list_preserves_values(self):
+    def test_bytes2list_preserves_values(self) -> None:
         """Test that byte values are preserved correctly"""
         byte_data = bytes([0xFF, 0x00, 0xAB, 0xCD])
         result = bytes2list(byte_data)
 
         assert result == [255, 0, 171, 205]
 
-    def test_hex2list_basic(self):
+    def test_hex2list_basic(self) -> None:
         """Test basic hex string to list conversion"""
         hex_str = "01020304"
         result = hex2list(hex_str)
 
         assert result == [1, 2, 3, 4]
 
-    def test_hex2list_with_spaces(self):
+    def test_hex2list_with_spaces(self) -> None:
         """Test hex string with spaces to list conversion"""
         hex_str = "01 02 03 04"
         result = hex2list(hex_str)
 
         assert result == [1, 2, 3, 4]
 
-    def test_hex2list_uppercase(self):
+    def test_hex2list_uppercase(self) -> None:
         """Test hex string with uppercase letters"""
         hex_str = "ABCDEF"
         result = hex2list(hex_str)
 
         assert result == [171, 205, 239]
 
-    def test_ints2bytes_basic(self):
+    def test_ints2bytes_basic(self) -> None:
         """Test basic int list to bytes conversion"""
         int_list = [1, 2, 3, 4]
         result = ints2bytes(int_list)
@@ -195,7 +212,7 @@ class TestHexListRoundtrips:
             [170, 187, 204, 221],  # AABBCCDD in hex
         ],
     )
-    def test_ints2hex_to_hex2list_roundtrip(self, int_list):
+    def test_ints2hex_to_hex2list_roundtrip(self, int_list: list[int]) -> None:
         """Test roundtrip from int list to hex and back"""
         hex_str = ints2hex(int_list)
         recovered_list = hex2list(hex_str)
@@ -212,7 +229,7 @@ class TestHexListRoundtrips:
             b"\xaa\xbb\xcc\xdd",
         ],
     )
-    def test_bytes2list_to_ints2bytes_roundtrip(self, byte_data):
+    def test_bytes2list_to_ints2bytes_roundtrip(self, byte_data: bytes) -> None:
         """Test roundtrip from bytes to list and back"""
         int_list = bytes2list(byte_data)
         recovered_bytes = ints2bytes(int_list)
@@ -300,89 +317,64 @@ class TestFirmwareVersionParsing:
 
 
 class TestUUIDManagement:
-    """Tests for UUID management functions"""
+    """Tests for UUID management functions using real temp files."""
 
-    @patch("cync_controller.utils.Path.exists")
-    @patch("cync_controller.utils.Path.open")
-    @patch("cync_controller.utils.Path.mkdir")
-    def test_check_for_uuid_creates_new_uuid_when_missing(self, mock_mkdir, mock_open, mock_exists):
-        """Test that check_for_uuid creates a new UUID when uuid.txt doesn't exist"""
-        from cync_controller.utils import g
+    def test_check_for_uuid_creates_new_uuid_when_missing(self, tmp_path: Path) -> None:
+        """Creates new UUID when file is missing."""
+        with (
+            patch("cync_controller.utils.PERSISTENT_BASE_DIR", str(tmp_path / "cync_persistent")),
+            patch("cync_controller.utils.CYNC_UUID_PATH", str(tmp_path / "uuid.txt")),
+            patch("cync_controller.utils.g") as mock_g,
+        ):
+            mock_g.uuid = None
+            check_for_uuid()
+            assert mock_g.uuid is not None
+            assert (tmp_path / "uuid.txt").exists()
 
-        # File doesn't exist
-        mock_exists.return_value = False
-
-        # Mock file open
-        mock_file = MagicMock()
-        mock_open.return_value.__enter__.return_value = mock_file
-
-        check_for_uuid()
-
-        # Should have written UUID
-        assert mock_open.return_value.__enter__.return_value.write.called
-        assert hasattr(g, "uuid")
-
-    @patch("cync_controller.utils.Path.exists")
-    @patch("cync_controller.utils.Path.open")
-    def test_check_for_uuid_loads_existing_uuid(self, mock_open, mock_exists):
-        """Test that check_for_uuid loads existing UUID from file"""
-        from cync_controller.utils import g
-
-        # File exists
-        mock_exists.return_value = True
-
-        # Mock file read
+    def test_check_for_uuid_loads_existing_uuid(self, tmp_path: Path) -> None:
+        """Loads existing UUID from file."""
+        uuid_path = tmp_path / "uuid.txt"
+        uuid_path.parent.mkdir(parents=True, exist_ok=True)
         test_uuid = str(uuid.uuid4())
-        mock_file = MagicMock()
-        mock_file.read.return_value = test_uuid
-        mock_open.return_value.__enter__.return_value = mock_file
+        _ = uuid_path.write_text(test_uuid)
+        with (
+            patch("cync_controller.utils.PERSISTENT_BASE_DIR", str(uuid_path.parent)),
+            patch("cync_controller.utils.CYNC_UUID_PATH", str(uuid_path)),
+            patch("cync_controller.utils.g") as mock_g,
+        ):
+            mock_g.uuid = None
+            check_for_uuid()
+            assert mock_g.uuid is not None
+            assert mock_g.uuid == uuid.UUID(test_uuid)
 
-        check_for_uuid()
+    def test_check_for_uuid_creates_uuid_when_invalid_version(self, tmp_path: Path) -> None:
+        """Creates new UUID when existing UUID has wrong version."""
+        uuid_path = tmp_path / "uuid.txt"
+        uuid_path.parent.mkdir(parents=True, exist_ok=True)
+        _ = uuid_path.write_text(str(uuid.uuid1()))
+        with (
+            patch("cync_controller.utils.PERSISTENT_BASE_DIR", str(uuid_path.parent)),
+            patch("cync_controller.utils.CYNC_UUID_PATH", str(uuid_path)),
+            patch("cync_controller.utils.g") as mock_g,
+        ):
+            mock_g.uuid = None
+            check_for_uuid()
+            assert mock_g.uuid is not None
+            assert mock_g.uuid.version == 4
 
-        # Should have loaded UUID
-        assert hasattr(g, "uuid")
-        assert g.uuid == uuid.UUID(test_uuid)
-
-    @patch("cync_controller.utils.Path.exists")
-    @patch("cync_controller.utils.Path.open")
-    @patch("cync_controller.utils.Path.mkdir")
-    def test_check_for_uuid_creates_uuid_when_invalid_version(self, mock_mkdir, mock_open, mock_exists):
-        """Test that check_for_uuid creates new UUID when existing is invalid version"""
-        from cync_controller.utils import g
-
-        # File exists
-        mock_exists.return_value = True
-
-        # Mock file read with invalid UUID (version 1)
-        # uuid1() is not version 4
-        invalid_uuid = str(uuid.uuid1())
-        mock_file = MagicMock()
-        mock_file.read.return_value = invalid_uuid
-        mock_open.return_value.__enter__.return_value = mock_file
-
-        check_for_uuid()
-
-        # Should have created new UUID (version 4)
-        assert hasattr(g, "uuid")
-        assert g.uuid.version == 4
-
-    @patch("cync_controller.utils.Path.exists")
-    @patch("cync_controller.utils.Path.open")
-    @patch("cync_controller.utils.Path.mkdir")
-    def test_check_for_uuid_creates_uuid_when_empty_file(self, mock_mkdir, mock_open, mock_exists):
-        """Test that check_for_uuid creates UUID when file is empty"""
-        from cync_controller.utils import g
-
-        # File exists but empty
-        mock_exists.return_value = True
-        mock_file = MagicMock()
-        mock_file.read.return_value = ""
-        mock_open.return_value.__enter__.return_value = mock_file
-
-        check_for_uuid()
-
-        # Should have created new UUID
-        assert hasattr(g, "uuid")
+    def test_check_for_uuid_creates_uuid_when_empty_file(self, tmp_path: Path) -> None:
+        """Creates new UUID when file is empty."""
+        uuid_path = tmp_path / "uuid.txt"
+        uuid_path.parent.mkdir(parents=True, exist_ok=True)
+        _ = uuid_path.write_text("")
+        with (
+            patch("cync_controller.utils.PERSISTENT_BASE_DIR", str(uuid_path.parent)),
+            patch("cync_controller.utils.CYNC_UUID_PATH", str(uuid_path)),
+            patch("cync_controller.utils.g") as mock_g,
+        ):
+            mock_g.uuid = None
+            check_for_uuid()
+            assert mock_g.uuid is not None
 
 
 class TestDatetimeUtilities:
@@ -410,33 +402,39 @@ class TestAsyncSignalCleanup:
 
     @pytest.mark.asyncio
     @patch("cync_controller.utils.g")
-    async def test_async_signal_cleanup_with_ncync_server(self, mock_g):
+    async def test_async_signal_cleanup_with_ncync_server(self, mock_g: MagicMock) -> None:
         """Test async signal cleanup when ncync_server exists"""
+        stop_mock: AsyncMock = AsyncMock()
         mock_server = MagicMock()
-        mock_server.stop = AsyncMock()
-        mock_g.ncync_server = mock_server
+        mock_server.stop = stop_mock
+        mock_g.ncync_server = mock_server  # type: ignore[reportAny]
         mock_g.export_server = None
         mock_g.cloud_api = None
         mock_g.mqtt_client = None
         mock_g.loop = None
         mock_g.tasks = []
 
-        await _async_signal_cleanup()
+        await run_async_cleanup()
 
-        mock_server.stop.assert_called_once()
+        stop_mock.assert_called_once()
 
     @pytest.mark.asyncio
     @patch("cync_controller.utils.g")
-    async def test_async_signal_cleanup_with_multiple_services(self, mock_g):
+    async def test_async_signal_cleanup_with_multiple_services(self, mock_g: MagicMock) -> None:
         """Test async signal cleanup with multiple services"""
+        server_stop: AsyncMock = AsyncMock()
+        export_stop: AsyncMock = AsyncMock()
+        api_close: AsyncMock = AsyncMock()
+        mqtt_stop: AsyncMock = AsyncMock()
+
         mock_server = MagicMock()
-        mock_server.stop = AsyncMock()
+        mock_server.stop = server_stop
         mock_export = MagicMock()
-        mock_export.stop = AsyncMock()
+        mock_export.stop = export_stop
         mock_api = MagicMock()
-        mock_api.close = AsyncMock()
+        mock_api.close = api_close
         mock_mqtt = MagicMock()
-        mock_mqtt.stop = AsyncMock()
+        mock_mqtt.stop = mqtt_stop
 
         mock_g.ncync_server = mock_server
         mock_g.export_server = mock_export
@@ -445,44 +443,43 @@ class TestAsyncSignalCleanup:
         mock_g.loop = None
         mock_g.tasks = []
 
-        await _async_signal_cleanup()
+        await run_async_cleanup()
 
-        mock_server.stop.assert_called_once()
-        mock_export.stop.assert_called_once()
-        mock_api.close.assert_called_once()
-        mock_mqtt.stop.assert_called_once()
+        server_stop.assert_called_once()
+        export_stop.assert_called_once()
+        api_close.assert_called_once()
+        mqtt_stop.assert_called_once()
 
     @pytest.mark.asyncio
     @patch("cync_controller.utils.g")
-    async def test_async_signal_cleanup_cancels_tasks(self, mock_g):
+    async def test_async_signal_cleanup_cancels_tasks(self, mock_g: MagicMock) -> None:
         """Test async signal cleanup cancels pending tasks"""
         mock_server = MagicMock()
         mock_server.stop = AsyncMock()
 
-        mock_task1 = MagicMock()
-        mock_task1.done.return_value = False
-        mock_task1.get_name.return_value = "task1"
+        mock_task1 = cast(asyncio.Task[object], create_autospec(asyncio.Task, instance=True))
+        mock_task1.done = MagicMock(return_value=False)
+        mock_task1.get_name = MagicMock(return_value="task1")
         mock_task1.cancel = MagicMock()
 
-        mock_task2 = MagicMock()
-        mock_task2.done.return_value = True  # Already done
+        mock_task2 = cast(asyncio.Task[object], create_autospec(asyncio.Task, instance=True))
+        mock_task2.done = MagicMock(return_value=True)
         mock_task2.cancel = MagicMock()
 
-        mock_loop = MagicMock()
-        mock_loop.create_task = MagicMock()
+        mock_loop = cast(asyncio.AbstractEventLoop, create_autospec(asyncio.AbstractEventLoop, instance=True))
 
         mock_g.ncync_server = mock_server
         mock_g.export_server = None
         mock_g.cloud_api = None
         mock_g.mqtt_client = None
-        mock_g.loop = mock_loop  # Need to set loop for task cancellation
+        mock_g.loop = mock_loop  # type: ignore[reportAny]
         mock_g.tasks = [mock_task1, mock_task2]
 
-        await _async_signal_cleanup()
+        await run_async_cleanup()
 
         # Only task1 should be cancelled since task2 is done
-        mock_task1.cancel.assert_called_once()
-        mock_task2.cancel.assert_not_called()
+        mock_task1.cancel.assert_called_once()  # type: ignore[reportAny]
+        mock_task2.cancel.assert_not_called()  # type: ignore[reportAny]
 
 
 class TestSignalHandler:
@@ -491,39 +488,47 @@ class TestSignalHandler:
     @patch("cync_controller.utils.g")
     @patch("cync_controller.utils.asyncio.get_event_loop")
     @patch("cync_controller.utils._async_signal_cleanup")
-    def test_signal_handler_with_loop(self, mock_cleanup, mock_loop, mock_g):
+    def test_signal_handler_with_loop(self, mock_cleanup: MagicMock, mock_loop: MagicMock, mock_g: MagicMock) -> None:
         """Test signal handler creates cleanup task"""
         import signal
 
-        mock_g.loop = MagicMock()
-        mock_g.loop.create_task = MagicMock()
+        _ = mock_cleanup
+        _ = mock_loop
+        loop_mock = cast(asyncio.AbstractEventLoop, create_autospec(asyncio.AbstractEventLoop, instance=True))
+        create_task_mock = MagicMock()
+        loop_mock.create_task = create_task_mock  # type: ignore[assignment]
+        mock_g.loop = loop_mock
 
-        signal_handler(signal.SIGTERM)
+        signal_handler_fn(signal.SIGTERM)
 
-        mock_g.loop.create_task.assert_called_once()
+        create_task_mock.assert_called_once()
 
     @patch("cync_controller.utils.g")
     @patch("cync_controller.utils.asyncio.get_event_loop")
     @patch("cync_controller.utils._async_signal_cleanup")
-    def test_signal_handler_falls_back_to_get_loop(self, mock_cleanup, mock_loop, mock_g):
+    def test_signal_handler_falls_back_to_get_loop(
+        self, mock_cleanup: MagicMock, mock_loop: MagicMock, mock_g: MagicMock
+    ) -> None:
         """Test signal handler falls back to get_event_loop when g.loop is None"""
         import signal
 
+        _ = mock_cleanup
         mock_g.loop = None
-        mock_event_loop = MagicMock()
-        mock_event_loop.create_task = MagicMock()
+        mock_event_loop = cast(asyncio.AbstractEventLoop, create_autospec(asyncio.AbstractEventLoop, instance=True))
+        event_create_task = MagicMock()
+        mock_event_loop.create_task = event_create_task  # type: ignore[assignment]
         mock_loop.return_value = mock_event_loop
 
-        signal_handler(signal.SIGTERM)
+        signal_handler_fn(signal.SIGTERM)
 
         mock_loop.assert_called_once()
-        mock_event_loop.create_task.assert_called_once()
+        event_create_task.assert_called_once()
 
 
 class TestCheckForUUID:
     """Tests for check_for_uuid function"""
 
-    def test_check_for_uuid_creates_directory_if_missing(self, tmp_path):
+    def test_check_for_uuid_creates_directory_if_missing(self, tmp_path: Path) -> None:
         """Test that check_for_uuid creates persistent directory if it doesn't exist"""
         with (
             patch("cync_controller.utils.PERSISTENT_BASE_DIR", str(tmp_path / "cync_persistent")),
@@ -537,7 +542,7 @@ class TestCheckForUUID:
             # Directory should have been created
             assert (tmp_path / "cync_persistent").exists()
 
-    def test_check_for_uuid_reads_existing_uuid(self, tmp_path):
+    def test_check_for_uuid_reads_existing_uuid(self, tmp_path: Path) -> None:
         """Test that check_for_uuid reads existing UUID from file"""
         with (
             patch("cync_controller.utils.PERSISTENT_BASE_DIR", str(tmp_path / "cync_persistent")),
@@ -549,7 +554,7 @@ class TestCheckForUUID:
 
             # Create uuid file
             test_uuid = str(uuid.uuid4())
-            (tmp_path / "uuid.txt").write_text(test_uuid)
+            _ = (tmp_path / "uuid.txt").write_text(test_uuid)
 
             mock_g.uuid = None
 
@@ -558,7 +563,7 @@ class TestCheckForUUID:
             # UUID should be set
             assert mock_g.uuid is not None
 
-    def test_check_for_uuid_creates_new_uuid_when_invalid(self, tmp_path, caplog):
+    def test_check_for_uuid_creates_new_uuid_when_invalid(self, tmp_path: Path) -> None:
         """Test that check_for_uuid creates new UUID when existing one is invalid version"""
         with (
             patch("cync_controller.utils.PERSISTENT_BASE_DIR", str(tmp_path / "cync_persistent")),
@@ -571,7 +576,7 @@ class TestCheckForUUID:
             # Create uuid file with non-v4 UUID (valid format, wrong version)
             # UUID v1 (non-standard) - will pass format check but fail version check
             old_uuid = "11223344-5566-1111-8888-998877665544"  # Using version 1 instead of 4
-            (tmp_path / "uuid.txt").write_text(old_uuid)
+            _ = (tmp_path / "uuid.txt").write_text(old_uuid)
 
             mock_g.uuid = None
 
@@ -580,7 +585,7 @@ class TestCheckForUUID:
             # Should have created new UUID despite error
             assert mock_g.uuid is not None
 
-    def test_check_for_uuid_creates_new_uuid_when_file_empty(self, tmp_path):
+    def test_check_for_uuid_creates_new_uuid_when_file_empty(self, tmp_path: Path) -> None:
         """Test that check_for_uuid creates new UUID when file is empty"""
         with (
             patch("cync_controller.utils.PERSISTENT_BASE_DIR", str(tmp_path / "cync_persistent")),
@@ -591,7 +596,7 @@ class TestCheckForUUID:
             (tmp_path / "cync_persistent").mkdir(parents=True)
 
             # Create empty uuid file
-            (tmp_path / "uuid.txt").write_text("")
+            _ = (tmp_path / "uuid.txt").write_text("")
 
             mock_g.uuid = None
 
@@ -604,7 +609,7 @@ class TestCheckForUUID:
 class TestUTCLocalConversion:
     """Tests for utc_to_local function"""
 
-    def test_utc_to_local_converts_timezone(self):
+    def test_utc_to_local_converts_timezone(self) -> None:
         """Test that utc_to_local converts UTC datetime to local timezone"""
         import datetime
 
@@ -620,7 +625,7 @@ class TestParseConfig:
     """Tests for parse_config function"""
 
     @pytest.mark.asyncio
-    async def test_parse_config_basic_structure(self, tmp_path):
+    async def test_parse_config_basic_structure(self, tmp_path: Path) -> None:
         """Test parsing a basic config file with devices and groups"""
         import yaml
 
@@ -645,20 +650,20 @@ class TestParseConfig:
             },
         }
 
-        config_file: Path = cast("Path", tmp_path / "config.yaml")
+        config_file: Path = tmp_path / "config.yaml"
         _ = config_file.write_text(yaml.dump(config_data))
 
         devices, groups = await parse_config(config_file)
 
         assert len(devices) == 1
-        assert "10" in devices
-        assert devices["10"].name == "Test Light"
+        assert 10 in devices
+        assert devices[10].name == "Test Light"
         assert len(groups) == 1
-        assert "100" in groups
-        assert groups["100"].name == "Test Group"
+        assert 100 in groups
+        assert groups[100].name == "Test Group"
 
     @pytest.mark.asyncio
-    async def test_parse_config_disabled_device_skipped(self, tmp_path):
+    async def test_parse_config_disabled_device_skipped(self, tmp_path: Path) -> None:
         """Test that disabled devices are skipped"""
         import yaml
 
@@ -677,18 +682,18 @@ class TestParseConfig:
             },
         }
 
-        config_file: Path = cast("Path", tmp_path / "config.yaml")
+        config_file: Path = tmp_path / "config.yaml"
         _ = config_file.write_text(yaml.dump(config_data))
 
         devices, _groups = await parse_config(config_file)
 
         assert len(devices) == 1
-        assert "10" in devices
-        assert "20" not in devices
-        assert "30" not in devices
+        assert 10 in devices
+        assert 20 not in devices
+        assert 30 not in devices
 
     @pytest.mark.asyncio
-    async def test_parse_config_no_devices_skips(self, tmp_path):
+    async def test_parse_config_no_devices_skips(self, tmp_path: Path) -> None:
         """Test that homes with no devices are skipped with warning"""
         import yaml
 
@@ -703,7 +708,7 @@ class TestParseConfig:
             },
         }
 
-        config_file: Path = cast("Path", tmp_path / "config.yaml")
+        config_file: Path = tmp_path / "config.yaml"
         _ = config_file.write_text(yaml.dump(config_data))
 
         devices, groups = await parse_config(config_file)
@@ -712,7 +717,7 @@ class TestParseConfig:
         assert len(groups) == 0
 
     @pytest.mark.asyncio
-    async def test_parse_config_int_mac_warns(self, tmp_path):
+    async def test_parse_config_int_mac_warns(self, tmp_path: Path) -> None:
         """Test that int MAC addresses are handled with warnings"""
         import yaml
 
@@ -733,20 +738,20 @@ class TestParseConfig:
             },
         }
 
-        config_file: Path = cast("Path", tmp_path / "config.yaml")
+        config_file: Path = tmp_path / "config.yaml"
         _ = config_file.write_text(yaml.dump(config_data))
 
         devices, _groups = await parse_config(config_file)
 
         assert len(devices) == 1
-        assert devices["10"].mac == "26616350814"  # MAC converted to string
+        assert devices[10].mac == "26616350814"  # MAC converted to string
 
     @pytest.mark.asyncio
-    async def test_parse_config_error_handling(self, tmp_path):
+    async def test_parse_config_error_handling(self, tmp_path: Path) -> None:
         """Test that config file errors are handled properly"""
         from cync_controller.main import parse_config
 
-        config_file: Path = cast("Path", tmp_path / "invalid.yaml")
+        config_file: Path = tmp_path / "invalid.yaml"
         _ = config_file.write_text("invalid: yaml: content: [unclosed")
 
         with pytest.raises(Exception, match=r".*"):

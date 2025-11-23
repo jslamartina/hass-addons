@@ -274,7 +274,9 @@ class TestPacketInjection:
 
     @pytest.mark.asyncio
     async def test_injection_checker_raw_bytes_injection(
-        self, cloud_relay_connection: CloudRelayConnection, tmp_path: Path,
+        self,
+        cloud_relay_connection: CloudRelayConnection,
+        tmp_path: Path,
     ):
         """Test raw bytes packet injection."""
         # Arrange
@@ -302,7 +304,9 @@ class TestPacketInjection:
 
     @pytest.mark.asyncio
     async def test_injection_checker_mode_injection_smart(
-        self, cloud_relay_connection: CloudRelayConnection, tmp_path: Path,
+        self,
+        cloud_relay_connection: CloudRelayConnection,
+        tmp_path: Path,
     ):
         """Test mode injection for smart mode."""
         # Arrange
@@ -324,7 +328,9 @@ class TestPacketInjection:
 
     @pytest.mark.asyncio
     async def test_injection_checker_mode_injection_traditional(
-        self, cloud_relay_connection: CloudRelayConnection, tmp_path: Path,
+        self,
+        cloud_relay_connection: CloudRelayConnection,
+        tmp_path: Path,
     ):
         """Test mode injection for traditional mode."""
         # Arrange

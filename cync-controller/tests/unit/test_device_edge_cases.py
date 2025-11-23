@@ -18,11 +18,11 @@ class TestCyncDeviceErrorPaths:
         device = CyncDevice(cync_id=0x1234)
 
         # Float 1.0 should become 1
-        device.state = 1.0
+        device.state = 1.0  # type: ignore[assignment]
         assert device.state == 1
 
         # Float 0.0 should become 0
-        device.state = 0.0
+        device.state = 0.0  # type: ignore[assignment]
         assert device.state == 0
 
     def test_device_brightness_edge_values(self):

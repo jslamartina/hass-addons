@@ -6,6 +6,7 @@ Provides device and bridge discovery functionality for MQTT integration.
 from __future__ import annotations
 
 import asyncio
+import importlib
 import json
 import re
 import unicodedata
@@ -40,7 +41,31 @@ if TYPE_CHECKING:
 
 logger = get_logger(__name__)
 
-g = GlobalObject()
+
+def _get_g() -> GlobalObject:
+    """Return shared GlobalObject honoring legacy/mock patch points."""
+    for mod_name in (
+        "cync_controller.mqtt_client",
+        "cync_controller.devices.shared",
+        "cync_controller.devices",
+    ):
+        try:
+            module = importlib.import_module(mod_name)
+            if hasattr(module, "g"):
+                return module.g  # type: ignore[return-value]
+        except ModuleNotFoundError:
+            continue
+        except Exception:
+            continue
+    return GlobalObject()
+
+
+class GProxy:
+    def __getattr__(self, name: str) -> object:
+        return getattr(_get_g(), name)
+
+
+g = GProxy()
 bridge_device_reg_struct = CYNC_BRIDGE_DEVICE_REGISTRY_CONF
 
 # Constants for magic values

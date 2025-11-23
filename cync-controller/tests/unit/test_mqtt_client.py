@@ -1,5 +1,4 @@
-"""
-Unit tests for mqtt_client module.
+"""Unit tests for mqtt_client module.
 
 Tests MQTTClient class and related utility functions.
 """
@@ -29,8 +28,7 @@ pytestmark = pytest.mark.filterwarnings("ignore:There is no current event loop:D
 # Factory functions for typed mocks
 # pyright: reportAny=false, reportExplicitAny=false
 def create_mock_mqtt_client() -> Any:
-    """
-    Create a fully mockable MQTT client mock.
+    """Create a fully mockable MQTT client mock.
 
     Returns Any to allow flexible mocking while maintaining type safety elsewhere.
     """
@@ -39,8 +37,7 @@ def create_mock_mqtt_client() -> Any:
 
 # pyright: reportAny=false, reportExplicitAny=false
 def create_mock_aiomqtt_client() -> Any:
-    """
-    Create a fully mockable aiomqtt.Client mock.
+    """Create a fully mockable aiomqtt.Client mock.
 
     Returns Any to allow flexible mocking while maintaining type safety elsewhere.
     """
@@ -780,7 +777,7 @@ class TestDeviceCommand:
 
             assert cmd.cmd_type == "set_power"
             assert cmd.device_id == "device_1234"
-            assert cast(dict[str, Any], cmd.params) == {"state": 1}
+            assert cast("dict[str, Any]", cmd.params) == {"state": 1}
             assert cmd.timestamp == 1234.567
 
     def test_device_command_with_multiple_params(self):
@@ -792,7 +789,7 @@ class TestDeviceCommand:
 
             assert cmd.cmd_type == "set_rgb"
             assert cmd.device_id == 0x5678
-            assert cast(dict[str, Any], cmd.params) == {"red": 255, "green": 128, "blue": 64}
+            assert cast("dict[str, Any]", cmd.params) == {"red": 255, "green": 128, "blue": 64}
             assert cmd.timestamp == 9876.543
 
     def test_device_command_with_no_params(self):
@@ -804,7 +801,7 @@ class TestDeviceCommand:
 
             assert cmd.cmd_type == "set_power"
             assert cmd.device_id == "group_9999"
-            assert cast(dict[str, Any], cmd.params) == {}
+            assert cast("dict[str, Any]", cmd.params) == {}
             assert cmd.timestamp == 1111.222
 
     def test_device_command_timestamp_uniqueness(self):
@@ -900,11 +897,11 @@ class TestCommandProcessor:
         processor = CommandProcessor()
 
         # Call __init__ again should not create new queue
-        original_queue = cast(asyncio.Queue[DeviceCommand], processor._queue)  # type: ignore[reportPrivateUsage]
+        original_queue = cast("asyncio.Queue[DeviceCommand]", processor._queue)  # type: ignore[reportPrivateUsage]
         processor.__init__()
 
         # Queue should be the same
-        assert cast(asyncio.Queue[DeviceCommand], processor._queue) is original_queue  # type: ignore[reportPrivateUsage]
+        assert cast("asyncio.Queue[DeviceCommand]", processor._queue) is original_queue  # type: ignore[reportPrivateUsage]
 
     @pytest.mark.asyncio
     async def test_command_processor_enqueue_command(self):
@@ -918,7 +915,7 @@ class TestCommandProcessor:
             await processor.enqueue(cmd)
 
             # Verify command was added to queue
-            assert not cast(asyncio.Queue[DeviceCommand], processor._queue).empty()  # type: ignore[reportPrivateUsage]
+            assert not cast("asyncio.Queue[DeviceCommand]", processor._queue).empty()  # type: ignore[reportPrivateUsage]
 
     @pytest.mark.asyncio
     async def test_command_processor_queue_fifo_ordering(self):
@@ -937,7 +934,7 @@ class TestCommandProcessor:
             await processor.enqueue(cmd3)
 
             # Dequeue and verify FIFO order
-            queue = cast(asyncio.Queue[DeviceCommand], processor._queue)  # type: ignore[reportPrivateUsage]
+            queue = cast("asyncio.Queue[DeviceCommand]", processor._queue)  # type: ignore[reportPrivateUsage]
             dequeued1: DeviceCommand = await queue.get()
             dequeued2: DeviceCommand = await queue.get()
             dequeued3: DeviceCommand = await queue.get()
@@ -1127,7 +1124,7 @@ class TestSetPowerCommand:
         assert cmd.cmd_type == "set_power"
         assert cmd.device_id == 42
         assert cmd.state == 1
-        assert cast(Any, cmd.device_or_group) is device  # type: ignore[reportUnknownMemberType]
+        assert cast("Any", cmd.device_or_group) is device  # type: ignore[reportUnknownMemberType]
 
     @pytest.mark.asyncio
     async def test_set_power_command_execute_calls_set_power(self):
@@ -1185,7 +1182,7 @@ class TestSetPowerCommand:
     @pytest.mark.asyncio
     async def test_set_power_command_optimistic_update_group(self):
         """Test optimistic update for group device"""
-        from cync_controller.devices import CyncGroup
+        from cync_controller.devices.group import CyncGroup
 
         group = MagicMock(spec=CyncGroup)
         group.id = "group1"
@@ -1214,7 +1211,7 @@ class TestSetBrightnessCommand:
         assert cmd.cmd_type == "set_brightness"
         assert cmd.device_id == 42
         assert cmd.brightness == 50
-        assert cast(Any, cmd.device_or_group) is device  # type: ignore[reportUnknownMemberType]
+        assert cast("Any", cmd.device_or_group) is device  # type: ignore[reportUnknownMemberType]
 
     @pytest.mark.asyncio
     async def test_set_brightness_command_execute_calls_set_brightness(self):
@@ -1245,7 +1242,7 @@ class TestSetBrightnessCommand:
     @pytest.mark.asyncio
     async def test_set_brightness_command_optimistic_update_group(self):
         """Test optimistic update for group brightness"""
-        from cync_controller.devices import CyncGroup
+        from cync_controller.devices.group import CyncGroup
 
         group = MagicMock(spec=CyncGroup)
         group.id = "group1"
@@ -1277,7 +1274,7 @@ class TestCommandProcessorQueue:
         await processor.enqueue(mock_command)
 
         # Command should be in queue
-        assert cast(asyncio.Queue[DeviceCommand], processor._queue).qsize() == 1  # type: ignore[reportPrivateUsage]
+        assert cast("asyncio.Queue[DeviceCommand]", processor._queue).qsize() == 1  # type: ignore[reportPrivateUsage]
 
     @pytest.mark.asyncio
     async def test_enqueue_starts_processing(self):
@@ -1327,8 +1324,18 @@ class TestCommandProcessorExecution:
         processor = CommandProcessor()
 
         mock_command = MagicMock(spec=DeviceCommand)
-        mock_command.publish_optimistic = AsyncMock()
-        mock_command.execute = AsyncMock()
+
+        publish_calls: list[None] = []
+        execute_calls: list[None] = []
+
+        async def publish_optimistic() -> None:
+            publish_calls.append(None)
+
+        async def execute() -> None:
+            execute_calls.append(None)
+
+        mock_command.publish_optimistic = publish_optimistic
+        mock_command.execute = execute
         mock_command.cmd_type = "test_command"
         mock_command.device_id = 42
 
@@ -1340,8 +1347,8 @@ class TestCommandProcessorExecution:
             await asyncio.sleep(0.1)
 
             # Should have called execute
-            mock_command.execute.assert_called_once()  # type: ignore[reportAny]
-            mock_command.publish_optimistic.assert_called_once()  # type: ignore[reportAny]
+            assert len(execute_calls) == 1
+            assert len(publish_calls) == 1
 
     @pytest.mark.asyncio
     async def test_process_next_publishes_optimistic(self):
@@ -1349,8 +1356,17 @@ class TestCommandProcessorExecution:
         processor = CommandProcessor()
 
         mock_command = MagicMock(spec=DeviceCommand)
-        mock_command.publish_optimistic = AsyncMock()
-        mock_command.execute = AsyncMock()
+
+        publish_calls: list[None] = []
+
+        async def publish_optimistic() -> None:
+            publish_calls.append(None)
+
+        async def execute() -> None:
+            return None
+
+        mock_command.publish_optimistic = publish_optimistic
+        mock_command.execute = execute
         mock_command.cmd_type = "test_command"
         mock_command.device_id = 42
 
@@ -1362,7 +1378,7 @@ class TestCommandProcessorExecution:
             await asyncio.sleep(0.1)
 
             # Should have called publish_optimistic
-            mock_command.publish_optimistic.assert_called_once()
+            assert len(publish_calls) == 1
 
     @pytest.mark.asyncio
     async def test_process_next_triggers_status_refresh(self):
@@ -1370,8 +1386,15 @@ class TestCommandProcessorExecution:
         processor = CommandProcessor()
 
         mock_command = MagicMock(spec=DeviceCommand)
-        mock_command.publish_optimistic = AsyncMock()
-        mock_command.execute = AsyncMock()
+
+        async def publish_optimistic() -> None:
+            return None
+
+        async def execute() -> None:
+            return None
+
+        mock_command.publish_optimistic = publish_optimistic
+        mock_command.execute = execute
         mock_command.cmd_type = "test_command"
         mock_command.device_id = 42
 
@@ -1391,8 +1414,15 @@ class TestCommandProcessorExecution:
         processor = CommandProcessor()
 
         mock_command = MagicMock(spec=DeviceCommand)
-        mock_command.publish_optimistic = AsyncMock()
-        mock_command.execute = AsyncMock(side_effect=Exception("Test error"))
+
+        async def publish_optimistic() -> None:
+            return None
+
+        async def execute() -> None:
+            raise Exception("Test error")
+
+        mock_command.publish_optimistic = publish_optimistic
+        mock_command.execute = execute
         mock_command.cmd_type = "test_command"
         mock_command.device_id = 42
 
@@ -1404,7 +1434,7 @@ class TestCommandProcessorExecution:
             await asyncio.sleep(0.1)
 
             # Command should have been removed from queue despite failure
-            queue = cast(asyncio.Queue[DeviceCommand], processor._queue)  # type: ignore[reportPrivateUsage]
+            queue = cast("asyncio.Queue[DeviceCommand]", processor._queue)  # type: ignore[reportPrivateUsage]
             assert processor._processing is False or queue.empty()  # type: ignore[reportPrivateUsage]
 
     @pytest.mark.asyncio
@@ -1416,8 +1446,15 @@ class TestCommandProcessorExecution:
 
         def make_mock_command(name: str):
             mock = MagicMock(spec=DeviceCommand)
-            mock.publish_optimistic = AsyncMock(side_effect=lambda: call_order.append(f"{name}_optimistic"))  # type: ignore[reportUnknownMemberType]
-            mock.execute = AsyncMock(side_effect=lambda: call_order.append(f"{name}_execute"))  # type: ignore[reportUnknownMemberType]
+
+            async def publish_optimistic() -> None:
+                call_order.append(f"{name}_optimistic")
+
+            async def execute() -> None:
+                call_order.append(f"{name}_execute")
+
+            mock.publish_optimistic = publish_optimistic
+            mock.execute = execute
             mock.cmd_type = f"{name}_command"
             mock.device_id = 42
             return mock

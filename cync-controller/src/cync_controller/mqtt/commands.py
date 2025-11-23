@@ -6,14 +6,18 @@ Provides command pattern implementation for optimistic updates and device contro
 from __future__ import annotations
 
 import asyncio
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any, cast, override
 
-from cync_controller.devices import CyncGroup
+from cync_controller.devices.group import CyncGroup
 from cync_controller.logging_abstraction import get_logger
 from cync_controller.structs import GlobalObject
 
 if TYPE_CHECKING:
     from cync_controller.devices.tcp_device import CyncTCPDevice
+
+SentBridge = tuple["CyncTCPDevice", int]
+type SentBridgeList = list["CyncTCPDevice"] | list[SentBridge]
+type CommandExecuteResult = tuple[asyncio.Event, SentBridgeList] | asyncio.Event | None
 
 logger = get_logger(__name__)
 g = GlobalObject()
@@ -22,7 +26,7 @@ g = GlobalObject()
 class DeviceCommand:
     """Base class for device commands."""
 
-    def __init__(self, cmd_type: str, device_id: str | int, **kwargs: Any) -> None:
+    def __init__(self, cmd_type: str, device_id: str | int, **kwargs: object) -> None:
         """Initialize a device command.
 
         Args:
@@ -31,19 +35,20 @@ class DeviceCommand:
             **kwargs: Command-specific parameters
 
         """
-        self.cmd_type = cmd_type
-        self.device_id = device_id
-        self.params = kwargs
-        self.timestamp = asyncio.get_event_loop().time()
+        self.cmd_type: str = cmd_type
+        self.device_id: str | int = device_id
+        self.params: dict[str, object] = dict(kwargs)
+        self.timestamp: float = asyncio.get_event_loop().time()
 
-    async def publish_optimistic(self):
+    async def publish_optimistic(self) -> None:
         """Publish optimistic state update to MQTT (before device command)."""
         raise NotImplementedError
 
-    async def execute(self):
+    async def execute(self) -> CommandExecuteResult:
         """Execute the actual device command."""
         raise NotImplementedError
 
+    @override
     def __repr__(self) -> str:
         return f"<{self.cmd_type}: device_id={self.device_id} params={self.params}>"
 
@@ -61,12 +66,55 @@ class CommandProcessor:
     def __init__(self) -> None:
         """Initialize command processor."""
         if not hasattr(self, "_initialized"):
-            self._queue = asyncio.Queue()
-            self._processing = False
+            self._queue: asyncio.Queue[DeviceCommand] = asyncio.Queue()
+            self._processing: bool = False
             self._initialized = True
             self.lp = "CommandProcessor:"
 
-    async def enqueue(self, cmd: DeviceCommand):
+    def _normalize_sent_bridges(
+        self,
+        raw_bridges: SentBridgeList,
+        device_id: str | int,
+        ack_event: asyncio.Event,
+    ) -> list[SentBridge]:
+        """Convert bridge list into `(bridge, msg_id)` tuples for cleanup."""
+        if not raw_bridges:
+            return []
+
+        first_item = raw_bridges[0]
+        if isinstance(first_item, tuple):
+            return cast("list[SentBridge]", raw_bridges)
+
+        normalized: list[SentBridge] = []
+        current_time = asyncio.get_event_loop().time()
+        bridges = cast("list[CyncTCPDevice]", raw_bridges)
+        for bridge in bridges:
+            msg_id_found: int | None = None
+            for ctrl_msg_id, callback in bridge.messages.control.items():
+                logger.debug(
+                    "%s Normalizing bridge callbacks: bridge=%s msg_id=%s callback_type=%s device_id=%s ack_event_matches=%s",
+                    self.lp,
+                    getattr(bridge, "address", "unknown"),
+                    ctrl_msg_id,
+                    type(callback),
+                    getattr(callback, "device_id", None),
+                    getattr(callback, "ack_event", None) is ack_event,
+                )
+                if (
+                    callback.device_id == device_id
+                    and callback.ack_event is ack_event
+                    and callback.sent_at is not None
+                    and callback.sent_at > current_time - 10.0
+                ):
+                    msg_id_found = ctrl_msg_id
+                    break
+            if msg_id_found is not None:
+                normalized.append((bridge, msg_id_found))
+            else:
+                normalized.append((bridge, -1))
+        return normalized
+
+    async def enqueue(self, cmd: DeviceCommand) -> None:
         """Enqueue a command for processing.
 
         Args:
@@ -79,7 +127,7 @@ class CommandProcessor:
             task = asyncio.create_task(self.process_next())
             del task  # Reference stored, allow garbage collection
 
-    async def process_next(self):  # noqa: PLR0912, PLR0915
+    async def process_next(self) -> None:  # noqa: PLR0912
         """Process commands sequentially with mesh refresh."""
         lp = f"{self.lp}process_next:"
         self._processing = True
@@ -89,6 +137,12 @@ class CommandProcessor:
                 cmd: DeviceCommand = cast("DeviceCommand", await self._queue.get())
 
                 logger.info("%s Processing: %s", lp, cmd)
+                logger.debug(
+                    "%s Command callables: publish_optimistic=%s execute=%s",
+                    lp,
+                    type(cmd.publish_optimistic),
+                    type(cmd.execute),
+                )
 
                 try:
                     # 1 Optimistic MQTT update first (UX feels instant)
@@ -97,62 +151,19 @@ class CommandProcessor:
 
                     # 2 Send to device and get ACK event + cleanup info
                     logger.debug("%s Executing device command", lp)
-                    result: (
-                        tuple[asyncio.Event, list[CyncTCPDevice] | list[tuple[CyncTCPDevice, int]]]
-                        | asyncio.Event
-                        | None
-                    ) = cast(
-                        "tuple[asyncio.Event, list[CyncTCPDevice] | list[tuple[CyncTCPDevice, int]]] | asyncio.Event | None",
-                        await cmd.execute(),
-                    )
+                    result: CommandExecuteResult = await cmd.execute()
+                    logger.debug("%s Execute result type=%s value=%r", lp, type(result), result)
+                    ack_event: asyncio.Event | None = None
+                    sent_bridges: list[SentBridge] = []
 
-                    # Unpack result (may be ack_event only or (ack_event, sent_bridges) tuple)
                     if isinstance(result, tuple):
-                        ack_event: asyncio.Event = result[0]
-                        # sent_bridges is actually list[tuple[CyncTCPDevice, int]] despite type annotation
-                        sent_bridges_raw: list[CyncTCPDevice] | list[tuple[CyncTCPDevice, int]] = result[1]
-                        if sent_bridges_raw and isinstance(sent_bridges_raw[0], tuple):
-                            sent_bridges: list[tuple[CyncTCPDevice, int]] = sent_bridges_raw  # type: ignore[assignment]
-                        else:
-                            # Convert list[CyncTCPDevice] to list[tuple[CyncTCPDevice, int]] by extracting msg_id from control messages
-                            # Match callbacks by device_id and ack_event to find the actual message IDs
-                            sent_bridges = []
-                            device_id = cmd.device_id
-                            # Type narrowing: sent_bridges_raw is list[CyncTCPDevice] at this point
-                            bridges_list: list[CyncTCPDevice] = cast("list[CyncTCPDevice]", sent_bridges_raw)
-                            for bridge in bridges_list:
-                                msg_id_found: int | None = None
-                                # Search control messages for callback matching this device and ack_event
-                                for ctrl_msg_id, callback in bridge.messages.control.items():
-                                    if (
-                                        callback.device_id == device_id
-                                        and callback.ack_event is ack_event
-                                        and callback.sent_at is not None
-                                        and callback.sent_at > asyncio.get_event_loop().time() - 10.0
-                                    ):
-                                        msg_id_found = ctrl_msg_id
-                                        break
-                                if msg_id_found is not None:
-                                    sent_bridges.append((bridge, msg_id_found))
-                                else:
-                                    # Fallback: log warning but still add bridge for potential cleanup
-                                    bridge_address = bridge.address if bridge.address else "unknown"
-                                    logger.warning(
-                                        "%s Could not find msg_id for bridge %s, device_id=%s - callback cleanup may be incomplete",
-                                        lp,
-                                        bridge_address,
-                                        device_id,
-                                    )
-                                    # Try to clean up all callbacks for this device_id as fallback
-                                    sent_bridges.append(
-                                        (bridge, -1),
-                                    )  # Use -1 as sentinel to trigger device_id-based cleanup
-                    else:
+                        ack_event = result[0]
+                        sent_bridges = self._normalize_sent_bridges(result[1], cmd.device_id, ack_event)
+                    elif isinstance(result, asyncio.Event):
                         ack_event = result
-                        sent_bridges: list[tuple[CyncTCPDevice, int]] = []
 
                     # 3 Wait for ACK with timeout (block queue until command confirmed)
-                    if ack_event:
+                    if ack_event is not None:
                         logger.debug("%s Waiting for ACK...", lp)
                         try:
                             _ = await asyncio.wait_for(ack_event.wait(), timeout=5.0)
@@ -161,7 +172,7 @@ class CommandProcessor:
                             logger.warning("%s ACK timeout after 5s - cleaning up callbacks", lp)
                             # Immediately remove orphaned callbacks instead of waiting 30s for cleanup task
                             device_id = cmd.device_id
-                            for bridge, msg_id in sent_bridges:  # type: ignore[reportUnknownVariableType]
+                            for bridge, msg_id in sent_bridges:
                                 if msg_id == -1:
                                     # Fallback: clean up all callbacks for this device_id and ack_event
                                     callbacks_to_remove: list[int] = []
@@ -208,7 +219,8 @@ class SetPowerCommand(DeviceCommand):
         self.device_or_group = device_or_group
         self.state = state
 
-    async def publish_optimistic(self):
+    @override
+    async def publish_optimistic(self) -> None:
         """Publish optimistic state update for the device and its group."""
         if isinstance(self.device_or_group, CyncGroup):
             # For groups: sync_group_devices will be called in set_power()
@@ -230,11 +242,10 @@ class SetPowerCommand(DeviceCommand):
             except Exception as e:
                 logger.warning("Group sync failed for switch: %s", e)
 
-    async def execute(self) -> tuple[asyncio.Event, list[CyncTCPDevice]] | None:
+    @override
+    async def execute(self) -> CommandExecuteResult:
         """Execute the actual set_power command."""
-        return cast(
-            "tuple[asyncio.Event, list[CyncTCPDevice]] | None", await self.device_or_group.set_power(self.state)
-        )
+        return cast("CommandExecuteResult", await self.device_or_group.set_power(self.state))
 
 
 class SetBrightnessCommand(DeviceCommand):
@@ -252,7 +263,8 @@ class SetBrightnessCommand(DeviceCommand):
         self.device_or_group = device_or_group
         self.brightness = brightness
 
-    async def publish_optimistic(self):
+    @override
+    async def publish_optimistic(self) -> None:
         """Publish optimistic brightness update for the device."""
         if isinstance(self.device_or_group, CyncGroup):
             # For groups: sync_group_devices will be called in cole_dset_brightness()
@@ -261,9 +273,7 @@ class SetBrightnessCommand(DeviceCommand):
         elif g.mqtt_client is not None:
             await g.mqtt_client.update_brightness(self.device_or_group, self.brightness)
 
-    async def execute(self) -> tuple[asyncio.Event, list[CyncTCPDevice]] | None:
+    @override
+    async def execute(self) -> CommandExecuteResult:
         """Execute the actual set_brightness command."""
-        return cast(
-            "tuple[asyncio.Event, list[CyncTCPDevice]] | None",
-            await self.device_or_group.set_brightness(self.brightness),
-        )
+        return cast("CommandExecuteResult", await self.device_or_group.set_brightness(self.brightness))

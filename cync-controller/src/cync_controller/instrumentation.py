@@ -9,7 +9,7 @@ from __future__ import annotations
 import functools
 import time
 from collections.abc import Callable, Coroutine
-from typing import Any, ParamSpec, TypeVar
+from typing import TYPE_CHECKING, ParamSpec, TypeVar
 
 __all__ = [
     "measure_time",
@@ -19,6 +19,9 @@ __all__ = [
 
 P = ParamSpec("P")
 T = TypeVar("T")
+
+if TYPE_CHECKING:
+    from cync_controller.logging_abstraction import CyncLogger
 
 
 def measure_time(start_time: float) -> float:
@@ -82,7 +85,7 @@ def timed(operation_name: str | None = None) -> Callable[[Callable[P, T]], Calla
 
 def timed_async(
     operation_name: str | None = None,
-) -> Callable[[Callable[P, Coroutine[Any, Any, T]]], Callable[P, Coroutine[Any, Any, T]]]:
+) -> Callable[[Callable[P, Coroutine[object, object, T]]], Callable[P, Coroutine[object, object, T]]]:
     """Decorator for timing async functions with configurable threshold warnings.
 
     Logs execution time and warns if operation exceeds configured threshold.
@@ -100,8 +103,8 @@ def timed_async(
     """
 
     def decorator(
-        func: Callable[P, Coroutine[Any, Any, T]],
-    ) -> Callable[P, Coroutine[Any, Any, T]]:
+        func: Callable[P, Coroutine[object, object, T]],
+    ) -> Callable[P, Coroutine[object, object, T]]:
         @functools.wraps(func)
         async def wrapper(*args: P.args, **kwargs: P.kwargs) -> T:
             # Import here to avoid circular dependency
@@ -113,16 +116,14 @@ def timed_async(
 
             # Skip timing if performance tracking is disabled
             if not CYNC_PERF_TRACKING:
-                result: T = await func(*args, **kwargs)
-                return result
+                return await func(*args, **kwargs)
 
             logger = get_logger(__name__)
             op_name = operation_name or func.__name__
 
             start_time = time.perf_counter()
             try:
-                result: T = await func(*args, **kwargs)
-                return result
+                return await func(*args, **kwargs)
             finally:
                 elapsed_ms = measure_time(start_time)
                 _log_timing(logger, op_name, elapsed_ms, CYNC_PERF_THRESHOLD_MS)
@@ -132,7 +133,7 @@ def timed_async(
     return decorator
 
 
-def _log_timing(logger: Any, operation_name: str, elapsed_ms: float, threshold_ms: int):
+def _log_timing(logger: CyncLogger, operation_name: str, elapsed_ms: float, threshold_ms: int) -> None:
     """Log timing information with appropriate level based on threshold.
 
     Args:

@@ -164,10 +164,9 @@ class TestCyncTCPDevice:
         tcp_device = CyncTCPDevice(reader=stream_reader, writer=stream_writer, address="192.168.1.100")
         tcp_device.closing = False
 
+        # Intentionally pass wrong type to test error handling
+        invalid_data = cast(bytes, cast(object, "not bytes"))
         with pytest.raises(TypeError, match="Data must be bytes"):
-            # Intentionally pass wrong type to test error handling
-            # Use cast via object to indicate this is intentional for testing
-            invalid_data = cast(bytes, cast(object, "not bytes"))
             _ = await tcp_device.write(invalid_data)
 
     @pytest.mark.asyncio

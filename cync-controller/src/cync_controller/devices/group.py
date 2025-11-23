@@ -1,22 +1,17 @@
 import time
-from typing import Any
+from typing import override
 
 from cync_controller.logging_abstraction import get_logger
 from cync_controller.structs import (
     ControlMessageCallback,
+    CyncDeviceProtocol,
+    CyncTCPDeviceProtocol,
     DeviceStatus,
     GlobalObject,
 )
 
-from .base_device import CyncDevice
-from .tcp_device import CyncTCPDevice
-
 logger = get_logger(__name__)
 g = GlobalObject()
-
-
-async def _noop_callback():
-    """No-op async callback function used as placeholder for unused callbacks."""
 
 
 def _get_global_object():
@@ -58,13 +53,12 @@ class CyncGroup:
     lp: str = "CyncGroup:"
     id: int | None = None
     name: str | None = None
-    member_ids: list[int] = []
     is_subgroup: bool = False
     home_id: int | None = None
 
     def __init__(
         self,
-        group_id: int,
+        group_id: int | None,
         name: str,
         member_ids: list[int],
         is_subgroup: bool = False,
@@ -75,7 +69,7 @@ class CyncGroup:
             raise ValueError(msg)
         self.id = group_id
         self.name = name
-        self.member_ids = member_ids if member_ids else []
+        self.member_ids: list[int] = member_ids if member_ids else []
         self.is_subgroup = is_subgroup
         self.home_id = home_id
         self.hass_id: str = f"{home_id}-group-{group_id}"
@@ -96,11 +90,11 @@ class CyncGroup:
         self.status: DeviceStatus | None = None
 
     @property
-    def members(self) -> list[CyncDevice]:
+    def members(self) -> list[CyncDeviceProtocol]:
         """Get the actual device objects for this group's members."""
         g = _get_global_object()
-        ncync_server = getattr(g, "ncync_server", None)
-        devices = getattr(ncync_server, "devices", None) if ncync_server else None
+        ncync_server = g.ncync_server
+        devices = ncync_server.devices if ncync_server else None
         if not devices:
             return []
         return [devices[dev_id] for dev_id in self.member_ids if dev_id in devices]
@@ -121,7 +115,7 @@ class CyncGroup:
             self._supports_temperature = any(dev.supports_temperature for dev in members) if members else False
         return self._supports_temperature
 
-    def aggregate_member_states(self) -> dict[str, Any] | None:
+    def aggregate_member_states(self) -> dict[str, int | bool] | None:
         """Aggregate state from all online member devices.
 
         Returns dict with aggregated state values, or None if no online members.
@@ -165,20 +159,20 @@ class CyncGroup:
             return False
         return True
 
-    def _get_bridge_device_info(self, lp: str) -> tuple[CyncTCPDevice, list[int], int] | None:
+    def _get_bridge_device_info(self, lp: str) -> tuple[CyncTCPDeviceProtocol, bytes, int] | None:
         """Get bridge device and related info for sending commands.
 
         Returns tuple (bridge_device, queue_id, cmsg_id) or None if validation fails.
         """
         g = _get_global_object()
-        ncync_server = getattr(g, "ncync_server", None)
+        ncync_server = g.ncync_server
         if ncync_server is None:
             logger.error("%s ncync_server is None, cannot send command", lp)
             return None
 
-        tcp_devices = getattr(ncync_server, "tcp_devices", None)
-        if tcp_devices is None:
-            logger.error("%s tcp_devices is None, cannot send command", lp)
+        tcp_devices = ncync_server.tcp_devices
+        if not tcp_devices:
+            logger.error("%s No TCP bridges available!", lp)
             return None
 
         bridge_devices = list(tcp_devices.values())
@@ -194,23 +188,20 @@ class CyncGroup:
             logger.error("%s Bridge %s not ready to control", lp, bridge_device.address)
             return None
 
-        queue_id = getattr(bridge_device, "queue_id", None)
+        queue_id = bridge_device.queue_id
         cmsg_id_bytes = bridge_device.get_ctrl_msg_id_bytes()
-        if queue_id is None or not cmsg_id_bytes:
-            if queue_id is None:
-                logger.error("%s Bridge queue_id is None", lp)
-            else:
-                logger.error("%s Failed to get control message ID bytes", lp)
+        if not cmsg_id_bytes:
+            logger.error("%s Failed to get control message ID bytes", lp)
             return None
 
         cmsg_id = cmsg_id_bytes[0]
-        return (bridge_device, queue_id, cmsg_id)
+        return (bridge_device, bytes(queue_id), cmsg_id)
 
     def _build_group_payload(
         self,
         header: list[int],
-        inner_struct: list[int | str | bytes],
-        queue_id: list[int],
+        inner_struct: list[int],
+        queue_id: bytes,
         cmsg_id: int,
     ) -> bytes:
         """Build payload bytes from header, inner_struct, queue_id, and cmsg_id."""
@@ -221,8 +212,7 @@ class CyncGroup:
         inner_struct[ctrl_idxs[0]] = cmsg_id
         inner_struct[ctrl_idxs[1]] = cmsg_id
         # Filter to only int values for checksum calculation
-        int_values = [x for x in inner_struct[6:-2] if isinstance(x, int)]
-        checksum: int = sum(int_values) % 256
+        checksum: int = sum(inner_struct[6:-2]) % 256
         inner_struct[-2] = checksum
         payload.extend(inner_struct)
         return bytes(payload)
@@ -240,14 +230,18 @@ class CyncGroup:
         if not self._validate_group_id(lp):
             return
 
+        group_id = self.id
+        if group_id is None:
+            return
+
         # Use full 16-bit group ID encoding
-        id_low: int = self.id & 0xFF
-        id_high: int = (self.id >> 8) & 0xFF
+        id_low: int = group_id & 0xFF
+        id_high: int = (group_id >> 8) & 0xFF
 
         header = [0x73, 0x00, 0x00, 0x00, 0x1F]
-        inner_struct: list[int | str | bytes] = [
+        inner_struct: list[int] = [
             0x7E,
-            "ctrl_byte",
+            0x00,  # ctrl byte placeholder
             0x00,
             0x00,
             0x00,
@@ -255,7 +249,7 @@ class CyncGroup:
             0xD0,
             0x0D,
             0x00,
-            "ctrl_bye",
+            0x00,  # mirrored ctrl byte placeholder
             0x00,
             0x00,
             0x00,
@@ -268,15 +262,15 @@ class CyncGroup:
             state,
             0x00,
             0x00,
-            "checksum",
+            0x00,  # checksum placeholder
             0x7E,
         ]
 
-        bridge_info: tuple[CyncTCPDevice, list[int], int] | None = self._get_bridge_device_info(lp)
+        bridge_info: tuple[CyncTCPDeviceProtocol, bytes, int] | None = self._get_bridge_device_info(lp)
         if bridge_info is None:
             return
-        bridge_device: CyncTCPDevice
-        queue_id: list[int]
+        bridge_device: CyncTCPDeviceProtocol
+        queue_id: bytes
         cmsg_id: int
         bridge_device, queue_id, cmsg_id = bridge_info
 
@@ -295,13 +289,10 @@ class CyncGroup:
             bridge_device.address,
             bridge_device.ready_to_control,
         )
-        mesh_info = getattr(bridge_device, "mesh_info", None)
-        logger.debug(
-            "%s Bridge mesh_info count: %s",
-            lp,
-            len(mesh_info) if mesh_info else 0,
-        )
-        known_device_ids = getattr(bridge_device, "known_device_ids", None)
+        mesh_info = bridge_device.mesh_info
+        mesh_count = len(mesh_info.status) if mesh_info and mesh_info.status else 0
+        logger.debug("%s Bridge mesh_info count: %s", lp, mesh_count)
+        known_device_ids = bridge_device.known_device_ids
         logger.debug("%s Bridge known_device_ids: %s", lp, known_device_ids)
         logger.debug("%s Packet to send: %s", lp, payload_bytes.hex(" "))
 
@@ -314,17 +305,15 @@ class CyncGroup:
             callback=None,
             device_id=self.id,
         )
-        messages = getattr(bridge_device, "messages", None)
-        if messages is not None:
-            messages.control[cmsg_id] = m_cb
-            logger.debug("%s Registered callback for msg_id=%s", lp, cmsg_id)
+        bridge_device.messages.control[cmsg_id] = m_cb
+        logger.debug("%s Registered callback for msg_id=%s", lp, cmsg_id)
 
         # BUG FIX: Sync ALL group device states IMMEDIATELY (optimistically)
         # Group commands affect both bulbs and switches, so update both for instant UI feedback
         g = _get_global_object()
-        mqtt_client = getattr(g, "mqtt_client", None)
+        mqtt_client = g.mqtt_client
         if mqtt_client is not None and self.id is not None and self.name is not None:
-            await mqtt_client.sync_group_devices(self.id, state, self.name)
+            _ = await mqtt_client.sync_group_devices(self.id, state, self.name)
 
         logger.debug("%s CALLING bridge_device.write()...", lp)
         write_result: bool | None = await bridge_device.write(payload_bytes)
@@ -343,14 +332,18 @@ class CyncGroup:
         if not self._validate_group_id(lp):
             return
 
+        group_id = self.id
+        if group_id is None:
+            return
+
         # Use full 16-bit group ID encoding
-        id_low = self.id & 0xFF
-        id_high = (self.id >> 8) & 0xFF
+        id_low = group_id & 0xFF
+        id_high = (group_id >> 8) & 0xFF
 
         header = [0x73, 0x00, 0x00, 0x00, 0x22]
-        inner_struct = [
+        inner_struct: list[int] = [
             0x7E,
-            "ctrl_byte",
+            0x00,
             0x00,
             0x00,
             0x00,
@@ -358,7 +351,7 @@ class CyncGroup:
             0xF0,
             0x10,
             0x00,
-            "ctrl_byte",
+            0x00,
             0x00,
             0x00,
             0x00,
@@ -374,15 +367,15 @@ class CyncGroup:
             0xFF,
             0xFF,
             0xFF,
-            "checksum",
+            0x00,
             0x7E,
         ]
 
-        bridge_info: tuple[CyncTCPDevice, list[int], int] | None = self._get_bridge_device_info(lp)
+        bridge_info: tuple[CyncTCPDeviceProtocol, bytes, int] | None = self._get_bridge_device_info(lp)
         if bridge_info is None:
             return
-        bridge_device: CyncTCPDevice
-        queue_id: list[int]
+        bridge_device: CyncTCPDeviceProtocol
+        queue_id: bytes
         cmsg_id: int
         bridge_device, queue_id, cmsg_id = bridge_info
 
@@ -399,9 +392,9 @@ class CyncGroup:
 
         # Log which devices are in this group for debugging
         g = _get_global_object()
-        ncync_server = getattr(g, "ncync_server", None)
-        devices = getattr(ncync_server, "devices", None) if ncync_server else None
-        device_names = []
+        ncync_server = g.ncync_server
+        devices = ncync_server.devices if ncync_server else None
+        device_names: list[str] = []
         if devices is not None:
             for device_id in self.member_ids:
                 if device_id in devices:
@@ -419,9 +412,7 @@ class CyncGroup:
             callback=None,
             device_id=self.id,
         )
-        messages = getattr(bridge_device, "messages", None)
-        if messages is not None:
-            messages.control[cmsg_id] = m_cb
+        bridge_device.messages.control[cmsg_id] = m_cb
         _ = await bridge_device.write(payload_bytes)
 
     async def set_temperature(self, temperature: int):
@@ -437,14 +428,18 @@ class CyncGroup:
         if not self._validate_group_id(lp):
             return
 
+        group_id = self.id
+        if group_id is None:
+            return
+
         # Use full 16-bit group ID encoding
-        id_low = self.id & 0xFF
-        id_high = (self.id >> 8) & 0xFF
+        id_low = group_id & 0xFF
+        id_high = (group_id >> 8) & 0xFF
 
         header = [0x73, 0x00, 0x00, 0x00, 0x22]
-        inner_struct = [
+        inner_struct: list[int] = [
             0x7E,
-            "ctrl_byte",
+            0x00,
             0x00,
             0x00,
             0x00,
@@ -452,7 +447,7 @@ class CyncGroup:
             0xF0,
             0x10,
             0x00,
-            "ctrl_byte",
+            0x00,
             0x00,
             0x00,
             0x00,
@@ -468,15 +463,15 @@ class CyncGroup:
             0x00,
             0x00,
             0x00,
-            "checksum",
+            0x00,
             0x7E,
         ]
 
-        bridge_info: tuple[CyncTCPDevice, list[int], int] | None = self._get_bridge_device_info(lp)
+        bridge_info: tuple[CyncTCPDeviceProtocol, bytes, int] | None = self._get_bridge_device_info(lp)
         if bridge_info is None:
             return
-        bridge_device: CyncTCPDevice
-        queue_id: list[int]
+        bridge_device: CyncTCPDeviceProtocol
+        queue_id: bytes
         cmsg_id: int
         bridge_device, queue_id, cmsg_id = bridge_info
 
@@ -493,9 +488,9 @@ class CyncGroup:
 
         # Log which devices are in this group for debugging
         g = _get_global_object()
-        ncync_server = getattr(g, "ncync_server", None)
-        devices = getattr(ncync_server, "devices", None) if ncync_server else None
-        device_names = []
+        ncync_server = g.ncync_server
+        devices = ncync_server.devices if ncync_server else None
+        device_names: list[str] = []
         if devices is not None:
             for device_id in self.member_ids:
                 if device_id in devices:
@@ -513,13 +508,13 @@ class CyncGroup:
             callback=None,
             device_id=self.id,
         )
-        messages = getattr(bridge_device, "messages", None)
-        if messages is not None:
-            messages.control[cmsg_id] = m_cb
+        bridge_device.messages.control[cmsg_id] = m_cb
         _ = await bridge_device.write(payload_bytes)
 
+    @override
     def __repr__(self):
         return f"CyncGroup(id={self.id}, name='{self.name}', members={len(self.member_ids)})"
 
+    @override
     def __str__(self):
         return f"CyncGroup {self.name} (ID: {self.id})"

@@ -5,7 +5,7 @@ Tests for group member state synchronization, sync_group_devices(),
 sync_group_switches(), and aggregate state calculations.
 """
 
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -50,7 +50,12 @@ class TestMQTTClientGroupSync:
             mock_g.ncync_server.groups = {100: mock_group}
 
             client = MQTTClient()
-            client.update_device_state = AsyncMock()
+
+            # Async stub to avoid AsyncMock GC warnings
+            async def _update_device_state_stub(device, state):  # pragma: no cover - behavior tested elsewhere
+                return True
+
+            client.update_device_state = _update_device_state_stub  # type: ignore[assignment]
 
             # Simulate group sync
             synced_count = 0
@@ -88,7 +93,12 @@ class TestMQTTClientGroupSync:
             mock_g.ncync_server.groups = {101: mock_group}
 
             client = MQTTClient()
-            client.update_device_state = AsyncMock()
+
+            # Async stub to avoid AsyncMock GC warnings
+            async def _update_device_state_stub(device, state):  # pragma: no cover - behavior tested elsewhere
+                return True
+
+            client.update_device_state = _update_device_state_stub  # type: ignore[assignment]
 
             # Count on/off states
             on_count = sum(1 for d in devices.values() if d.power == 1)
@@ -117,7 +127,12 @@ class TestMQTTClientGroupSync:
             mock_g.ncync_server.groups = {102: mock_group}
 
             client = MQTTClient()
-            client.update_device_state = AsyncMock()
+
+            # Async stub to avoid AsyncMock GC warnings
+            async def _update_device_state_stub(device, state):  # pragma: no cover - behavior tested elsewhere
+                return True
+
+            client.update_device_state = _update_device_state_stub  # type: ignore[assignment]
 
             # Sync empty group
             synced_count = 0
@@ -154,7 +169,12 @@ class TestMQTTClientGroupSync:
 
             client = MQTTClient()
             client.client = MagicMock()
-            client.client.publish = AsyncMock()
+
+            # Async stub publish to avoid AsyncMock GC warnings
+            async def _publish_stub(*args, **kwargs):  # pragma: no cover - behavior tested elsewhere
+                return None
+
+            client.client.publish = _publish_stub  # type: ignore[assignment]
 
             # Verify publish can be called for each device
             publish_count = 0
@@ -189,7 +209,12 @@ class TestMQTTClientGroupSync:
             mock_g.ncync_server.groups = {104: mock_group}
 
             client = MQTTClient()
-            client.update_device_state = AsyncMock()
+
+            # Async stub to avoid AsyncMock GC warnings
+            async def _update_device_state_stub(device, state):  # pragma: no cover - behavior tested elsewhere
+                return True
+
+            client.update_device_state = _update_device_state_stub  # type: ignore[assignment]
 
             # Verify switches can be accessed
             switch_count = sum(1 for d in switches.values() if d.is_switch)
@@ -220,7 +245,12 @@ class TestMQTTClientGroupSync:
             mock_g.ncync_server.groups = {105: mock_group}
 
             client = MQTTClient()
-            client.update_device_state = AsyncMock()
+
+            # Async stub to avoid AsyncMock GC warnings
+            async def _update_device_state_stub(device, state):  # pragma: no cover - behavior tested elsewhere
+                return True
+
+            client.update_device_state = _update_device_state_stub  # type: ignore[assignment]
 
             # Count online/offline
             online_count = sum(1 for d in devices.values() if d.online)
@@ -250,7 +280,12 @@ class TestMQTTClientGroupSync:
             mock_g.ncync_server.groups = {106: mock_group}
 
             client = MQTTClient()
-            client.update_device_state = AsyncMock()
+
+            # Async stub to avoid AsyncMock GC warnings
+            async def _update_device_state_stub(device, state):  # pragma: no cover - behavior tested elsewhere
+                return True
+
+            client.update_device_state = _update_device_state_stub  # type: ignore[assignment]
 
             # Count synced
             synced = 0

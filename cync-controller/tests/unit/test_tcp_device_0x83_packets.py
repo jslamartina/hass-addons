@@ -8,7 +8,7 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from cync_controller.devices import CyncDevice
+from cync_controller.devices.base_device import CyncDevice
 
 
 class TestCyncTCPDevicePacketParsing0x83Advanced:

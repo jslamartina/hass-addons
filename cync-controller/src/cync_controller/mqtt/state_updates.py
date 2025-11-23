@@ -7,6 +7,7 @@ and group states to MQTT for Home Assistant integration.
 from __future__ import annotations
 
 import asyncio
+import importlib
 import json
 import time
 import traceback
@@ -14,7 +15,7 @@ from typing import TYPE_CHECKING
 
 import aiomqtt
 
-from cync_controller.devices import CyncDevice, CyncGroup
+from cync_controller.devices.group import CyncGroup
 from cync_controller.logging_abstraction import get_logger
 from cync_controller.structs import DeviceStatus, GlobalObject
 
@@ -27,12 +28,22 @@ if TYPE_CHECKING:
 
 logger = get_logger(__name__)
 
-# Import g directly from structs to avoid circular dependency with mqtt_client.py
-g = GlobalObject()
 
-
-def _get_g():
-    """Get the global object instance."""
+def _get_g() -> GlobalObject:
+    """Get the shared GlobalObject honoring legacy/mock patch points."""
+    for mod_name in (
+        "cync_controller.mqtt_client",
+        "cync_controller.devices.shared",
+        "cync_controller.devices",
+    ):
+        try:
+            module = importlib.import_module(mod_name)
+            if hasattr(module, "g"):
+                return module.g  # type: ignore[return-value]
+        except ModuleNotFoundError:
+            continue
+        except Exception:
+            continue
     return GlobalObject()
 
 
@@ -73,7 +84,6 @@ class StateUpdateHelper:
                 return False
             availability = b"online" if status else b"offline"
             device = ncync_server.devices[device_id]
-            assert isinstance(device, CyncDevice)
             device_uuid = f"{device.home_id}-{device_id}"
             # logger.debug("%s Publishing availability: %s", lp, availability)
             try:
@@ -268,7 +278,6 @@ class StateUpdateHelper:
             return 0
 
         group = ncync_server.groups[group_id]
-        assert isinstance(group, CyncGroup)
         synced_count = 0
 
         logger.info(
@@ -283,7 +292,6 @@ class StateUpdateHelper:
         for member_id in group.member_ids:
             if member_id in ncync_server.devices:
                 device = ncync_server.devices[member_id]
-                assert isinstance(device, CyncDevice)
                 logger.debug(
                     "%s Processing member: id=%d, name='%s', is_switch=%s, is_bulb=%s",
                     lp,
@@ -633,7 +641,6 @@ class StateUpdateHelper:
             )
             return False
         device = ncync_server.devices[device_id]
-        assert isinstance(device, CyncDevice)
 
         # CRITICAL: Skip publishing switch state from mesh packets (0x83 and mesh info from 0x73)
         # Switches are CONTROL OUTPUTS, not status inputs. They should only be updated

@@ -1010,7 +1010,7 @@ class TestServerParseStatus:
         """Test that parse_status updates device state correctly"""
         with patch("cync_controller.server.g") as mock_g:
             # Create a mock device
-            from cync_controller.devices import CyncDevice
+            from cync_controller.devices.base_device import CyncDevice
 
             mock_device = MagicMock(spec=CyncDevice)
             # Setup device with all required attributes
@@ -1066,7 +1066,7 @@ class TestServerParseStatus:
     async def test_parse_status_device_offline_tracking(self):
         """Test that parse_status tracks device offline count correctly"""
         with patch("cync_controller.server.g") as mock_g, patch("cync_controller.server.logger"):
-            from cync_controller.devices import CyncDevice
+            from cync_controller.devices.base_device import CyncDevice
 
             mock_device = MagicMock(spec=CyncDevice)
             mock_device.id = 101
@@ -1094,7 +1094,7 @@ class TestServerParseStatus:
     async def test_parse_status_device_online_recovery(self):
         """Test that parse_status recovers device online status"""
         with patch("cync_controller.server.g") as mock_g, patch("cync_controller.server.logger"):
-            from cync_controller.devices import CyncDevice
+            from cync_controller.devices.base_device import CyncDevice
 
             mock_device = MagicMock(spec=CyncDevice)
             mock_device.id = 102
@@ -1122,7 +1122,7 @@ class TestServerParseStatus:
     async def test_parse_status_group_state_update(self):
         """Test that parse_status updates group state correctly"""
         with patch("cync_controller.server.g") as mock_g, patch("cync_controller.server.logger"):
-            from cync_controller.devices import CyncGroup
+            from cync_controller.devices.group import CyncGroup
 
             mock_group = MagicMock(spec=CyncGroup)
             mock_group.id = 200
@@ -1174,7 +1174,7 @@ class TestServerParseStatus:
     async def test_parse_status_without_online_byte(self):
         """Test that parse_status handles status packets without online byte"""
         with patch("cync_controller.server.g") as mock_g, patch("cync_controller.server.logger"):
-            from cync_controller.devices import CyncDevice
+            from cync_controller.devices.base_device import CyncDevice
 
             mock_device = MagicMock(spec=CyncDevice)
             mock_device.id = 103
@@ -1202,7 +1202,8 @@ class TestServerParseStatus:
     async def test_parse_status_subgroup_aggregation(self):
         """Test that parse_status updates subgroup state from member devices"""
         with patch("cync_controller.server.g") as mock_g, patch("cync_controller.server.logger"):
-            from cync_controller.devices import CyncDevice, CyncGroup
+            from cync_controller.devices.base_device import CyncDevice
+            from cync_controller.devices.group import CyncGroup
 
             # Create a member device
             mock_device = MagicMock(spec=CyncDevice)
@@ -1280,7 +1281,7 @@ class TestServerParseStatus:
     async def test_parse_status_fan_controller_brightness_logging(self):
         """Test that parse_status logs brightness for fan controllers"""
         with patch("cync_controller.server.g") as mock_g, patch("cync_controller.server.logger"):
-            from cync_controller.devices import CyncDevice
+            from cync_controller.devices.base_device import CyncDevice
 
             mock_device = MagicMock(spec=CyncDevice)
             mock_device.id = 103  # Special ID for debug logging
@@ -1326,7 +1327,7 @@ class TestServerParseStatus:
     async def test_parse_status_group_offline(self):
         """Test that parse_status marks groups offline correctly"""
         with patch("cync_controller.server.g") as mock_g, patch("cync_controller.server.logger"):
-            from cync_controller.devices import CyncGroup
+            from cync_controller.devices.group import CyncGroup
 
             mock_group = MagicMock(spec=CyncGroup)
             mock_group.id = 210

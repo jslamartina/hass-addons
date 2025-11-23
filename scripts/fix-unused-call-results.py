@@ -76,7 +76,6 @@ def fix_unused_call_result(file_path: Path, line_num: int) -> bool:
         return False
 
     line = lines[line_num - 1]
-    original_line = line
 
     # Skip if already has '_ = ' prefix
     stripped = line.lstrip()

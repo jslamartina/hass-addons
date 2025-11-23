@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import time
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 from cync_controller.logging_abstraction import get_logger
 
@@ -42,10 +42,8 @@ class TCPConnectionManager:
                     break
 
                 # Update heartbeat if we've received data recently
-                if (
-                    hasattr(self.tcp_device, "last_data_received")
-                    and current_time - self.tcp_device.last_data_received < self.heartbeat_interval
-                ):
+                last_data: float = getattr(self.tcp_device, "last_data_received", 0.0)
+                if last_data and current_time - last_data < self.heartbeat_interval:
                     self.last_heartbeat = current_time
 
             except asyncio.CancelledError:
@@ -57,10 +55,10 @@ class TCPConnectionManager:
         """Update the last heartbeat timestamp."""
         self.last_heartbeat = time.time()
 
-    def get_connection_stats(self):
+    def get_connection_stats(self) -> dict[str, float | bool]:
         """Get connection statistics."""
         uptime = time.time() - self.connection_start_time
-        result: dict[str, Any] = {
+        result: dict[str, float | bool] = {
             "uptime_seconds": uptime,
             "last_heartbeat": self.last_heartbeat,
             "is_healthy": time.time() - self.last_heartbeat < self.connection_timeout,

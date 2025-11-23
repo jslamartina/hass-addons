@@ -85,7 +85,7 @@ cloud_relay:
   enabled: false
 ```
 
-### Behavior
+### Mode 1 Behavior
 
 - Default mode - add-on acts as local Cync cloud replacement
 - No cloud communication
@@ -107,7 +107,7 @@ cloud_relay:
   debug_packet_logging: false
 ```
 
-### Behavior
+### Mode 2 Behavior
 
 - Devices connect to add-on, add-on forwards to real cloud
 - Transparent proxy - devices work as if connected directly to cloud
@@ -130,7 +130,7 @@ cloud_relay:
   debug_packet_logging: true
 ```
 
-### Behavior
+### Mode 3 Behavior
 
 - Same as Mode 2, but logs all packet details
 - Useful for protocol analysis and debugging
@@ -160,7 +160,7 @@ cloud_relay:
   debug_packet_logging: true
 ```
 
-### Behavior
+### Mode 4 Behavior
 
 - Devices connect to add-on
 - Packets are parsed and logged
@@ -183,7 +183,7 @@ cloud_relay:
   disable_ssl_verification: true
 ```
 
-### Behavior
+### Mode 5 Behavior
 
 - Same as Mode 3, but disables SSL certificate verification
 - **⚠️ INSECURE** - vulnerable to MITM attacks
@@ -191,7 +191,7 @@ cloud_relay:
 
 ### Security Warning
 
-```
+```text
 ============================================================
 ⚠️  SSL VERIFICATION DISABLED - DEBUG MODE ACTIVE ⚠️
 This mode should ONLY be used for local debugging!
@@ -216,7 +216,7 @@ cloud_relay:
   debug_packet_logging: true
 ```
 
-### Workflow
+### Protocol Analysis Workflow
 
 1. Enable relay with debug logging
 2. Trigger device actions in Cync app or Home Assistant
@@ -238,7 +238,7 @@ cloud_relay:
   debug_packet_logging: true
 ```
 
-### Workflow
+### Debugging Workflow
 
 1. Enable relay mode
 2. Reproduce the issue
@@ -263,7 +263,7 @@ cloud_relay:
   forward_to_cloud: false
 ```
 
-### Workflow
+### Offline Testing Workflow
 
 1. Enable relay without forwarding
 2. Test all device functions
@@ -557,4 +557,3 @@ A: No. Authentication happens during device setup via the cloud API (not the TCP
 
 **Last Updated:** October 2025
 **Version:** 0.0.4.0
-````

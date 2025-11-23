@@ -6,7 +6,7 @@ import asyncio
 import os
 import uuid
 from pathlib import Path
-from typing import Any
+from typing import ClassVar, TypedDict
 
 import aiohttp
 import uvicorn
@@ -27,6 +27,11 @@ from cync_controller.structs import GlobalObject
 
 g = GlobalObject()
 logger = get_logger(__name__)
+
+
+class APIResponse(TypedDict):
+    success: bool
+    message: str
 
 
 class OTPRequest(BaseModel):
@@ -73,7 +78,7 @@ def _masked_http_exception(operation: str, exc: Exception, user_message: str) ->
 
 
 @app.get("/api/export/start")
-async def start_export() -> dict[str, Any]:
+async def start_export() -> APIResponse:
     """Start the device configuration export process."""
     ret_msg = "Export started successfully"
     if g.cloud_api is None:
@@ -87,7 +92,7 @@ async def start_export() -> dict[str, Any]:
                 return {"success": False, "message": ret_msg}
             ret_msg = "Failed to request OTP. Please check your credentials or network connection."
             return {"success": False, "message": ret_msg}
-        await g.cloud_api.export_config_file()
+        _ = await g.cloud_api.export_config_file()
     except Exception as e:
         op_name = "Export start failed"
         raise _masked_http_exception(
@@ -100,10 +105,12 @@ async def start_export() -> dict[str, Any]:
 
 
 @app.get("/api/export/otp/request")
-async def request_otp() -> dict[str, Any]:
+async def request_otp() -> APIResponse:
     """Request OTP for export."""
     ret_msg = "OTP requested successfully"
     try:
+        if g.cloud_api is None:
+            return {"success": False, "message": "Cloud API not initialized"}
         otp_succ = await g.cloud_api.request_otp()
     except Exception as e:
         op_name = "OTP request failed"
@@ -120,7 +127,7 @@ async def request_otp() -> dict[str, Any]:
 
 
 @app.post("/api/restart")
-async def restart() -> dict[str, Any]:
+async def restart() -> APIResponse:
     """Restart the add-on via Supervisor API."""
     lp = "ExportServer:restart:"
     supervisor_token = os.environ.get("SUPERVISOR_TOKEN")
@@ -184,7 +191,7 @@ async def restart() -> dict[str, Any]:
 
 
 @app.post("/api/export/otp/submit")
-async def submit_otp(otp_request: OTPRequest) -> dict[str, Any]:
+async def submit_otp(otp_request: OTPRequest) -> APIResponse:
     """Submit OTP code and complete the export process."""
     ret_msg = "Export completed successfully"
     export_succ = False
@@ -229,20 +236,20 @@ async def download_config():
 class ExportServer:
     """Singleton class managing the FastAPI export server lifecycle."""
 
-    lp = "ExportServer:"
+    lp: ClassVar[str] = "ExportServer:"
     enabled: bool = False
     running: bool = False
     start_task: asyncio.Task[None] | None = None
-    _instance: ExportServer | None = None
+    _instance: ClassVar[ExportServer | None] = None
 
-    def __new__(cls, *args: object, **kwargs: object) -> ExportServer:
+    def __new__(cls, *_args: object, **_kwargs: object) -> ExportServer:
         if cls._instance is None:
             cls._instance = super().__new__(cls)
         return cls._instance
 
-    def __init__(self) -> None:
-        self.app = app
-        self.uvi_server = uvicorn.Server(
+    def __init__(self, *_args: object, **_kwargs: object) -> None:
+        self.app: FastAPI = app
+        self.uvi_server: uvicorn.Server = uvicorn.Server(
             config=uvicorn.Config(
                 app,
                 host=CYNC_SRV_HOST,
@@ -267,7 +274,7 @@ class ExportServer:
         self.running = True
         # Publish MQTT message indicating the export server is running
         if g.mqtt_client:
-            await g.mqtt_client.publish(f"{g.env.mqtt_topic}/status/bridge/export_server/running", b"ON")
+            _ = await g.mqtt_client.publish(f"{g.env.mqtt_topic}/status/bridge/export_server/running", b"ON")
         try:
             await self.uvi_server.serve()
         except asyncio.CancelledError:
@@ -296,7 +303,7 @@ class ExportServer:
         finally:
             # Publish MQTT message indicating the export server is stopped
             if g.mqtt_client:
-                await g.mqtt_client.publish(
+                _ = await g.mqtt_client.publish(
                     f"{g.env.mqtt_topic}/status/bridge/export_server/running",
                     b"OFF",
                 )

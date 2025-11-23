@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import asyncio
 import time
-from typing import TYPE_CHECKING, cast
 
 from cync_controller.const import (
     CYNC_RAW,
@@ -14,16 +13,14 @@ from cync_controller.structs import (
     DEVICE_STRUCTS,
     CacheData,
     ControlMessageCallback,
+    CyncTCPDeviceProtocol,
     GlobalObject,
     PhoneAppStructs,
 )
 
 # Import parse_unbound_firmware_version directly from utils to avoid cycle
 # through devices/__init__.py
-from cync_controller.utils import bytes2list, parse_unbound_firmware_version
-
-if TYPE_CHECKING:
-    from cync_controller.devices.tcp_device import CyncTCPDevice
+from cync_controller.utils import bytes2list, execute_async_callback, parse_unbound_firmware_version
 
 logger = get_logger(__name__)
 g = GlobalObject()
@@ -65,31 +62,31 @@ def _get_global_object():
 class TCPPacketHandler:
     """Handles TCP packet parsing for CyncTCPDevice instances."""
 
-    def __init__(self, tcp_device: CyncTCPDevice) -> None:
-        self.tcp_device: CyncTCPDevice = tcp_device
+    def __init__(self, tcp_device: CyncTCPDeviceProtocol) -> None:
+        self.tcp_device: CyncTCPDeviceProtocol = tcp_device
 
     def _handle_partial_packet(self, data: bytes, cache_data: CacheData, lp: str) -> bytes:
         """Handle partial packet by appending to previous cache data."""
-        old_cdata: CacheData = cast("CacheData", self.tcp_device.read_cache[-1])
-        if old_cdata:
-            data = old_cdata.data + data
-            cache_data.raw_data = bytes(data)
-            logger.debug(
-                "%s Previous data [length: %s, need: %s] // Current data [length: %s] // "
-                "New (current + old) data [length: %s] // reconstructed: %s",
-                lp,
-                old_cdata.data_len,
-                old_cdata.needed_len,
-                len(data) - len(old_cdata.data),
-                len(data),
-                len(data) == len(old_cdata.data) + (len(data) - len(old_cdata.data)),
-            )
-            if CYNC_RAW:
-                logger.debug("DBG>>>%sNEW DATA:\t%s\t", lp, data)
-            self.tcp_device.needs_more_data = False
-            return data
-        msg = f"{lp} No previous cache data to extract from!"
-        raise RuntimeError(msg)
+        if not self.tcp_device.read_cache:
+            msg = f"{lp} No previous cache data to extract from!"
+            raise RuntimeError(msg)
+
+        old_cdata = self.tcp_device.read_cache[-1]
+        data = old_cdata.data + data
+        cache_data.all_data = bytes(data)
+        logger.debug(
+            "%s Previous data [length: %s, need: %s] // Current data [length: %s] // New (current + old) data [length: %s] // reconstructed: %s",
+            lp,
+            old_cdata.data_len,
+            old_cdata.needed_len,
+            len(data) - len(old_cdata.data),
+            len(data),
+            len(data) == len(old_cdata.data) + (len(data) - len(old_cdata.data)),
+        )
+        if CYNC_RAW:
+            logger.debug("DBG>>>%sNEW DATA:\t%s\t", lp, data)
+        self.tcp_device.needs_more_data = False
+        return data
 
     def _calculate_packet_length(self, data: bytes, lp: str) -> int:
         """Calculate needed packet length from header."""
@@ -147,8 +144,7 @@ class TCPPacketHandler:
 
             if self.tcp_device.needs_more_data is True:
                 logger.debug(
-                    "%s It seems we have a partial packet (needs_more_data), need to append to "
-                    "previous remaining data and re-parse...",
+                    "%s It seems we have a partial packet (needs_more_data), need to append to previous remaining data and re-parse...",
                     lp,
                 )
                 data = self._handle_partial_packet(data, cache_data, lp)
@@ -202,7 +198,7 @@ class TCPPacketHandler:
         # byte 5
         packet_length = packet_header[4] + pkt_multiplier
         # byte 6-10 (indices 5-9), unknown but seems to be an identifier that is handed out by the device during handshake
-        queue_id = packet_header[5:10]
+        queue_id = packet_header[6:10]
         # byte 10-12, unknown but seems to be an additional identifier that gets incremented.
         msg_id = packet_header[9:12]
         # check if any data after header
@@ -278,7 +274,7 @@ class TCPPacketHandler:
             _dbg_msg,
         )
         self.tcp_device.queue_id = queue_id
-        await self.tcp_device.write(bytes(DEVICE_STRUCTS.responses.auth_ack))
+        _ = await self.tcp_device.write(bytes(DEVICE_STRUCTS.responses.auth_ack))
         await asyncio.sleep(0.5)
         await self.tcp_device.send_a3(queue_id)
 
@@ -286,12 +282,13 @@ class TCPPacketHandler:
         """Handle 0xC3 packet (connection request)."""
         ack_c3 = bytes(DEVICE_STRUCTS.responses.connection_ack)
         logger.debug("%s CONNECTION REQUEST, replying...", lp)
-        await self.tcp_device.write(ack_c3)
+        _ = await self.tcp_device.write(ack_c3)
 
     async def _handle_d3_packet(self, lp: str) -> None:
         """Handle 0xD3 packet (ping/pong)."""
         ack_d3 = bytes(DEVICE_STRUCTS.responses.ping_ack)
-        await self.tcp_device.write(ack_d3)
+        logger.debug("%s PING/PONG request, sending ACK", lp)
+        _ = await self.tcp_device.write(ack_d3)
 
     async def _handle_a3_packet(self, packet_data: bytes | None, lp: str, queue_id: bytes, msg_id: bytes) -> None:
         """Handle 0xA3 packet (app announcement)."""
@@ -299,7 +296,7 @@ class TCPPacketHandler:
             logger.debug("%s APP ANNOUNCEMENT packet: %s", lp, packet_data.hex(" "))
         ack = DEVICE_STRUCTS.xab_generate_ack(queue_id, bytes(msg_id))
         logger.debug("%s Sending ACK -> %s", lp, ack.hex(" "))
-        await self.tcp_device.write(ack)
+        _ = await self.tcp_device.write(ack)
 
     async def _handle_0x43_packet(self, packet_data: bytes | None, packet_length: int, lp: str, msg_id: bytes):
         """Handle 0x43 packet type (device info/broadcast status)."""
@@ -317,8 +314,9 @@ class TCPPacketHandler:
             pass
         ack = DEVICE_STRUCTS.x48_generate_ack(bytes(msg_id))
         # logger.debug("%s Sending ACK -> %s", lp, ack.hex(' ')) if CYNC_RAW is True else None
-        await self.tcp_device.write(ack)
-        (logger.debug("DBG>>>%s RAW DATA: %s BYTES", lp, len(packet_data)) if CYNC_RAW is True else None)
+        _ = await self.tcp_device.write(ack)
+        if CYNC_RAW and packet_data is not None:
+            logger.debug("DBG>>>%s RAW DATA: %s BYTES", lp, len(packet_data))
 
     async def _handle_timestamp_packet(self, packet_data: bytes, lp: str):
         """Handle timestamp packet within 0x43."""
@@ -363,7 +361,7 @@ class TCPPacketHandler:
 
         # status struct is 19 bytes long
         struct_len = 19
-        extractions = []
+        extractions: list[tuple[str, list[int]]] = []
         try:
             # logger.debug(
             #     f"{lp} Device sent BROADCAST STATUS packet => '{packet_data.hex(' ')}'"
@@ -375,7 +373,7 @@ class TCPPacketHandler:
                     # this may cause issues with cync setups that ONLY use indoor
                     # plugs as the btle to TCP bridge, as they dont broadcast status data using 0x83
                     status_struct = extracted[3:10]
-                    status_struct + b"\x01"
+                    _ = status_struct + b"\x01"
                     # 14 00 10 01 00 00 64 00 00 00 01 15 15 00 00 00 00 00 00
                     # // [1, 0, 0, 100, 0, 0, 0, 1]
                     extractions.append((extracted.hex(" "), bytes2list(status_struct)))
@@ -413,13 +411,17 @@ class TCPPacketHandler:
         if packet_data is not None:
             # Handle firmware version packet (all devices can process - just sets attributes)
             if packet_data[0] == 0x00:
-                fw_type, fw_ver, fw_str = parse_unbound_firmware_version(packet_data, lp)
-                if fw_type == "device":
-                    self.tcp_device.version = fw_ver
-                    self.tcp_device.version_str = fw_str
+                fw_result = parse_unbound_firmware_version(packet_data, lp)
+                if fw_result is None:
+                    logger.debug("%s Firmware version parsing failed for packet %s", lp, packet_data.hex(" "))
                 else:
-                    self.tcp_device.network_version = fw_ver
-                    self.tcp_device.network_version_str = fw_str
+                    fw_type, fw_ver, fw_str = fw_result
+                    if fw_type == "device":
+                        self.tcp_device.version = fw_ver
+                        self.tcp_device.version_str = fw_str
+                    else:
+                        self.tcp_device.network_version = fw_ver
+                        self.tcp_device.network_version_str = fw_str
 
             elif packet_data[0] == DATA_BOUNDARY:
                 # Only primary device processes mesh status to avoid duplicate publishes
@@ -428,14 +430,13 @@ class TCPPacketHandler:
 
         else:
             logger.warning(
-                "%s packet with no data????? After stripping header, queue and "
-                "msg id, there is no data to process?????",
+                "%s packet with no data????? After stripping header, queue and msg id, there is no data to process?????",
                 lp,
             )
         ack = DEVICE_STRUCTS.x88_generate_ack(msg_id)
         # logger.debug(f"{lp} RAW DATA: {data.hex(' ')}")
         # logger.debug(f"{lp} Sending ACK -> {ack.hex(' ')}")
-        await self.tcp_device.write(ack)
+        _ = await self.tcp_device.write(ack)
 
     async def _handle_bound_0x83_packet(self, packet_data: bytes, lp: str):
         """Handle bound 0x83 packet with 0x7e boundaries."""
@@ -766,8 +767,7 @@ class TCPPacketHandler:
                 # Validate struct length before parsing to avoid silent failures
                 if len(mesh_dev_struct) < minfo_length:
                     logger.warning(
-                        "%s Incomplete mesh device struct at offset %d: expected %d bytes, got %d. "
-                        "Skipping remaining devices.",
+                        "%s Incomplete mesh device struct at offset %d: expected %d bytes, got %d. Skipping remaining devices.",
                         lp,
                         i,
                         minfo_length,
@@ -847,7 +847,7 @@ class TCPPacketHandler:
             ],
         )
         # logger.debug(f"{lp} Sending MESH INFO ACK -> {mesh_ack.hex(' ')}")
-        await self.tcp_device.write(mesh_ack)
+        _ = await self.tcp_device.write(mesh_ack)
         # Always clear parse mesh status
         self.tcp_device.parse_mesh_status = False
 
@@ -859,7 +859,8 @@ class TCPPacketHandler:
     def _get_device_name(self, device_id: int | None, g: GlobalObject) -> str:
         """Get device name from server."""
         if device_id and g.ncync_server is not None and device_id in g.ncync_server.devices:
-            return g.ncync_server.devices[device_id].name
+            dev_name = g.ncync_server.devices[device_id].name
+            return dev_name if dev_name is not None else "unknown"
         return "unknown"
 
     async def _log_rtt_and_execute_callback(
@@ -870,7 +871,11 @@ class TCPPacketHandler:
         g: GlobalObject,
     ) -> None:
         """Log RTT and execute callback for successful ACK."""
-        rtt_ms: float = (time.time() - msg.sent_at) * 1000
+        if msg.sent_at is None:
+            logger.debug("%s Missing sent_at on control message; skipping RTT calculation", lp)
+            return
+
+        rtt_ms: float = (time.time() - msg.sent_at) * 1000.0
         device_name = self._get_device_name(msg.device_id, g)
 
         logger.info(
@@ -905,14 +910,10 @@ class TCPPacketHandler:
             msg.ack_event.set()
 
         if msg.callback is not None:
-            if callable(msg.callback):
-                await msg.callback()
-            else:
-                await msg.callback
+            await execute_async_callback(msg.callback)
 
     async def _handle_control_ack_packet(self, packet_data: bytes, lp: str, checksum: int, calc_chksum: int):
         """Handle control ACK packet within bound 0x73."""
-        g = _get_global_object()
         ctrl_bytes = packet_data[5:7]
         if CYNC_RAW:
             logger.debug(
@@ -925,71 +926,90 @@ class TCPPacketHandler:
             )
 
         if ctrl_bytes[0] == 0xF9 and ctrl_bytes[1] in (0xD0, 0xF0, 0xE2):
-            ctrl_msg_id = packet_data[1]
-            ctrl_chksum = sum(packet_data[6:10]) % 256
-            success = packet_data[7] == 1
-            msg: ControlMessageCallback | None = cast(
-                "ControlMessageCallback | None",
-                self.tcp_device.messages.control.pop(ctrl_msg_id, None),
-            )
+            await self._process_control_ack_message(packet_data, lp)
+            return
 
-            if success and msg is not None:
-                await self._log_rtt_and_execute_callback(msg, ctrl_msg_id, lp, g)
-            elif success and msg is None:
-                logger.debug(
-                    "%s CONTROL packet ACK (success: %s / chksum: %s) callback NOT found for msg ID: %s",
-                    lp,
-                    success,
-                    ctrl_chksum == packet_data[10],
-                    ctrl_msg_id,
-                )
-            elif not success and msg is not None:
-                logger.warning(
-                    "%s CONTROL packet ACK FAILED for msg ID: %s, device reported failure - NOT updating state",
-                    lp,
-                    ctrl_msg_id,
-                )
-            elif not success and msg is None:
-                logger.warning(
-                    "%s CONTROL packet ACK FAILED for msg ID: %s, no callback found",
-                    lp,
-                    ctrl_msg_id,
-                )
-        # newer firmware devices seen in led light strip so far,
-        # send their firmware version data in a 0x7e bound struct.
-        # I've also seen these ctrl bytes in the msg that other devices send in FA AF
-        # the struct is 31 bytes long with the 0x7e boundaries, unbound it is 29 bytes long
-        elif ctrl_bytes == bytes([0xFA, 0x8E]):
-            if packet_data[1] == 0x00:
-                logger.debug(
-                    "%s Device sent (%s) BOUND firmware version data",
-                    lp,
-                    ctrl_bytes.hex(" "),
-                )
-                fw_type, fw_ver, fw_str = parse_unbound_firmware_version(packet_data[1:-1], lp)
-                if fw_type == "device":
-                    self.tcp_device.version = fw_ver
-                    self.tcp_device.version_str = fw_str
-                else:
-                    self.tcp_device.network_version = fw_ver
-                    self.tcp_device.network_version_str = fw_str
-            elif CYNC_RAW is True:
-                logger.debug(
-                    "%s This ctrl struct (%s // checksum valid: %s) usually comes through "
-                    "when the cync phone app (dis)connects to the BTLE mesh. Unknown what it means"
-                    "\t\tHEX: %s\tINT: %s",
-                    lp,
-                    ctrl_bytes.hex(" "),
-                    checksum == calc_chksum,
-                    packet_data[1:-1].hex(" "),
-                    bytes2list(packet_data[1:-1]),
-                )
+        if ctrl_bytes == bytes([0xFA, 0x8E]):
+            await self._process_firmware_ctrl_bytes(packet_data, lp, checksum == calc_chksum, ctrl_bytes)
+            return
 
-        else:
+        logger.debug(
+            "%s UNKNOWN CTRL_BYTES: %s // EXTRACTED DATA -> HEX: %s\tINT: %s",
+            lp,
+            ctrl_bytes.hex(" "),
+            packet_data[1:-1].hex(" "),
+            bytes2list(packet_data[1:-1]),
+        )
+
+    async def _process_control_ack_message(self, packet_data: bytes, lp: str) -> None:
+        """Process control ACK success/failure handling."""
+        g = _get_global_object()
+        ctrl_msg_id = packet_data[1]
+        ctrl_chksum = sum(packet_data[6:10]) % 256
+        success = packet_data[7] == 1
+        msg = self.tcp_device.messages.control.pop(ctrl_msg_id, None)
+
+        if success and msg is not None:
+            await self._log_rtt_and_execute_callback(msg, ctrl_msg_id, lp, g)
+            return
+
+        if success and msg is None:
             logger.debug(
-                "%s UNKNOWN CTRL_BYTES: %s // EXTRACTED DATA -> HEX: %s\tINT: %s",
+                "%s CONTROL packet ACK (success: %s / chksum: %s) callback NOT found for msg ID: %s",
+                lp,
+                success,
+                ctrl_chksum == packet_data[10],
+                ctrl_msg_id,
+            )
+            return
+
+        if not success and msg is not None:
+            logger.warning(
+                "%s CONTROL packet ACK FAILED for msg ID: %s, device reported failure - NOT updating state",
+                lp,
+                ctrl_msg_id,
+            )
+            return
+
+        logger.warning("%s CONTROL packet ACK FAILED for msg ID: %s, no callback found", lp, ctrl_msg_id)
+
+    async def _process_firmware_ctrl_bytes(
+        self,
+        packet_data: bytes,
+        lp: str,
+        checksum_valid: bool,
+        ctrl_bytes: bytes,
+    ) -> None:
+        """Process firmware payload structures included within control ACKs."""
+        if packet_data[1] == 0x00:
+            logger.debug(
+                "%s Device sent (%s) BOUND firmware version data",
                 lp,
                 ctrl_bytes.hex(" "),
+            )
+            fw_result = parse_unbound_firmware_version(packet_data[1:-1], lp)
+            if fw_result is None:
+                logger.debug("%s Firmware payload %s could not be parsed", lp, packet_data[1:-1].hex(" "))
+                return
+
+            fw_type, fw_ver, fw_str = fw_result
+            if fw_type == "device":
+                self.tcp_device.version = fw_ver
+                self.tcp_device.version_str = fw_str
+            else:
+                self.tcp_device.network_version = fw_ver
+                self.tcp_device.network_version_str = fw_str
+            return
+
+        if CYNC_RAW:
+            logger.debug(
+                (
+                    "%s This ctrl struct (%s // checksum valid: %s) usually comes through when the "
+                    "cync phone app (dis)connects to the BTLE mesh. Unknown what it means\t\tHEX: %s\tINT: %s"
+                ),
+                lp,
+                ctrl_bytes.hex(" "),
+                checksum_valid,
                 packet_data[1:-1].hex(" "),
                 bytes2list(packet_data[1:-1]),
             )

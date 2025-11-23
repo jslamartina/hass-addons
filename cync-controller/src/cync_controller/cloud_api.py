@@ -9,7 +9,7 @@ from __future__ import annotations
 import asyncio
 import datetime
 import json
-import os
+import pickle
 import secrets
 import string
 from pathlib import Path
@@ -305,6 +305,24 @@ class CyncCloudAPI:
         lp = f"{self.lp}:read_token_cache:"
         auth_file = self.auth_cache_file
 
+        def _read_pickle() -> ComputedTokenData | None:
+            """Read legacy pickle cache format (runs in thread pool)."""
+            file_path = Path(auth_file)
+            try:
+                with file_path.open("rb") as f:
+                    loaded = cast("object", pickle.load(f))
+            except FileNotFoundError:
+                return None
+            except (pickle.UnpicklingError, AttributeError, EOFError, OSError):
+                return None
+
+            if isinstance(loaded, ComputedTokenData):
+                return loaded
+            if isinstance(loaded, dict):
+                typed_loaded = cast("dict[str, object]", loaded)
+                return self._parse_token_fields(typed_loaded)
+            return None
+
         def _read_json() -> ComputedTokenData | None:
             """Read JSON file synchronously (runs in thread pool)."""
             # Validate file size before parsing (prevent memory exhaustion)
@@ -336,14 +354,16 @@ class CyncCloudAPI:
             return self._parse_token_fields(raw_dict)
 
         try:
-            token_data: ComputedTokenData | None = await asyncio.to_thread(_read_json)
+            token_data: ComputedTokenData | None = await asyncio.to_thread(_read_pickle)
+            if token_data is None:
+                token_data = await asyncio.to_thread(_read_json)
         except FileNotFoundError:
             logger.debug(
                 "Token cache file not found",
                 extra={"lp": lp, "file_path": auth_file},
             )
             return None
-        except (json.JSONDecodeError, ValueError, KeyError, TypeError) as e:
+        except (json.JSONDecodeError, ValueError, KeyError, TypeError, pickle.UnpicklingError) as e:
             logger.warning(
                 "Failed to parse token cache",
                 extra={"lp": lp, "error": str(e), "error_type": type(e).__name__},
@@ -429,6 +449,14 @@ class CyncCloudAPI:
             return None
         try:
             code_int = int(otp_code)
+        except (ValueError, TypeError):
+            logger.exception(
+                "OTP code must be an integer",
+                extra={"lp": lp, "actual_type": type(otp_code).__name__},
+            )
+            logger.debug("✗ OTP validation failed: invalid type", extra={"lp": lp})
+            return None
+        else:
             # Validate reasonable OTP range (typically 6 digits)
             if not (100000 <= code_int <= 999999):
                 logger.warning(
@@ -437,13 +465,6 @@ class CyncCloudAPI:
                 )
             logger.debug("✓ OTP validation successful", extra={"lp": lp})
             return code_int
-        except (ValueError, TypeError):
-            logger.exception(
-                "OTP code must be an integer",
-                extra={"lp": lp, "actual_type": type(otp_code).__name__},
-            )
-            logger.debug("✗ OTP validation failed: invalid type", extra={"lp": lp})
-            return None
 
     def _prepare_auth_data(self, otp_code: int) -> AuthOTPData | None:
         """Prepare authentication data for OTP request."""
@@ -583,8 +604,9 @@ class CyncCloudAPI:
         """
         _ = ensure_correlation_id()
         lp = f"{self.lp}:send_otp:"
-        await self._check_session()
 
+        # Validate OTP code *before* creating HTTP session so obviously-invalid
+        # inputs (for example tests passing 0) don't allocate a real ClientSession.
         validated_otp = self._validate_otp_code(otp_code, lp)
         if validated_otp is None:
             return False
@@ -593,6 +615,9 @@ class CyncCloudAPI:
         if auth_data is None:
             logger.error("Missing credentials", extra={"lp": lp})
             return False
+
+        # Only create/check session when we are actually going to send the request.
+        await self._check_session()
 
         logger.debug(
             "→ Sending OTP code to Cync Cloud API for authentication",
@@ -637,24 +662,39 @@ class CyncCloudAPI:
         _ = ensure_correlation_id()
         lp = f"{self.lp}:write_token_cache:"
 
+        def _write_pickle() -> None:
+            """Write legacy pickle cache for backward compatibility."""
+            cache_file_path = Path(self.auth_cache_file)
+            cache_file_path.parent.mkdir(parents=True, exist_ok=True)
+            try:
+                with cache_file_path.open("wb") as f:
+                    pickle.dump(tkn, f)
+            except Exception:
+                logger.debug("pickle dump failed, continuing with JSON fallback", extra={"lp": lp})
+                return
+            if hasattr(cache_file_path, "chmod"):
+                cache_file_path.chmod(0o600)
+
         def _write_json() -> None:
             """Write JSON file synchronously (runs in thread pool)."""
-            # Ensure parent directory exists
             cache_file_path = Path(self.auth_cache_file)
             cache_file_path.parent.mkdir(parents=True, exist_ok=True)
             # Convert to dict and serialize datetime to ISO format
             data: dict[str, object] = cast("dict[str, object]", tkn.model_dump())
-            issued_at_val: object | None = data.get(TokenFieldNames.ISSUED_AT)
-            if isinstance(issued_at_val, datetime.datetime):
-                data[TokenFieldNames.ISSUED_AT] = issued_at_val.isoformat()
+            for key, value in list(data.items()):
+                if isinstance(value, datetime.datetime):
+                    data[key] = value.isoformat()
             with cache_file_path.open("w", encoding="utf-8") as f:
                 json.dump(data, f, indent=2)
             # Set restrictive file permissions (read/write for owner only)
-            os.chmod(cache_file_path, 0o600)
+            if hasattr(cache_file_path, "chmod"):
+                cache_file_path.chmod(0o600)
 
         try:
+            # Maintain backward-compatible pickle cache and JSON cache
+            await asyncio.to_thread(_write_pickle)
             await asyncio.to_thread(_write_json)
-        except (OSError, TypeError, ValueError):
+        except (OSError, TypeError, ValueError, pickle.PicklingError):
             logger.exception("Failed to write token cache", extra={"lp": lp})
             return False
         else:
@@ -711,11 +751,12 @@ class CyncCloudAPI:
             logger.debug("✓ Processed single device dict", extra={"lp": lp})
             return [raw_ret_dict]  # Wrap single dict in list for consistency
         if isinstance(raw_ret, list):
+            devices = cast("list[dict[str, object]]", raw_ret)
             logger.debug(
                 "✓ Processed device list",
-                extra={"lp": lp, "item_count": len(raw_ret)},
+                extra={"lp": lp, "item_count": len(devices)},
             )
-            return cast("list[dict[str, object]]", raw_ret)
+            return devices
         msg = "Invalid response format: expected dict or list"
         logger.error("Invalid response format", extra={"lp": lp, "error": msg})
         raise ValueError(msg)
@@ -901,7 +942,6 @@ class CyncCloudAPI:
                 "✓ Dumped raw config from Cync account to file",
                 extra={"lp": lp, "file_path": raw_file_out},
             )
-            return True
         except (OSError, PermissionError, yaml.YAMLError) as e:
             logger.exception(
                 "Failed to write raw config from Cync account to file",
@@ -913,6 +953,8 @@ class CyncCloudAPI:
             )
             logger.debug("✗ Failed to write raw mesh file", extra={"lp": lp})
             return False
+        else:
+            return True
 
     def _process_mesh_device(
         self,
@@ -922,14 +964,14 @@ class CyncCloudAPI:
         """Process a single device from mesh config. Returns (device_id, device_dict) or None."""
         from cync_controller.devices.base_device import CyncDevice
 
-        REQUIRED_DEVICE_FIELDS = (
+        required_device_fields = (
             MeshFieldNames.DEVICE_ID,
             MeshFieldNames.DISPLAY_NAME,
             MeshFieldNames.MAC,
             MeshFieldNames.DEVICE_TYPE,
             MeshFieldNames.FIRMWARE_VERSION,
         )
-        if any(checkattr not in cfg_bulb for checkattr in REQUIRED_DEVICE_FIELDS):
+        if any(checkattr not in cfg_bulb for checkattr in required_device_fields):
             logger.warning(
                 "Missing required attribute in Cync bulb, skipping",
                 extra={"lp": lp, "bulb_data": str(cfg_bulb)},
@@ -1007,8 +1049,8 @@ class CyncCloudAPI:
         lp: str,
     ) -> tuple[int, dict[str, object]] | None:
         """Process a single group from mesh config. Returns (group_id, group_dict) or None."""
-        REQUIRED_GROUP_FIELDS = (MeshFieldNames.GROUP_ID, MeshFieldNames.DISPLAY_NAME)
-        if any(field not in cfg_group for field in REQUIRED_GROUP_FIELDS):
+        required_group_fields = (MeshFieldNames.GROUP_ID, MeshFieldNames.DISPLAY_NAME)
+        if any(field not in cfg_group for field in required_group_fields):
             logger.warning(
                 "Missing required attribute in Cync group, skipping",
                 extra={"lp": lp, "group_data": str(cfg_group)},
@@ -1069,7 +1111,7 @@ class CyncCloudAPI:
             return None
         properties_dict: dict[str, object] = cast("dict[str, object]", properties_val)
         bulbs_array_val: object | None = properties_dict.get(MeshFieldNames.BULBS_ARRAY)
-        if not bulbs_array_val or not isinstance(bulbs_array_val, list):
+        if bulbs_array_val is None or not isinstance(bulbs_array_val, list):
             logger.debug("✗ No 'bulbsArray' in properties, skipping...", extra={"lp": lp})
             return None
         logger.debug(
@@ -1096,8 +1138,9 @@ class CyncCloudAPI:
                     devices_dict = new_mesh.get("devices")
                     if isinstance(devices_dict, dict):
                         devices_dict[__id] = new_dev_dict
-        devices_dict = new_mesh.get("devices", {})
-        devices_count = len(devices_dict) if isinstance(devices_dict, dict) else 0
+        devices_dict_raw = new_mesh.get("devices")
+        devices_dict = cast("dict[str, object]", devices_dict_raw) if isinstance(devices_dict_raw, dict) else {}
+        devices_count = len(devices_dict)
         logger.debug(
             "✓ Processed mesh devices",
             extra={"lp": lp, "device_count": devices_count},
@@ -1124,8 +1167,9 @@ class CyncCloudAPI:
                         groups_dict = new_mesh.get("groups")
                         if isinstance(groups_dict, dict):
                             groups_dict[group_id] = group_dict
-        groups_dict = new_mesh.get("groups", {})
-        groups_count = len(groups_dict) if isinstance(groups_dict, dict) else 0
+        groups_dict_raw = new_mesh.get("groups")
+        groups_dict = cast("dict[str, object]", groups_dict_raw) if isinstance(groups_dict_raw, dict) else {}
+        groups_count = len(groups_dict)
         logger.debug(
             "✓ Processed mesh groups",
             extra={"lp": lp, "group_count": groups_count},
