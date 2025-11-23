@@ -1,5 +1,4 @@
-"""
-Unit tests for CyncDevice command execution.
+"""Unit tests for CyncDevice command execution.
 
 Tests fan commands, lightshow commands, and error path handling.
 """
@@ -12,11 +11,11 @@ from cync_controller.devices import CyncDevice, CyncGroup
 
 
 class TestCyncDeviceFanCommands:
-    """Tests for set_fan_speed command"""
+    """Tests for set_fan_speed command."""
 
     @pytest.mark.asyncio
     async def test_set_fan_speed_valid_execution(self, mock_tcp_device):
-        """Test set_fan_speed successfully sends command with valid FanSpeed"""
+        """Test set_fan_speed successfully sends command with valid FanSpeed."""
         from cync_controller.structs import FanSpeed
 
         with patch("cync_controller.devices.shared.g") as mock_g:
@@ -38,7 +37,7 @@ class TestCyncDeviceFanCommands:
 
     @pytest.mark.asyncio
     async def test_set_fan_speed_not_fan_controller(self, caplog):
-        """Test set_fan_speed logs warning when device is not a fan controller"""
+        """Test set_fan_speed logs warning when device is not a fan controller."""
         from cync_controller.structs import FanSpeed
 
         with patch("cync_controller.devices.shared.g") as mock_g:
@@ -53,11 +52,11 @@ class TestCyncDeviceFanCommands:
 
 
 class TestCyncDeviceLightshowCommand:
-    """Tests for set_lightshow command"""
+    """Tests for set_lightshow command."""
 
     @pytest.mark.asyncio
     async def test_set_lightshow_creates_packet(self, mock_tcp_device):
-        """Test set_lightshow creates proper control packet"""
+        """Test set_lightshow creates proper control packet."""
         with patch("cync_controller.devices.shared.g") as mock_g:
             mock_g.ncync_server = MagicMock()
             mock_g.ncync_server.tcp_devices = {"192.168.1.100": mock_tcp_device}
@@ -77,7 +76,7 @@ class TestCyncDeviceLightshowCommand:
 
     @pytest.mark.asyncio
     async def test_set_lightshow_no_tcp_bridges(self, caplog):
-        """Test set_lightshow logs error when no TCP bridges available"""
+        """Test set_lightshow logs error when no TCP bridges available."""
         with patch("cync_controller.devices.shared.g") as mock_g:
             mock_g.ncync_server.tcp_devices = {}
 
@@ -90,7 +89,7 @@ class TestCyncDeviceLightshowCommand:
 
     @pytest.mark.asyncio
     async def test_set_lightshow_various_shows(self, mock_tcp_device):
-        """Test set_lightshow with different show types"""
+        """Test set_lightshow with different show types."""
         with patch("cync_controller.devices.shared.g") as mock_g:
             mock_g.ncync_server = MagicMock()
             mock_g.ncync_server.tcp_devices = {"192.168.1.100": mock_tcp_device}
@@ -113,11 +112,11 @@ class TestCyncDeviceLightshowCommand:
 
 
 class TestCyncDeviceErrorPathsCommands:
-    """Tests for error paths and edge cases in CyncDevice commands"""
+    """Tests for error paths and edge cases in CyncDevice commands."""
 
     @pytest.mark.asyncio
     async def test_set_temperature_no_tcp_bridges(self, mock_tcp_device):
-        """Test set_temperature returns early when no TCP bridges available"""
+        """Test set_temperature returns early when no TCP bridges available."""
         with patch("cync_controller.devices.shared.g") as mock_g:
             mock_g.ncync_server.tcp_devices = {}
             mock_g.mqtt_client = AsyncMock()
@@ -132,7 +131,7 @@ class TestCyncDeviceErrorPathsCommands:
 
     @pytest.mark.asyncio
     async def test_set_temperature_invalid_value_returns_early(self, mock_tcp_device):
-        """Test set_temperature returns early with invalid temperature"""
+        """Test set_temperature returns early with invalid temperature."""
         with patch("cync_controller.devices.shared.g") as mock_g:
             mock_g.ncync_server = MagicMock()
             mock_g.ncync_server.tcp_devices = {"192.168.1.100": mock_tcp_device}
@@ -148,7 +147,7 @@ class TestCyncDeviceErrorPathsCommands:
 
     @pytest.mark.asyncio
     async def test_set_rgb_no_tcp_bridges(self, mock_tcp_device):
-        """Test set_rgb returns early when no TCP bridges available"""
+        """Test set_rgb returns early when no TCP bridges available."""
         with patch("cync_controller.devices.shared.g") as mock_g:
             mock_g.ncync_server.tcp_devices = {}
             mock_g.mqtt_client = AsyncMock()
@@ -165,7 +164,7 @@ class TestCyncDeviceErrorPathsCommands:
 
     @pytest.mark.asyncio
     async def test_set_rgb_invalid_color_returns_early(self, mock_tcp_device):
-        """Test set_rgb returns early with invalid color values"""
+        """Test set_rgb returns early with invalid color values."""
         with patch("cync_controller.devices.shared.g") as mock_g:
             mock_g.ncync_server = MagicMock()
             mock_g.ncync_server.tcp_devices = {"192.168.1.100": mock_tcp_device}
@@ -181,7 +180,7 @@ class TestCyncDeviceErrorPathsCommands:
 
     @pytest.mark.asyncio
     async def test_group_set_power_no_bridges(self, mock_tcp_device):
-        """Test group set_power returns early when no TCP bridges available"""
+        """Test group set_power returns early when no TCP bridges available."""
         with patch("cync_controller.devices.shared.g") as mock_g:
             mock_g.ncync_server.tcp_devices = {}
             mock_g.mqtt_client = AsyncMock()
@@ -198,7 +197,7 @@ class TestCyncDeviceErrorPathsCommands:
 
     @pytest.mark.asyncio
     async def test_group_set_power_bridge_not_ready(self, mock_tcp_device):
-        """Test group set_power returns early when bridge not ready"""
+        """Test group set_power returns early when bridge not ready."""
         with patch("cync_controller.devices.shared.g") as mock_g:
             mock_tcp_device.ready_to_control = False
             mock_g.ncync_server.tcp_devices = {"192.168.1.100": mock_tcp_device}
@@ -216,11 +215,11 @@ class TestCyncDeviceErrorPathsCommands:
 
 
 class TestDeviceBridgeSelection:
-    """Tests for bridge selection logic"""
+    """Tests for bridge selection logic."""
 
     @pytest.mark.asyncio
     async def test_device_prefers_ready_bridges(self):
-        """Test that device commands prefer ready bridges"""
+        """Test that device commands prefer ready bridges."""
         with patch("cync_controller.devices.shared.g") as mock_g:
             ready_bridge = AsyncMock()
             ready_bridge.ready_to_control = True
@@ -252,11 +251,11 @@ class TestDeviceBridgeSelection:
 
 
 class TestDeviceErrorPaths:
-    """Tests for error handling in device commands"""
+    """Tests for error handling in device commands."""
 
     @pytest.mark.asyncio
     async def test_device_invalid_brightness_range(self, caplog):
-        """Test device rejects out-of-range brightness values"""
+        """Test device rejects out-of-range brightness values."""
         with patch("cync_controller.devices.shared.g") as mock_g:
             mock_g.ncync_server = MagicMock()
             mock_g.ncync_server.tcp_devices = {}
