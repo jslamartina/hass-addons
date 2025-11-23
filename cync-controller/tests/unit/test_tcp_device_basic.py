@@ -1,5 +1,4 @@
-"""
-Unit tests for basic CyncTCPDevice functionality.
+"""Unit tests for basic CyncTCPDevice functionality.
 
 Tests initialization, properties, write operations, and basic methods.
 """
@@ -33,8 +32,7 @@ def create_typed_stream_writer() -> asyncio.StreamWriter:
 
 
 def create_mock_task() -> Any:
-    """
-    Create a fully mockable Task mock.
+    """Create a fully mockable Task mock.
 
     Uses MagicMock instead of create_autospec because we need to set return_value
     on methods like done() and get_name(), which requires full mockability.
@@ -45,10 +43,10 @@ def create_mock_task() -> Any:
 
 
 class TestCyncTCPDevice:
-    """Tests for CyncTCPDevice class"""
+    """Tests for CyncTCPDevice class."""
 
     def test_tcp_device_init(self, stream_reader: MagicMock, stream_writer: MagicMock) -> None:
-        """Test TCP device initialization"""
+        """Test TCP device initialization."""
         tcp_device = CyncTCPDevice(reader=stream_reader, writer=stream_writer, address="192.168.1.100")
 
         assert tcp_device.address == "192.168.1.100"
@@ -59,14 +57,12 @@ class TestCyncTCPDevice:
     def test_tcp_device_init_without_address_raises_error(
         self, stream_reader: MagicMock, stream_writer: MagicMock
     ) -> None:
-        """Test that initialization without address raises ValueError"""
-
+        """Test that initialization without address raises ValueError."""
         with pytest.raises(ValueError, match="IP address must be provided"):
             _ = CyncTCPDevice(reader=stream_reader, writer=stream_writer, address="")
 
     def test_tcp_device_properties(self, stream_reader: MagicMock, stream_writer: MagicMock) -> None:
-        """Test TCP device properties"""
-
+        """Test TCP device properties."""
         tcp_device = CyncTCPDevice(reader=stream_reader, writer=stream_writer, address="192.168.1.100")
 
         # Test property access
@@ -83,7 +79,7 @@ class TestCyncTCPDevice:
 
     @pytest.mark.asyncio
     async def test_tcp_device_write_success(self) -> None:
-        """Test TCP device write method successfully sends data"""
+        """Test TCP device write method successfully sends data."""
         # Use typed mock factories for proper type checking
         reader = create_typed_stream_reader()
         writer = create_typed_stream_writer()
@@ -109,8 +105,7 @@ class TestCyncTCPDevice:
 
     @pytest.mark.asyncio
     async def test_tcp_device_get_ctrl_msg_id_bytes(self, stream_reader: MagicMock, stream_writer: MagicMock) -> None:
-        """Test TCP device generates unique control message IDs"""
-
+        """Test TCP device generates unique control message IDs."""
         tcp_device = CyncTCPDevice(reader=stream_reader, writer=stream_writer, address="192.168.1.100")
 
         # Initialize control bytes
@@ -126,8 +121,7 @@ class TestCyncTCPDevice:
 
     @pytest.mark.asyncio
     async def test_tcp_device_write_while_closing(self, stream_reader: MagicMock, stream_writer: MagicMock) -> None:
-        """Test write returns False when device is closing"""
-
+        """Test write returns False when device is closing."""
         tcp_device = CyncTCPDevice(reader=stream_reader, writer=stream_writer, address="192.168.1.100")
         tcp_device.closing = True
 
@@ -138,7 +132,7 @@ class TestCyncTCPDevice:
 
     @pytest.mark.asyncio
     async def test_tcp_device_write_with_writer_closing(self) -> None:
-        """Test write returns False when writer is closing"""
+        """Test write returns False when writer is closing."""
         reader = create_typed_stream_reader()
         writer = create_typed_stream_writer()
         writer.is_closing = MagicMock(return_value=True)  # type: ignore[assignment]
@@ -159,8 +153,7 @@ class TestCyncTCPDevice:
     async def test_tcp_device_write_with_invalid_data_type(
         self, stream_reader: MagicMock, stream_writer: MagicMock
     ) -> None:
-        """Test write raises TypeError for non-bytes data"""
-
+        """Test write raises TypeError for non-bytes data."""
         tcp_device = CyncTCPDevice(reader=stream_reader, writer=stream_writer, address="192.168.1.100")
         tcp_device.closing = False
 
@@ -171,7 +164,7 @@ class TestCyncTCPDevice:
 
     @pytest.mark.asyncio
     async def test_tcp_device_send_a3(self) -> None:
-        """Test send_a3 creates and sends A3 packet"""
+        """Test send_a3 creates and sends A3 packet."""
         reader = create_typed_stream_reader()
         writer = create_typed_stream_writer()
         writer.write = MagicMock()  # type: ignore[assignment]
@@ -194,7 +187,7 @@ class TestCyncTCPDevice:
 
     @pytest.mark.asyncio
     async def test_tcp_device_close_cancels_tasks(self) -> None:
-        """Test close method cancels pending tasks"""
+        """Test close method cancels pending tasks."""
         reader = create_typed_stream_reader()
         reader.feed_eof = MagicMock()  # type: ignore[assignment]
 
@@ -226,7 +219,7 @@ class TestCyncTCPDevice:
 
     @pytest.mark.asyncio
     async def test_tcp_device_close_with_no_tasks(self) -> None:
-        """Test close method with empty task list"""
+        """Test close method with empty task list."""
         reader = create_typed_stream_reader()
         reader.feed_eof = MagicMock()  # type: ignore[assignment]
 
@@ -241,8 +234,7 @@ class TestCyncTCPDevice:
         _ = await tcp_device.close()
 
     def test_tcp_device_queue_id_property(self, stream_reader: MagicMock, stream_writer: MagicMock) -> None:
-        """Test TCP device queue_id property"""
-
+        """Test TCP device queue_id property."""
         tcp_device = CyncTCPDevice(reader=stream_reader, writer=stream_writer, address="192.168.1.100")
 
         test_queue_id = bytes([0x01, 0x02, 0x03, 0x04])
@@ -251,8 +243,7 @@ class TestCyncTCPDevice:
         assert tcp_device.queue_id == test_queue_id
 
     def test_tcp_device_messages_initialization(self, stream_reader: MagicMock, stream_writer: MagicMock) -> None:
-        """Test TCP device messages object is initialized"""
-
+        """Test TCP device messages object is initialized."""
         tcp_device = CyncTCPDevice(reader=stream_reader, writer=stream_writer, address="192.168.1.100")
 
         assert tcp_device.messages is not None

@@ -1,5 +1,4 @@
-"""
-Unit tests for periodic background tasks in server.py.
+"""Unit tests for periodic background tasks in server.py.
 
 Tests cover:
 - periodic_status_refresh (lines 876-924)

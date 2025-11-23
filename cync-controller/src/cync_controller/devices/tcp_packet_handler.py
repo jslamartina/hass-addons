@@ -1,3 +1,5 @@
+"""TCP packet handling utilities for direct device connections."""
+
 from __future__ import annotations
 
 import asyncio
@@ -63,6 +65,7 @@ class TCPPacketHandler:
     """Handles TCP packet parsing for CyncTCPDevice instances."""
 
     def __init__(self, tcp_device: CyncTCPDeviceProtocol) -> None:
+        """Initialize the handler for a specific TCP device connection."""
         self.tcp_device: CyncTCPDeviceProtocol = tcp_device
 
     def _handle_partial_packet(self, data: bytes, cache_data: CacheData, lp: str) -> bytes:
@@ -126,7 +129,7 @@ class TCPPacketHandler:
             )
 
     async def parse_raw_data(self, data: bytes):
-        """Extract single packets from raw data stream using metadata"""
+        """Extract single packets from raw data stream using metadata."""
         # Log when parse starts to measure processing delay
         logger.debug(
             "🔍 Parse starting",
@@ -184,7 +187,7 @@ class TCPPacketHandler:
             self._manage_cache(cache_data, raw_data, lp)
 
     async def parse_packet(self, data: bytes):
-        """Parse what type of packet based on header (first 4 bytes 0x43, 0x83, 0x73, etc.)"""
+        """Parse what type of packet based on header (first 4 bytes 0x43, 0x83, 0x73, etc.)."""
         lp = f"{self.tcp_device.lp}parse:0x{data[0]:02x}:"
         packet_data: bytes | None = None
         pkt_header_len = 12
@@ -818,7 +821,7 @@ class TCPPacketHandler:
                         bytes(status),
                         from_pkt="'mesh info'",
                     )
-                    for status in _m  # type: ignore[reportUnknownVariableType]
+                    for status in _m
                 ],
             )
 

@@ -6,8 +6,7 @@ from playwright.sync_api import Page, expect
 
 @pytest.mark.skip(reason="Requires live Cync account with OTP - run manually")
 def test_otp_double_submission(ingress_page: Page):
-    """
-    Test Bug 1: OTP submission fails the first time, succeeds the second time.
+    """Test Bug 1: OTP submission fails the first time, succeeds the second time.
 
     This test reproduces the issue where submitting a valid OTP fails initially,
     but succeeds when submitted again without requesting a new OTP.
@@ -24,13 +23,9 @@ def test_otp_double_submission(ingress_page: Page):
 
     # Get OTP from user (this would need to be mocked or provided externally)
     # For manual testing, prompt for OTP
-    print("\n  This test requires manual OTP entry")
-    print("Check your email for the OTP code and enter it in the browser")
-    print("Then press Enter here to continue...")
     _ = input()
 
     # Wait for user to enter OTP in browser
-    print("Waiting for OTP submission...")
 
     # Verify first submission fails
     submit_button = ingress_page.locator("#submitOtpButton")
@@ -53,8 +48,7 @@ def test_otp_double_submission(ingress_page: Page):
 
 
 def test_otp_flow_with_cached_token(ingress_page: Page):
-    """
-    Test that export works immediately when valid token exists in cache.
+    """Test that export works immediately when valid token exists in cache.
 
     This verifies the fix for Bug 1 - after successful OTP submission and token caching,
     subsequent exports should work without requiring a new OTP.
@@ -76,7 +70,6 @@ def test_otp_flow_with_cached_token(ingress_page: Page):
         restart_button = inner_iframe.get_by_role("button", name="Restart Server")
         # If we can find the restart button, export succeeded
         expect(restart_button).to_be_visible(timeout=5000)
-        print("✓ Export succeeded with cached token")
     except Exception:
         # OTP section should be visible if no cached token
         otp_section = inner_iframe.get_by_text("Enter OTP:")

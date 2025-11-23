@@ -1,5 +1,4 @@
-"""
-Unit tests for devices module.
+"""Unit tests for devices module.
 
 Tests CyncDevice, CyncGroup, and CyncTCPDevice classes.
 """
@@ -14,10 +13,10 @@ from cync_controller.devices.group import CyncGroup
 
 
 class TestCyncGroup:
-    """Tests for CyncGroup class"""
+    """Tests for CyncGroup class."""
 
     def test_group_init_with_required_params(self) -> None:
-        """Test group initialization with required parameters"""
+        """Test group initialization with required parameters."""
         group = CyncGroup(group_id=0x5678, name="Living Room", member_ids=[0x1234, 0x5678, 0x9ABC])  # type: ignore[misc]
 
         assert group.id == 0x5678
@@ -29,25 +28,25 @@ class TestCyncGroup:
         assert group.online is True
 
     def test_group_init_without_id_raises_error(self) -> None:
-        """Test that initialization without group_id raises ValueError"""
+        """Test that initialization without group_id raises ValueError."""
         with pytest.raises(ValueError, match="Group ID must be provided"):
             _ = CyncGroup(group_id=None, name="Test", member_ids=[])  # pyright: ignore[reportArgumentType]
 
     def test_group_init_with_home_id(self) -> None:
-        """Test group initialization with home_id"""
+        """Test group initialization with home_id."""
         group = CyncGroup(group_id=0x5678, name="Living Room", member_ids=[], home_id=12345)  # type: ignore
 
         assert group.home_id == 12345
         assert group.hass_id == "12345-group-22136"  # 0x5678 = 22136
 
     def test_group_init_as_subgroup(self) -> None:
-        """Test subgroup initialization"""
+        """Test subgroup initialization."""
         group = CyncGroup(group_id=0x5678, name="Desk Lights", member_ids=[0x1234, 0x5678], is_subgroup=True)  # type: ignore
 
         assert group.is_subgroup is True
 
     def test_group_state_properties(self) -> None:
-        """Test group state property getters and setters"""
+        """Test group state property getters and setters."""
         group = CyncGroup(group_id=0x5678, name="Living Room", member_ids=[])  # type: ignore
 
         # Initial state
@@ -65,7 +64,7 @@ class TestCyncGroup:
         assert group.temperature == 50
 
     def test_group_members_property(self) -> None:
-        """Test group members property returns actual device objects"""
+        """Test group members property returns actual device objects."""
         with patch("cync_controller.devices.g") as mock_g:
             # Mock device registry
             mock_device1: Any = MagicMock()  # type: ignore[reportExplicitAny]
@@ -89,7 +88,7 @@ class TestCyncGroup:
             assert mock_device2 in members
 
     def test_group_members_when_server_uninitialized(self) -> None:
-        """members should return empty list when ncync_server is not ready"""
+        """Members should return empty list when ncync_server is not ready."""
         with patch("cync_controller.devices.g") as mock_g:
             mock_g.ncync_server = None  # type: ignore[reportAny]
 
@@ -98,7 +97,7 @@ class TestCyncGroup:
             assert group.members == []
 
     def test_group_supports_rgb_property(self) -> None:
-        """Test group supports_rgb property checks member capabilities"""
+        """Test group supports_rgb property checks member capabilities."""
         with patch("cync_controller.devices.g") as mock_g:
             # Mock devices with RGB support
             mock_device1: Any = MagicMock()  # type: ignore[reportExplicitAny]
@@ -118,7 +117,7 @@ class TestCyncGroup:
             assert group.supports_rgb is True
 
     def test_group_supports_temperature_property(self) -> None:
-        """Test group supports_temperature property checks member capabilities"""
+        """Test group supports_temperature property checks member capabilities."""
         with patch("cync_controller.devices.g") as mock_g:
             # Mock devices with temperature support
             mock_device1: Any = MagicMock()  # type: ignore[reportExplicitAny]
@@ -138,7 +137,7 @@ class TestCyncGroup:
             assert group.supports_temperature is True
 
     def test_group_aggregate_member_states(self) -> None:
-        """Test group state aggregation from members"""
+        """Test group state aggregation from members."""
         with patch("cync_controller.devices.g") as mock_g:
             # Mock member devices
             mock_device1: Any = MagicMock()  # type: ignore[reportExplicitAny]
@@ -174,7 +173,7 @@ class TestCyncGroup:
             assert agg["online"] is True
 
     def test_group_aggregate_when_server_uninitialized(self) -> None:
-        """Aggregate should safely return None when ncync_server is missing"""
+        """Aggregate should safely return None when ncync_server is missing."""
         with patch("cync_controller.devices.g") as mock_g:
             mock_g.ncync_server = None  # type: ignore[reportAny]
 
@@ -183,7 +182,7 @@ class TestCyncGroup:
             assert group.aggregate_member_states() is None
 
     def test_group_aggregate_no_online_members(self) -> None:
-        """Test group aggregation returns None when no members online"""
+        """Test group aggregation returns None when no members online."""
         with patch("cync_controller.devices.g") as mock_g:
             # Mock offline devices
             mock_device1: Any = MagicMock()  # type: ignore[reportExplicitAny]
@@ -205,7 +204,7 @@ class TestCyncGroup:
 
     @pytest.mark.asyncio
     async def test_group_set_power(self, mock_tcp_device: Any) -> None:  # type: ignore[reportExplicitAny]
-        """Test group set_power command"""
+        """Test group set_power command."""
         with (
             patch("cync_controller.devices.g") as mock_g,
             patch("cync_controller.devices.asyncio.sleep", new_callable=AsyncMock),
@@ -236,7 +235,7 @@ class TestCyncGroup:
 
     @pytest.mark.asyncio
     async def test_group_set_power_invalid_state(self, caplog: Any) -> None:  # type: ignore[reportExplicitAny]
-        """Test group set_power rejects invalid state values"""
+        """Test group set_power rejects invalid state values."""
         with patch("cync_controller.devices.g") as mock_g:
             mock_g.ncync_server.tcp_devices = {}  # type: ignore[reportAny]
 
@@ -250,7 +249,7 @@ class TestCyncGroup:
 
     @pytest.mark.asyncio
     async def test_group_set_brightness(self, mock_tcp_device: Any) -> None:  # type: ignore[reportExplicitAny]
-        """Test group set_brightness command"""
+        """Test group set_brightness command."""
         with patch("cync_controller.devices.g") as mock_g:
             mock_g.ncync_server.tcp_devices = {"192.168.1.100": mock_tcp_device}  # type: ignore[reportAny]
             mock_tcp_device.ready_to_control = True  # type: ignore[reportAny]
@@ -270,7 +269,7 @@ class TestCyncGroup:
 
     @pytest.mark.asyncio
     async def test_group_set_temperature_valid_execution(self, mock_tcp_device: Any) -> None:  # type: ignore[reportExplicitAny]
-        """Test group set_temperature successfully sends command"""
+        """Test group set_temperature successfully sends command."""
         with patch("cync_controller.devices.g") as mock_g:
             mock_g.ncync_server.tcp_devices = {"192.168.1.100": mock_tcp_device}  # type: ignore[reportAny]
             mock_g.ncync_server.devices = {}  # type: ignore[reportAny]
@@ -289,7 +288,7 @@ class TestCyncGroup:
 
     @pytest.mark.asyncio
     async def test_group_set_temperature_invalid_value(self, caplog: Any) -> None:
-        """Test group set_temperature rejects invalid temperature values"""
+        """Test group set_temperature rejects invalid temperature values."""
         with patch("cync_controller.devices.g") as mock_g:
             mock_g.ncync_server.tcp_devices = {}  # type: ignore[reportAny]
 
@@ -303,7 +302,7 @@ class TestCyncGroup:
 
     @pytest.mark.asyncio
     async def test_group_set_temperature_no_tcp_bridges(self, caplog: Any) -> None:  # type: ignore[reportExplicitAny]
-        """Test group set_temperature logs error when no TCP bridges available"""
+        """Test group set_temperature logs error when no TCP bridges available."""
         with patch("cync_controller.devices.g") as mock_g:
             mock_g.ncync_server.tcp_devices = {}  # type: ignore[reportAny]
 
@@ -315,11 +314,11 @@ class TestCyncGroup:
 
 
 class TestCyncGroupAdvancedCommands:
-    """Tests for advanced CyncGroup commands and features"""
+    """Tests for advanced CyncGroup commands and features."""
 
     @pytest.mark.asyncio
     async def test_group_aggregate_with_mixed_states(self) -> None:
-        """Test group aggregation with mixed member states"""
+        """Test group aggregation with mixed member states."""
         with patch("cync_controller.devices.g") as mock_g:
             # Create group with mixed-state devices
             device1: Any = MagicMock()  # type: ignore[reportExplicitAny]
@@ -352,7 +351,7 @@ class TestCyncGroupAdvancedCommands:
 
     @pytest.mark.asyncio
     async def test_group_aggregate_with_one_online_member(self) -> None:
-        """Test group aggregation when only one member is online"""
+        """Test group aggregation when only one member is online."""
         with patch("cync_controller.devices.g") as mock_g:
             device1: Any = MagicMock()  # type: ignore[reportExplicitAny]
             device1.state = 1  # type: ignore[reportAny]
@@ -378,21 +377,21 @@ class TestCyncGroupAdvancedCommands:
             assert agg["brightness"] == 75  # Only online member
 
     def test_group_supports_rgb_when_no_members(self) -> None:
-        """Test group supports_rgb when group has no members"""
+        """Test group supports_rgb when group has no members."""
         group = CyncGroup(group_id=0xABCD, name="Empty Group", member_ids=[])  # type: ignore
 
         # Should not support RGB if no members
         assert group.supports_rgb is False
 
     def test_group_supports_temperature_when_no_members(self) -> None:
-        """Test group supports_temperature when group has no members"""
+        """Test group supports_temperature when group has no members."""
         group = CyncGroup(group_id=0xABCD, name="Empty Group", member_ids=[])  # type: ignore
 
         # Should not support temperature if no members
         assert group.supports_temperature is False
 
     def test_group_aggregate_returns_none_when_all_offline(self) -> None:
-        """Test group aggregation returns None when all members are offline"""
+        """Test group aggregation returns None when all members are offline."""
         with patch("cync_controller.devices.g") as mock_g:
             device1: Any = MagicMock()  # type: ignore[reportExplicitAny]
             device1.online = False  # type: ignore[reportAny]
@@ -414,7 +413,7 @@ class TestCyncGroupAdvancedCommands:
             assert agg is None
 
     def test_group_aggregate_filters_invalid_temperatures(self) -> None:
-        """Test group aggregation filters out invalid temperature values"""
+        """Test group aggregation filters out invalid temperature values."""
         with patch("cync_controller.devices.g") as mock_g:
             device1: Any = MagicMock()  # type: ignore[reportExplicitAny]
             device1.state = 1  # type: ignore[reportAny]
@@ -443,7 +442,7 @@ class TestCyncGroupAdvancedCommands:
             assert agg["temperature"] == 50  # Should not be 90 (average of 129 and 50)
 
     def test_group_aggregate_averages_multiple_devices(self) -> None:
-        """Test group aggregation correctly averages multiple devices"""
+        """Test group aggregation correctly averages multiple devices."""
         with patch("cync_controller.devices.g") as mock_g:
             # Create 4 devices with different states
             mock_g.ncync_server = MagicMock()  # type: ignore[reportAny]
@@ -469,7 +468,7 @@ class TestCyncGroupAdvancedCommands:
     # REMOVED: pending_command test - flag no longer exists (command queue handles throttling)
 
     def test_group_str_representation(self) -> None:
-        """Test group __str__ and __repr__ methods"""
+        """Test group __str__ and __repr__ methods."""
         group = CyncGroup(group_id=0x5678, name="Living Room", member_ids=[0x1234, 0x5678])  # type: ignore
 
         # Test __str__ (shows decimal ID)
@@ -486,11 +485,11 @@ class TestCyncGroupAdvancedCommands:
 
 
 class TestCyncGroupErrorHandling:
-    """Tests for error handling paths in group methods"""
+    """Tests for error handling paths in group methods."""
 
     @pytest.mark.asyncio
     async def test_group_set_brightness_error_no_tcp_bridges(self, caplog: Any) -> None:  # type: ignore[reportExplicitAny]
-        """Test group set_brightness logs error when no TCP bridges available"""
+        """Test group set_brightness logs error when no TCP bridges available."""
         with patch("cync_controller.devices.g") as mock_g:
             mock_g.ncync_server = MagicMock()  # type: ignore[reportAny]
             mock_g.ncync_server.tcp_devices = {}  # type: ignore[reportAny]
@@ -505,7 +504,7 @@ class TestCyncGroupErrorHandling:
 
     @pytest.mark.asyncio
     async def test_group_set_temperature_error_no_tcp_bridges(self, caplog: Any) -> None:  # type: ignore[reportExplicitAny]
-        """Test group set_temperature logs error when no TCP bridges available"""
+        """Test group set_temperature logs error when no TCP bridges available."""
         with patch("cync_controller.devices.g") as mock_g:
             mock_g.ncync_server = MagicMock()  # type: ignore[reportAny]
             mock_g.ncync_server.tcp_devices = {}  # type: ignore[reportAny]
@@ -521,7 +520,7 @@ class TestCyncGroupErrorHandling:
 
     @pytest.mark.asyncio
     async def test_group_set_temperature_invalid_value(self, caplog: Any) -> None:
-        """Test group set_temperature handles invalid temperature values"""
+        """Test group set_temperature handles invalid temperature values."""
         with patch("cync_controller.devices.g") as mock_g:
             mock_g.ncync_server = MagicMock()  # type: ignore[reportAny]
             mock_g.ncync_server.tcp_devices = {}  # type: ignore[reportAny]
@@ -543,11 +542,11 @@ class TestCyncGroupErrorHandling:
 
 
 class TestCyncGroupOperations:
-    """Tests for group operation methods"""
+    """Tests for group operation methods."""
 
     @pytest.mark.asyncio
     async def test_group_set_brightness_success(self) -> None:
-        """Test successful group brightness command"""
+        """Test successful group brightness command."""
         with patch("cync_controller.devices.g") as mock_g:
             mock_bridge: Any = AsyncMock()  # type: ignore[reportExplicitAny]
             mock_bridge.ready_to_control = True  # type: ignore[reportAny]
@@ -569,7 +568,7 @@ class TestCyncGroupOperations:
 
     @pytest.mark.asyncio
     async def test_group_set_brightness_bridge_not_ready(self, caplog: Any) -> None:  # type: ignore[reportExplicitAny]
-        """Test group brightness when bridge not ready"""
+        """Test group brightness when bridge not ready."""
         with patch("cync_controller.devices.g") as mock_g:
             mock_bridge: Any = MagicMock()  # type: ignore[reportExplicitAny]
             mock_bridge.ready_to_control = False  # type: ignore[reportAny]
@@ -587,7 +586,7 @@ class TestCyncGroupOperations:
 
     @pytest.mark.asyncio
     async def test_group_set_brightness_invalid_range(self, caplog: Any) -> None:  # type: ignore[reportExplicitAny]
-        """Test group brightness with out-of-range values"""
+        """Test group brightness with out-of-range values."""
         with patch("cync_controller.devices.g") as mock_g:
             mock_g.ncync_server = MagicMock()  # type: ignore[reportAny]
             mock_g.ncync_server.tcp_devices = {}  # type: ignore[reportAny]
@@ -607,7 +606,7 @@ class TestCyncGroupOperations:
 
     @pytest.mark.asyncio
     async def test_group_set_power_all_members(self) -> None:
-        """Test group power command affects all member devices"""
+        """Test group power command affects all member devices."""
         with patch("cync_controller.devices.g") as mock_g:
             mock_bridge: Any = AsyncMock()  # type: ignore[reportExplicitAny]
             mock_bridge.ready_to_control = True  # type: ignore[reportAny]
@@ -630,7 +629,7 @@ class TestCyncGroupOperations:
 
     @pytest.mark.asyncio
     async def test_group_aggregate_member_states_all_on(self) -> None:
-        """Test group aggregation when all members are ON"""
+        """Test group aggregation when all members are ON."""
         with patch("cync_controller.devices.g") as mock_g:
             # Create group with member devices
             group = CyncGroup(group_id=0x5678, name="Test Group", member_ids=[1, 2, 3])  # type: ignore
@@ -663,7 +662,7 @@ class TestCyncGroupOperations:
 
     @pytest.mark.asyncio
     async def test_group_aggregate_member_states_all_off(self) -> None:
-        """Test group aggregation when all members are OFF"""
+        """Test group aggregation when all members are OFF."""
         with patch("cync_controller.devices.g") as mock_g:
             group = CyncGroup(group_id=0x5678, name="Test Group", member_ids=[1, 2])  # type: ignore
 
@@ -687,7 +686,7 @@ class TestCyncGroupOperations:
 
     @pytest.mark.asyncio
     async def test_group_aggregate_member_states_mixed(self) -> None:
-        """Test group aggregation when members have mixed states"""
+        """Test group aggregation when members have mixed states."""
         with patch("cync_controller.devices.g") as mock_g:
             group = CyncGroup(group_id=0x5678, name="Test Group", member_ids=[1, 2, 3])  # type: ignore
 

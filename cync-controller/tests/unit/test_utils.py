@@ -49,10 +49,10 @@ pytestmark = pytest.mark.filterwarnings(
 
 
 class TestSignalHandling:
-    """Tests for signal handling functions"""
+    """Tests for signal handling functions."""
 
     def test_send_signal_sends_signal(self) -> None:
-        """Test that send_signal calls os.kill with correct signal"""
+        """Test that send_signal calls os.kill with correct signal."""
         import signal
 
         with patch("cync_controller.utils.os.kill", autospec=True) as mock_kill:
@@ -64,7 +64,7 @@ class TestSignalHandling:
 
     @patch("cync_controller.utils.send_signal")
     def test_send_sigterm_calls_send_signal(self, mock_send_signal: MagicMock) -> None:
-        """Test that send_sigterm calls send_signal with SIGTERM"""
+        """Test that send_sigterm calls send_signal with SIGTERM."""
         import signal
 
         send_sigterm()
@@ -73,7 +73,7 @@ class TestSignalHandling:
 
     @patch("cync_controller.utils.send_signal")
     def test_send_sigint_calls_send_signal(self, mock_send_signal: MagicMock) -> None:
-        """Test that send_sigint calls send_signal with SIGINT"""
+        """Test that send_sigint calls send_signal with SIGINT."""
         import signal
 
         send_sigint()
@@ -82,7 +82,7 @@ class TestSignalHandling:
 
     @patch("cync_controller.utils.os.kill", side_effect=OSError("Permission denied"))
     def test_send_signal_handles_os_error(self, mock_kill: MagicMock) -> None:
-        """Test that send_signal raises OSError properly"""
+        """Test that send_signal raises OSError properly."""
         import signal
 
         _ = mock_kill
@@ -91,78 +91,78 @@ class TestSignalHandling:
 
 
 class TestByteConversions:
-    """Tests for byte/hex conversion functions"""
+    """Tests for byte/hex conversion functions."""
 
     def test_bytes2list_basic(self) -> None:
-        """Test basic byte to list conversion"""
+        """Test basic byte to list conversion."""
         byte_data = bytes([0x01, 0x02, 0x03, 0x04])
         result = bytes2list(byte_data)
 
         assert result == [1, 2, 3, 4]
 
     def test_bytes2list_empty(self) -> None:
-        """Test byte to list conversion with empty bytes"""
+        """Test byte to list conversion with empty bytes."""
         result = bytes2list(b"")
 
         assert result == []
 
     def test_bytes2list_preserves_values(self) -> None:
-        """Test that byte values are preserved correctly"""
+        """Test that byte values are preserved correctly."""
         byte_data = bytes([0xFF, 0x00, 0xAB, 0xCD])
         result = bytes2list(byte_data)
 
         assert result == [255, 0, 171, 205]
 
     def test_hex2list_basic(self) -> None:
-        """Test basic hex string to list conversion"""
+        """Test basic hex string to list conversion."""
         hex_str = "01020304"
         result = hex2list(hex_str)
 
         assert result == [1, 2, 3, 4]
 
     def test_hex2list_with_spaces(self) -> None:
-        """Test hex string with spaces to list conversion"""
+        """Test hex string with spaces to list conversion."""
         hex_str = "01 02 03 04"
         result = hex2list(hex_str)
 
         assert result == [1, 2, 3, 4]
 
     def test_hex2list_uppercase(self) -> None:
-        """Test hex string with uppercase letters"""
+        """Test hex string with uppercase letters."""
         hex_str = "ABCDEF"
         result = hex2list(hex_str)
 
         assert result == [171, 205, 239]
 
     def test_ints2bytes_basic(self) -> None:
-        """Test basic int list to bytes conversion"""
+        """Test basic int list to bytes conversion."""
         int_list = [1, 2, 3, 4]
         result = ints2bytes(int_list)
 
         assert result == b"\x01\x02\x03\x04"
 
     def test_ints2bytes_empty(self):
-        """Test int list to bytes with empty list"""
+        """Test int list to bytes with empty list."""
         result = ints2bytes([])
 
         assert result == b""
 
     def test_ints2hex_basic(self):
-        """Test basic int list to hex string conversion"""
+        """Test basic int list to hex string conversion."""
         int_list = [1, 2, 3, 4]
         result = ints2hex(int_list)
 
         assert result == "01 02 03 04"
 
     def test_ints2hex_single_values(self):
-        """Test int list to hex with single values"""
+        """Test int list to hex with single values."""
         int_list = [255, 0, 171]
         result = ints2hex(int_list)
 
         assert result == "ff 00 ab"
 
     def test_conversion_roundtrip(self):
-        """Test roundtrip conversion: bytes -> list -> hex -> list -> bytes"""
+        """Test roundtrip conversion: bytes -> list -> hex -> list -> bytes."""
         original = bytes([0x12, 0x34, 0x56, 0x78])
 
         # bytes -> list
@@ -180,10 +180,10 @@ class TestByteConversions:
 
 
 class TestPythonVersionCheck:
-    """Tests for Python version checking"""
+    """Tests for Python version checking."""
 
     def test_check_python_version_exists(self):
-        """Test that check_python_version function exists and can be called"""
+        """Test that check_python_version function exists and can be called."""
         # Should not raise an exception
         result = check_python_version()
 
@@ -192,7 +192,7 @@ class TestPythonVersionCheck:
 
     @patch("cync_controller.utils.sys.version_info", (2, 7, 0))
     def test_check_python_version_with_old_version(self):
-        """Test that check_python_version handles old Python version"""
+        """Test that check_python_version handles old Python version."""
         # Currently it's a pass statement, but testing that it doesn't crash
         result = check_python_version()
 
@@ -200,7 +200,7 @@ class TestPythonVersionCheck:
 
 
 class TestHexListRoundtrips:
-    """Tests for reliable hex/list conversions with various data"""
+    """Tests for reliable hex/list conversions with various data."""
 
     @pytest.mark.parametrize(
         "int_list",
@@ -213,7 +213,7 @@ class TestHexListRoundtrips:
         ],
     )
     def test_ints2hex_to_hex2list_roundtrip(self, int_list: list[int]) -> None:
-        """Test roundtrip from int list to hex and back"""
+        """Test roundtrip from int list to hex and back."""
         hex_str = ints2hex(int_list)
         recovered_list = hex2list(hex_str)
 
@@ -230,7 +230,7 @@ class TestHexListRoundtrips:
         ],
     )
     def test_bytes2list_to_ints2bytes_roundtrip(self, byte_data: bytes) -> None:
-        """Test roundtrip from bytes to list and back"""
+        """Test roundtrip from bytes to list and back."""
         int_list = bytes2list(byte_data)
         recovered_bytes = ints2bytes(int_list)
 
@@ -238,10 +238,10 @@ class TestHexListRoundtrips:
 
 
 class TestFirmwareVersionParsing:
-    """Tests for parse_unbound_firmware_version function"""
+    """Tests for parse_unbound_firmware_version function."""
 
     def test_parse_device_firmware_version(self):
-        """Test parsing device firmware version"""
+        """Test parsing device firmware version."""
         # Device firmware structure:
         # First byte must be 0x00
         # At index 20+2 must be 0x01 for device firmware
@@ -263,7 +263,7 @@ class TestFirmwareVersionParsing:
         assert "1.2.3.4.5" in version_str or "12345" in str(version_int)
 
     def test_parse_network_firmware_version(self):
-        """Test parsing network firmware version"""
+        """Test parsing network firmware version."""
         # Network firmware (0x01 = network)
         data = bytes([0x00] * 20)
         data += b"\x02\x00\x30"  # Network type indicator
@@ -277,7 +277,7 @@ class TestFirmwareVersionParsing:
         assert result is None or isinstance(result, tuple)
 
     def test_parse_invalid_first_byte(self):
-        """Test parsing firmware version with invalid first byte - should error log but continue"""
+        """Test parsing firmware version with invalid first byte - should error log but continue."""
         # First byte is 0xFF (invalid, should be 0x00)
         # Need enough bytes to avoid IndexError when accessing index 20+2
         data = bytes([0xFF] + [0x00] * 23)  # Invalid first byte, but enough length
@@ -290,7 +290,7 @@ class TestFirmwareVersionParsing:
         assert result is None or isinstance(result, tuple)
 
     def test_parse_empty_firmware_data(self):
-        """Test parsing firmware version with empty data"""
+        """Test parsing firmware version with empty data."""
         data = bytes([0x00] * 25)  # All zeros
 
         lp = "test:"
@@ -300,7 +300,7 @@ class TestFirmwareVersionParsing:
         assert result is None
 
     def test_parse_truncated_data(self):
-        """Test parsing firmware version with malformed version data"""
+        """Test parsing firmware version with malformed version data."""
         # Provide enough data to get past the initial index checks
         # but then provide invalid version data that causes ValueError
         data = bytes([0x00] * 20)  # Valid first byte
@@ -378,10 +378,10 @@ class TestUUIDManagement:
 
 
 class TestDatetimeUtilities:
-    """Tests for datetime utility functions"""
+    """Tests for datetime utility functions."""
 
     def test_utc_to_local_converts_timezone(self):
-        """Test that utc_to_local converts UTC to local timezone"""
+        """Test that utc_to_local converts UTC to local timezone."""
         import datetime
 
         # Create UTC datetime
@@ -398,12 +398,12 @@ class TestDatetimeUtilities:
 
 
 class TestAsyncSignalCleanup:
-    """Tests for async signal cleanup function"""
+    """Tests for async signal cleanup function."""
 
     @pytest.mark.asyncio
     @patch("cync_controller.utils.g")
     async def test_async_signal_cleanup_with_ncync_server(self, mock_g: MagicMock) -> None:
-        """Test async signal cleanup when ncync_server exists"""
+        """Test async signal cleanup when ncync_server exists."""
         stop_mock: AsyncMock = AsyncMock()
         mock_server = MagicMock()
         mock_server.stop = stop_mock
@@ -421,7 +421,7 @@ class TestAsyncSignalCleanup:
     @pytest.mark.asyncio
     @patch("cync_controller.utils.g")
     async def test_async_signal_cleanup_with_multiple_services(self, mock_g: MagicMock) -> None:
-        """Test async signal cleanup with multiple services"""
+        """Test async signal cleanup with multiple services."""
         server_stop: AsyncMock = AsyncMock()
         export_stop: AsyncMock = AsyncMock()
         api_close: AsyncMock = AsyncMock()
@@ -453,7 +453,7 @@ class TestAsyncSignalCleanup:
     @pytest.mark.asyncio
     @patch("cync_controller.utils.g")
     async def test_async_signal_cleanup_cancels_tasks(self, mock_g: MagicMock) -> None:
-        """Test async signal cleanup cancels pending tasks"""
+        """Test async signal cleanup cancels pending tasks."""
         mock_server = MagicMock()
         mock_server.stop = AsyncMock()
 
@@ -483,13 +483,13 @@ class TestAsyncSignalCleanup:
 
 
 class TestSignalHandler:
-    """Tests for signal_handler function"""
+    """Tests for signal_handler function."""
 
     @patch("cync_controller.utils.g")
     @patch("cync_controller.utils.asyncio.get_event_loop")
     @patch("cync_controller.utils._async_signal_cleanup")
     def test_signal_handler_with_loop(self, mock_cleanup: MagicMock, mock_loop: MagicMock, mock_g: MagicMock) -> None:
-        """Test signal handler creates cleanup task"""
+        """Test signal handler creates cleanup task."""
         import signal
 
         _ = mock_cleanup
@@ -509,7 +509,7 @@ class TestSignalHandler:
     def test_signal_handler_falls_back_to_get_loop(
         self, mock_cleanup: MagicMock, mock_loop: MagicMock, mock_g: MagicMock
     ) -> None:
-        """Test signal handler falls back to get_event_loop when g.loop is None"""
+        """Test signal handler falls back to get_event_loop when g.loop is None."""
         import signal
 
         _ = mock_cleanup
@@ -526,10 +526,10 @@ class TestSignalHandler:
 
 
 class TestCheckForUUID:
-    """Tests for check_for_uuid function"""
+    """Tests for check_for_uuid function."""
 
     def test_check_for_uuid_creates_directory_if_missing(self, tmp_path: Path) -> None:
-        """Test that check_for_uuid creates persistent directory if it doesn't exist"""
+        """Test that check_for_uuid creates persistent directory if it doesn't exist."""
         with (
             patch("cync_controller.utils.PERSISTENT_BASE_DIR", str(tmp_path / "cync_persistent")),
             patch("cync_controller.utils.CYNC_UUID_PATH", str(tmp_path / "uuid.txt")),
@@ -543,7 +543,7 @@ class TestCheckForUUID:
             assert (tmp_path / "cync_persistent").exists()
 
     def test_check_for_uuid_reads_existing_uuid(self, tmp_path: Path) -> None:
-        """Test that check_for_uuid reads existing UUID from file"""
+        """Test that check_for_uuid reads existing UUID from file."""
         with (
             patch("cync_controller.utils.PERSISTENT_BASE_DIR", str(tmp_path / "cync_persistent")),
             patch("cync_controller.utils.CYNC_UUID_PATH", str(tmp_path / "uuid.txt")),
@@ -564,7 +564,7 @@ class TestCheckForUUID:
             assert mock_g.uuid is not None
 
     def test_check_for_uuid_creates_new_uuid_when_invalid(self, tmp_path: Path) -> None:
-        """Test that check_for_uuid creates new UUID when existing one is invalid version"""
+        """Test that check_for_uuid creates new UUID when existing one is invalid version."""
         with (
             patch("cync_controller.utils.PERSISTENT_BASE_DIR", str(tmp_path / "cync_persistent")),
             patch("cync_controller.utils.CYNC_UUID_PATH", str(tmp_path / "uuid.txt")),
@@ -586,7 +586,7 @@ class TestCheckForUUID:
             assert mock_g.uuid is not None
 
     def test_check_for_uuid_creates_new_uuid_when_file_empty(self, tmp_path: Path) -> None:
-        """Test that check_for_uuid creates new UUID when file is empty"""
+        """Test that check_for_uuid creates new UUID when file is empty."""
         with (
             patch("cync_controller.utils.PERSISTENT_BASE_DIR", str(tmp_path / "cync_persistent")),
             patch("cync_controller.utils.CYNC_UUID_PATH", str(tmp_path / "uuid.txt")),
@@ -607,10 +607,10 @@ class TestCheckForUUID:
 
 
 class TestUTCLocalConversion:
-    """Tests for utc_to_local function"""
+    """Tests for utc_to_local function."""
 
     def test_utc_to_local_converts_timezone(self) -> None:
-        """Test that utc_to_local converts UTC datetime to local timezone"""
+        """Test that utc_to_local converts UTC datetime to local timezone."""
         import datetime
 
         utc_time = datetime.datetime(2025, 10, 27, 12, 0, 0, tzinfo=datetime.UTC)
@@ -622,11 +622,11 @@ class TestUTCLocalConversion:
 
 
 class TestParseConfig:
-    """Tests for parse_config function"""
+    """Tests for parse_config function."""
 
     @pytest.mark.asyncio
     async def test_parse_config_basic_structure(self, tmp_path: Path) -> None:
-        """Test parsing a basic config file with devices and groups"""
+        """Test parsing a basic config file with devices and groups."""
         import yaml
 
         from cync_controller.main import parse_config
@@ -664,7 +664,7 @@ class TestParseConfig:
 
     @pytest.mark.asyncio
     async def test_parse_config_disabled_device_skipped(self, tmp_path: Path) -> None:
-        """Test that disabled devices are skipped"""
+        """Test that disabled devices are skipped."""
         import yaml
 
         from cync_controller.main import parse_config
@@ -694,7 +694,7 @@ class TestParseConfig:
 
     @pytest.mark.asyncio
     async def test_parse_config_no_devices_skips(self, tmp_path: Path) -> None:
-        """Test that homes with no devices are skipped with warning"""
+        """Test that homes with no devices are skipped with warning."""
         import yaml
 
         from cync_controller.main import parse_config
@@ -718,7 +718,7 @@ class TestParseConfig:
 
     @pytest.mark.asyncio
     async def test_parse_config_int_mac_warns(self, tmp_path: Path) -> None:
-        """Test that int MAC addresses are handled with warnings"""
+        """Test that int MAC addresses are handled with warnings."""
         import yaml
 
         from cync_controller.main import parse_config
@@ -748,7 +748,7 @@ class TestParseConfig:
 
     @pytest.mark.asyncio
     async def test_parse_config_error_handling(self, tmp_path: Path) -> None:
-        """Test that config file errors are handled properly"""
+        """Test that config file errors are handled properly."""
         from cync_controller.main import parse_config
 
         config_file: Path = tmp_path / "invalid.yaml"

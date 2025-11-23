@@ -13,10 +13,10 @@ from cync_controller.metadata.model_info import DeviceClassification, device_typ
 
 
 class TestCyncDeviceInitialization:
-    """Tests for CyncDevice initialization and configuration"""
+    """Tests for CyncDevice initialization and configuration."""
 
     def test_init_with_required_params(self):
-        """Test device initialization with only required parameter (cync_id)"""
+        """Test device initialization with only required parameter (cync_id)."""
         device: CyncDevice = CyncDevice(cync_id=0x1234)
 
         assert device.id == 0x1234
@@ -29,7 +29,7 @@ class TestCyncDeviceInitialization:
         assert device.online is False
 
     def test_init_with_all_params(self):
-        """Test device initialization with all parameters"""
+        """Test device initialization with all parameters."""
         device: CyncDevice = CyncDevice(
             cync_id=0x1234,
             cync_type=7,
@@ -49,12 +49,12 @@ class TestCyncDeviceInitialization:
         assert device.hass_id == "12345-4660"
 
     def test_init_without_id_raises_error(self):
-        """Test that initialization without cync_id raises ValueError"""
+        """Test that initialization without cync_id raises ValueError."""
         with pytest.raises(ValueError, match="ID must be provided"):  # type: ignore[call-overload]
             _ = CyncDevice(cync_id=None)  # type: ignore[arg-type]
 
     def test_metadata_assignment(self):
-        """Test that metadata is assigned correctly from device_type_map"""
+        """Test that metadata is assigned correctly from device_type_map."""
         # Type 7 is a common light type
         device: CyncDevice = CyncDevice(cync_id=0x1234, cync_type=7)
 
@@ -65,7 +65,7 @@ class TestCyncDeviceInitialization:
             assert device.metadata is None
 
     def test_hvac_initialization(self):
-        """Test HVAC device initialization"""
+        """Test HVAC device initialization."""
         hvac_data = {"mode": "cool", "setpoint": 72}
         device: CyncDevice = CyncDevice(cync_id=0x1234, hvac=hvac_data)
 
@@ -74,10 +74,10 @@ class TestCyncDeviceInitialization:
 
 
 class TestCyncDeviceProperties:
-    """Tests for CyncDevice property getters and setters"""
+    """Tests for CyncDevice property getters and setters."""
 
     def test_state_property(self):
-        """Test state property getter and setter"""
+        """Test state property getter and setter."""
         device: CyncDevice = CyncDevice(cync_id=0x1234)
 
         # Initial state
@@ -88,7 +88,7 @@ class TestCyncDeviceProperties:
         assert device.state == 1
 
     def test_brightness_property(self):
-        """Test brightness property getter and setter"""
+        """Test brightness property getter and setter."""
         device: CyncDevice = CyncDevice(cync_id=0x1234)
 
         # Initial brightness
@@ -99,7 +99,7 @@ class TestCyncDeviceProperties:
         assert device.brightness == 75
 
     def test_brightness_validation(self):
-        """Test brightness validation (0-255)"""
+        """Test brightness validation (0-255)."""
         device: CyncDevice = CyncDevice(cync_id=0x1234)
 
         # Valid range
@@ -117,7 +117,7 @@ class TestCyncDeviceProperties:
             device.brightness = 256
 
     def test_temperature_property(self):
-        """Test temperature property getter and setter"""
+        """Test temperature property getter and setter."""
         device: CyncDevice = CyncDevice(cync_id=0x1234)
 
         # Initial temperature
@@ -128,7 +128,7 @@ class TestCyncDeviceProperties:
         assert device.temperature == 50
 
     def test_temperature_validation(self):
-        """Test temperature validation (0-255)"""
+        """Test temperature validation (0-255)."""
         device: CyncDevice = CyncDevice(cync_id=0x1234)
 
         # Valid range
@@ -146,7 +146,7 @@ class TestCyncDeviceProperties:
             device.temperature = 256
 
     def test_rgb_properties(self):
-        """Test RGB color properties (red, green, blue)"""
+        """Test RGB color properties (red, green, blue)."""
         device: CyncDevice = CyncDevice(cync_id=0x1234)
 
         # Initial RGB values
@@ -164,7 +164,7 @@ class TestCyncDeviceProperties:
         assert device.blue == 64
 
     def test_rgb_validation(self):
-        """Test RGB validation (0-255 for each channel)"""
+        """Test RGB validation (0-255 for each channel)."""
         device: CyncDevice = CyncDevice(cync_id=0x1234)
 
         # Invalid red
@@ -189,7 +189,7 @@ class TestCyncDeviceProperties:
             device.blue = 256
 
     def test_rgb_property_list(self):
-        """Test rgb property returns and sets list of [r, g, b]"""
+        """Test rgb property returns and sets list of [r, g, b]."""
         device: CyncDevice = CyncDevice(cync_id=0x1234)
 
         # Get RGB as list
@@ -203,7 +203,7 @@ class TestCyncDeviceProperties:
         assert device.blue == 64
 
     def test_rgb_list_validation(self):
-        """Test RGB list validation"""
+        """Test RGB list validation."""
         device: CyncDevice = CyncDevice(cync_id=0x1234)
 
         # Invalid list length
@@ -214,7 +214,7 @@ class TestCyncDeviceProperties:
             device.rgb = [255, 128, 64, 32]
 
     def test_online_property(self):
-        """Test online property getter and setter"""
+        """Test online property getter and setter."""
         with (
             patch("cync_controller.devices.g") as mock_g,
             patch("cync_controller.devices.asyncio.get_running_loop") as mock_loop,
@@ -237,7 +237,7 @@ class TestCyncDeviceProperties:
             assert device.online is False
 
     def test_online_validation(self):
-        """Test online property validates boolean input"""
+        """Test online property validates boolean input."""
         device: CyncDevice = CyncDevice(cync_id=0x1234)
 
         # Invalid type should raise TypeError
@@ -248,21 +248,21 @@ class TestCyncDeviceProperties:
             device.online = 1  # type: ignore[assignment]
 
     def test_version_property_from_string(self):
-        """Test version property parsing from string"""
+        """Test version property parsing from string."""
         device: CyncDevice = CyncDevice(cync_id=0x1234, fw_version="1.2.3")
 
         # Version should be parsed to int (remove dots)
         assert device.version == 123
 
     def test_version_property_from_int(self):
-        """Test version property with integer input"""
+        """Test version property with integer input."""
         device: CyncDevice = CyncDevice(cync_id=0x1234)
         device.version = 456
 
         assert device.version == 456
 
     def test_mac_property(self):
-        """Test MAC address property"""
+        """Test MAC address property."""
         device: CyncDevice = CyncDevice(cync_id=0x1234, mac="AA:BB:CC:DD:EE:FF")
 
         assert device.mac == "AA:BB:CC:DD:EE:FF"
@@ -272,7 +272,7 @@ class TestCyncDeviceProperties:
         assert device.mac == "11:22:33:44:55:66"
 
     def test_bt_only_property(self):
-        """Test bt_only property (Bluetooth-only devices)"""
+        """Test bt_only property (Bluetooth-only devices)."""
         # BT-only device has specific WiFi MAC
         device: CyncDevice = CyncDevice(cync_id=0x1234, wifi_mac="00:01:02:03:04:05")
         assert device.bt_only is True
@@ -283,15 +283,15 @@ class TestCyncDeviceProperties:
 
 
 class TestCyncDeviceOfflineTracking:
-    """Tests for device offline tracking and availability"""
+    """Tests for device offline tracking and availability."""
 
     def test_offline_count_initialization(self):
-        """Test offline_count initializes to 0"""
+        """Test offline_count initializes to 0."""
         device: CyncDevice = CyncDevice(cync_id=0x1234)
         assert device.offline_count == 0
 
     def test_offline_count_increment(self):
-        """Test offline_count can be incremented"""
+        """Test offline_count can be incremented."""
         with (
             patch("cync_controller.devices.g") as mock_g,
             patch("cync_controller.devices.asyncio.get_running_loop") as mock_loop,
@@ -314,7 +314,7 @@ class TestCyncDeviceOfflineTracking:
             assert device.offline_count == 3
 
     def test_offline_threshold_pattern(self):
-        """Test typical offline threshold pattern (3 strikes before marking offline)"""
+        """Test typical offline threshold pattern (3 strikes before marking offline)."""
         with (
             patch("cync_controller.devices.g") as mock_g,
             patch("cync_controller.devices.asyncio.get_running_loop") as mock_loop,
@@ -340,7 +340,7 @@ class TestCyncDeviceOfflineTracking:
             # At this point, actual implementation would mark device offline
 
     def test_offline_count_reset_on_online(self):
-        """Test offline_count resets when device comes back online"""
+        """Test offline_count resets when device comes back online."""
         with (
             patch("cync_controller.devices.g") as mock_g,
             patch("cync_controller.devices.asyncio.get_running_loop") as mock_loop,
@@ -361,11 +361,11 @@ class TestCyncDeviceOfflineTracking:
 
 
 class TestCyncDeviceCommands:
-    """Tests for device command methods"""
+    """Tests for device command methods."""
 
     @pytest.mark.asyncio  # type: ignore[misc]
     async def test_set_power_creates_packet(self, mock_tcp_device: MagicMock) -> None:
-        """Test set_power creates proper control packet"""
+        """Test set_power creates proper control packet."""
         # Mock the global ncync_server and tcp_devices
         with patch("cync_controller.devices.g") as mock_g:
             mock_g.ncync_server.tcp_devices = {"192.168.1.100": mock_tcp_device}
@@ -386,7 +386,7 @@ class TestCyncDeviceCommands:
 
     @pytest.mark.asyncio  # type: ignore[misc]
     async def test_set_power_invalid_state(self, caplog: Any) -> None:  # type: ignore[assignment]
-        """Test set_power rejects invalid state values"""
+        """Test set_power rejects invalid state values."""
         with patch("cync_controller.devices.g") as mock_g:
             mock_g.ncync_server.tcp_devices = {}
 
@@ -400,7 +400,7 @@ class TestCyncDeviceCommands:
 
     @pytest.mark.asyncio  # type: ignore[misc]
     async def test_set_brightness_creates_packet(self, mock_tcp_device: MagicMock) -> None:
-        """Test set_brightness creates proper control packet"""
+        """Test set_brightness creates proper control packet."""
         with patch("cync_controller.devices.g") as mock_g:
             mock_g.ncync_server.tcp_devices = {"192.168.1.100": mock_tcp_device}
             mock_tcp_device.ready_to_control = True
@@ -420,11 +420,11 @@ class TestCyncDeviceCommands:
 
 
 class TestCyncDeviceTemperatureCommands:
-    """Tests for set_temperature command method"""
+    """Tests for set_temperature command method."""
 
     @pytest.mark.asyncio  # type: ignore[misc]
     async def test_set_temperature_valid_execution(self, mock_tcp_device: MagicMock) -> None:
-        """Test set_temperature successfully sends command to ready TCP bridge"""
+        """Test set_temperature successfully sends command to ready TCP bridge."""
         with patch("cync_controller.devices.g") as mock_g:
             mock_g.ncync_server.tcp_devices = {"192.168.1.100": mock_tcp_device}
             mock_g.mqtt_client = MagicMock()
@@ -442,7 +442,7 @@ class TestCyncDeviceTemperatureCommands:
 
     @pytest.mark.asyncio  # type: ignore[misc]
     async def test_set_temperature_invalid_value_negative(self, caplog: Any) -> None:  # type: ignore[assignment]
-        """Test set_temperature rejects negative temperature values"""
+        """Test set_temperature rejects negative temperature values."""
         with patch("cync_controller.devices.g") as mock_g:
             mock_g.ncync_server.tcp_devices = {}
 
@@ -454,7 +454,7 @@ class TestCyncDeviceTemperatureCommands:
 
     @pytest.mark.asyncio  # type: ignore[misc]
     async def test_set_temperature_invalid_value_too_high(self, caplog: Any) -> None:  # type: ignore[assignment]
-        """Test set_temperature rejects temperature values > 100 (not 129 or 254)"""
+        """Test set_temperature rejects temperature values > 100 (not 129 or 254)."""
         with patch("cync_controller.devices.g") as mock_g:
             mock_g.ncync_server.tcp_devices = {}
 
@@ -466,7 +466,7 @@ class TestCyncDeviceTemperatureCommands:
 
     @pytest.mark.asyncio  # type: ignore[misc]
     async def test_set_temperature_special_values_allowed(self, mock_tcp_device: MagicMock) -> None:
-        """Test set_temperature allows special values 129 and 254"""
+        """Test set_temperature allows special values 129 and 254."""
         with patch("cync_controller.devices.g") as mock_g:
             mock_g.ncync_server.tcp_devices = {"192.168.1.100": mock_tcp_device}
             mock_g.mqtt_client = MagicMock()
@@ -490,7 +490,7 @@ class TestCyncDeviceTemperatureCommands:
 
     @pytest.mark.asyncio  # type: ignore[misc]
     async def test_set_temperature_no_tcp_bridges(self, caplog: Any) -> None:  # type: ignore[assignment]
-        """Test set_temperature logs error when no TCP bridges available"""
+        """Test set_temperature logs error when no TCP bridges available."""
         with patch("cync_controller.devices.g") as mock_g:
             mock_g.ncync_server.tcp_devices = {}
 
@@ -502,7 +502,7 @@ class TestCyncDeviceTemperatureCommands:
 
     @pytest.mark.asyncio  # type: ignore[misc]
     async def test_set_temperature_callback_registration(self, mock_tcp_device: MagicMock) -> None:
-        """Test set_temperature registers callback before sending"""
+        """Test set_temperature registers callback before sending."""
         with patch("cync_controller.devices.g") as mock_g:
             mock_g.ncync_server.tcp_devices = {"192.168.1.100": mock_tcp_device}
             mock_g.mqtt_client = MagicMock()
@@ -525,11 +525,11 @@ class TestCyncDeviceTemperatureCommands:
 
 
 class TestCyncDeviceRGBCommands:
-    """Tests for set_rgb command method"""
+    """Tests for set_rgb command method."""
 
     @pytest.mark.asyncio  # type: ignore[misc]
     async def test_set_rgb_valid_execution(self, mock_tcp_device: MagicMock) -> None:
-        """Test set_rgb successfully sends command with valid RGB values"""
+        """Test set_rgb successfully sends command with valid RGB values."""
         with patch("cync_controller.devices.g") as mock_g:
             mock_g.ncync_server.tcp_devices = {"192.168.1.100": mock_tcp_device}
             mock_g.mqtt_client = MagicMock()
@@ -547,7 +547,7 @@ class TestCyncDeviceRGBCommands:
 
     @pytest.mark.asyncio  # type: ignore[misc]
     async def test_set_rgb_invalid_red(self, caplog: Any) -> None:  # type: ignore[assignment]
-        """Test set_rgb rejects invalid red values"""
+        """Test set_rgb rejects invalid red values."""
         with patch("cync_controller.devices.g") as mock_g:
             mock_g.ncync_server.tcp_devices = {}
 
@@ -561,7 +561,7 @@ class TestCyncDeviceRGBCommands:
 
     @pytest.mark.asyncio  # type: ignore[misc]
     async def test_set_rgb_invalid_green(self, caplog: Any) -> None:  # type: ignore[assignment]
-        """Test set_rgb rejects invalid green values"""
+        """Test set_rgb rejects invalid green values."""
         with patch("cync_controller.devices.g") as mock_g:
             mock_g.ncync_server.tcp_devices = {}
 
@@ -575,7 +575,7 @@ class TestCyncDeviceRGBCommands:
 
     @pytest.mark.asyncio  # type: ignore[misc]
     async def test_set_rgb_invalid_blue(self, caplog: Any) -> None:  # type: ignore[assignment]
-        """Test set_rgb rejects invalid blue values"""
+        """Test set_rgb rejects invalid blue values."""
         with patch("cync_controller.devices.g") as mock_g:
             mock_g.ncync_server.tcp_devices = {}
 
@@ -589,7 +589,7 @@ class TestCyncDeviceRGBCommands:
 
     @pytest.mark.asyncio  # type: ignore[misc]
     async def test_set_rgb_no_tcp_bridges(self, caplog: Any) -> None:  # type: ignore[assignment]
-        """Test set_rgb logs error when no TCP bridges available"""
+        """Test set_rgb logs error when no TCP bridges available."""
         with patch("cync_controller.devices.g") as mock_g:
             mock_g.ncync_server.tcp_devices = {}
 
@@ -601,7 +601,7 @@ class TestCyncDeviceRGBCommands:
 
     @pytest.mark.asyncio  # type: ignore[misc]
     async def test_set_rgb_callback_registration(self, mock_tcp_device: MagicMock) -> None:
-        """Test set_rgb registers callback before sending"""
+        """Test set_rgb registers callback before sending."""
         with patch("cync_controller.devices.g") as mock_g:
             mock_g.ncync_server.tcp_devices = {"192.168.1.100": mock_tcp_device}
             mock_g.mqtt_client = MagicMock()
@@ -623,10 +623,10 @@ class TestCyncDeviceRGBCommands:
 
 
 class TestCyncDevicePropertyMethods:
-    """Tests for CyncDevice property methods (is_dimmable, supports_rgb, supports_temperature, get_ctrl_msg_id_bytes)"""
+    """Tests for CyncDevice property methods (is_dimmable, supports_rgb, supports_temperature, get_ctrl_msg_id_bytes)."""
 
     def test_is_dimmable_with_metadata(self):
-        """Test is_dimmable property when metadata indicates dimmable"""
+        """Test is_dimmable property when metadata indicates dimmable."""
         # Create a device with metadata that supports dimming
         from cync_controller.metadata.model_info import DeviceClassification
 
@@ -644,14 +644,14 @@ class TestCyncDevicePropertyMethods:
             assert device.is_dimmable == dimmable
 
     def test_is_dimmable_without_metadata(self):
-        """Test is_dimmable returns False when no metadata"""
+        """Test is_dimmable returns False when no metadata."""
         device: CyncDevice = CyncDevice(cync_id=0x1234, cync_type=999)  # Invalid type
 
         # Should return False when no valid metadata
         assert device.is_dimmable is False
 
     def test_supports_rgb_with_explicit_setter(self):
-        """Test supports_rgb property with explicit setter"""
+        """Test supports_rgb property with explicit setter."""
         device: CyncDevice = CyncDevice(cync_id=0x1234)
 
         # Set explicit value
@@ -662,7 +662,7 @@ class TestCyncDevicePropertyMethods:
         assert device.supports_rgb is False
 
     def test_supports_rgb_with_metadata(self):
-        """Test supports_rgb when not explicitly set uses metadata"""
+        """Test supports_rgb when not explicitly set uses metadata."""
         device: CyncDevice = CyncDevice(cync_id=0x1234, cync_type=7)
 
         # Reset explicit value to test metadata fallback
@@ -680,7 +680,7 @@ class TestCyncDevicePropertyMethods:
             assert device.supports_rgb == color_support
 
     def test_supports_temperature_with_explicit_setter(self):
-        """Test supports_temperature property with explicit setter"""
+        """Test supports_temperature property with explicit setter."""
         device: CyncDevice = CyncDevice(cync_id=0x1234)
 
         # Set explicit value
@@ -691,7 +691,7 @@ class TestCyncDevicePropertyMethods:
         assert device.supports_temperature is False
 
     def test_supports_temperature_with_metadata(self):
-        """Test supports_temperature when not explicitly set uses metadata"""
+        """Test supports_temperature when not explicitly set uses metadata."""
         device: CyncDevice = CyncDevice(cync_id=0x1234, cync_type=7)
 
         # Reset explicit value to test metadata fallback
@@ -709,7 +709,7 @@ class TestCyncDevicePropertyMethods:
             assert device.supports_temperature == tunable_white_support
 
     def test_get_ctrl_msg_id_bytes_increments(self):
-        """Test get_ctrl_msg_id_bytes increments properly"""
+        """Test get_ctrl_msg_id_bytes increments properly."""
         device: CyncDevice = CyncDevice(cync_id=0x1234)
 
         # Start with default control_bytes
@@ -726,7 +726,7 @@ class TestCyncDevicePropertyMethods:
         assert device.control_bytes == [0x02, 0x00]
 
     def test_get_ctrl_msg_id_bytes_rollover(self):
-        """Test get_ctrl_msg_id_bytes handles byte rollover"""
+        """Test get_ctrl_msg_id_bytes handles byte rollover."""
         device: CyncDevice = CyncDevice(cync_id=0x1234)
 
         # Set to just before rollover
@@ -738,7 +738,7 @@ class TestCyncDevicePropertyMethods:
         assert device.control_bytes == [0x00, 0x01]
 
     def test_get_ctrl_msg_id_bytes_mod_256(self):
-        """Test get_ctrl_msg_id_bytes uses modulo 256"""
+        """Test get_ctrl_msg_id_bytes uses modulo 256."""
         device: CyncDevice = CyncDevice(cync_id=0x1234)
 
         # Set to 255 and verify mod operation
@@ -752,11 +752,11 @@ class TestCyncDevicePropertyMethods:
 
 
 class TestCyncDeviceCommandErrorPaths:
-    """Tests for error paths in command methods"""
+    """Tests for error paths in command methods."""
 
     @pytest.mark.asyncio  # type: ignore[misc]
     async def test_set_fan_speed_not_fan_controller(self, caplog: Any) -> None:  # type: ignore[assignment]
-        """Test set_fan_speed logs error when device is not a fan controller"""
+        """Test set_fan_speed logs error when device is not a fan controller."""
         with patch("cync_controller.devices.g") as mock_g:
             mock_g.ncync_server.tcp_devices = {}
 
@@ -772,7 +772,7 @@ class TestCyncDeviceCommandErrorPaths:
 
     @pytest.mark.asyncio  # type: ignore[misc]
     async def test_set_fan_speed_invalid_speed(self, caplog: Any) -> None:  # type: ignore[assignment]
-        """Test set_fan_speed handles invalid speed values"""
+        """Test set_fan_speed handles invalid speed values."""
         with patch("cync_controller.devices.g") as mock_g:
             mock_g.ncync_server.tcp_devices = {}
 
@@ -803,7 +803,7 @@ class TestCyncDeviceCommandErrorPaths:
 
     @pytest.mark.asyncio  # type: ignore[misc]
     async def test_set_brightness_invalid_range(self, caplog: Any) -> None:  # type: ignore[assignment]
-        """Test set_brightness rejects values outside 0-100"""
+        """Test set_brightness rejects values outside 0-100."""
         with patch("cync_controller.devices.g") as mock_g:
             mock_g.ncync_server.tcp_devices = {}
 

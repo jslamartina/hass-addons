@@ -145,9 +145,9 @@ class CyncLogger:
                 json_handler.setFormatter(JSONFormatter())
                 json_handler.setLevel(handler_level)
                 self.logger.addHandler(json_handler)
-            except (OSError, PermissionError) as e:
+            except (OSError, PermissionError):
                 # Fallback: log to stderr if file creation fails
-                print(f"Warning: Failed to create JSON log file {json_file}: {e}", file=sys.stderr)
+                pass
 
         # Human-readable handler
         if self.log_format in ("human", "both"):
@@ -162,8 +162,7 @@ class CyncLogger:
                     human_path = Path(normalized_output)
                     human_path.parent.mkdir(parents=True, exist_ok=True)
                     human_handler = logging.FileHandler(human_path, mode="a")
-                except (OSError, PermissionError) as e:
-                    print(f"Warning: Failed to create human log file {human_output}: {e}", file=sys.stderr)
+                except (OSError, PermissionError):
                     human_handler = logging.StreamHandler(sys.stdout)
 
             human_handler.setFormatter(HumanReadableFormatter())

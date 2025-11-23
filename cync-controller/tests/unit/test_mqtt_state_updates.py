@@ -1,5 +1,4 @@
-"""
-Unit tests for MQTTClient state update methods.
+"""Unit tests for MQTTClient state update methods.
 
 Tests for update_switch_from_subgroup(), update_brightness(),
 update_temperature(), update_rgb(), parse_device_status(),
@@ -14,18 +13,18 @@ from cync_controller.mqtt_client import MQTTClient
 
 
 class TestMQTTClientStateUpdates:
-    """Tests for MQTT client state update methods"""
+    """Tests for MQTT client state update methods."""
 
     @pytest.fixture(autouse=True)
     def reset_mqtt_singleton(self):
-        """Reset MQTTClient singleton between tests"""
+        """Reset MQTTClient singleton between tests."""
         MQTTClient._instance = None
         yield
         MQTTClient._instance = None
 
     @pytest.mark.asyncio
     async def test_update_switch_from_subgroup(self):
-        """Test switch state update from subgroup"""
+        """Test switch state update from subgroup."""
         with (
             patch("cync_controller.mqtt_client.g") as mock_g,
             patch("cync_controller.mqtt_client.aiomqtt.Client"),
@@ -58,7 +57,7 @@ class TestMQTTClientStateUpdates:
 
     @pytest.mark.asyncio
     async def test_update_brightness_percentage_conversion(self):
-        """Test 0-255 to 0-100 percentage conversion"""
+        """Test 0-255 to 0-100 percentage conversion."""
         with (
             patch("cync_controller.mqtt_client.g") as mock_g,
             patch("cync_controller.mqtt_client.aiomqtt.Client"),
@@ -84,7 +83,7 @@ class TestMQTTClientStateUpdates:
 
     @pytest.mark.asyncio
     async def test_update_temperature_kelvin_conversion(self):
-        """Test Kelvin to mireds conversion"""
+        """Test Kelvin to mireds conversion."""
         with (
             patch("cync_controller.mqtt_client.g") as mock_g,
             patch("cync_controller.mqtt_client.aiomqtt.Client"),
@@ -110,7 +109,7 @@ class TestMQTTClientStateUpdates:
 
     @pytest.mark.asyncio
     async def test_update_temperature_reverse_conversion(self):
-        """Test mireds to Kelvin reverse conversion"""
+        """Test mireds to Kelvin reverse conversion."""
         with (
             patch("cync_controller.mqtt_client.g") as mock_g,
             patch("cync_controller.mqtt_client.aiomqtt.Client"),
@@ -128,7 +127,7 @@ class TestMQTTClientStateUpdates:
 
     @pytest.mark.asyncio
     async def test_update_rgb_zero_values(self):
-        """Test RGB (0,0,0) handling"""
+        """Test RGB (0,0,0) handling."""
         with (
             patch("cync_controller.mqtt_client.g") as mock_g,
             patch("cync_controller.mqtt_client.aiomqtt.Client"),
@@ -156,7 +155,7 @@ class TestMQTTClientStateUpdates:
 
     @pytest.mark.asyncio
     async def test_update_rgb_color_values(self):
-        """Test RGB color value handling"""
+        """Test RGB color value handling."""
         with (
             patch("cync_controller.mqtt_client.g") as mock_g,
             patch("cync_controller.mqtt_client.aiomqtt.Client"),
@@ -184,7 +183,7 @@ class TestMQTTClientStateUpdates:
 
     @pytest.mark.asyncio
     async def test_parse_device_status_all_capabilities(self):
-        """Test full device status parsing with all capabilities"""
+        """Test full device status parsing with all capabilities."""
         with (
             patch("cync_controller.mqtt_client.g") as mock_g,
             patch("cync_controller.mqtt_client.aiomqtt.Client"),
@@ -216,7 +215,7 @@ class TestMQTTClientStateUpdates:
 
     @pytest.mark.asyncio
     async def test_update_device_state_offline_device(self):
-        """Test updating unavailable/offline device state"""
+        """Test updating unavailable/offline device state."""
         with (
             patch("cync_controller.mqtt_client.g") as mock_g,
             patch("cync_controller.mqtt_client.aiomqtt.Client"),
@@ -247,7 +246,7 @@ class TestMQTTClientStateUpdates:
 
     @pytest.mark.asyncio
     async def test_update_device_state_online_device(self):
-        """Test updating online device state"""
+        """Test updating online device state."""
         with (
             patch("cync_controller.mqtt_client.g") as mock_g,
             patch("cync_controller.mqtt_client.aiomqtt.Client"),

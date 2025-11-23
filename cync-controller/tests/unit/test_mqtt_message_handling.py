@@ -1,5 +1,4 @@
-"""
-Unit tests for MQTTClient message handling.
+"""Unit tests for MQTTClient message handling.
 
 Tests for MQTTClient.start_receiver_task() MQTT message routing,
 command parsing, export button handling, and error recovery.
@@ -15,18 +14,18 @@ from cync_controller.mqtt_client import MQTTClient
 
 
 class TestMQTTClientMessageHandling:
-    """Tests for MQTTClient message handling and MQTT routing"""
+    """Tests for MQTTClient message handling and MQTT routing."""
 
     @pytest.fixture(autouse=True)
     def reset_mqtt_singleton(self):
-        """Reset MQTTClient singleton between tests"""
+        """Reset MQTTClient singleton between tests."""
         MQTTClient._instance = None
         yield
         MQTTClient._instance = None
 
     @pytest.mark.asyncio
     async def test_receiver_handles_set_power_command(self):
-        """Test power command routing from MQTT"""
+        """Test power command routing from MQTT."""
         with (
             patch("cync_controller.mqtt_client.g") as mock_g,
             patch("cync_controller.mqtt_client.aiomqtt.Client"),
@@ -50,7 +49,7 @@ class TestMQTTClientMessageHandling:
 
     @pytest.mark.asyncio
     async def test_receiver_handles_set_brightness_command(self):
-        """Test brightness command routing from MQTT"""
+        """Test brightness command routing from MQTT."""
         with (
             patch("cync_controller.mqtt_client.g") as mock_g,
             patch("cync_controller.mqtt_client.aiomqtt.Client"),
@@ -71,7 +70,7 @@ class TestMQTTClientMessageHandling:
 
     @pytest.mark.asyncio
     async def test_receiver_handles_set_rgb_command(self):
-        """Test RGB command routing from MQTT"""
+        """Test RGB command routing from MQTT."""
         with (
             patch("cync_controller.mqtt_client.g") as mock_g,
             patch("cync_controller.mqtt_client.aiomqtt.Client"),
@@ -93,7 +92,7 @@ class TestMQTTClientMessageHandling:
 
     @pytest.mark.asyncio
     async def test_receiver_handles_malformed_json(self):
-        """Test malformed JSON message handling"""
+        """Test malformed JSON message handling."""
         with (
             patch("cync_controller.mqtt_client.g") as mock_g,
             patch("cync_controller.mqtt_client.aiomqtt.Client"),
@@ -112,7 +111,7 @@ class TestMQTTClientMessageHandling:
 
     @pytest.mark.asyncio
     async def test_receiver_handles_unknown_topic(self):
-        """Test unknown topic graceful handling"""
+        """Test unknown topic graceful handling."""
         with (
             patch("cync_controller.mqtt_client.g") as mock_g,
             patch("cync_controller.mqtt_client.aiomqtt.Client"),
@@ -131,7 +130,7 @@ class TestMQTTClientMessageHandling:
 
     @pytest.mark.asyncio
     async def test_receiver_handles_unknown_device_id(self):
-        """Test command for non-existent device"""
+        """Test command for non-existent device."""
         with (
             patch("cync_controller.mqtt_client.g") as mock_g,
             patch("cync_controller.mqtt_client.aiomqtt.Client"),
@@ -148,7 +147,7 @@ class TestMQTTClientMessageHandling:
 
     @pytest.mark.asyncio
     async def test_receiver_handles_group_commands(self):
-        """Test group command routing"""
+        """Test group command routing."""
         with (
             patch("cync_controller.mqtt_client.g") as mock_g,
             patch("cync_controller.mqtt_client.aiomqtt.Client"),
@@ -169,7 +168,7 @@ class TestMQTTClientMessageHandling:
 
     @pytest.mark.asyncio
     async def test_receiver_handles_task_exception(self):
-        """Test task exception doesn't kill receiver"""
+        """Test task exception doesn't kill receiver."""
         with (
             patch("cync_controller.mqtt_client.g") as mock_g,
             patch("cync_controller.mqtt_client.aiomqtt.Client"),
@@ -193,7 +192,7 @@ class TestMQTTClientMessageHandling:
 
     @pytest.mark.asyncio
     async def test_receiver_executes_tasks_concurrently(self):
-        """Test multiple commands execute as tasks"""
+        """Test multiple commands execute as tasks."""
         with (
             patch("cync_controller.mqtt_client.g") as mock_g,
             patch("cync_controller.mqtt_client.aiomqtt.Client"),
@@ -218,7 +217,7 @@ class TestMQTTClientMessageHandling:
 
     @pytest.mark.asyncio
     async def test_receiver_command_payload_parsing(self):
-        """Test parsing command payloads from MQTT"""
+        """Test parsing command payloads from MQTT."""
         with (
             patch("cync_controller.mqtt_client.g") as mock_g,
             patch("cync_controller.mqtt_client.aiomqtt.Client"),

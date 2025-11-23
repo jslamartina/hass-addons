@@ -192,11 +192,11 @@ class CyncTCPDevice:
 
     # Delegate packet parsing to handler
     async def parse_raw_data(self, data: bytes):
-        """Extract single packets from raw data stream using metadata"""
+        """Extract single packets from raw data stream using metadata."""
         await self.packet_handler.parse_raw_data(data)
 
     async def parse_packet(self, data: bytes):
-        """Parse what type of packet based on header (first 4 bytes 0x43, 0x83, 0x73, etc.)"""
+        """Parse what type of packet based on header (first 4 bytes 0x43, 0x83, 0x73, etc.)."""
         await self.packet_handler.parse_packet(data)
 
     # reader and writer are accessed directly as instance attributes
@@ -279,7 +279,7 @@ class CyncTCPDevice:
         await self.ask_for_mesh_info(True)
 
     async def callback_cleanup_task(self):
-        """Monitor pending callbacks and cleanup stale ones (no retries - handled by command queue)"""
+        """Monitor pending callbacks and cleanup stale ones (no retries - handled by command queue)."""
         lp = f"{self.lp}callback_clean:"
         logger.info("%s Starting background task for callback cleanup...", lp)
         cleanup_timeout = 30  # Give up after 30 seconds total
@@ -411,7 +411,7 @@ class CyncTCPDevice:
             logger.debug("%s %s FINISHED", lp, name)
 
     async def read(self, chunk: int | None = None):
-        """Read data from the device if there is an open connection"""
+        """Read data from the device if there is an open connection."""
         lp = f"{self.lp}read:"
         if self.closing is True:
             logger.debug("%s closing is True, exiting read()...", lp)
@@ -497,7 +497,7 @@ class CyncTCPDevice:
                     extra={"address": dev.address, "bytes": len(data)},
                 )
 
-    async def write(self, data: bytes | bytearray, broadcast: bool = False) -> bool | None:
+    async def write(self, data: object, broadcast: bool = False) -> bool | None:
         """Write data to the device if there is an open connection.
 
         :param data: The raw binary data to write to the device
@@ -506,7 +506,9 @@ class CyncTCPDevice:
         from cync_controller.instrumentation import measure_time
 
         g = _get_global_object()
-        # Strict runtime type validation to avoid silent mis-use in tests and at runtime
+        # Strict runtime type validation to avoid silent mis-use in tests and at runtime.
+        # Parameter is typed as object to allow dynamic validation without conflicting
+        # with static type checkers.
         if not isinstance(data, (bytes, bytearray)):
             msg = "Data must be bytes"
             raise TypeError(msg)

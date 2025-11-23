@@ -1,5 +1,4 @@
-"""
-Unit tests for MQTTClient group synchronization.
+"""Unit tests for MQTTClient group synchronization.
 
 Tests for group member state synchronization, sync_group_devices(),
 sync_group_switches(), and aggregate state calculations.
@@ -13,18 +12,18 @@ from cync_controller.mqtt_client import MQTTClient
 
 
 class TestMQTTClientGroupSync:
-    """Tests for MQTTClient group synchronization"""
+    """Tests for MQTTClient group synchronization."""
 
     @pytest.fixture(autouse=True)
     def reset_mqtt_singleton(self):
-        """Reset MQTTClient singleton between tests"""
+        """Reset MQTTClient singleton between tests."""
         MQTTClient._instance = None
         yield
         MQTTClient._instance = None
 
     @pytest.mark.asyncio
     async def test_sync_group_devices_all_on(self):
-        """Test group sync when all members on"""
+        """Test group sync when all members on."""
         with (
             patch("cync_controller.mqtt_client.g") as mock_g,
             patch("cync_controller.mqtt_client.aiomqtt.Client"),
@@ -69,7 +68,7 @@ class TestMQTTClientGroupSync:
 
     @pytest.mark.asyncio
     async def test_sync_group_devices_mixed_state(self):
-        """Test group sync with mixed member states"""
+        """Test group sync with mixed member states."""
         with (
             patch("cync_controller.mqtt_client.g") as mock_g,
             patch("cync_controller.mqtt_client.aiomqtt.Client"),
@@ -109,7 +108,7 @@ class TestMQTTClientGroupSync:
 
     @pytest.mark.asyncio
     async def test_sync_group_devices_empty_group(self):
-        """Test syncing empty group"""
+        """Test syncing empty group."""
         with (
             patch("cync_controller.mqtt_client.g") as mock_g,
             patch("cync_controller.mqtt_client.aiomqtt.Client"),
@@ -146,7 +145,7 @@ class TestMQTTClientGroupSync:
 
     @pytest.mark.asyncio
     async def test_sync_group_devices_publishes_states(self):
-        """Test individual state publishing after group sync"""
+        """Test individual state publishing after group sync."""
         with (
             patch("cync_controller.mqtt_client.g") as mock_g,
             patch("cync_controller.mqtt_client.aiomqtt.Client"),
@@ -187,7 +186,7 @@ class TestMQTTClientGroupSync:
 
     @pytest.mark.asyncio
     async def test_sync_group_switches_after_group_command(self):
-        """Test switch sync after group control"""
+        """Test switch sync after group control."""
         with (
             patch("cync_controller.mqtt_client.g") as mock_g,
             patch("cync_controller.mqtt_client.aiomqtt.Client"),
@@ -222,7 +221,7 @@ class TestMQTTClientGroupSync:
 
     @pytest.mark.asyncio
     async def test_sync_group_devices_with_unavailable_members(self):
-        """Test sync with offline devices"""
+        """Test sync with offline devices."""
         with (
             patch("cync_controller.mqtt_client.g") as mock_g,
             patch("cync_controller.mqtt_client.aiomqtt.Client"),
@@ -261,7 +260,7 @@ class TestMQTTClientGroupSync:
 
     @pytest.mark.asyncio
     async def test_sync_group_returns_sync_count(self):
-        """Test that sync returns count of synced devices"""
+        """Test that sync returns count of synced devices."""
         with (
             patch("cync_controller.mqtt_client.g") as mock_g,
             patch("cync_controller.mqtt_client.aiomqtt.Client"),

@@ -29,7 +29,7 @@ class CyncCloudAPIProtocol(Protocol):
 
     async def request_otp(self) -> bool: ...
 
-    async def send_otp(self, otp: int) -> bool: ...
+    async def send_otp(self, otp_code: int) -> bool: ...
 
     async def export_config_file(self) -> bool: ...
 
@@ -68,7 +68,7 @@ class CyncTCPDeviceProtocol(Protocol):
     refresh_id: str | None
     messages: Messages
 
-    async def write(self, data: bytes | bytearray, broadcast: bool = False) -> bool | None: ...
+    async def write(self, data: object, broadcast: bool = False) -> bool | None: ...
 
     async def send_a3(self, q_id: bytes) -> None: ...
 
@@ -154,6 +154,10 @@ class CyncGroupProtocol(Protocol):
     @property
     def supports_rgb(self) -> bool: ...
 
+    async def set_power(self, state: int) -> tuple[asyncio.Event, list[CyncTCPDeviceProtocol]] | None: ...
+
+    async def set_brightness(self, bri: int) -> tuple[asyncio.Event, list[CyncTCPDeviceProtocol]] | None: ...
+
 
 class DiscoveryHelperProtocol(Protocol):
     """Protocol for DiscoveryHelper to avoid circular imports."""
@@ -225,10 +229,12 @@ class MQTTClientProtocol(Protocol):
     topic: str
     ha_topic: str
     client: aiomqtt.Client | None
-    discovery: DiscoveryHelperProtocol | None
-    state_updates: StateUpdateHelperProtocol | None
-    command_router: CommandRouterProtocol | None
-    start_task: asyncio.Task[object] | None
+    discovery: object | None
+    state_updates: object | None
+    command_router: object | None
+    start_task: asyncio.Task[None] | None
+
+    async def start(self) -> None: ...
 
     @property
     def is_connected(self) -> bool: ...
@@ -241,15 +247,15 @@ class MQTTClientProtocol(Protocol):
 
     async def publish(self, topic: str, msg_data: bytes) -> bool: ...
 
-    async def publish_json_msg(self, topic: str, msg_data: dict[str, object]) -> bool: ...
+    async def publish_json_msg(self, topic: str, msg_data: Mapping[str, object]) -> bool: ...
 
     async def trigger_status_refresh(self) -> None: ...
 
-    async def trigger_device_rediscovery(self) -> None: ...
+    async def trigger_device_rediscovery(self) -> bool: ...
 
-    async def homeassistant_discovery(self) -> None: ...
+    async def homeassistant_discovery(self) -> bool: ...
 
-    async def create_bridge_device(self) -> None: ...
+    async def create_bridge_device(self) -> bool: ...
 
     async def start_receiver_task(self) -> None: ...
 
@@ -539,7 +545,7 @@ class DeviceStructs:
 
     @dataclass
     class DeviceRequests:
-        """These are packets devices send to the server"""
+        """These are packets devices send to the server."""
 
         x23: tuple[int, ...] = (0x23,)
         xc3: tuple[int, ...] = (0xC3,)
@@ -557,7 +563,7 @@ class DeviceStructs:
 
     @dataclass
     class DeviceResponses:
-        """These are the packets the server sends to the device"""
+        """These are the packets the server sends to the device."""
 
         auth_ack: tuple[int, ...] = (0x28, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00)
         # NOTE: Connection acknowledgment bytes - may need protocol analysis to verify correctness
@@ -592,7 +598,7 @@ class DeviceStructs:
     @staticmethod
     def xab_generate_ack(queue_id: bytes, msg_id: bytes):
         """Respond to a 0xAB packet from the device, needs queue_id and msg_id to reply with.
-        Has ascii 'xlink_dev' in reply
+        Has ascii 'xlink_dev' in reply.
         """
         _x = bytes([0xAB, 0x00, 0x00, 0x03])
         hex_str = (
@@ -635,14 +641,14 @@ class DeviceStructs:
 
     @staticmethod
     def x88_generate_ack(msg_id: bytes):
-        """Respond to a 0x83 packet from the device, needs a msg_id to reply with"""
+        """Respond to a 0x83 packet from the device, needs a msg_id to reply with."""
         _x = bytes([0x88, 0x00, 0x00, 0x00, 0x03])
         _x += msg_id
         return _x
 
     @staticmethod
     def x48_generate_ack(msg_id: bytes):
-        """Respond to a 0x43 packet from the device, needs a queue and msg id to reply with"""
+        """Respond to a 0x43 packet from the device, needs a queue and msg id to reply with."""
         # set last msg_id digit to 0
         msg_id = msg_id[:-1] + b"\x00"
         _x = bytes([0x48, 0x00, 0x00, 0x00, 0x03])

@@ -19,20 +19,16 @@ ADDON_SLUG = "local_cync-controller"
 
 @pytest.mark.serial
 def test_mqtt_command_updates_device_state(ha_login: Page, ha_base_url: str):
-    """
-    Test that MQTT commands update device state within 2 seconds.
+    """Test that MQTT commands update device state within 2 seconds.
 
     Expected: Sending command via MQTT results in state update in HA.
     """
-    print("\n=== Test: MQTT Command Updates Device State ===")
-
     page = ha_login
     _ = page.goto(f"{ha_base_url}/lovelace/0")
     page.wait_for_load_state("networkidle")
 
     light_name = "Hallway Lights"
 
-    print(f"[Step 1] Sending command to {light_name}...")
     start_time = time.time()
 
     # Toggle light
@@ -42,10 +38,8 @@ def test_mqtt_command_updates_device_state(ha_login: Page, ha_base_url: str):
 
         if on_switch.is_visible(timeout=2000):
             on_switch.click()
-            target_state = "off"
         elif off_switch.is_visible(timeout=2000):
             off_switch.click()
-            target_state = "on"
         else:
             pytest.skip("Light entity not found")
 
@@ -53,7 +47,6 @@ def test_mqtt_command_updates_device_state(ha_login: Page, ha_base_url: str):
         page.wait_for_timeout(2000)
 
         elapsed = time.time() - start_time
-        print(f"✓ State updated to {target_state} (latency: {elapsed:.2f}s)")
         assert elapsed < 3, f"State sync took too long: {elapsed:.2f}s"
 
     except Exception as e:
@@ -62,36 +55,24 @@ def test_mqtt_command_updates_device_state(ha_login: Page, ha_base_url: str):
 
 @pytest.mark.serial
 def test_subgroup_state_aggregation(ha_login: Page, ha_base_url: str):
-    """
-    Test that subgroup state correctly aggregates member device states.
+    """Test that subgroup state correctly aggregates member device states.
 
     Expected: Group shows ON if any member is ON, OFF if all members are OFF.
     """
-    print("\n=== Test: Subgroup State Aggregation ===")
-
     page = ha_login
     _ = page.goto(f"{ha_base_url}/lovelace/0")
     page.wait_for_load_state("networkidle")
 
-    group_name = "Hallway Lights"
-
-    print(f"[Step 1] Checking {group_name} group state...")
-
     # This test would verify that group state reflects member states
     # Requires checking both group and individual member states
-
-    print("✓ Test placeholder - requires group and member device setup")
 
 
 @pytest.mark.serial
 def test_simultaneous_commands_to_multiple_devices(ha_login: Page, ha_base_url: str):
-    """
-    Test sending commands to multiple devices simultaneously.
+    """Test sending commands to multiple devices simultaneously.
 
     Expected: All devices process commands without interference.
     """
-    print("\n=== Test: Simultaneous Commands to Multiple Devices ===")
-
     page = ha_login
     _ = page.goto(f"{ha_base_url}/lovelace/0")
     page.wait_for_load_state("networkidle")
@@ -99,7 +80,6 @@ def test_simultaneous_commands_to_multiple_devices(ha_login: Page, ha_base_url: 
     # Find multiple light entities
     lights = ["Hallway Lights", "Kitchen Lights", "Bedroom Lights"]
 
-    print("[Step 1] Sending simultaneous commands...")
     start_time = time.time()
 
     # Send commands to all lights
@@ -110,62 +90,47 @@ def test_simultaneous_commands_to_multiple_devices(ha_login: Page, ha_base_url: 
             if toggle.is_visible(timeout=1000):
                 toggle.click()
         except Exception:
-            print(f"  {light} not found, skipping...")
+            pass
 
     # Wait for all to complete
     page.wait_for_timeout(3000)
 
-    elapsed = time.time() - start_time
-    print(f"✓ Processed multiple commands (total time: {elapsed:.2f}s)")
+    time.time() - start_time
 
 
 def test_no_cascading_refresh_storms():
-    """
-    Test that state updates don't trigger cascading refresh storms.
+    """Test that state updates don't trigger cascading refresh storms.
 
     Expected: No excessive refresh commands in logs after state changes.
     """
-    print("\n=== Test: No Cascading Refresh Storms ===")
-
     # Read logs
     logs: list[dict[str, Any]] = cast(list[dict[str, Any]], read_json_logs(ADDON_SLUG, lines=200))
 
     # Look for refresh-related logs
     refresh_logs: list[dict[str, Any]] = [log for log in logs if "refresh" in log.get("message", "").lower()]
 
-    print(f"  Found {len(refresh_logs)} refresh-related log entries")
-
     # Check for excessive refresh patterns (more than 10 in short time window)
     if len(refresh_logs) > 10:
-        print("  ⚠️  Warning: High number of refresh entries detected")
         # Check timestamps to see if they're clustered
         timestamps: list[Any] = [log.get("timestamp") for log in refresh_logs if "timestamp" in log]
         if timestamps:
-            print(f"  First refresh: {timestamps[0]}")
-            print(f"  Last refresh: {timestamps[-1]}")
+            pass
     else:
-        print("  ✓ Refresh count appears normal")
-
-    print("✓ No obvious refresh storms detected")
+        pass
 
 
 @pytest.mark.serial
 def test_group_command_synchronization(ha_login: Page, ha_base_url: str):
-    """
-    Test that group commands properly synchronize member switch states.
+    """Test that group commands properly synchronize member switch states.
 
     Expected: Turning off group turns off all member switches (Bug 4 regression test).
     """
-    print("\n=== Test: Group Command Synchronization ===")
-
     page = ha_login
     _ = page.goto(f"{ha_base_url}/lovelace/0")
     page.wait_for_load_state("networkidle")
 
     group_name = "Hallway Lights"
     member_switches = ["4way Switch", "Counter Switch", "Front Switch"]
-
-    print(f"[Step 1] Turning off {group_name} group...")
 
     try:
         # Turn off group
@@ -175,7 +140,6 @@ def test_group_command_synchronization(ha_login: Page, ha_base_url: str):
             page.wait_for_timeout(2000)  # Wait for MQTT sync
 
             # Check all member switches are OFF
-            print("[Step 2] Verifying member switches synced...")
             all_synced = True
 
             for switch_name in member_switches:
@@ -183,95 +147,60 @@ def test_group_command_synchronization(ha_login: Page, ha_base_url: str):
                     # Check if switch shows OFF state
                     switch_off = page.get_by_role("switch", name=f"Toggle Hallway {switch_name} on")
                     if not switch_off.is_visible(timeout=1000):
-                        print(f"  ⚠️  {switch_name} not synced to OFF")
                         all_synced = False
                     else:
-                        print(f"  ✓ {switch_name} synced to OFF")
-                except Exception as e:
-                    print(f"  ⚠️  Could not verify {switch_name}: {e}")
+                        pass
+                except Exception:
                     all_synced = False
 
             if all_synced:
-                print("✓ All member switches synchronized with group state")
+                pass
             else:
-                print("⚠️  Some member switches not synchronized")
+                pass
 
     except Exception as e:
         pytest.skip(f"Could not test group synchronization: {e}")
 
 
 def test_state_updates_logged_correctly():
-    """
-    Test that state updates are properly logged.
+    """Test that state updates are properly logged.
 
     Expected: State change logs contain necessary context.
     """
-    print("\n=== Test: State Updates Logged ===")
-
     # Read logs
     logs: list[dict[str, Any]] = cast(list[dict[str, Any]], read_json_logs(ADDON_SLUG, lines=200))
 
     # Look for state-related logs
     state_logs: list[dict[str, Any]] = [log for log in logs if "state" in log.get("message", "").lower()]
 
-    print(f"  Found {len(state_logs)} state-related log entries")
-
     if state_logs:
-        print("  Sample state log:")
-        sample: dict[str, Any] = state_logs[0]
-        print(f"    Level: {sample.get('level')}")
-        print(f"    Logger: {sample.get('logger')}")
-        print(f"    Message: {sample.get('message', '')[:100]}")
-
-    print("✓ State logging infrastructure in place")
+        state_logs[0]
 
 
 @pytest.mark.serial
 def test_physical_device_changes_reflect_in_ha(ha_login: Page, ha_base_url: str):
-    """
-    Test that physical device state changes (via wall switch) reflect in HA.
+    """Test that physical device state changes (via wall switch) reflect in HA.
 
     Expected: Physical toggle triggers status packet → updates HA entity state.
     """
-    print("\n=== Test: Physical Device Changes Reflect in HA ===")
-
     page = ha_login
     _ = page.goto(f"{ha_base_url}/lovelace/0")
     page.wait_for_load_state("networkidle")
 
-    print("[Manual Test] This test requires:")
-    print("  1. Physically toggle a wall switch")
-    print("  2. Observe if HA entity state updates within 2 seconds")
-    print("  3. Check logs for 0x83 status packet processing")
-
     # Check logs for status packets
     logs: list[dict[str, Any]] = cast(list[dict[str, Any]], read_json_logs(ADDON_SLUG, lines=100))
-    status_logs: list[dict[str, Any]] = [
-        log for log in logs if "0x83" in log.get("message", "") or "status" in log.get("message", "").lower()
-    ]
-
-    print(f"\n  Found {len(status_logs)} status-related log entries")
-
-    print("✓ Test requires manual verification")
+    [log for log in logs if "0x83" in log.get("message", "") or "status" in log.get("message", "").lower()]
 
 
 def test_no_state_flicker_during_updates():
-    """
-    Test that entities don't flicker between states during updates.
+    """Test that entities don't flicker between states during updates.
 
     Expected: Clean state transitions without rapid ON→OFF→ON patterns.
     """
-    print("\n=== Test: No State Flicker ===")
-
     # This is primarily tested through logs
     # Flicker would show as rapid state changes in short time
 
     logs: list[dict[str, Any]] = cast(list[dict[str, Any]], read_json_logs(ADDON_SLUG, lines=200))
 
     # Look for rapid state changes (would need timestamp analysis)
-    state_logs: list[dict[str, Any]] = [log for log in logs if "state" in log.get("message", "").lower()]
-
-    print(f"  Found {len(state_logs)} state change log entries")
-    print("  Note: Full flicker detection requires timestamp analysis")
-
-    print("✓ Basic state change logging working")
+    [log for log in logs if "state" in log.get("message", "").lower()]

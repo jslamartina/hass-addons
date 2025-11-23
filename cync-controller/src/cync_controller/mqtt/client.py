@@ -10,7 +10,8 @@ import asyncio
 import importlib
 import json
 import uuid
-from typing import TYPE_CHECKING
+from collections.abc import Mapping
+from typing import TYPE_CHECKING, cast
 
 import aiomqtt
 
@@ -57,7 +58,7 @@ def _get_global_object() -> GlobalObject:
         try:
             module = importlib.import_module(mod_name)
             if hasattr(module, "g"):
-                return module.g  # type: ignore[return-value]
+                return cast("GlobalObject", module.g)
         except ModuleNotFoundError:
             continue
         except Exception:
@@ -81,11 +82,14 @@ class MQTTClient:
     client: aiomqtt.Client | None = None
     topic: str = ""
     ha_topic: str = ""
-    discovery: DiscoveryHelper | None = None
-    state_updates: StateUpdateHelper | None = None
-    command_router: CommandRouter | None = None
+    # Helper attributes are stored as concrete helper instances but typed as
+    # generic objects here to satisfy protocol invariance rules.
+    discovery: object | None = None
+    state_updates: object | None = None
+    command_router: object | None = None
 
     _instance: MQTTClient | None = None
+    _initialized: bool = False
 
     def __new__(cls, *_args: object, **_kwargs: object) -> MQTTClient:
         if cls._instance is None:
@@ -161,17 +165,18 @@ class MQTTClient:
 
         logger.debug("%s Seeding all devices: offline", lp)
         assert self.state_updates is not None, "state_updates must be initialized"
+        state_updates = cast("StateUpdateHelper", self.state_updates)
         assert self.topic, "topic must be initialized"
         assert self.client is not None, "client must be initialized"
 
         ncync_server = self._g.ncync_server
         assert ncync_server is not None
         # Protocol ensures types are known without circular import
-        devices: dict[int, CyncDeviceProtocol] = ncync_server.devices
-        groups: dict[int, CyncGroupProtocol] = ncync_server.groups
+        devices: Mapping[int, CyncDeviceProtocol] = ncync_server.devices
+        groups: Mapping[int, CyncGroupProtocol] = ncync_server.groups
 
         for device_id in devices:
-            _ = await self.state_updates.pub_online(device_id, False)
+            _ = await state_updates.pub_online(device_id, False)
         subgroups: list[CyncGroupProtocol] = [grp for grp in groups.values() if grp.is_subgroup]
         logger.debug("%s Setting %s subgroups: online", lp, len(subgroups))
         for group in subgroups:
@@ -201,19 +206,20 @@ class MQTTClient:
             return
 
         assert self.state_updates is not None, "state_updates must be initialized"
+        state_updates = cast("StateUpdateHelper", self.state_updates)
 
         ncync_server = self._g.ncync_server
         assert ncync_server is not None
         # Protocol ensures types are known without circular import
-        devices: dict[int, CyncDeviceProtocol] = ncync_server.devices
-        groups: dict[int, CyncGroupProtocol] = ncync_server.groups
+        devices: Mapping[int, CyncDeviceProtocol] = ncync_server.devices
+        groups: Mapping[int, CyncGroupProtocol] = ncync_server.groups
 
         tasks: list[asyncio.Task[None] | Coroutine[object, object, bool]] = []
         for device in devices.values():
             assert device.id is not None
-            tasks.append(self.state_updates.pub_online(device.id, device.online))
+            tasks.append(state_updates.pub_online(device.id, device.online))
             tasks.append(
-                self.state_updates.parse_device_status(
+                state_updates.parse_device_status(
                     device.id,
                     DeviceStatus(
                         state=device.state,
@@ -256,7 +262,9 @@ class MQTTClient:
             [x[0] for x in topics],
         )
         try:
-            await self.command_router.start_receiver_task()
+            assert self.command_router is not None, "command_router must be initialized"
+            command_router = cast("CommandRouter", self.command_router)
+            await command_router.start_receiver_task()
         except asyncio.CancelledError:
             logger.debug("%s MQTT receiver task cancelled, propagating...", rcv_lp)
             raise
@@ -369,15 +377,16 @@ class MQTTClient:
         # set all devices offline
         if self._connected and self._g.ncync_server:
             assert self.state_updates is not None, "state_updates must be initialized"
+            state_updates = cast("StateUpdateHelper", self.state_updates)
             logger.debug("%s Setting all Cync devices offline...", lp)
 
             ncync_server = self._g.ncync_server
             assert ncync_server is not None
             # Protocol ensures types are known without circular import
-            devices: dict[int, CyncDeviceProtocol] = ncync_server.devices
+            devices: Mapping[int, CyncDeviceProtocol] = ncync_server.devices
 
             for device_id, _device in devices.items():
-                _ = await self.state_updates.pub_online(device_id, False)
+                _ = await state_updates.pub_online(device_id, False)
             # Publish MQTT message indicating the MQTT client is disconnected
             _ = await self.publish(
                 f"{self.topic}/status/bridge/mqtt_client/connected",
@@ -474,7 +483,7 @@ class MQTTClient:
             return True
         return False
 
-    async def publish_json_msg(self, topic: str, msg_data: dict[str, object]) -> bool:
+    async def publish_json_msg(self, topic: str, msg_data: Mapping[str, object]) -> bool:
         lp = f"{self.lp}publish_msg:"
         assert self.client is not None, "client must be initialized"
         try:
@@ -492,7 +501,7 @@ class MQTTClient:
         return False
 
     def kelvin2cync(self, k: float) -> int:
-        """Convert Kelvin value to Cync white temp (0-100) with step size: 1"""
+        """Convert Kelvin value to Cync white temp (0-100) with step size: 1."""
         max_k = CYNC_MAXK
         min_k = CYNC_MINK
         if k < min_k:
@@ -504,7 +513,7 @@ class MQTTClient:
         # logger.debug("%s Converting Kelvin: %s using scale: %s (max_k=%s, min_k=%s) -> return value: %s", self.lp, k, scale, max_k, min_k, ret)
 
     def cync2kelvin(self, ct: int) -> int:
-        """Convert Cync white temp (0-100) to Kelvin value"""
+        """Convert Cync white temp (0-100) to Kelvin value."""
         max_k = CYNC_MAXK
         min_k = CYNC_MINK
         if ct <= 0:
@@ -610,62 +619,71 @@ class MQTTClient:
                 await asyncio.sleep(15)  # Wait before retrying on error
 
     # Delegation methods to helper classes
-    async def register_single_device(self, device: CyncDeviceProtocol) -> None:
+    async def register_single_device(self, device: CyncDeviceProtocol) -> bool:
         """Register a single device with Home Assistant via MQTT discovery."""
         assert self.discovery is not None, "discovery must be initialized"
+        discovery = cast("DiscoveryHelper", self.discovery)
         # CyncDevice structurally implements CyncDeviceProtocol
-        return await self.discovery.register_single_device(device)  # type: ignore[arg-type]
+        return await discovery.register_single_device(device)
 
-    async def trigger_device_rediscovery(self) -> None:
+    async def trigger_device_rediscovery(self) -> bool:
         """Trigger rediscovery of all devices currently in the devices dictionary."""
         assert self.discovery is not None, "discovery must be initialized"
-        return await self.discovery.trigger_device_rediscovery()
+        discovery = cast("DiscoveryHelper", self.discovery)
+        return await discovery.trigger_device_rediscovery()
 
-    async def homeassistant_discovery(self) -> None:
-        """Build each configured Cync device for HASS device registry"""
+    async def homeassistant_discovery(self) -> bool:
+        """Build each configured Cync device for HASS device registry."""
         assert self.discovery is not None, "discovery must be initialized"
-        return await self.discovery.homeassistant_discovery()
+        discovery = cast("DiscoveryHelper", self.discovery)
+        return await discovery.homeassistant_discovery()
 
-    async def create_bridge_device(self) -> None:
+    async def create_bridge_device(self) -> bool:
         """Create the device / entity registry config for the Cync Controller bridge itself."""
         assert self.discovery is not None, "discovery must be initialized"
-        return await self.discovery.create_bridge_device()
+        discovery = cast("DiscoveryHelper", self.discovery)
+        return await discovery.create_bridge_device()
 
     # Delegation methods to state_updates helper
     async def pub_online(self, device_id: int, status: bool) -> bool:
         """Publish device online/offline status."""
         assert self.state_updates is not None, "state_updates must be initialized"
-        return await self.state_updates.pub_online(device_id, status)
+        state_updates = cast("StateUpdateHelper", self.state_updates)
+        return await state_updates.pub_online(device_id, status)
 
     async def update_device_state(self, device: CyncDeviceProtocol, state: int) -> bool:
         """Update the device state and publish to MQTT."""
         assert self.state_updates is not None, "state_updates must be initialized"
-        # Type checker can't fully resolve method signature due to circular dependency
-        return await self.state_updates.update_device_state(device, state)  # type: ignore
+        state_updates = cast("StateUpdateHelper", self.state_updates)
+        return await state_updates.update_device_state(device, state)
 
     async def update_brightness(self, device: CyncDeviceProtocol, bri: int) -> bool:
         """Update the device brightness and publish to MQTT."""
         assert self.state_updates is not None, "state_updates must be initialized"
-        return await self.state_updates.update_brightness(device, bri)  # type: ignore
+        state_updates = cast("StateUpdateHelper", self.state_updates)
+        return await state_updates.update_brightness(device, bri)
 
     async def update_temperature(self, device: CyncDeviceProtocol, temp: int) -> bool:
         """Update the device temperature and publish to MQTT."""
         assert self.state_updates is not None, "state_updates must be initialized"
-        return await self.state_updates.update_temperature(device, temp)  # type: ignore
+        state_updates = cast("StateUpdateHelper", self.state_updates)
+        return await state_updates.update_temperature(device, temp)
 
     async def update_rgb(self, device: CyncDeviceProtocol, rgb: tuple[int, int, int]) -> bool:
         """Update the device RGB and publish to MQTT."""
         assert self.state_updates is not None, "state_updates must be initialized"
-        return await self.state_updates.update_rgb(device, rgb)  # type: ignore
+        state_updates = cast("StateUpdateHelper", self.state_updates)
+        return await state_updates.update_rgb(device, rgb)
 
     async def send_device_status(self, device: CyncDeviceProtocol, state_bytes: bytes) -> bool:
         """Publish device status to MQTT."""
         assert self.state_updates is not None, "state_updates must be initialized"
-        return await self.state_updates.send_device_status(device, state_bytes)  # type: ignore
+        state_updates = cast("StateUpdateHelper", self.state_updates)
+        return await state_updates.send_device_status(device, state_bytes)
 
     async def publish_group_state(
         self,
-        group: CyncGroupProtocol,  # type: ignore[valid-type]
+        group: CyncGroupProtocol,
         state: int | None = None,
         brightness: int | None = None,
         temperature: int | None = None,
@@ -673,38 +691,49 @@ class MQTTClient:
     ) -> bool:
         """Publish group state to MQTT."""
         assert self.state_updates is not None, "state_updates must be initialized"
-        # Type checker can't fully resolve method signature due to circular dependency
-        await self.state_updates.publish_group_state(group, state, brightness, temperature, origin)  # type: ignore[misc]
+        state_updates = cast("StateUpdateHelper", self.state_updates)
+        await state_updates.publish_group_state(group, state, brightness, temperature, origin)
         # publish_group_state returns None, but we return True to indicate the call was made
         return True
 
     async def parse_device_status(
-        self, device_id: int, device_status: DeviceStatus, *args: object, **kwargs: object
+        self,
+        device_id: int,
+        device_status: DeviceStatus,
+        *args: object,
+        **kwargs: object,
     ) -> bool:
         """Parse device status and publish to MQTT."""
         assert self.state_updates is not None, "state_updates must be initialized"
-        result = await self.state_updates.parse_device_status(device_id, device_status, *args, **kwargs)
-        return bool(result)
+        state_updates = cast("StateUpdateHelper", self.state_updates)
+        return bool(await state_updates.parse_device_status(device_id, device_status, *args, **kwargs))
 
     async def update_switch_from_subgroup(
-        self, device: CyncDeviceProtocol, subgroup_state: int, subgroup_name: str
+        self,
+        device: CyncDeviceProtocol,
+        subgroup_state: int,
+        subgroup_name: str,
     ) -> bool:
         """Update a switch device state to match its subgroup state."""
         assert self.state_updates is not None, "state_updates must be initialized"
-        return await self.state_updates.update_switch_from_subgroup(device, subgroup_state, subgroup_name)  # type: ignore
+        state_updates = cast("StateUpdateHelper", self.state_updates)
+        return await state_updates.update_switch_from_subgroup(device, subgroup_state, subgroup_name)
 
     async def sync_group_switches(self, group_id: int, group_state: int, group_name: str) -> int:
         """Sync all switch devices in a group to match the group's state."""
         assert self.state_updates is not None, "state_updates must be initialized"
-        return await self.state_updates.sync_group_switches(group_id, group_state, group_name)
+        state_updates = cast("StateUpdateHelper", self.state_updates)
+        return await state_updates.sync_group_switches(group_id, group_state, group_name)
 
     async def sync_group_devices(self, group_id: int, group_state: int, group_name: str) -> int:
         """Sync all devices (switches and bulbs) in a group to match the group's state."""
         assert self.state_updates is not None, "state_updates must be initialized"
-        return await self.state_updates.sync_group_devices(group_id, group_state, group_name)
+        state_updates = cast("StateUpdateHelper", self.state_updates)
+        return await state_updates.sync_group_devices(group_id, group_state, group_name)
 
     # Delegation method to command_router helper
     async def start_receiver_task(self) -> None:
         """Start listening for MQTT messages on subscribed topics."""
         assert self.command_router is not None, "command_router must be initialized"
-        await self.command_router.start_receiver_task()
+        command_router = cast("CommandRouter", self.command_router)
+        await command_router.start_receiver_task()

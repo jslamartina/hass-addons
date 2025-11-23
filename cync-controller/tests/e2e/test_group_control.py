@@ -7,8 +7,7 @@ from playwright.sync_api import Page, expect
 
 
 def test_group_turns_off_all_switches(ha_login: Page, ha_base_url: str):
-    """
-    Test Bug 4: Turning off a light group should turn off all member switches.
+    """Test Bug 4: Turning off a light group should turn off all member switches.
 
     Root cause: Group commands target bulbs via group ID, but switches (physical
     wall controllers) don't receive individual 0x83 status packets. The
@@ -37,45 +36,37 @@ def test_group_turns_off_all_switches(ha_login: Page, ha_base_url: str):
     except Exception:
         pytest.skip("Hallway Lights group not found on Overview dashboard")
 
-    print("\n=== Bug 4: Group Switch Synchronization Test ===")
-
     # Step 1: Turn the group ON
-    print("\n[Step 1] Turning Hallway Lights group ON...")
     try:
         on_switch = page.get_by_role("switch", name="Toggle Hallway Lights on")
         if on_switch.is_visible(timeout=1000):
             on_switch.click()
-            print(" Group turned ON")
             # Wait for MQTT sync to propagate to all switches
             page.wait_for_timeout(2000)
     except Exception:
-        print("  Group already ON, continuing...")
+        pass
 
     # Step 2: Verify switches are ON
-    print("\n[Step 2] Checking that wall switches are ON...")
     switch_names = ["4way Switch", "Counter Switch", "Front Switch"]
     for switch_name in switch_names:
         switch_locator = page.get_by_role("switch", name=f"Toggle Hallway {switch_name} off")
         if switch_locator.is_visible(timeout=2000):
-            print(f" Hallway {switch_name} is ON (checked)")
+            pass
         else:
-            print(f" Hallway {switch_name} state unknown (may need refresh)")
+            pass
 
     # Wait for UI to fully stabilize before next command
     page.wait_for_timeout(2000)
 
     # Step 3: Turn the group OFF (critical test)
-    print("\n[Step 3] Turning Hallway Lights group OFF...")
     off_switch = page.get_by_role("switch", name="Toggle Hallway Lights off")
     expect(off_switch).to_be_visible(timeout=5000)
     off_switch.click()
-    print(" Group turned OFF")
 
     # Wait for MQTT sync to propagate to all switches
     page.wait_for_timeout(3000)
 
     # Step 4: Verify ALL switches are now OFF (Bug 4 fix verification)
-    print("\n[Step 4] Verifying wall switches synced to OFF...")
     switches_synced = True
     for switch_name in switch_names:
         # After fix, switches should show "Toggle ... on" (meaning they're currently off)
@@ -87,30 +78,26 @@ def test_group_turns_off_all_switches(ha_login: Page, ha_base_url: str):
         for attempt in range(max_attempts):
             try:
                 expect(switch_off).to_be_visible(timeout=3000)
-                print(f" Hallway {switch_name} is OFF (synced correctly)")
                 break
             except Exception:
                 if attempt < max_attempts - 1:
-                    print(f"  Hallway {switch_name} not synced yet, retrying...")
                     page.wait_for_timeout(1000)
                 else:
                     # Final check if it's still showing as ON
                     switch_still_on = page.get_by_role("switch", name=f"Toggle Hallway {switch_name} off")
                     if switch_still_on.is_visible(timeout=1000):
-                        print(f" Hallway {switch_name} is still ON (BUG NOT FIXED)")
                         switches_synced = False
                     else:
-                        print(f" Hallway {switch_name} state unknown")
+                        pass
 
     if switches_synced:
-        print("\n SUCCESS: All wall switches synced to OFF after group command")
+        pass
     else:
         pytest.fail(" FAILED: Some switches did not sync after group OFF command")
 
 
 def test_group_turns_on_all_switches(ha_login: Page, ha_base_url: str):
-    """
-    Test that turning ON a light group also syncs all member switches to ON.
+    """Test that turning ON a light group also syncs all member switches to ON.
 
     This is the inverse of the OFF test - ensures the fix works in both directions.
     """
@@ -121,33 +108,26 @@ def test_group_turns_on_all_switches(ha_login: Page, ha_base_url: str):
     page.wait_for_load_state("networkidle")
     page.wait_for_timeout(2000)
 
-    print("\n=== Bug 4: Group ON Synchronization Test ===")
-
     # Step 1: Turn the group OFF first
-    print("\n[Step 1] Ensuring Hallway Lights group starts OFF...")
     try:
         off_switch = page.get_by_role("switch", name="Toggle Hallway Lights off")
         if off_switch.is_visible(timeout=1000):
             off_switch.click()
-            print(" Group turned OFF")
             # Wait for MQTT sync to propagate to all switches
             page.wait_for_timeout(2000)
     except Exception:
-        print("  Group already OFF, continuing...")
+        pass
 
     # Step 2: Turn the group ON
-    print("\n[Step 2] Turning Hallway Lights group ON...")
     on_switch = page.get_by_role("switch", name="Toggle Hallway Lights on")
     if not on_switch.is_visible(timeout=2000):
         pytest.skip("Hallway Lights group not found or not in expected state")
 
     on_switch.click()
-    print(" Group turned ON")
     # Wait for MQTT sync to propagate to all switches
     page.wait_for_timeout(3000)
 
     # Step 3: Verify ALL switches are now ON
-    print("\n[Step 3] Verifying wall switches synced to ON...")
     switch_names = ["4way Switch", "Counter Switch", "Front Switch"]
     switches_synced = True
 
@@ -159,24 +139,20 @@ def test_group_turns_on_all_switches(ha_login: Page, ha_base_url: str):
         max_attempts = 3
         for attempt in range(max_attempts):
             if switch_on.is_visible(timeout=3000):
-                print(f" Hallway {switch_name} is ON (synced correctly)")
                 break
             if attempt < max_attempts - 1:
-                print(f"  Hallway {switch_name} not synced yet, retrying...")
                 page.wait_for_timeout(1000)
             else:
-                print(f" Hallway {switch_name} did not sync to ON")
                 switches_synced = False
 
     if switches_synced:
-        print("\n SUCCESS: All wall switches synced to ON after group command")
+        pass
     else:
         pytest.fail(" FAILED: Some switches did not sync after group ON command")
 
 
 def test_individual_switch_control_still_works(ha_login: Page, ha_base_url: str):
-    """
-    Test that individual switch commands still work independently.
+    """Test that individual switch commands still work independently.
 
     This ensures the fix doesn't break existing individual switch control.
     The sync should only happen when GROUP commands are sent, not when
@@ -189,37 +165,27 @@ def test_individual_switch_control_still_works(ha_login: Page, ha_base_url: str)
     page.wait_for_load_state("networkidle")
     page.wait_for_timeout(2000)
 
-    print("\n=== Individual Switch Control Test ===")
-
     # Pick one switch to test individually
     switch_name = "Counter Switch"
-    print(f"\n[Test] Toggling Hallway {switch_name} individually...")
 
     # Try to find the switch in either state
     switch_on_locator = page.get_by_role("switch", name=f"Toggle Hallway {switch_name} off")
     switch_off_locator = page.get_by_role("switch", name=f"Toggle Hallway {switch_name} on")
 
     if switch_on_locator.is_visible(timeout=2000):
-        print(f"  {switch_name} is currently ON, turning OFF...")
         switch_on_locator.click()
         page.wait_for_timeout(3000)  # Wait for MQTT update
         # Just verify the command was accepted - don't assert on UI state
-        print(f" {switch_name} toggle command sent")
     elif switch_off_locator.is_visible(timeout=2000):
-        print(f"  {switch_name} is currently OFF, turning ON...")
         switch_off_locator.click()
         page.wait_for_timeout(3000)  # Wait for MQTT update
         # Just verify the command was accepted - don't assert on UI state
-        print(f" {switch_name} toggle command sent")
     else:
         pytest.skip(f"Hallway {switch_name} not found on Overview dashboard")
 
-    print("\n SUCCESS: Individual switch control works independently")
-
 
 def test_individual_switch_toggle_no_flicker(ha_login: Page, ha_base_url: str):
-    """
-    Test UX: Individual switch toggles should not flicker between states.
+    """Test UX: Individual switch toggles should not flicker between states.
 
     Issue: When toggling a switch ON, it briefly shows OFF before settling to ON.
     Pattern: ON (optimistic)  OFF (status packet?)  ON (final) over 1-2 seconds.
@@ -235,10 +201,7 @@ def test_individual_switch_toggle_no_flicker(ha_login: Page, ha_base_url: str):
     page.wait_for_load_state("networkidle")
     page.wait_for_timeout(2000)
 
-    print("\n=== Individual Switch Toggle - Flicker Detection Test ===")
-
     switch_name = "4way Switch"
-    print(f"\n[Step 1] Finding initial state of Hallway {switch_name}...")
 
     # Find initial state
     switch_on_locator = page.get_by_role("switch", name=f"Toggle Hallway {switch_name} off")
@@ -250,24 +213,19 @@ def test_individual_switch_toggle_no_flicker(ha_login: Page, ha_base_url: str):
     if switch_on_locator.is_visible(timeout=2000):
         initial_state = "ON"
         target_state = "OFF"
-        print(f" {switch_name} is currently ON, will toggle to OFF")
     elif switch_off_locator.is_visible(timeout=2000):
         initial_state = "OFF"
         target_state = "ON"
-        print(f" {switch_name} is currently OFF, will toggle to ON")
     else:
         pytest.skip(f"Hallway {switch_name} not found on Overview dashboard")
 
     # Step 2: Click the toggle
-    print(f"\n[Step 2] Toggling {switch_name} to {target_state}...")
     if target_state == "OFF":
         switch_on_locator.click()
     else:
         switch_off_locator.click()
-    print(" Toggle clicked")
 
     # Step 3: Monitor state transitions for the next 3 seconds
-    print("\n[Step 3] Monitoring state for unwanted transitions over 3 seconds...")
     state_transitions: list[dict[str, str | int | float | None]] = []
 
     # Check state at regular intervals
@@ -286,13 +244,8 @@ def test_individual_switch_toggle_no_flicker(ha_login: Page, ha_base_url: str):
         # Only record if state changed
         if not state_transitions or state_transitions[-1]["state"] != current_state:
             state_transitions.append({"time_ms": i * 100, "state": current_state})
-            print(f"  @{i * 100}ms: State = {current_state}")
 
     # Step 4: Analyze transitions
-    print("\n[Step 4] Analyzing state transitions...")
-    print(f"  Initial state: {initial_state}")
-    print(f"  Target state: {target_state}")
-    print(f"  Transitions: {state_transitions}")
 
     # Look for unwanted flicker: transitions that go back to initial state after clicking
     flicker_detected = False
@@ -307,30 +260,24 @@ def test_individual_switch_toggle_no_flicker(ha_login: Page, ha_base_url: str):
             for j in range(i + 1, len(state_transitions)):
                 if state_transitions[j]["state"] == target_state:
                     flicker_detected = True
-                    print(
-                        f"    FLICKER DETECTED: {prev_state}  {curr_state} (at {state_transitions[i]['time_ms']}ms)  {target_state} (at {state_transitions[j]['time_ms']}ms)"
-                    )
                     break
 
     # Final state should be target
     final_state = state_transitions[-1]["state"] if state_transitions else None
-    print(f"  Final state: {final_state}")
 
     if flicker_detected:
-        print("\n  FLICKER PATTERN DETECTED: Switch briefly reverted to previous state before settling")
         pytest.fail("UX flicker detected: Switch briefly reverted to previous state")
     elif final_state != target_state:
-        print(f"\n  WARNING: Final state {final_state} doesn't match target {target_state}")
+        pass
     else:
-        print(f"\n SUCCESS: No unwanted state flicker detected, switch settled to {target_state}")
+        pass
 
 
 @pytest.mark.skip(
     reason="Known Home Assistant UI rendering limitation - flicker is a HA UI artifact, not a bug in Cync Controller"
 )
 def test_comprehensive_flicker_detection(ha_login: Page, ha_base_url: str):
-    """
-    Comprehensive flicker detection test for all entity types.
+    """Comprehensive flicker detection test for all entity types.
 
     Tests power commands on:
     1. Hallway Lights group (ON and OFF)
@@ -348,10 +295,7 @@ def test_comprehensive_flicker_detection(ha_login: Page, ha_base_url: str):
     page.wait_for_load_state("networkidle")
     page.wait_for_timeout(2000)
 
-    print("\n=== COMPREHENSIVE FLICKER DETECTION TEST ===\n")
-
     # Preamble: Ensure all test entities start in OFF state
-    print("[Setup] Initializing all entities to OFF state...")
     preamble_entities = [
         "Hallway Lights",
         "Hallway 4way Switch",
@@ -366,17 +310,15 @@ def test_comprehensive_flicker_detection(ha_login: Page, ha_base_url: str):
                 # Entity is ON, click OFF button to turn it OFF
                 off_switch.click()
                 page.wait_for_timeout(300)
-                print(f"   Set {entity_name} to OFF")
             elif on_switch.is_visible(timeout=500):
                 # Entity is already OFF, no action needed
-                print(f"   {entity_name} already OFF")
+                pass
             else:
-                print(f"   {entity_name} not found")
-        except Exception as e:
-            print(f"    Could not set {entity_name} to OFF: {e}")
+                pass
+        except Exception:
+            pass
 
     page.wait_for_timeout(1000)
-    print()
 
     test_scenarios = [
         {
@@ -414,9 +356,6 @@ def test_comprehensive_flicker_detection(ha_login: Page, ha_base_url: str):
     all_passed = True
 
     for scenario in test_scenarios:
-        print(f"[Test] {scenario['name']}")
-        print("-" * 60)
-
         entity_name: str = cast(str, scenario["entity_name"])
         # Group entity names are used directly, individual devices use "Hallway {name}" format
         control_name: str = entity_name if scenario["type"] == "group" else f"Hallway {entity_name}"
@@ -425,9 +364,7 @@ def test_comprehensive_flicker_detection(ha_login: Page, ha_base_url: str):
             # Test each transition
             for i, transition in enumerate(scenario["transitions"]):  # type: ignore[reportUnknownVariableType]
                 target_state = transition["to"]
-                description = transition["description"]
-
-                print(f"\n  [{i + 1}/{len(scenario['transitions'])}] {description}")
+                transition["description"]
 
                 # Find the switch control
                 if target_state == "ON":
@@ -436,7 +373,6 @@ def test_comprehensive_flicker_detection(ha_login: Page, ha_base_url: str):
                     switch_locator = page.get_by_role("switch", name=f"Toggle {control_name} off")
 
                 if not switch_locator.is_visible(timeout=2000):
-                    print(f"      Entity '{control_name}' not found or not visible, skipping...")
                     continue
 
                 # Get initial state before click
@@ -444,16 +380,12 @@ def test_comprehensive_flicker_detection(ha_login: Page, ha_base_url: str):
                 on_switch = page.get_by_role("switch", name=f"Toggle {control_name} on")
                 off_switch = page.get_by_role("switch", name=f"Toggle {control_name} off")
 
-                initial_state = None
                 if on_switch.is_visible(timeout=500):
-                    initial_state = "OFF"  # Button says "turn on", so it's currently off
+                    pass  # Button says "turn on", so it's currently off
                 elif off_switch.is_visible(timeout=500):
-                    initial_state = "ON"  # Button says "turn off", so it's currently on
+                    pass  # Button says "turn off", so it's currently on
                 else:
-                    print("      Could not determine initial state")
                     continue
-
-                print(f"    Initial state: {initial_state}")
 
                 # Record state transitions during the command
                 state_transitions: list[dict[str, str | float]] = []
@@ -486,7 +418,6 @@ def test_comprehensive_flicker_detection(ha_login: Page, ha_base_url: str):
 
                 # Analyze for flicker
                 flicker_detected = False
-                print(f"    State transitions: {[(t['state'], t['time_ms']) for t in state_transitions]}")  # type: ignore[reportUnknownVariableType]
 
                 for i in range(len(state_transitions) - 1):
                     curr: str | None = cast(str | None, state_transitions[i]["state"])
@@ -498,22 +429,17 @@ def test_comprehensive_flicker_detection(ha_login: Page, ha_base_url: str):
                         for j in range(i + 1, len(state_transitions)):
                             if state_transitions[j]["state"] == target_state:
                                 flicker_detected = True
-                                print(f"      FLICKER DETECTED: {curr}  {next_state}  {target_state}")
                                 break
 
                 if flicker_detected:
-                    print("     FAILED: Flicker detected")
                     all_passed = False
                 else:
-                    print("     PASSED: No flicker detected")
+                    pass
 
-        except Exception as e:
-            print(f"   ERROR: {e}")
+        except Exception:
             all_passed = False
 
-    print("\n" + "=" * 60)
     if all_passed:
-        print(" COMPREHENSIVE FLICKER TEST: ALL SCENARIOS PASSED")
+        pass
     else:
-        print(" COMPREHENSIVE FLICKER TEST: SOME SCENARIOS FAILED")
         pytest.fail("Flicker detected in one or more scenarios")

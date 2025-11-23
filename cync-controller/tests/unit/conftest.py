@@ -219,7 +219,7 @@ def stream_writer():
 
 @pytest.fixture
 def real_tcp_device():
-    """Create a real CyncTCPDevice instance for testing"""
+    """Create a real CyncTCPDevice instance for testing."""
     from cync_controller.devices.tcp_device import CyncTCPDevice
 
     # Create reader and writer with proper sync/async methods

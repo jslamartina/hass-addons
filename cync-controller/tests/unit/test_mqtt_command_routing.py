@@ -1,5 +1,4 @@
-"""
-Unit tests for MQTT command routing in mqtt_client.py.
+"""Unit tests for MQTT command routing in mqtt_client.py.
 
 Tests cover:
 - Group command routing (lines 475-482)

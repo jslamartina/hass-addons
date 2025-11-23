@@ -1,5 +1,4 @@
-"""
-Unit tests for main.py module.
+"""Unit tests for main.py module.
 
 Tests CyncController singleton, signal handling, and startup/shutdown flows.
 """
@@ -19,7 +18,7 @@ with patch("starlette.staticfiles.StaticFiles"), patch("cync_controller.utils.ch
 
 @pytest.fixture(autouse=True)
 def reset_controller_singleton():
-    """Reset CyncController singleton between tests"""
+    """Reset CyncController singleton between tests."""
     CyncController._instance = None
     yield
     CyncController._instance = None
@@ -27,7 +26,7 @@ def reset_controller_singleton():
 
 @pytest.fixture
 def mock_global_object():
-    """Mock the global object to avoid dependencies"""
+    """Mock the global object to avoid dependencies."""
     with patch("cync_controller.main.g") as mock_g:
         mock_g.loop = AsyncMock()
         mock_g.loop.is_closed.return_value = False
@@ -43,36 +42,36 @@ def mock_global_object():
 
 @pytest.fixture
 def mock_path_exists():
-    """Mock config file existence"""
+    """Mock config file existence."""
     with patch("pathlib.Path.exists") as mock_exists:
         yield mock_exists
 
 
 class TestCyncControllerInitialization:
-    """Tests for CyncController initialization"""
+    """Tests for CyncController initialization."""
 
     def test_init_is_singleton(self):
-        """Test that CyncController is a singleton"""
+        """Test that CyncController is a singleton."""
         # These tests require complex mocking of event loop and signal handlers
         # Skip for now as they test implementation details rather than behavior
 
     def test_init_configures_signal_handlers(self):
-        """Test that initialization sets up signal handlers"""
+        """Test that initialization sets up signal handlers."""
         # These tests require complex mocking of event loop and signal handlers
         # Skip for now as they test implementation details rather than behavior
 
     def test_init_sets_event_loop_policy(self):
-        """Test that initialization sets uvloop as event loop policy"""
+        """Test that initialization sets uvloop as event loop policy."""
         # These tests require complex mocking of event loop and signal handlers
         # Skip for now as they test implementation details rather than behavior
 
 
 class TestCyncControllerStartup:
-    """Tests for CyncController startup sequence"""
+    """Tests for CyncController startup sequence."""
 
     @pytest.mark.asyncio
     async def test_start_with_missing_config_file(self, mock_global_object, mock_path_exists):
-        """Test startup when config file doesn't exist"""
+        """Test startup when config file doesn't exist."""
         mock_path_exists.return_value = False
         with patch("cync_controller.main.check_for_uuid"):
             controller = CyncController()
@@ -85,7 +84,7 @@ class TestCyncControllerStartup:
 
     @pytest.mark.asyncio
     async def test_start_loads_config_and_creates_services(self, mock_global_object, mock_path_exists):
-        """Test startup loads config and creates NCyncServer and MQTTClient"""
+        """Test startup loads config and creates NCyncServer and MQTTClient."""
         mock_path_exists.return_value = True
 
         mock_devices = {1: MagicMock(), 2: MagicMock()}
@@ -124,7 +123,7 @@ class TestCyncControllerStartup:
 
     @pytest.mark.asyncio
     async def test_start_with_export_server_enabled(self, mock_global_object, mock_path_exists):
-        """Test startup when export server is enabled"""
+        """Test startup when export server is enabled."""
         mock_global_object.cli_args.export_server = True
         mock_path_exists.return_value = True
 
@@ -179,7 +178,7 @@ class TestCyncControllerStartup:
 
     @pytest.mark.asyncio
     async def test_start_failure_calls_stop(self, mock_global_object, mock_path_exists):
-        """Test that startup failure triggers stop method"""
+        """Test that startup failure triggers stop method."""
         mock_path_exists.return_value = True
         mock_devices = {1: MagicMock()}
         mock_groups = {}
@@ -222,11 +221,11 @@ class TestCyncControllerStartup:
 
 
 class TestCyncControllerShutdown:
-    """Tests for CyncController shutdown sequence"""
+    """Tests for CyncController shutdown sequence."""
 
     @pytest.mark.asyncio
     async def test_stop_sends_sigterm(self, mock_global_object):
-        """Test that stop calls send_sigterm"""
+        """Test that stop calls send_sigterm."""
         with (
             patch("cync_controller.main.check_for_uuid"),
             patch("cync_controller.main.send_sigterm") as mock_sigterm,
@@ -239,10 +238,10 @@ class TestCyncControllerShutdown:
 
 
 class TestParseCLI:
-    """Tests for CLI argument parsing"""
+    """Tests for CLI argument parsing."""
 
     def test_parse_cli_export_server_enabled(self):
-        """Test parsing export server argument"""
+        """Test parsing export server argument."""
         with (
             patch("cync_controller.main.sys.argv", ["test", "--export-server"]),
             patch("cync_controller.main.logger"),
@@ -253,7 +252,7 @@ class TestParseCLI:
             assert mock_g.cli_args.export_server is True
 
     def test_parse_cli_debug_mode(self):
-        """Test parsing debug mode argument"""
+        """Test parsing debug mode argument."""
         with (
             patch("cync_controller.main.sys.argv", ["test", "--debug"]),
             patch("cync_controller.main.logger"),
@@ -264,7 +263,7 @@ class TestParseCLI:
             assert mock_g.cli_args.debug is True
 
     def test_parse_cli_env_file(self):
-        """Test parsing environment file argument"""
+        """Test parsing environment file argument."""
         test_env_path = Path("/tmp/test.env")
 
         with (
@@ -292,7 +291,7 @@ class TestParseCLI:
             assert mock_g.cli_args.env == test_env_path
 
     def test_parse_cli_without_optional_deps(self):
-        """Test parsing with python-dotenv not installed"""
+        """Test parsing with python-dotenv not installed."""
         test_env_path = Path("/tmp/test.env")
 
         with (
@@ -309,10 +308,10 @@ class TestParseCLI:
 
 
 class TestMainFunction:
-    """Tests for main() entry point"""
+    """Tests for main() entry point."""
 
     def test_main_exists_and_callable(self):
-        """Test that main function exists and is callable"""
+        """Test that main function exists and is callable."""
         # Main function tests require complex async event loop setup
         # Testing the actual main() execution is better suited for e2e tests
         assert callable(main)

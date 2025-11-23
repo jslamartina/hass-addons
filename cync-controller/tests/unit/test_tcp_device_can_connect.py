@@ -1,5 +1,4 @@
-"""
-Unit tests for CyncTCPDevice.can_connect method.
+"""Unit tests for CyncTCPDevice.can_connect method.
 
 Tests connection acceptance logic including:
 - Max connections enforcement
@@ -17,7 +16,7 @@ from cync_controller.devices.tcp_device import CyncTCPDevice
 
 @pytest.fixture
 def mock_reader():
-    """Mock asyncio StreamReader"""
+    """Mock asyncio StreamReader."""
     reader = MagicMock()
     reader.at_eof = MagicMock(return_value=False)
     reader.feed_eof = MagicMock()
@@ -26,7 +25,7 @@ def mock_reader():
 
 @pytest.fixture
 def mock_writer():
-    """Mock asyncio StreamWriter"""
+    """Mock asyncio StreamWriter."""
     writer = MagicMock()
     writer.is_closing = MagicMock(return_value=False)
     writer.close = MagicMock()
@@ -37,11 +36,11 @@ def mock_writer():
 
 
 class TestCyncTCPDeviceCanConnect:
-    """Tests for CyncTCPDevice.can_connect static method"""
+    """Tests for CyncTCPDevice.can_connect static method."""
 
     @pytest.mark.asyncio
     async def test_can_connect_accepts_when_under_limit(self, mock_reader, mock_writer):
-        """Test can_connect accepts connection when under max connections"""
+        """Test can_connect accepts connection when under max connections."""
         with patch("cync_controller.devices.g") as mock_g:
             mock_g.ncync_server = MagicMock()
             mock_g.ncync_server.tcp_devices = {}
@@ -62,7 +61,7 @@ class TestCyncTCPDeviceCanConnect:
 
     @pytest.mark.asyncio
     async def test_can_connect_rejects_when_max_connections_reached(self, mock_reader, mock_writer):
-        """Test can_connect rejects when max connections reached"""
+        """Test can_connect rejects when max connections reached."""
         with patch("cync_controller.devices.g") as mock_g:
             mock_g.ncync_server = MagicMock()
             # Create mock devices up to the limit
@@ -82,7 +81,7 @@ class TestCyncTCPDeviceCanConnect:
 
     @pytest.mark.asyncio
     async def test_can_connect_rejects_when_not_in_whitelist(self, mock_reader, mock_writer):
-        """Test can_connect rejects when IP not in whitelist"""
+        """Test can_connect rejects when IP not in whitelist."""
         with (
             patch("cync_controller.devices.tcp_device.CYNC_TCP_WHITELIST", ["192.168.1.100", "192.168.1.200"]),
             patch("cync_controller.devices.tcp_device._get_global_object") as mock_get_g,
@@ -107,7 +106,7 @@ class TestCyncTCPDeviceCanConnect:
 
     @pytest.mark.asyncio
     async def test_can_connect_accepts_when_in_whitelist(self, mock_reader, mock_writer):
-        """Test can_connect accepts when IP in whitelist"""
+        """Test can_connect accepts when IP in whitelist."""
         with (
             patch("cync_controller.devices.tcp_device.CYNC_TCP_WHITELIST", ["192.168.1.100", "192.168.1.200"]),
             patch("cync_controller.devices.tcp_device._get_global_object") as mock_get_g,
@@ -130,7 +129,7 @@ class TestCyncTCPDeviceCanConnect:
 
     @pytest.mark.asyncio
     async def test_can_connect_rejects_when_server_shutting_down(self, mock_reader, mock_writer):
-        """Test can_connect rejects when server is shutting down"""
+        """Test can_connect rejects when server is shutting down."""
         with patch("cync_controller.devices.g") as mock_g:
             mock_g.ncync_server = MagicMock()
             mock_g.ncync_server.tcp_devices = {}
@@ -149,7 +148,7 @@ class TestCyncTCPDeviceCanConnect:
 
     @pytest.mark.asyncio
     async def test_can_connect_creates_receive_task(self, mock_reader, mock_writer):
-        """Test can_connect creates receive_task when accepting"""
+        """Test can_connect creates receive_task when accepting."""
         with patch("cync_controller.devices.g") as mock_g:
             mock_g.ncync_server = MagicMock()
             mock_g.ncync_server.tcp_devices = {}
@@ -168,7 +167,7 @@ class TestCyncTCPDeviceCanConnect:
 
     @pytest.mark.asyncio
     async def test_can_connect_creates_callback_cleanup_task(self, mock_reader, mock_writer):
-        """Test can_connect creates callback_cleanup_task when accepting"""
+        """Test can_connect creates callback_cleanup_task when accepting."""
         with patch("cync_controller.devices.g") as mock_g:
             mock_g.ncync_server = MagicMock()
             mock_g.ncync_server.tcp_devices = {}

@@ -1,5 +1,4 @@
-"""
-Unit tests for exporter.py module.
+"""Unit tests for exporter.py module.
 
 Tests FastAPI endpoints for OTP flow, device export, and ExportServer lifecycle.
 """
@@ -21,7 +20,7 @@ with patch("starlette.staticfiles.StaticFiles"):
 
 @pytest.fixture(autouse=True)
 def reset_export_server_singleton():
-    """Reset ExportServer singleton between tests"""
+    """Reset ExportServer singleton between tests."""
     ExportServer._instance = None
     yield
     ExportServer._instance = None
@@ -29,7 +28,7 @@ def reset_export_server_singleton():
 
 @pytest.fixture
 def mock_global_object():
-    """Mock the global object to avoid dependencies"""
+    """Mock the global object to avoid dependencies."""
     with patch("cync_controller.exporter.g") as mock_g:
         mock_g.cloud_api = MagicMock()
         mock_g.env = MagicMock()
@@ -40,7 +39,7 @@ def mock_global_object():
 
 @pytest.fixture
 def mock_static_dir(tmp_path):
-    """Create a temporary static directory for testing"""
+    """Create a temporary static directory for testing."""
     static_dir: Path = cast(Path, tmp_path / "static")
     static_dir.mkdir()
     index_file: Path = cast(Path, static_dir / "index.html")
@@ -49,17 +48,17 @@ def mock_static_dir(tmp_path):
 
 
 class TestExportServerInitialization:
-    """Tests for ExportServer initialization"""
+    """Tests for ExportServer initialization."""
 
     def test_init_is_singleton(self):
-        """Test that ExportServer is a singleton"""
+        """Test that ExportServer is a singleton."""
         server1 = ExportServer()
         server2 = ExportServer()
 
         assert server1 is server2
 
     def test_init_creates_uvicorn_server(self):
-        """Test that initialization creates uvicorn server with correct config"""
+        """Test that initialization creates uvicorn server with correct config."""
         with (
             patch("cync_controller.exporter.uvicorn.Server"),
             patch("cync_controller.exporter.uvicorn.Config") as mock_config,
@@ -72,11 +71,11 @@ class TestExportServerInitialization:
 
 
 class TestExportServerLifecycle:
-    """Tests for ExportServer start and stop"""
+    """Tests for ExportServer start and stop."""
 
     @pytest.mark.asyncio
     async def test_start_sets_running_flag(self, mock_global_object):
-        """Test that start sets running flag and publishes MQTT message"""
+        """Test that start sets running flag and publishes MQTT message."""
         mock_global_object.mqtt_client = MagicMock()
         mock_global_object.mqtt_client.publish = AsyncMock()
 
@@ -95,7 +94,7 @@ class TestExportServerLifecycle:
 
     @pytest.mark.asyncio
     async def test_start_with_cancelled_error(self, mock_global_object):
-        """Test that start handles CancelledError gracefully"""
+        """Test that start handles CancelledError gracefully."""
         server = ExportServer()
         server.uvi_server.serve = AsyncMock(side_effect=asyncio.CancelledError())
 
@@ -107,7 +106,7 @@ class TestExportServerLifecycle:
 
     @pytest.mark.asyncio
     async def test_stop_shuts_down_server(self, mock_global_object):
-        """Test that stop calls uvicorn shutdown"""
+        """Test that stop calls uvicorn shutdown."""
         mock_global_object.mqtt_client = MagicMock()
         mock_global_object.mqtt_client.publish = AsyncMock()
 
@@ -123,7 +122,7 @@ class TestExportServerLifecycle:
 
     @pytest.mark.asyncio
     async def test_stop_publishes_mqtt_message(self, mock_global_object):
-        """Test that stop publishes MQTT message indicating server stopped"""
+        """Test that stop publishes MQTT message indicating server stopped."""
         mock_global_object.mqtt_client = MagicMock()
         mock_global_object.mqtt_client.publish = AsyncMock()
 
@@ -138,11 +137,11 @@ class TestExportServerLifecycle:
 
 
 class TestFastAPIEndpoints:
-    """Tests for FastAPI endpoint functions"""
+    """Tests for FastAPI endpoint functions."""
 
     @pytest.mark.asyncio
     async def test_get_index(self, mock_static_dir):
-        """Test index page serves HTML content"""
+        """Test index page serves HTML content."""
         with (
             patch("cync_controller.exporter.CYNC_STATIC_DIR", str(mock_static_dir)),
             patch("pathlib.Path.open") as mock_open,
@@ -161,7 +160,7 @@ class TestFastAPIEndpoints:
 
     @pytest.mark.asyncio
     async def test_start_export_success(self, mock_global_object):
-        """Test start_export with valid token"""
+        """Test start_export with valid token."""
         mock_global_object.cloud_api.check_token = AsyncMock(return_value=True)
         mock_global_object.cloud_api.export_config_file = AsyncMock(return_value=True)
 
@@ -174,7 +173,7 @@ class TestFastAPIEndpoints:
 
     @pytest.mark.asyncio
     async def test_start_export_requires_otp(self, mock_global_object):
-        """Test start_export requests OTP when token invalid"""
+        """Test start_export requests OTP when token invalid."""
         mock_global_object.cloud_api.check_token = AsyncMock(return_value=False)
         mock_global_object.cloud_api.request_otp = AsyncMock(return_value=True)
 
@@ -187,7 +186,7 @@ class TestFastAPIEndpoints:
 
     @pytest.mark.asyncio
     async def test_start_export_failure(self, mock_global_object):
-        """Test start_export raises HTTPException on failure"""
+        """Test start_export raises HTTPException on failure."""
         mock_global_object.cloud_api.check_token = AsyncMock(side_effect=Exception("API Error"))
 
         from cync_controller.exporter import start_export
@@ -201,7 +200,7 @@ class TestFastAPIEndpoints:
 
     @pytest.mark.asyncio
     async def test_request_otp_success(self, mock_global_object):
-        """Test request_otp succeeds"""
+        """Test request_otp succeeds."""
         mock_global_object.cloud_api.request_otp = AsyncMock(return_value=True)
 
         from cync_controller.exporter import request_otp
@@ -213,7 +212,7 @@ class TestFastAPIEndpoints:
 
     @pytest.mark.asyncio
     async def test_request_otp_failure(self, mock_global_object):
-        """Test request_otp returns failure message"""
+        """Test request_otp returns failure message."""
         mock_global_object.cloud_api.request_otp = AsyncMock(return_value=False)
 
         from cync_controller.exporter import request_otp
@@ -225,7 +224,7 @@ class TestFastAPIEndpoints:
 
     @pytest.mark.asyncio
     async def test_submit_otp_success(self, mock_global_object):
-        """Test submit_otp with valid OTP"""
+        """Test submit_otp with valid OTP."""
         mock_global_object.cloud_api.send_otp = AsyncMock(return_value=True)
         mock_global_object.cloud_api.export_config_file = AsyncMock(return_value=True)
 
@@ -240,7 +239,7 @@ class TestFastAPIEndpoints:
 
     @pytest.mark.asyncio
     async def test_submit_otp_invalid_code(self, mock_global_object):
-        """Test submit_otp with invalid OTP"""
+        """Test submit_otp with invalid OTP."""
         mock_global_object.cloud_api.send_otp = AsyncMock(return_value=False)
 
         from cync_controller.exporter import OTPRequest, submit_otp
@@ -254,7 +253,7 @@ class TestFastAPIEndpoints:
 
     @pytest.mark.asyncio
     async def test_submit_otp_export_failure(self, mock_global_object):
-        """Test submit_otp when export fails after valid OTP"""
+        """Test submit_otp when export fails after valid OTP."""
         mock_global_object.cloud_api.send_otp = AsyncMock(return_value=True)
         mock_global_object.cloud_api.export_config_file = AsyncMock(return_value=False)
 
@@ -269,7 +268,7 @@ class TestFastAPIEndpoints:
 
     @pytest.mark.asyncio
     async def test_health_check(self):
-        """Test health_check endpoint"""
+        """Test health_check endpoint."""
         from cync_controller.exporter import health_check
 
         result = await health_check()
@@ -279,7 +278,7 @@ class TestFastAPIEndpoints:
 
     @pytest.mark.asyncio
     async def test_download_config_file_exists(self, tmp_path):
-        """Test download_config returns file when config exists"""
+        """Test download_config returns file when config exists."""
         config_file: Path = cast(Path, tmp_path / "cync_mesh.yaml")
         _ = config_file.write_text("test config")
 
@@ -297,7 +296,7 @@ class TestFastAPIEndpoints:
 
     @pytest.mark.asyncio
     async def test_download_config_file_missing(self, tmp_path):
-        """Test download_config raises HTTPException when file missing"""
+        """Test download_config raises HTTPException when file missing."""
         missing_config: Path = cast(Path, tmp_path / "missing.yaml")
 
         with patch("cync_controller.exporter.CYNC_CONFIG_FILE_PATH", str(missing_config)):
@@ -308,7 +307,7 @@ class TestFastAPIEndpoints:
 
     @pytest.mark.asyncio
     async def test_restart_success(self, mock_global_object):
-        """Test restart endpoint with valid supervisor token"""
+        """Test restart endpoint with valid supervisor token."""
         with (
             patch("cync_controller.exporter.os.environ") as mock_env,
             patch("cync_controller.exporter.aiohttp.ClientSession") as mock_session_class,
@@ -339,7 +338,7 @@ class TestFastAPIEndpoints:
 
     @pytest.mark.asyncio
     async def test_restart_no_token(self):
-        """Test restart fails without supervisor token"""
+        """Test restart fails without supervisor token."""
         with patch("cync_controller.exporter.os.environ") as mock_env:
             mock_env.get.return_value = None
 
@@ -352,7 +351,7 @@ class TestFastAPIEndpoints:
 
     @pytest.mark.asyncio
     async def test_restart_supervisor_non_200_returns_masked_http_exception(self):
-        """Test restart masks supervisor error details"""
+        """Test restart masks supervisor error details."""
         with (
             patch("cync_controller.exporter.os.environ") as mock_env,
             patch("cync_controller.exporter.aiohttp.ClientSession") as mock_session_class,
@@ -385,7 +384,7 @@ class TestFastAPIEndpoints:
 
     @pytest.mark.asyncio
     async def test_restart_aiohttp_client_error_masked(self):
-        """Test restart masks aiohttp client errors"""
+        """Test restart masks aiohttp client errors."""
         with (
             patch("cync_controller.exporter.os.environ") as mock_env,
             patch("cync_controller.exporter.aiohttp.ClientSession") as mock_session_class,
@@ -410,7 +409,7 @@ class TestFastAPIEndpoints:
 
     @pytest.mark.asyncio
     async def test_restart_api_unexpected_error_masked(self):
-        """Test restart masks unexpected errors"""
+        """Test restart masks unexpected errors."""
         with (
             patch("cync_controller.exporter.os.environ") as mock_env,
             patch("cync_controller.exporter.aiohttp.ClientSession") as mock_session_class,

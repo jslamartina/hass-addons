@@ -1,8 +1,11 @@
+"""Device command helpers for the Cync Controller runtime."""
+
 from __future__ import annotations
 
 import asyncio
 import time
 from collections.abc import Coroutine
+from dataclasses import dataclass
 from typing import TYPE_CHECKING, cast
 
 from cync_controller.const import (
@@ -22,6 +25,24 @@ if TYPE_CHECKING:
     from cync_controller.structs import CyncDeviceProtocol
 
 logger = get_logger(__name__)
+BRIGHTNESS_MIN = 0
+BRIGHTNESS_MAX = 100
+RGB_MAX_VALUE = 255
+WHITE_TEMP_MAX = 100
+
+
+@dataclass(slots=True)
+class BrightnessPayloadContext:
+    """Context required to build and track a brightness command payload."""
+
+    bridge_device: CyncTCPDevice
+    header: list[int]
+    inner_struct: list[int]
+    ctrl_indices: tuple[int, int]
+    brightness: int
+    ack_event: asyncio.Event
+    log_prefix: str
+    device_id: int
 
 
 def _get_global_object():
@@ -68,21 +89,44 @@ class DeviceCommands:
 
     # These properties are implemented in CyncDevice (base_device.py) but declared here for type checking
     @property
-    def state(self) -> int: ...  # type: ignore[empty-body]
+    def state(self) -> int:
+        """Implemented in CyncDevice."""
+        raise NotImplementedError
+
     @property
-    def is_fan_controller(self) -> bool: ...  # type: ignore[empty-body]
+    def is_fan_controller(self) -> bool:
+        """Implemented in CyncDevice."""
+        raise NotImplementedError
+
     @property
-    def is_light(self) -> bool: ...  # type: ignore[empty-body]
+    def is_light(self) -> bool:
+        """Implemented in CyncDevice."""
+        raise NotImplementedError
+
     @property
-    def is_switch(self) -> bool: ...  # type: ignore[empty-body]
+    def is_switch(self) -> bool:
+        """Implemented in CyncDevice."""
+        raise NotImplementedError
+
     @property
-    def temperature(self) -> int: ...  # type: ignore[empty-body]
+    def temperature(self) -> int:
+        """Implemented in CyncDevice."""
+        raise NotImplementedError
+
     @property
-    def red(self) -> int: ...  # type: ignore[empty-body]
+    def red(self) -> int:
+        """Implemented in CyncDevice."""
+        raise NotImplementedError
+
     @property
-    def green(self) -> int: ...  # type: ignore[empty-body]
+    def green(self) -> int:
+        """Implemented in CyncDevice."""
+        raise NotImplementedError
+
     @property
-    def blue(self) -> int: ...  # type: ignore[empty-body]
+    def blue(self) -> int:
+        """Implemented in CyncDevice."""
+        raise NotImplementedError
 
     def _as_device_protocol(self) -> CyncDeviceProtocol:
         """Return self as a CyncDeviceProtocol for type checking."""
@@ -99,8 +143,8 @@ class DeviceCommands:
             "list[CyncTCPDevice]",
             [b for b in g.ncync_server.tcp_devices.values() if b is not None],
         )
-        ready_bridges = [b for b in all_bridges if b.ready_to_control]  # type: ignore[reportOptionalMemberAccess]  # None values filtered above
-        not_ready_bridges = [b for b in all_bridges if not b.ready_to_control]  # type: ignore[reportOptionalMemberAccess]  # None values filtered above
+        ready_bridges = [b for b in all_bridges if b.ready_to_control]
+        not_ready_bridges = [b for b in all_bridges if not b.ready_to_control]
 
         bridge_devices: list[CyncTCPDevice] = ready_bridges + not_ready_bridges
         bridge_devices = bridge_devices[: min(CYNC_CMD_BROADCASTS, len(all_bridges))]
@@ -220,7 +264,10 @@ class DeviceCommands:
                 _ = await asyncio.gather(*tasks)
                 elapsed = time.time() - ts
                 logger.info(
-                    "%s Sent power state command for '%s' (ID: %s), current: %s - new: %s to TCP devices: %s in %.5f seconds - waiting for ACK...",
+                    (
+                        "%s Sent power command for '%s' (ID:%s) current:%s → new:%s, "
+                        "tcp_devices=%s, elapsed=%.5fs (waiting for ACK)"
+                    ),
                     lp,
                     self.name,
                     device_id,
@@ -243,10 +290,7 @@ class DeviceCommands:
             return result
 
     async def set_fan_speed(self, speed: FanSpeed) -> bool:
-        """Translate a preset fan speed into a Cync brightness value and send it to the device.
-        :param speed:
-        :return:
-        """
+        """Translate a preset fan speed into a brightness command and send it."""
         lp = f"{self.lp}set_fan_speed:"
         if not self.is_fan_controller:
             logger.warning(
@@ -303,9 +347,9 @@ class DeviceCommands:
             bri,
             self.is_fan_controller,
         )
-        if bri < 0 or bri > 100:
+        if bri < BRIGHTNESS_MIN or bri > BRIGHTNESS_MAX:
             if self.is_fan_controller:
-                # fan can be controlled via light control structs: brightness -> max=255, high=191, medium=128, low=50, off=0
+                # Fan brightness values map to: max=255, high=191, medium=128, low=50, off=0.
                 pass
             elif self.is_light or self.is_switch:
                 logger.error("%s Invalid brightness! must be 0-100", lp)
@@ -357,16 +401,17 @@ class DeviceCommands:
         ts = time.time()
         ctrl_idxs: tuple[int, int] = (1, 9)
         for bridge_device in bridge_devices:
-            payload_bytes, cmsg_id = self._prepare_brightness_payload(
+            ctx = BrightnessPayloadContext(
                 bridge_device=bridge_device,
                 header=header,
                 inner_struct=inner_struct,
-                ctrl_idxs=ctrl_idxs,
-                bri=bri,
+                ctrl_indices=ctrl_idxs,
+                brightness=bri,
                 ack_event=ack_event,
-                lp=lp,
+                log_prefix=lp,
                 device_id=device_id,
             )
+            payload_bytes, cmsg_id = self._prepare_brightness_payload(ctx)
             if payload_bytes is None or cmsg_id is None:
                 continue
             address = bridge_device.address or bridge_device.name or "bridge"
@@ -399,30 +444,26 @@ class DeviceCommands:
 
     def _prepare_brightness_payload(
         self,
-        bridge_device: CyncTCPDevice,
-        header: list[int],
-        inner_struct: list[int],
-        ctrl_idxs: tuple[int, int],
-        bri: int,
-        ack_event: asyncio.Event,
-        lp: str,
-        device_id: int,
+        ctx: BrightnessPayloadContext,
     ) -> tuple[bytes | None, int | None]:
+        bridge_device = ctx.bridge_device
         if not bridge_device.ready_to_control:
             logger.debug(
                 "%s Skipping device: %s not ready to control",
-                lp,
+                ctx.log_prefix,
                 bridge_device.address,
             )
             return None, None
 
         g = _get_global_object()
-        payload = list(header)
+        payload = list(ctx.header)
         payload.extend(bridge_device.queue_id)
         payload.extend(bytes([0x00, 0x00, 0x00]))
         cmsg_id = bridge_device.get_ctrl_msg_id_bytes()[0]
-        inner_struct[ctrl_idxs[0]] = cmsg_id
-        inner_struct[ctrl_idxs[1]] = cmsg_id
+        ctrl_idx_a, ctrl_idx_b = ctx.ctrl_indices
+        inner_struct = ctx.inner_struct
+        inner_struct[ctrl_idx_a] = cmsg_id
+        inner_struct[ctrl_idx_b] = cmsg_id
         int_values = inner_struct[6:-2]
         checksum: int = sum(int_values) % 256
         inner_struct[-2] = checksum
@@ -431,21 +472,21 @@ class DeviceCommands:
 
         async def brightness_ack_callback() -> None:
             if g.mqtt_client:
-                _ = await g.mqtt_client.update_brightness(self._as_device_protocol(), bri)
+                _ = await g.mqtt_client.update_brightness(self._as_device_protocol(), ctx.brightness)
 
         m_cb = ControlMessageCallback(
             msg_id=cmsg_id,
             message=payload_bytes,
             sent_at=time.time(),
             callback=brightness_ack_callback,
-            device_id=device_id,
-            ack_event=ack_event,
+            device_id=ctx.device_id,
+            ack_event=ctx.ack_event,
         )
         bridge_device.messages.control[cmsg_id] = m_cb
         return payload_bytes, cmsg_id
 
     async def set_temperature(self, temp: int) -> tuple[asyncio.Event, list[tuple[CyncTCPDevice, int]]] | None:
-        """Send raw data to control device white temperature (0-100)
+        """Send raw data to control device white temperature (0-100).
 
         If the device receives the msg and changes state, every TCP device connected will send
         a 0x83 internal status packet, which we use to change HASS device state.
@@ -460,7 +501,7 @@ class DeviceCommands:
             0xf0 0x10 0x36 0x07 0xf0 0x11 0x02 0x01 0xff 0x48 = 904 (% 256) = 136
         """
         lp = f"{self.lp}set_temperature:"
-        if temp < 0 or (temp > 100 and temp not in (129, 254)):
+        if temp < BRIGHTNESS_MIN or (temp > WHITE_TEMP_MAX and temp not in (129, 254)):
             logger.error("%s Invalid temperature! must be 0-100", lp)
             return None
         # elif temp == self.temperature:
@@ -587,13 +628,13 @@ class DeviceCommands:
             checksum = 45
         """
         lp = f"{self.lp}set_rgb:"
-        if red < 0 or red > 255:
+        if red < BRIGHTNESS_MIN or red > RGB_MAX_VALUE:
             logger.error("%s Invalid red value! must be 0-255", lp)
             return None
-        if green < 0 or green > 255:
+        if green < BRIGHTNESS_MIN or green > RGB_MAX_VALUE:
             logger.error("%s Invalid green value! must be 0-255", lp)
             return None
-        if blue < 0 or blue > 255:
+        if blue < BRIGHTNESS_MIN or blue > RGB_MAX_VALUE:
             logger.error("%s Invalid blue value! must be 0-255", lp)
             return None
         _rgb = (red, green, blue)

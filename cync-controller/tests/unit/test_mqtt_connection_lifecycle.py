@@ -1,5 +1,4 @@
-"""
-Unit tests for MQTTClient connection lifecycle.
+"""Unit tests for MQTTClient connection lifecycle.
 
 Tests for MQTTClient.start() method and connection management including
 reconnection logic, error recovery, and task lifecycle.
@@ -15,11 +14,11 @@ from cync_controller.mqtt_client import MQTTClient
 
 
 class TestMQTTClientConnectionLifecycle:
-    """Tests for MQTTClient.start() main connection loop lifecycle"""
+    """Tests for MQTTClient.start() main connection loop lifecycle."""
 
     @pytest.mark.asyncio
     async def test_start_main_loop_basic(self):
-        """Test that start() runs main connection loop"""
+        """Test that start() runs main connection loop."""
         with (
             patch("cync_controller.mqtt_client.g") as mock_g,
             patch("cync_controller.mqtt_client.aiomqtt.Client"),
@@ -48,7 +47,7 @@ class TestMQTTClientConnectionLifecycle:
 
     @pytest.mark.asyncio
     async def test_start_reconnects_on_disconnect(self):
-        """Test automatic reconnection after disconnect"""
+        """Test automatic reconnection after disconnect."""
         with (
             patch("cync_controller.mqtt_client.g") as mock_g,
             patch("cync_controller.mqtt_client.aiomqtt.Client"),
@@ -77,7 +76,7 @@ class TestMQTTClientConnectionLifecycle:
 
     @pytest.mark.asyncio
     async def test_start_handles_mqtt_error(self):
-        """Test error recovery in main loop"""
+        """Test error recovery in main loop."""
         from aiomqtt import MqttError
 
         with (
@@ -108,7 +107,7 @@ class TestMQTTClientConnectionLifecycle:
 
     @pytest.mark.asyncio
     async def test_start_creates_receiver_task(self):
-        """Test receiver task lifecycle when connection succeeds"""
+        """Test receiver task lifecycle when connection succeeds."""
         with (
             patch("cync_controller.mqtt_client.g") as mock_g,
             patch("cync_controller.mqtt_client.aiomqtt.Client"),
@@ -145,7 +144,7 @@ class TestMQTTClientConnectionLifecycle:
 
     @pytest.mark.asyncio
     async def test_start_resilience_multiple_failures(self):
-        """Test that start() handles repeated connection failures gracefully"""
+        """Test that start() handles repeated connection failures gracefully."""
         with (
             patch("cync_controller.mqtt_client.g") as mock_g,
             patch("cync_controller.mqtt_client.aiomqtt.Client"),

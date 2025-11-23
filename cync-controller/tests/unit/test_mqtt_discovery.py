@@ -1,5 +1,4 @@
-"""
-Unit tests for MQTT discovery functionality.
+"""Unit tests for MQTT discovery functionality.
 
 Tests MQTT discovery payload generation and device registration.
 """
@@ -14,7 +13,7 @@ from cync_controller.mqtt_client import MQTTClient
 
 @pytest.fixture(autouse=True)
 def reset_mqtt_singleton():
-    """Reset MQTTClient singleton between tests"""
+    """Reset MQTTClient singleton between tests."""
     MQTTClient._instance = None
     yield
     MQTTClient._instance = None
@@ -22,7 +21,7 @@ def reset_mqtt_singleton():
 
 @pytest.fixture
 def mock_global_state():
-    """Mock global state for discovery tests"""
+    """Mock global state for discovery tests."""
     with patch("cync_controller.mqtt.discovery.g") as mock_g:
         mock_g.uuid = "test-uuid-1234"
         mock_g.ncync_server = MagicMock()
@@ -33,7 +32,7 @@ def mock_global_state():
 
 @pytest.fixture
 def mock_device():
-    """Create a mock CyncDevice for testing"""
+    """Create a mock CyncDevice for testing."""
     device = MagicMock()
     device.id = 42
     device.name = "Test Light"
@@ -57,11 +56,11 @@ def mock_device():
 
 
 class TestDeviceRegistration:
-    """Tests for device registration with MQTT discovery"""
+    """Tests for device registration with MQTT discovery."""
 
     @pytest.mark.asyncio
     async def test_register_single_device_not_connected(self):
-        """Test that register_single_device returns False when not connected"""
+        """Test that register_single_device returns False when not connected."""
         with patch("cync_controller.mqtt_client.g") as mock_g:
             mock_g.uuid = "test-uuid"
             client = MQTTClient()
@@ -75,7 +74,7 @@ class TestDeviceRegistration:
 
     @pytest.mark.asyncio
     async def test_register_single_device_publishes_discovery(self, mock_global_state, mock_device):
-        """Test that register_single_device publishes MQTT discovery message"""
+        """Test that register_single_device publishes MQTT discovery message."""
         with (
             patch("cync_controller.mqtt_client.aiomqtt.Client") as mock_client_class,
             patch("cync_controller.metadata.model_info.device_type_map"),
@@ -98,7 +97,7 @@ class TestDeviceRegistration:
 
     @pytest.mark.asyncio
     async def test_register_single_device_sets_suggested_area_from_group(self, mock_global_state, mock_device):
-        """Test that register_single_device extracts area from group membership"""
+        """Test that register_single_device extracts area from group membership."""
         # Create a group that device belongs to
         group = MagicMock()
         group.name = "Living Room"
@@ -135,7 +134,7 @@ class TestDeviceRegistration:
 
     @pytest.mark.asyncio
     async def test_register_single_device_extracts_area_from_device_name(self, mock_global_state, mock_device):
-        """Test that register_single_device extracts area from device name when not in group"""
+        """Test that register_single_device extracts area from device name when not in group."""
         # Device name contains area
         mock_device.name = "Bedroom Light"
 
@@ -156,7 +155,7 @@ class TestDeviceRegistration:
 
     @pytest.mark.asyncio
     async def test_register_single_device_handles_switch_device(self, mock_global_state):
-        """Test that register_single_device classifies switch device correctly"""
+        """Test that register_single_device classifies switch device correctly."""
         switch_device = MagicMock()
         switch_device.id = 43
         switch_device.name = "Test Switch"
@@ -192,11 +191,11 @@ class TestDeviceRegistration:
 
 
 class TestDeviceRediscovery:
-    """Tests for device rediscovery functionality"""
+    """Tests for device rediscovery functionality."""
 
     @pytest.mark.asyncio
     async def test_trigger_device_rediscovery_not_connected(self):
-        """Test that trigger_device_rediscovery returns False when not connected"""
+        """Test that trigger_device_rediscovery returns False when not connected."""
         with patch("cync_controller.mqtt_client.g") as mock_g:
             mock_g.uuid = "test-uuid"
             client = MQTTClient()
@@ -208,7 +207,7 @@ class TestDeviceRediscovery:
 
     @pytest.mark.asyncio
     async def test_trigger_device_rediscovery_registers_all_devices(self, mock_global_state):
-        """Test that trigger_device_rediscovery calls register_single_device for all devices"""
+        """Test that trigger_device_rediscovery calls register_single_device for all devices."""
         device1 = MagicMock()
         device1.id = 1
         device1.name = "Device 1"
@@ -236,7 +235,7 @@ class TestDeviceRediscovery:
 
     @pytest.mark.asyncio
     async def test_trigger_device_rediscovery_handles_registration_failure(self, mock_global_state):
-        """Test that trigger_device_rediscovery handles registration failures gracefully"""
+        """Test that trigger_device_rediscovery handles registration failures gracefully."""
         device = MagicMock()
         device.id = 1
         device.name = "Device 1"
@@ -259,11 +258,11 @@ class TestDeviceRediscovery:
 
 
 class TestEntityIDGeneration:
-    """Tests for entity ID generation from device names"""
+    """Tests for entity ID generation from device names."""
 
     @pytest.mark.asyncio
     async def test_entity_id_from_simple_device_name(self, mock_global_state, mock_device):
-        """Test entity ID generation from simple device name"""
+        """Test entity ID generation from simple device name."""
         mock_device.name = "Hallway Light"
 
         with patch("cync_controller.mqtt_client.aiomqtt.Client") as mock_client_class:
@@ -283,7 +282,7 @@ class TestEntityIDGeneration:
 
     @pytest.mark.asyncio
     async def test_entity_id_from_complex_device_name(self, mock_global_state, mock_device):
-        """Test entity ID generation from complex device name with spaces and numbers"""
+        """Test entity ID generation from complex device name with spaces and numbers."""
         mock_device.name = "Master Bedroom Light 1"
 
         with patch("cync_controller.mqtt_client.aiomqtt.Client") as mock_client_class:
@@ -303,7 +302,7 @@ class TestEntityIDGeneration:
 
     @pytest.mark.asyncio
     async def test_entity_id_from_unicode_device_name(self, mock_global_state, mock_device):
-        """Test entity ID generation from device name with unicode characters"""
+        """Test entity ID generation from device name with unicode characters."""
         mock_device.name = "Café Lights"
 
         with patch("cync_controller.mqtt_client.aiomqtt.Client") as mock_client_class:
@@ -323,11 +322,11 @@ class TestEntityIDGeneration:
 
 
 class TestAreaExtraction:
-    """Tests for area extraction from device names and groups"""
+    """Tests for area extraction from device names and groups."""
 
     @pytest.mark.asyncio
     async def test_area_extraction_from_group_name(self, mock_global_state, mock_device):
-        """Test that area is extracted from group name when device is in group"""
+        """Test that area is extracted from group name when device is in group."""
         group = MagicMock()
         group.name = "Living Room"
         group.is_subgroup = False
@@ -352,7 +351,7 @@ class TestAreaExtraction:
 
     @pytest.mark.asyncio
     async def test_area_extraction_removes_suffixes(self, mock_global_state, mock_device):
-        """Test that area extraction removes device type suffixes"""
+        """Test that area extraction removes device type suffixes."""
         # Device name with suffix that should be removed
         mock_device.name = "Bedroom Light"
 
@@ -373,7 +372,7 @@ class TestAreaExtraction:
 
     @pytest.mark.asyncio
     async def test_area_extraction_removes_trailing_numbers(self, mock_global_state, mock_device):
-        """Test that area extraction removes trailing numbers from device names"""
+        """Test that area extraction removes trailing numbers from device names."""
         mock_device.name = "Hallway 1"
 
         with patch("cync_controller.mqtt_client.aiomqtt.Client") as mock_client_class:
@@ -393,7 +392,7 @@ class TestAreaExtraction:
 
     @pytest.mark.asyncio
     async def test_area_extraction_skips_subgroups(self, mock_global_state, mock_device):
-        """Test that area extraction only considers non-subgroup groups"""
+        """Test that area extraction only considers non-subgroup groups."""
         subgroup = MagicMock()
         subgroup.name = "Subgroup Name"
         subgroup.is_subgroup = True  # Should be skipped

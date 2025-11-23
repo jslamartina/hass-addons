@@ -49,53 +49,53 @@ def create_mock_aiomqtt_client() -> Any:
 # pyright: reportPrivateUsage=false
 @pytest.fixture(autouse=True)
 def reset_mqtt_singleton():
-    """Reset MQTTClient singleton between tests"""
+    """Reset MQTTClient singleton between tests."""
     MQTTClient._instance = None  # type: ignore[reportPrivateUsage]
     yield
     MQTTClient._instance = None  # type: ignore[reportPrivateUsage]
 
 
 class TestSlugify:
-    """Tests for slugify function"""
+    """Tests for slugify function."""
 
     def test_slugify_basic(self):
-        """Test basic slugification"""
+        """Test basic slugification."""
         assert slugify("Hallway Lights") == "hallway_lights"
 
     def test_slugify_multiple_spaces(self):
-        """Test slugification with multiple spaces"""
+        """Test slugification with multiple spaces."""
         assert slugify("Master  Bedroom   Light") == "master_bedroom_light"
 
     def test_slugify_special_characters(self):
-        """Test slugification removes special characters"""
+        """Test slugification removes special characters."""
         assert slugify("Kitchen-Light@#$") == "kitchen_light"
 
     def test_slugify_numbers(self):
-        """Test slugification preserves numbers"""
+        """Test slugification preserves numbers."""
         assert slugify("Bedroom Light 1") == "bedroom_light_1"
 
     def test_slugify_unicode(self):
-        """Test slugification handles unicode"""
+        """Test slugification handles unicode."""
         assert slugify("Caf Lights") == "caf_lights"
 
     def test_slugify_leading_trailing_spaces(self):
-        """Test slugification strips leading/trailing spaces"""
+        """Test slugification strips leading/trailing spaces."""
         assert slugify("  Living Room  ") == "living_room"
 
     def test_slugify_hyphens(self):
-        """Test slugification converts hyphens to underscores"""
+        """Test slugification converts hyphens to underscores."""
         assert slugify("Desk-Lamp") == "desk_lamp"
 
     def test_slugify_mixed(self):
-        """Test slugification with mixed input"""
+        """Test slugification with mixed input."""
         assert slugify("Master-Bedroom (Light #1)") == "master_bedroom_light_1"
 
 
 class TestMQTTClientInitialization:
-    """Tests for MQTTClient initialization"""
+    """Tests for MQTTClient initialization."""
 
     def test_init_creates_singleton(self):
-        """Test that MQTTClient is a singleton"""
+        """Test that MQTTClient is a singleton."""
         with patch("cync_controller.mqtt_client.g") as mock_g:
             mock_g.uuid = "test-uuid-1234"
 
@@ -106,7 +106,7 @@ class TestMQTTClientInitialization:
             assert client1 is client2
 
     def test_init_with_default_topics(self):
-        """Test initialization with default topic values"""
+        """Test initialization with default topic values."""
         with (
             patch("cync_controller.mqtt.client.CYNC_TOPIC", ""),
             patch("cync_controller.mqtt.client.CYNC_HASS_TOPIC", ""),
@@ -121,7 +121,7 @@ class TestMQTTClientInitialization:
             assert client.ha_topic == "homeassistant"
 
     def test_init_with_custom_topics(self):
-        """Test initialization with custom topic values"""
+        """Test initialization with custom topic values."""
         with (
             patch("cync_controller.mqtt.client.CYNC_TOPIC", "custom_cync"),
             patch("cync_controller.mqtt.client.CYNC_HASS_TOPIC", "custom_ha"),
@@ -135,7 +135,7 @@ class TestMQTTClientInitialization:
             assert client.ha_topic == "custom_ha"
 
     def test_init_sets_broker_config(self):
-        """Test that initialization sets broker configuration"""
+        """Test that initialization sets broker configuration."""
         with (
             patch("cync_controller.mqtt.client.CYNC_MQTT_HOST", "192.168.1.100"),
             patch("cync_controller.mqtt.client.CYNC_MQTT_PORT", "1883"),
@@ -153,7 +153,7 @@ class TestMQTTClientInitialization:
             assert client.broker_password == "testpass"
 
     def test_init_creates_client_id(self):
-        """Test that initialization creates unique client ID"""
+        """Test that initialization creates unique client ID."""
         with patch("cync_controller.mqtt_client.g") as mock_g:
             mock_g.uuid = "unique-test-uuid"
 
@@ -164,11 +164,11 @@ class TestMQTTClientInitialization:
 
 # pyright: reportAny=false
 class TestMQTTClientConnection:
-    """Tests for MQTT client connection handling"""
+    """Tests for MQTT client connection handling."""
 
     @pytest.mark.asyncio
     async def test_connect_success(self):
-        """Test successful MQTT connection"""
+        """Test successful MQTT connection."""
         with (
             patch("cync_controller.mqtt_client.g") as mock_g,
             patch("cync_controller.mqtt_client.aiomqtt.Client") as mock_client_class,
@@ -199,7 +199,7 @@ class TestMQTTClientConnection:
 
     @pytest.mark.asyncio
     async def test_connect_failure(self):
-        """Test failed MQTT connection"""
+        """Test failed MQTT connection."""
         from aiomqtt import MqttError
 
         with (
@@ -227,7 +227,7 @@ class TestMQTTClientConnection:
 
     @pytest.mark.asyncio
     async def test_connect_bad_credentials(self, caplog: Any):  # type: ignore[assignment, reportAny, reportExplicitAny]
-        """Test connection with bad credentials"""
+        """Test connection with bad credentials."""
         with (
             patch("cync_controller.mqtt_client.g") as mock_g,
             patch("cync_controller.mqtt.client.send_sigterm") as mock_sigterm,
@@ -257,11 +257,11 @@ class TestMQTTClientConnection:
 
 
 class TestMQTTClientPublishing:
-    """Tests for MQTT client publishing methods"""
+    """Tests for MQTT client publishing methods."""
 
     @pytest.mark.asyncio
     async def test_publish(self):
-        """Test publishing a message"""
+        """Test publishing a message."""
         with patch("cync_controller.mqtt_client.g") as mock_g:
             mock_g.uuid = "test-uuid"
 
@@ -277,7 +277,7 @@ class TestMQTTClientPublishing:
 
     @pytest.mark.asyncio
     async def test_publish_json_msg(self):
-        """Test publishing a JSON message"""
+        """Test publishing a JSON message."""
         with patch("cync_controller.mqtt_client.g") as mock_g:
             mock_g.uuid = "test-uuid"
 
@@ -298,7 +298,7 @@ class TestMQTTClientPublishing:
 
     @pytest.mark.asyncio
     async def test_publish_json_msg_error_handling(self, caplog: Any):  # type: ignore[assignment, reportExplicitAny]
-        """Test publish_json_msg handles errors gracefully"""
+        """Test publish_json_msg handles errors gracefully."""
         with patch("cync_controller.mqtt_client.g") as mock_g:
             mock_g.uuid = "test-uuid"
 
@@ -315,11 +315,11 @@ class TestMQTTClientPublishing:
 
 
 class TestMQTTClientAvailability:
-    """Tests for MQTT client availability publishing"""
+    """Tests for MQTT client availability publishing."""
 
     @pytest.mark.asyncio
     async def test_pub_online_true(self):
-        """Test publishing device online status"""
+        """Test publishing device online status."""
         with patch("cync_controller.mqtt_client.g") as mock_g:
             mock_g.uuid = "test-uuid"
             mock_g.ncync_server = MagicMock()
@@ -344,7 +344,7 @@ class TestMQTTClientAvailability:
 
     @pytest.mark.asyncio
     async def test_pub_online_false(self):
-        """Test publishing device offline status"""
+        """Test publishing device offline status."""
         with patch("cync_controller.mqtt_client.g") as mock_g:
             mock_g.uuid = "test-uuid"
             mock_g.ncync_server = MagicMock()
@@ -369,7 +369,7 @@ class TestMQTTClientAvailability:
 
     @pytest.mark.asyncio
     async def test_pub_online_device_not_found(self):
-        """Test pub_online with non-existent device"""
+        """Test pub_online with non-existent device."""
         with patch("cync_controller.mqtt_client.g") as mock_g:
             mock_g.uuid = "test-uuid"
             mock_g.ncync_server = MagicMock()
@@ -383,11 +383,11 @@ class TestMQTTClientAvailability:
 
 
 class TestMQTTClientStateUpdates:
-    """Tests for MQTT client state update methods"""
+    """Tests for MQTT client state update methods."""
 
     @pytest.mark.asyncio
     async def test_update_device_state_on(self):
-        """Test updating device state to ON"""
+        """Test updating device state to ON."""
         with (
             patch("cync_controller.mqtt_client.g") as mock_g,
             patch("cync_controller.mqtt_client.asyncio.get_running_loop") as mock_loop,
@@ -424,7 +424,7 @@ class TestMQTTClientStateUpdates:
 
     @pytest.mark.asyncio
     async def test_update_device_state_off(self):
-        """Test updating device state to OFF"""
+        """Test updating device state to OFF."""
         with (
             patch("cync_controller.mqtt_client.g") as mock_g,
             patch("cync_controller.mqtt_client.asyncio.get_running_loop") as mock_loop,
@@ -458,7 +458,7 @@ class TestMQTTClientStateUpdates:
 
     @pytest.mark.asyncio
     async def test_update_brightness(self):
-        """Test updating device brightness"""
+        """Test updating device brightness."""
         with patch("cync_controller.mqtt_client.g") as mock_g:
             mock_g.uuid = "test-uuid"
             mock_device = MagicMock()
@@ -484,7 +484,7 @@ class TestMQTTClientStateUpdates:
 
     @pytest.mark.asyncio
     async def test_update_temperature(self):
-        """Test updating device color temperature"""
+        """Test updating device color temperature."""
         with patch("cync_controller.mqtt_client.g") as mock_g:
             mock_g.uuid = "test-uuid"
             mock_device = MagicMock()
@@ -510,7 +510,7 @@ class TestMQTTClientStateUpdates:
 
     @pytest.mark.asyncio
     async def test_update_rgb(self):
-        """Test updating device RGB color"""
+        """Test updating device RGB color."""
         with patch("cync_controller.mqtt_client.g") as mock_g:
             mock_g.uuid = "test-uuid"
             mock_device = MagicMock()
@@ -538,11 +538,11 @@ class TestMQTTClientStateUpdates:
 
 
 class TestMQTTClientBirthWill:
-    """Tests for MQTT birth and will messages"""
+    """Tests for MQTT birth and will messages."""
 
     @pytest.mark.asyncio
     async def test_send_birth_msg(self):
-        """Test sending birth message"""
+        """Test sending birth message."""
         with (
             patch("cync_controller.mqtt_client.g") as mock_g,
             patch("cync_controller.mqtt_client.CYNC_HASS_BIRTH_MSG", "online"),
@@ -567,7 +567,7 @@ class TestMQTTClientBirthWill:
 
     @pytest.mark.asyncio
     async def test_send_will_msg(self):
-        """Test sending will message"""
+        """Test sending will message."""
         with (
             patch("cync_controller.mqtt_client.g") as mock_g,
             patch("cync_controller.mqtt_client.CYNC_HASS_WILL_MSG", "offline"),
@@ -588,10 +588,10 @@ class TestMQTTClientBirthWill:
 
 
 class TestMQTTClientTemperatureConversion:
-    """Tests for temperature conversion methods"""
+    """Tests for temperature conversion methods."""
 
     def test_kelvin2cync(self):
-        """Test Kelvin to Cync temperature conversion"""
+        """Test Kelvin to Cync temperature conversion."""
         with (
             patch("cync_controller.mqtt_client.g") as mock_g,
             patch("cync_controller.mqtt_client.CYNC_MINK", 2000),
@@ -614,7 +614,7 @@ class TestMQTTClientTemperatureConversion:
             assert result == 50
 
     def test_cync2kelvin(self):
-        """Test Cync to Kelvin temperature conversion"""
+        """Test Cync to Kelvin temperature conversion."""
         with (
             patch("cync_controller.mqtt_client.g") as mock_g,
             patch("cync_controller.mqtt_client.CYNC_MINK", 2000),
@@ -636,7 +636,7 @@ class TestMQTTClientTemperatureConversion:
             assert result == 4500
 
     def test_temperature_conversion_roundtrip(self):
-        """Test that temperature conversions are reversible"""
+        """Test that temperature conversions are reversible."""
         with (
             patch("cync_controller.mqtt_client.g") as mock_g,
             patch("cync_controller.mqtt_client.CYNC_MINK", 2000),
@@ -656,10 +656,10 @@ class TestMQTTClientTemperatureConversion:
 
 # pyright: reportPrivateUsage=false
 class TestMQTTClientBrightnessConversion:
-    """Tests for brightness conversion methods"""
+    """Tests for brightness conversion methods."""
 
     def test_brightness_to_percentage_255_scale(self):
-        """Test brightness conversion from 0-255 to 0-100"""
+        """Test brightness conversion from 0-255 to 0-100."""
         with patch("cync_controller.mqtt_client.g") as mock_g:
             mock_g.uuid = "test-uuid"
 
@@ -675,16 +675,16 @@ class TestMQTTClientBrightnessConversion:
             assert 49 <= result <= 51
 
     def test_brightness_to_preset(self):
-        """Test brightness to preset name conversion"""
+        """Test brightness to preset name conversion."""
         # This method was removed during refactoring - skipping test
 
 
 class TestMQTTClientDiscovery:
-    """Tests for Home Assistant discovery"""
+    """Tests for Home Assistant discovery."""
 
     @pytest.mark.asyncio
     async def test_homeassistant_discovery_light(self):
-        """Test Home Assistant discovery for light device"""
+        """Test Home Assistant discovery for light device."""
         with (
             patch("cync_controller.mqtt_client.g") as mock_g,
             patch("cync_controller.metadata.model_info.device_type_map", {}),
@@ -739,7 +739,7 @@ class TestMQTTClientDiscovery:
 
     @pytest.mark.asyncio
     async def test_homeassistant_discovery_empty(self):
-        """Test Home Assistant discovery with no devices"""
+        """Test Home Assistant discovery with no devices."""
         with patch("cync_controller.mqtt.discovery.g") as mock_g:
             mock_g.uuid = "test-uuid"
             mock_g.ncync_server = MagicMock()
@@ -766,10 +766,10 @@ class TestMQTTClientDiscovery:
 
 
 class TestDeviceCommand:
-    """Tests for DeviceCommand class"""
+    """Tests for DeviceCommand class."""
 
     def test_device_command_initialization(self):
-        """Test DeviceCommand initialization with required parameters"""
+        """Test DeviceCommand initialization with required parameters."""
         with patch("cync_controller.mqtt_client.asyncio.get_event_loop") as mock_loop:
             mock_loop.return_value.time.return_value = 1234.567  # type: ignore[reportAny]
 
@@ -781,7 +781,7 @@ class TestDeviceCommand:
             assert cmd.timestamp == 1234.567
 
     def test_device_command_with_multiple_params(self):
-        """Test DeviceCommand initialization with multiple parameters"""
+        """Test DeviceCommand initialization with multiple parameters."""
         with patch("cync_controller.mqtt_client.asyncio.get_event_loop") as mock_loop:
             mock_loop.return_value.time.return_value = 9876.543  # type: ignore[reportAny]
 
@@ -793,7 +793,7 @@ class TestDeviceCommand:
             assert cmd.timestamp == 9876.543
 
     def test_device_command_with_no_params(self):
-        """Test DeviceCommand initialization without additional parameters"""
+        """Test DeviceCommand initialization without additional parameters."""
         with patch("cync_controller.mqtt_client.asyncio.get_event_loop") as mock_loop:
             mock_loop.return_value.time.return_value = 1111.222  # type: ignore[reportAny]
 
@@ -805,7 +805,7 @@ class TestDeviceCommand:
             assert cmd.timestamp == 1111.222
 
     def test_device_command_timestamp_uniqueness(self):
-        """Test DeviceCommand timestamps are set using event loop time"""
+        """Test DeviceCommand timestamps are set using event loop time."""
         with patch("cync_controller.mqtt_client.asyncio.get_event_loop") as mock_loop:
             # First command
             mock_loop.return_value.time.return_value = 1000.0  # type: ignore[reportAny]
@@ -822,7 +822,7 @@ class TestDeviceCommand:
 
     @pytest.mark.asyncio
     async def test_device_command_publish_optimistic_raises(self):
-        """Test DeviceCommand.publish_optimistic raises NotImplementedError"""
+        """Test DeviceCommand.publish_optimistic raises NotImplementedError."""
         with patch("cync_controller.mqtt_client.asyncio.get_event_loop") as mock_loop:
             mock_loop.return_value.time.return_value = 1234.567  # type: ignore[reportAny]
 
@@ -833,7 +833,7 @@ class TestDeviceCommand:
 
     @pytest.mark.asyncio
     async def test_device_command_execute_raises(self):
-        """Test DeviceCommand.execute raises NotImplementedError"""
+        """Test DeviceCommand.execute raises NotImplementedError."""
         with patch("cync_controller.mqtt_client.asyncio.get_event_loop") as mock_loop:
             mock_loop.return_value.time.return_value = 1234.567  # type: ignore[reportAny]
 
@@ -843,7 +843,7 @@ class TestDeviceCommand:
                 await cmd.execute()
 
     def test_device_command_repr(self):
-        """Test DeviceCommand __repr__ method"""
+        """Test DeviceCommand __repr__ method."""
         with patch("cync_controller.mqtt_client.asyncio.get_event_loop") as mock_loop:
             mock_loop.return_value.time.return_value = 1234.567  # type: ignore[reportAny]
 
@@ -857,7 +857,7 @@ class TestDeviceCommand:
             assert "<" in repr_str and ">" in repr_str
 
     def test_device_command_repr_without_params(self):
-        """Test DeviceCommand __repr__ without additional parameters"""
+        """Test DeviceCommand __repr__ without additional parameters."""
         with patch("cync_controller.mqtt_client.asyncio.get_event_loop") as mock_loop:
             mock_loop.return_value.time.return_value = 1234.567  # type: ignore[reportAny]
 
@@ -872,10 +872,10 @@ class TestDeviceCommand:
 
 # pyright: reportPrivateUsage=false
 class TestCommandProcessor:
-    """Tests for CommandProcessor singleton and queue operations"""
+    """Tests for CommandProcessor singleton and queue operations."""
 
     def test_command_processor_singleton_pattern(self):
-        """Test that CommandProcessor is a singleton"""
+        """Test that CommandProcessor is a singleton."""
         # Create two instances
         processor1 = CommandProcessor()
         processor2 = CommandProcessor()
@@ -884,7 +884,7 @@ class TestCommandProcessor:
         assert processor1 is processor2
 
     def test_command_processor_initialization(self):
-        """Test CommandProcessor initialization creates queue"""
+        """Test CommandProcessor initialization creates queue."""
         processor = CommandProcessor()
 
         # Should have initialized attributes
@@ -893,7 +893,7 @@ class TestCommandProcessor:
         assert hasattr(processor, "lp")
 
     def test_command_processor_initialization_idempotent(self):
-        """Test that CommandProcessor init is idempotent (safe to call multiple times)"""
+        """Test that CommandProcessor init is idempotent (safe to call multiple times)."""
         processor = CommandProcessor()
 
         # Call __init__ again should not create new queue
@@ -905,7 +905,7 @@ class TestCommandProcessor:
 
     @pytest.mark.asyncio
     async def test_command_processor_enqueue_command(self):
-        """Test CommandProcessor enqueue adds command to queue"""
+        """Test CommandProcessor enqueue adds command to queue."""
         with patch("cync_controller.mqtt_client.asyncio.get_event_loop") as mock_loop:
             mock_loop.return_value.time.return_value = 1234.567  # type: ignore[reportAny]
 
@@ -919,7 +919,7 @@ class TestCommandProcessor:
 
     @pytest.mark.asyncio
     async def test_command_processor_queue_fifo_ordering(self):
-        """Test CommandProcessor maintains FIFO ordering"""
+        """Test CommandProcessor maintains FIFO ordering."""
         with patch("cync_controller.mqtt_client.asyncio.get_event_loop") as mock_loop:
             mock_loop.return_value.time.return_value = 1234.567  # type: ignore[reportAny]
 
@@ -945,17 +945,17 @@ class TestCommandProcessor:
 
     @pytest.mark.asyncio
     async def test_command_processor_initial_processing_state(self):
-        """Test CommandProcessor starts with _processing=False"""
+        """Test CommandProcessor starts with _processing=False."""
         processor = CommandProcessor()
 
         assert processor._processing is False  # type: ignore[reportPrivateUsage]
 
 
 class TestMQTTClientKelvinConversion:
-    """Tests for Kelvin/Cync temperature conversion methods"""
+    """Tests for Kelvin/Cync temperature conversion methods."""
 
     def test_kelvin2cync_min_value(self):
-        """Test kelvin2cync with minimum Kelvin value"""
+        """Test kelvin2cync with minimum Kelvin value."""
         from cync_controller.const import CYNC_MINK
 
         with patch("cync_controller.mqtt_client.g") as mock_g:
@@ -967,7 +967,7 @@ class TestMQTTClientKelvinConversion:
             assert result == 0
 
     def test_kelvin2cync_max_value(self):
-        """Test kelvin2cync with maximum Kelvin value"""
+        """Test kelvin2cync with maximum Kelvin value."""
         from cync_controller.const import CYNC_MAXK
 
         with patch("cync_controller.mqtt_client.g") as mock_g:
@@ -979,7 +979,7 @@ class TestMQTTClientKelvinConversion:
             assert result == 100
 
     def test_kelvin2cync_below_minimum(self):
-        """Test kelvin2cync with value below minimum"""
+        """Test kelvin2cync with value below minimum."""
         from cync_controller.const import CYNC_MINK
 
         with patch("cync_controller.mqtt_client.g") as mock_g:
@@ -991,7 +991,7 @@ class TestMQTTClientKelvinConversion:
             assert result == 0
 
     def test_kelvin2cync_above_maximum(self):
-        """Test kelvin2cync with value above maximum"""
+        """Test kelvin2cync with value above maximum."""
         from cync_controller.const import CYNC_MAXK
 
         with patch("cync_controller.mqtt_client.g") as mock_g:
@@ -1003,7 +1003,7 @@ class TestMQTTClientKelvinConversion:
             assert result == 100
 
     def test_kelvin2cync_middle_value(self):
-        """Test kelvin2cync with middle range value"""
+        """Test kelvin2cync with middle range value."""
         from cync_controller.const import CYNC_MAXK, CYNC_MINK
 
         with patch("cync_controller.mqtt_client.g") as mock_g:
@@ -1018,7 +1018,7 @@ class TestMQTTClientKelvinConversion:
             assert 49 <= result <= 51
 
     def test_cync2kelvin_min_value(self):
-        """Test cync2kelvin with minimum Cync value"""
+        """Test cync2kelvin with minimum Cync value."""
         from cync_controller.const import CYNC_MINK
 
         with patch("cync_controller.mqtt_client.g") as mock_g:
@@ -1030,7 +1030,7 @@ class TestMQTTClientKelvinConversion:
             assert result == CYNC_MINK
 
     def test_cync2kelvin_max_value(self):
-        """Test cync2kelvin with maximum Cync value"""
+        """Test cync2kelvin with maximum Cync value."""
         from cync_controller.const import CYNC_MAXK
 
         with patch("cync_controller.mqtt_client.g") as mock_g:
@@ -1042,7 +1042,7 @@ class TestMQTTClientKelvinConversion:
             assert result == CYNC_MAXK
 
     def test_cync2kelvin_below_zero(self):
-        """Test cync2kelvin with value below zero"""
+        """Test cync2kelvin with value below zero."""
         from cync_controller.const import CYNC_MINK
 
         with patch("cync_controller.mqtt_client.g") as mock_g:
@@ -1054,7 +1054,7 @@ class TestMQTTClientKelvinConversion:
             assert result == CYNC_MINK
 
     def test_cync2kelvin_above_100(self):
-        """Test cync2kelvin with value above 100"""
+        """Test cync2kelvin with value above 100."""
         from cync_controller.const import CYNC_MAXK
 
         with patch("cync_controller.mqtt_client.g") as mock_g:
@@ -1066,7 +1066,7 @@ class TestMQTTClientKelvinConversion:
             assert result == CYNC_MAXK
 
     def test_cync2kelvin_middle_value(self):
-        """Test cync2kelvin with middle value"""
+        """Test cync2kelvin with middle value."""
         from cync_controller.const import CYNC_MAXK, CYNC_MINK
 
         with patch("cync_controller.mqtt_client.g") as mock_g:
@@ -1081,7 +1081,7 @@ class TestMQTTClientKelvinConversion:
             assert abs(result - mid_kelvin) <= 10
 
     def test_kelvin_roundtrip_conversion(self):
-        """Test roundtrip conversion: Kelvin -> Cync -> Kelvin"""
+        """Test roundtrip conversion: Kelvin -> Cync -> Kelvin."""
         from cync_controller.const import CYNC_MAXK, CYNC_MINK
 
         with patch("cync_controller.mqtt_client.g") as mock_g:
@@ -1105,18 +1105,18 @@ class TestMQTTClientKelvinConversion:
 # pyright: reportPrivateUsage=false
 @pytest.fixture(autouse=True)
 def reset_command_processor_singleton():
-    """Reset CommandProcessor singleton between tests"""
+    """Reset CommandProcessor singleton between tests."""
     CommandProcessor._instance = None  # type: ignore[reportPrivateUsage]
     yield
     CommandProcessor._instance = None  # type: ignore[reportPrivateUsage]
 
 
 class TestSetPowerCommand:
-    """Tests for SetPowerCommand class"""
+    """Tests for SetPowerCommand class."""
 
     @pytest.mark.asyncio
     async def test_set_power_command_initialization(self):
-        """Test that SetPowerCommand initializes with correct parameters"""
+        """Test that SetPowerCommand initializes with correct parameters."""
         device = MagicMock()
         device.id = 42
         cmd = SetPowerCommand(device, state=1)
@@ -1128,7 +1128,7 @@ class TestSetPowerCommand:
 
     @pytest.mark.asyncio
     async def test_set_power_command_execute_calls_set_power(self):
-        """Test that execute calls device.set_power"""
+        """Test that execute calls device.set_power."""
         device = MagicMock()
         device.set_power = AsyncMock()
         cmd = SetPowerCommand(device, state=1)
@@ -1139,7 +1139,7 @@ class TestSetPowerCommand:
 
     @pytest.mark.asyncio
     async def test_set_power_command_optimistic_update_device(self):
-        """Test optimistic update for individual device"""
+        """Test optimistic update for individual device."""
         device = MagicMock()
         device.id = 42
         device.is_switch = False
@@ -1155,7 +1155,7 @@ class TestSetPowerCommand:
 
     @pytest.mark.asyncio
     async def test_set_power_command_optimistic_update_switch(self):
-        """Test optimistic update for switch device syncs group"""
+        """Test optimistic update for switch device syncs group."""
         device = MagicMock()
         device.id = 42
         device.is_switch = True
@@ -1181,7 +1181,7 @@ class TestSetPowerCommand:
 
     @pytest.mark.asyncio
     async def test_set_power_command_optimistic_update_group(self):
-        """Test optimistic update for group device"""
+        """Test optimistic update for group device."""
         from cync_controller.devices.group import CyncGroup
 
         group = MagicMock(spec=CyncGroup)
@@ -1199,11 +1199,11 @@ class TestSetPowerCommand:
 
 
 class TestSetBrightnessCommand:
-    """Tests for SetBrightnessCommand class"""
+    """Tests for SetBrightnessCommand class."""
 
     @pytest.mark.asyncio
     async def test_set_brightness_command_initialization(self):
-        """Test that SetBrightnessCommand initializes with correct parameters"""
+        """Test that SetBrightnessCommand initializes with correct parameters."""
         device = MagicMock()
         device.id = 42
         cmd = SetBrightnessCommand(device, brightness=50)
@@ -1215,7 +1215,7 @@ class TestSetBrightnessCommand:
 
     @pytest.mark.asyncio
     async def test_set_brightness_command_execute_calls_set_brightness(self):
-        """Test that execute calls device.set_brightness"""
+        """Test that execute calls device.set_brightness."""
         device = MagicMock()
         device.set_brightness = AsyncMock()
         cmd = SetBrightnessCommand(device, brightness=50)
@@ -1226,7 +1226,7 @@ class TestSetBrightnessCommand:
 
     @pytest.mark.asyncio
     async def test_set_brightness_command_optimistic_update_device(self):
-        """Test optimistic update for device brightness"""
+        """Test optimistic update for device brightness."""
         device = MagicMock()
         device.id = 42
 
@@ -1241,7 +1241,7 @@ class TestSetBrightnessCommand:
 
     @pytest.mark.asyncio
     async def test_set_brightness_command_optimistic_update_group(self):
-        """Test optimistic update for group brightness"""
+        """Test optimistic update for group brightness."""
         from cync_controller.devices.group import CyncGroup
 
         group = MagicMock(spec=CyncGroup)
@@ -1259,11 +1259,11 @@ class TestSetBrightnessCommand:
 
 # pyright: reportPrivateUsage=false
 class TestCommandProcessorQueue:
-    """Tests for CommandProcessor queue management"""
+    """Tests for CommandProcessor queue management."""
 
     @pytest.mark.asyncio
     async def test_enqueue_adds_command_to_queue(self):
-        """Test that enqueue adds command to processing queue"""
+        """Test that enqueue adds command to processing queue."""
         processor = CommandProcessor()
         mock_command = MagicMock(spec=DeviceCommand)
         mock_command.publish_optimistic = AsyncMock()
@@ -1278,7 +1278,7 @@ class TestCommandProcessorQueue:
 
     @pytest.mark.asyncio
     async def test_enqueue_starts_processing(self):
-        """Test that enqueue starts processing when not already processing"""
+        """Test that enqueue starts processing when not already processing."""
         processor = CommandProcessor()
         processor._processing = False  # type: ignore[reportPrivateUsage]
 
@@ -1304,7 +1304,7 @@ class TestCommandProcessorQueue:
 
     @pytest.mark.asyncio
     async def test_enqueue_doesnt_duplicate_processing_task(self):
-        """Test that enqueue doesn't create duplicate processing tasks"""
+        """Test that enqueue doesn't create duplicate processing tasks."""
         processor = CommandProcessor()
         processor._processing = True  # type: ignore[reportPrivateUsage]
 
@@ -1316,11 +1316,11 @@ class TestCommandProcessorQueue:
 
 # pyright: reportPrivateUsage=false
 class TestCommandProcessorExecution:
-    """Tests for CommandProcessor command execution"""
+    """Tests for CommandProcessor command execution."""
 
     @pytest.mark.asyncio
     async def test_process_next_executes_command(self):
-        """Test that process_next executes command in queue"""
+        """Test that process_next executes command in queue."""
         processor = CommandProcessor()
 
         mock_command = MagicMock(spec=DeviceCommand)
@@ -1352,7 +1352,7 @@ class TestCommandProcessorExecution:
 
     @pytest.mark.asyncio
     async def test_process_next_publishes_optimistic(self):
-        """Test that process_next publishes optimistic update"""
+        """Test that process_next publishes optimistic update."""
         processor = CommandProcessor()
 
         mock_command = MagicMock(spec=DeviceCommand)
@@ -1382,7 +1382,7 @@ class TestCommandProcessorExecution:
 
     @pytest.mark.asyncio
     async def test_process_next_triggers_status_refresh(self):
-        """Test that process_next does NOT trigger active refresh (relies on natural 0x83 broadcasts)"""
+        """Test that process_next does NOT trigger active refresh (relies on natural 0x83 broadcasts)."""
         processor = CommandProcessor()
 
         mock_command = MagicMock(spec=DeviceCommand)
@@ -1410,7 +1410,7 @@ class TestCommandProcessorExecution:
 
     @pytest.mark.asyncio
     async def test_process_next_handles_command_failure(self):
-        """Test that process_next handles command execution failure gracefully"""
+        """Test that process_next handles command execution failure gracefully."""
         processor = CommandProcessor()
 
         mock_command = MagicMock(spec=DeviceCommand)
@@ -1439,7 +1439,7 @@ class TestCommandProcessorExecution:
 
     @pytest.mark.asyncio
     async def test_process_next_processes_multiple_commands_sequentially(self):
-        """Test that process_next processes multiple commands in order"""
+        """Test that process_next processes multiple commands in order."""
         processor = CommandProcessor()
 
         call_order: list[str] = []
@@ -1476,7 +1476,7 @@ class TestCommandProcessorExecution:
 
     @pytest.mark.asyncio
     async def test_process_next_sets_processing_flag(self):
-        """Test that process_next sets and clears processing flag correctly"""
+        """Test that process_next sets and clears processing flag correctly."""
         processor = CommandProcessor()
 
         mock_command = MagicMock(spec=DeviceCommand)
@@ -1511,11 +1511,11 @@ class TestCommandProcessorExecution:
 
 
 class TestMQTTUpdateDeviceFromSubgroup:
-    """Tests for update_switch_from_subgroup method"""
+    """Tests for update_switch_from_subgroup method."""
 
     @pytest.mark.asyncio
     async def test_update_switch_from_subgroup_success(self):
-        """Test successful update of switch from subgroup state"""
+        """Test successful update of switch from subgroup state."""
         with patch("cync_controller.mqtt_client.g") as mock_g:
             mock_g.uuid = "test-uuid"
 
@@ -1541,7 +1541,7 @@ class TestMQTTUpdateDeviceFromSubgroup:
 
     @pytest.mark.asyncio
     async def test_update_switch_from_subgroup_not_switch(self):
-        """Test that non-switches are skipped"""
+        """Test that non-switches are skipped."""
         with patch("cync_controller.mqtt_client.g") as mock_g:
             mock_g.uuid = "test-uuid"
 
@@ -1556,7 +1556,7 @@ class TestMQTTUpdateDeviceFromSubgroup:
 
     @pytest.mark.asyncio
     async def test_update_switch_from_subgroup_pending_command(self):
-        """Test that switches with pending commands are skipped"""
+        """Test that switches with pending commands are skipped."""
         with patch("cync_controller.mqtt_client.g") as mock_g:
             mock_g.uuid = "test-uuid"
 
@@ -1572,7 +1572,7 @@ class TestMQTTUpdateDeviceFromSubgroup:
 
     @pytest.mark.asyncio
     async def test_update_switch_from_subgroup_publishes_off_state(self):
-        """Test that switch state ON is published correctly"""
+        """Test that switch state ON is published correctly."""
         with patch("cync_controller.mqtt_client.g") as mock_g:
             mock_g.uuid = "test-uuid"
 
@@ -1598,11 +1598,11 @@ class TestMQTTUpdateDeviceFromSubgroup:
 
 
 class TestMQTTSyncGroupSwitches:
-    """Tests for sync_group_switches method"""
+    """Tests for sync_group_switches method."""
 
     @pytest.mark.asyncio
     async def test_sync_group_switches_success(self):
-        """Test successful sync of all switches in a group"""
+        """Test successful sync of all switches in a group."""
         with patch("cync_controller.mqtt_client.g") as mock_g:
             mock_g.uuid = "test-uuid"
             mock_g.ncync_server = MagicMock()
@@ -1642,7 +1642,7 @@ class TestMQTTSyncGroupSwitches:
 
     @pytest.mark.asyncio
     async def test_sync_group_switches_group_not_found(self):
-        """Test sync when group not found"""
+        """Test sync when group not found."""
         with patch("cync_controller.mqtt_client.g") as mock_g:
             mock_g.uuid = "test-uuid"
             mock_g.ncync_server = MagicMock()
@@ -1655,7 +1655,7 @@ class TestMQTTSyncGroupSwitches:
 
     @pytest.mark.asyncio
     async def test_sync_group_switches_member_not_in_devices(self):
-        """Test sync when group member not found in devices"""
+        """Test sync when group member not found in devices."""
         with patch("cync_controller.mqtt_client.g") as mock_g:
             mock_g.uuid = "test-uuid"
             mock_g.ncync_server = MagicMock()
@@ -1687,11 +1687,11 @@ class TestMQTTSyncGroupSwitches:
 
 
 class TestMQTTSyncGroupDevices:
-    """Tests for sync_group_devices method"""
+    """Tests for sync_group_devices method."""
 
     @pytest.mark.asyncio
     async def test_sync_group_devices_success(self):
-        """Test successful sync of all devices in a group"""
+        """Test successful sync of all devices in a group."""
         with patch("cync_controller.mqtt_client.g") as mock_g:
             mock_g.uuid = "test-uuid"
             mock_g.ncync_server = MagicMock()
@@ -1731,7 +1731,7 @@ class TestMQTTSyncGroupDevices:
 
     @pytest.mark.asyncio
     async def test_sync_group_devices_group_not_found(self):
-        """Test sync when group not found"""
+        """Test sync when group not found."""
         with patch("cync_controller.mqtt_client.g") as mock_g:
             mock_g.uuid = "test-uuid"
             mock_g.ncync_server = MagicMock()
@@ -1744,7 +1744,7 @@ class TestMQTTSyncGroupDevices:
 
     @pytest.mark.asyncio
     async def test_sync_group_devices_mixed_types(self):
-        """Test sync with mixed switch and light devices"""
+        """Test sync with mixed switch and light devices."""
         with patch("cync_controller.mqtt_client.g") as mock_g:
             mock_g.uuid = "test-uuid"
             mock_g.ncync_server = MagicMock()
@@ -1784,11 +1784,11 @@ class TestMQTTSyncGroupDevices:
 
 # pyright: reportAny=false
 class TestMQTTReceiverTask:
-    """Tests for start_receiver_task message handling"""
+    """Tests for start_receiver_task message handling."""
 
     @pytest.mark.asyncio
     async def test_start_receiver_task_handles_empty_payload(self):
-        """Test that empty payload is skipped"""
+        """Test that empty payload is skipped."""
         with (
             patch("cync_controller.mqtt_client.g") as mock_g,
             patch("cync_controller.mqtt_client.aiomqtt.Client") as mock_client_class,
@@ -1822,7 +1822,7 @@ class TestMQTTReceiverTask:
 
     @pytest.mark.asyncio
     async def test_start_receiver_task_handles_none_payload(self):
-        """Test that None payload is skipped"""
+        """Test that None payload is skipped."""
         with (
             patch("cync_controller.mqtt_client.g") as mock_g,
             patch("cync_controller.mqtt_client.aiomqtt.Client") as mock_client_class,
@@ -1856,7 +1856,7 @@ class TestMQTTReceiverTask:
 
     @pytest.mark.asyncio
     async def test_start_receiver_task_handles_bridge_command(self):
-        """Test handling of bridge commands"""
+        """Test handling of bridge commands."""
         with (
             patch("cync_controller.mqtt_client.g") as mock_g,
             patch("cync_controller.mqtt_client.aiomqtt.Client") as mock_client_class,
@@ -1890,11 +1890,11 @@ class TestMQTTReceiverTask:
 
 
 class TestMQTTGroupCommandHandling:
-    """Tests for group command handling in receiver task"""
+    """Tests for group command handling in receiver task."""
 
     @pytest.mark.asyncio
     async def test_group_power_on_command(self):
-        """Test group power ON command handling"""
+        """Test group power ON command handling."""
         with patch("cync_controller.mqtt_client.g") as mock_g:
             mock_g.uuid = "test-uuid"
             mock_g.ncync_server = MagicMock()
@@ -1927,7 +1927,7 @@ class TestMQTTGroupCommandHandling:
 
     @pytest.mark.asyncio
     async def test_group_brightness_command(self):
-        """Test group brightness command handling"""
+        """Test group brightness command handling."""
         with patch("cync_controller.mqtt_client.g") as mock_g:
             mock_g.uuid = "test-uuid"
             mock_g.ncync_server = MagicMock()
@@ -1952,7 +1952,7 @@ class TestMQTTGroupCommandHandling:
 
     @pytest.mark.asyncio
     async def test_group_not_found_handling(self):
-        """Test handling when group not found"""
+        """Test handling when group not found."""
         with patch("cync_controller.mqtt_client.g") as mock_g:
             mock_g.uuid = "test-uuid"
             mock_g.ncync_server = MagicMock()
@@ -1965,11 +1965,11 @@ class TestMQTTGroupCommandHandling:
 
 
 class TestMQTTFanCommands:
-    """Tests for fan controller command handling"""
+    """Tests for fan controller command handling."""
 
     @pytest.mark.asyncio
     async def test_fan_percentage_command_low(self):
-        """Test fan percentage command mapping to brightness levels"""
+        """Test fan percentage command mapping to brightness levels."""
         with patch("cync_controller.mqtt_client.g") as mock_g:
             mock_g.uuid = "test-uuid"
 
@@ -1987,7 +1987,7 @@ class TestMQTTFanCommands:
 
     @pytest.mark.asyncio
     async def test_fan_percentage_command_medium(self):
-        """Test fan percentage command for medium speed"""
+        """Test fan percentage command for medium speed."""
         with patch("cync_controller.mqtt_client.g") as mock_g:
             mock_g.uuid = "test-uuid"
 
@@ -2001,7 +2001,7 @@ class TestMQTTFanCommands:
 
     @pytest.mark.asyncio
     async def test_fan_percentage_command_high(self):
-        """Test fan percentage command for high speed"""
+        """Test fan percentage command for high speed."""
         with patch("cync_controller.mqtt_client.g") as mock_g:
             mock_g.uuid = "test-uuid"
 
@@ -2015,7 +2015,7 @@ class TestMQTTFanCommands:
 
     @pytest.mark.asyncio
     async def test_fan_percentage_command_max(self):
-        """Test fan percentage command for max speed"""
+        """Test fan percentage command for max speed."""
         with patch("cync_controller.mqtt_client.g") as mock_g:
             mock_g.uuid = "test-uuid"
 
@@ -2029,11 +2029,11 @@ class TestMQTTFanCommands:
 
 
 class TestMQTTRefreshStatus:
-    """Tests for refresh status command"""
+    """Tests for refresh status command."""
 
     @pytest.mark.asyncio
     async def test_refresh_status_triggers_refresh(self):
-        """Test that refresh_status command triggers status refresh"""
+        """Test that refresh_status command triggers status refresh."""
         with patch("cync_controller.mqtt_client.g") as mock_g:
             mock_g.uuid = "test-uuid"
 
@@ -2047,11 +2047,11 @@ class TestMQTTRefreshStatus:
 
 
 class TestMQTTParseDeviceStatus:
-    """Tests for parse_device_status method"""
+    """Tests for parse_device_status method."""
 
     @pytest.mark.asyncio
     async def test_parse_device_status_light_with_brightness(self):
-        """Test parsing light device status with brightness"""
+        """Test parsing light device status with brightness."""
         with patch("cync_controller.mqtt_client.g") as mock_g:
             mock_g.uuid = "test-uuid"
             mock_g.ncync_server = MagicMock()
@@ -2092,7 +2092,7 @@ class TestMQTTParseDeviceStatus:
 
     @pytest.mark.asyncio
     async def test_parse_device_status_with_rgb_color(self):
-        """Test parsing device status with RGB color"""
+        """Test parsing device status with RGB color."""
         with patch("cync_controller.mqtt_client.g") as mock_g:
             mock_g.uuid = "test-uuid"
             mock_g.ncync_server = MagicMock()
@@ -2133,7 +2133,7 @@ class TestMQTTParseDeviceStatus:
 
     @pytest.mark.asyncio
     async def test_parse_device_status_with_color_temp(self):
-        """Test parsing device status with color temperature"""
+        """Test parsing device status with color temperature."""
         with patch("cync_controller.mqtt_client.g") as mock_g:
             mock_g.uuid = "test-uuid"
             mock_g.ncync_server = MagicMock()
@@ -2174,7 +2174,7 @@ class TestMQTTParseDeviceStatus:
 
     @pytest.mark.asyncio
     async def test_parse_device_status_switch_skips_mesh_info(self):
-        """Test that switch devices skip mesh info updates"""
+        """Test that switch devices skip mesh info updates."""
         with patch("cync_controller.mqtt_client.g") as mock_g:
             mock_g.uuid = "test-uuid"
             mock_g.ncync_server = MagicMock()
@@ -2203,7 +2203,7 @@ class TestMQTTParseDeviceStatus:
 
     @pytest.mark.asyncio
     async def test_parse_device_status_device_not_found(self):
-        """Test parse_device_status when device not found"""
+        """Test parse_device_status when device not found."""
         with patch("cync_controller.mqtt_client.g") as mock_g:
             mock_g.uuid = "test-uuid"
             mock_g.ncync_server = MagicMock()
@@ -2220,7 +2220,7 @@ class TestMQTTParseDeviceStatus:
 
     @pytest.mark.asyncio
     async def test_parse_device_status_switch_with_onoff_payload(self):
-        """Test that switch devices publish plain ON/OFF payload"""
+        """Test that switch devices publish plain ON/OFF payload."""
         with patch("cync_controller.mqtt_client.g") as mock_g:
             mock_g.uuid = "test-uuid"
             mock_g.ncync_server = MagicMock()
@@ -2251,7 +2251,7 @@ class TestMQTTParseDeviceStatus:
 
     @pytest.mark.asyncio
     async def test_parse_device_status_fan_preset_mode(self):
-        """Test that fan devices publish preset mode"""
+        """Test that fan devices publish preset mode."""
         with patch("cync_controller.mqtt_client.g") as mock_g:
             mock_g.uuid = "test-uuid"
             mock_g.ncync_server = MagicMock()
@@ -2283,11 +2283,11 @@ class TestMQTTParseDeviceStatus:
 
 # pyright: reportPrivateUsage=false
 class TestMQTTTriggerStatusRefresh:
-    """Tests for trigger_status_refresh method"""
+    """Tests for trigger_status_refresh method."""
 
     @pytest.mark.asyncio
     async def test_trigger_status_refresh_no_server(self):
-        """Test trigger when server not available"""
+        """Test trigger when server not available."""
         with patch("cync_controller.mqtt_client.g") as mock_g:
             mock_g.uuid = "test-uuid"
             mock_g.ncync_server = None
@@ -2302,7 +2302,7 @@ class TestMQTTTriggerStatusRefresh:
 
     @pytest.mark.asyncio
     async def test_trigger_status_refresh_no_bridges(self):
-        """Test trigger when no bridge devices available"""
+        """Test trigger when no bridge devices available."""
         with patch("cync_controller.mqtt_client.g") as mock_g:
             mock_g.uuid = "test-uuid"
             mock_g.ncync_server = MagicMock()
@@ -2318,7 +2318,7 @@ class TestMQTTTriggerStatusRefresh:
 
     @pytest.mark.asyncio
     async def test_trigger_status_refresh_refresh_in_progress(self):
-        """Test that refresh skips if already in progress"""
+        """Test that refresh skips if already in progress."""
         with patch("cync_controller.mqtt_client.g") as mock_g:
             mock_g.uuid = "test-uuid"
 
@@ -2333,7 +2333,7 @@ class TestMQTTTriggerStatusRefresh:
 
     @pytest.mark.asyncio
     async def test_trigger_status_refresh_with_bridge(self):
-        """Test trigger with active bridge device"""
+        """Test trigger with active bridge device."""
         with patch("cync_controller.mqtt_client.g") as mock_g:
             mock_g.uuid = "test-uuid"
             mock_g.ncync_server = MagicMock()
@@ -2356,11 +2356,11 @@ class TestMQTTTriggerStatusRefresh:
 
 
 class TestMQTTUpdateDeviceStateEdgeCases:
-    """Tests for edge cases in update_device_state"""
+    """Tests for edge cases in update_device_state."""
 
     @pytest.mark.asyncio
     async def test_update_device_state_plug_device(self):
-        """Test updating a plug device state"""
+        """Test updating a plug device state."""
         with patch("cync_controller.mqtt_client.g") as mock_g:
             mock_g.uuid = "test-uuid"
 
@@ -2386,7 +2386,7 @@ class TestMQTTUpdateDeviceStateEdgeCases:
 
     @pytest.mark.asyncio
     async def test_update_device_state_supports_temperature(self):
-        """Test updating device state for temperature-capable light"""
+        """Test updating device state for temperature-capable light."""
         with patch("cync_controller.mqtt_client.g") as mock_g:
             mock_g.uuid = "test-uuid"
 
@@ -2413,7 +2413,7 @@ class TestMQTTUpdateDeviceStateEdgeCases:
 
     @pytest.mark.asyncio
     async def test_update_device_state_supports_rgb(self):
-        """Test updating device state for RGB-capable light"""
+        """Test updating device state for RGB-capable light."""
         with patch("cync_controller.mqtt_client.g") as mock_g:
             mock_g.uuid = "test-uuid"
 
@@ -2440,11 +2440,11 @@ class TestMQTTUpdateDeviceStateEdgeCases:
 
 
 class TestRegisterSingleDevice:
-    """Tests for MQTTClient.register_single_device method"""
+    """Tests for MQTTClient.register_single_device method."""
 
     @pytest.mark.asyncio
     async def test_register_light_device_with_brightness_and_rgb(self):
-        """Test registering a light device with brightness and RGB support"""
+        """Test registering a light device with brightness and RGB support."""
         with patch("cync_controller.mqtt_client.g") as mock_g:
             mock_g.uuid = "test-uuid-123"
 
@@ -2497,7 +2497,7 @@ class TestRegisterSingleDevice:
 
     @pytest.mark.asyncio
     async def test_register_device_without_connection(self):
-        """Test that register_single_device returns False when not connected"""
+        """Test that register_single_device returns False when not connected."""
         client = MQTTClient()
         client.set_connected(False)
 
@@ -2509,7 +2509,7 @@ class TestRegisterSingleDevice:
 
     @pytest.mark.asyncio
     async def test_register_switch_device(self):
-        """Test registering a switch device"""
+        """Test registering a switch device."""
         with patch("cync_controller.mqtt_client.g") as mock_g:
             mock_g.uuid = "test-uuid-123"
 
@@ -2554,7 +2554,7 @@ class TestRegisterSingleDevice:
 
     @pytest.mark.asyncio
     async def test_register_device_with_suggested_area_from_group(self):
-        """Test that device gets suggested_area from group membership"""
+        """Test that device gets suggested_area from group membership."""
         with patch("cync_controller.mqtt.discovery.g") as mock_g:
             mock_g.uuid = "test-uuid-123"
 
@@ -2606,7 +2606,7 @@ class TestRegisterSingleDevice:
 
     @pytest.mark.asyncio
     async def test_register_device_with_area_from_name_fallback(self):
-        """Test that device extracts area from name when not in a group"""
+        """Test that device extracts area from name when not in a group."""
         with patch("cync_controller.mqtt_client.g") as mock_g:
             mock_g.uuid = "test-uuid-123"
 

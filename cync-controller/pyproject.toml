@@ -56,6 +56,7 @@ respect-gitignore = true
 [tool.ruff.lint]
 # Select rules to check (more comprehensive)
 select = [
+    "D",     # flake8-docstrings (docstrings)
     "E",     # pycodestyle errors
     "W",     # pycodestyle warnings
     "F",     # pyflakes
@@ -84,15 +85,6 @@ select = [
     "TRY",   # tryceratops (exception handling)
     "RUF",   # ruff-specific rules (includes RUF001-003 for ambiguous unicode)
 ]
-ignore = [
-    "E501",    # line too long (handled by formatter)
-    "F405",    # star imports may be undefined
-    "F403",    # star import used; unable to detect undefined names
-    "T20",     # print statements (used for CLI output)
-    "TRY003",  # avoid specifying long messages outside exception class
-    "PLR0913", # too many arguments
-    "PLR2004", # magic value comparison
-]
 
 [tool.ruff.lint.per-file-ignores]
 # Lazy imports to avoid circular dependencies
@@ -111,7 +103,28 @@ ignore = [
 
 
 # Tests: allow localized imports, unused args, and test-specific patterns
-"tests/**/*.py" = ["PLC0415", "EM101", "TRY301", "TRY002", "SIM222", "PT018", "PT006", "SIM117", "PLW2901", "PLR1714", "RET504", "PT015", "B011", "RSE102", "E402", "ARG001", "ARG002", "PLR0912", "PLR0915"]
+"tests/**/*.py" = [
+    "PLC0415",  # allow relative imports in tests
+    "EM101",    # allow string literal exceptions
+    "TRY301", "TRY002",  # relax try/except style rules
+    "SIM222", "SIM117",  # allow test helper constructs like nested for/if
+    "PT018", "PT006", "PT015",  # relax pytest fixture style checks
+    "PLW2901", "PLR1714",  # lenient on large helper functions
+    "PLR0912", "PLR0915",  # allow complex/branchy test helpers
+    "PLR0913",  # allow many arguments in fixtures/helpers
+    "ANN201",  # allow missing return annotations in test functions
+    "D100", "D101", "D102", "D103", "D107",  # allow missing docstrings
+    "FBT001", "FBT002", "FBT003",  # allow boolean positional args
+    "PLR2004",  # allow magic numbers in assertions/configs
+    "RET504",  # allow multiple return statements in tests
+    "B011",  # allow hardcoded `assert False` in tests
+    "RSE102",  # allow bare `raise` in tests
+    "E402",  # allow imports not at top (test-only)
+    "ARG001", "ARG002",  # unused fixture arguments
+    "S104",  # allow binding to all interfaces in test setup
+    "SLF001",  # allow tests to access private members explicitly
+    "S101",  # allow `assert` statements in tests
+]
 
 [tool.ruff.format]
 quote-style = "double"

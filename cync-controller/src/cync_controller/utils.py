@@ -91,30 +91,30 @@ def signal_handler(signum: int) -> None:
 
 
 def bytes2list(byte_string: bytes) -> list[int]:
-    """Convert a byte string to a list of integers"""
+    """Convert a byte string to a list of integers."""
     # Interpret the byte string as a sequence of unsigned integers (little-endian)
     int_list = struct.unpack("<" + "B" * (len(byte_string)), byte_string)
     return list(int_list)
 
 
 def hex2list(hex_string: str) -> list[int]:
-    """Convert a hex string to a list of integers"""
+    """Convert a hex string to a list of integers."""
     x = b"".fromhex(hex_string)
     return bytes2list(x)
 
 
 def ints2hex(ints: list[int]) -> str:
-    """Convert a list of integers to a hex string with space separators"""
+    """Convert a list of integers to a hex string with space separators."""
     return bytes(ints).hex(" ")
 
 
 def ints2bytes(ints: list[int]) -> bytes:
-    """Convert a list of integers to a byte string representation"""
+    """Convert a list of integers to a byte string representation."""
     return bytes(ints)
 
 
 def parse_unbound_firmware_version(data_struct: bytes, lp: str) -> tuple[str, int, str] | None:
-    """Parse the firmware version from binary hex data. Unbound means not bound by 0x7E boundaries"""
+    """Parse the firmware version from binary hex data. Unbound means not bound by 0x7E boundaries."""
     # LED controller sends this data after cync app connects via BTLE
     # 1f 00 00 00 fa 8e 14 00 50 22 33 08 00 ff ff ea 11 02 08 a1 [01 03 01 00 00 00 00 00 f8
     lp = f"{lp}firmware_version:"
@@ -157,7 +157,7 @@ def check_python_version():
 
 
 def check_for_uuid():
-    """Check if this is the first run of the Cync Controller server, if so, create the CYNC_ADDON_UUID (UUID4)"""
+    """Check if this is the first run of the Cync Controller server, if so, create the CYNC_ADDON_UUID (UUID4)."""
     lp = "check_uuid:"
     # create dir for cync_mesh.yaml and variable data if it does not exist
     persistent_dir = Path(PERSISTENT_BASE_DIR).expanduser().resolve()

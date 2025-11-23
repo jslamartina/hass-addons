@@ -1,6 +1,8 @@
+"""High-level Cync device model used by the controller runtime."""
+
 import asyncio
 from collections.abc import Mapping
-from typing import cast, override
+from typing import TypedDict, Unpack, cast, override
 
 from cync_controller.logging_abstraction import get_logger
 from cync_controller.metadata.model_info import (
@@ -19,6 +21,21 @@ from .device_commands import DeviceCommands
 logger = get_logger(__name__)
 
 DeviceCategoryMap = Mapping[str, set[int]]
+BYTE_MIN_VALUE = 0
+BYTE_MAX_VALUE = 0xFF
+RGB_CHANNELS = 3
+
+
+class CyncDeviceInitOptions(TypedDict, total=False):
+    """Optional keyword arguments accepted by `CyncDevice`."""
+
+    cync_type: int | None
+    name: str | None
+    mac: str | None
+    wifi_mac: str | None
+    fw_version: str | None
+    home_id: int | None
+    hvac: dict[str, object] | None
 
 
 def _get_global_object():
@@ -55,9 +72,7 @@ def _get_global_object():
 
 
 class CyncDevice(DeviceCommands):
-    """A class to represent a Cync device imported from a config file. This class is used to manage the state of the device
-    and send commands to it by using its device ID defined when the device was added to your Cync account.
-    """
+    """Represent a locally managed Cync device and its runtime state."""
 
     lp: str = "CyncDevice:"
     id: int | None = None
@@ -75,20 +90,24 @@ class CyncDevice(DeviceCommands):
     _online: bool = False
     metadata: DeviceTypeInfo | None = None
 
-    def __init__(
-        self,
-        cync_id: int | None,
-        cync_type: int | None = None,
-        name: str | None = None,
-        mac: str | None = None,
-        wifi_mac: str | None = None,
-        fw_version: str | None = None,
-        home_id: int | None = None,
-        hvac: dict[str, object] | None = None,
-    ) -> None:
+    def __init__(self, cync_id: int | None, **device_info: Unpack[CyncDeviceInitOptions]) -> None:
+        """Initialize the device with its identifier and optional metadata."""
         if cync_id is None:
             msg = "ID must be provided"
             raise ValueError(msg)
+        if device_info:
+            allowed_fields = set(CyncDeviceInitOptions.__annotations__)
+            unexpected_fields = set(device_info) - allowed_fields
+            if unexpected_fields:
+                msg = f"Unexpected init parameter(s): {', '.join(sorted(unexpected_fields))}"
+                raise TypeError(msg)
+        cync_type = device_info.get("cync_type")
+        name = device_info.get("name")
+        mac = device_info.get("mac")
+        wifi_mac = device_info.get("wifi_mac")
+        fw_version = device_info.get("fw_version")
+        home_id = device_info.get("home_id")
+        hvac = device_info.get("hvac")
         self.control_bytes: list[int] = [0x00, 0x00]
         self.id = cync_id
         self.type = cync_type
@@ -159,8 +178,15 @@ class CyncDevice(DeviceCommands):
         msg = f"Invalid value for state: {normalized}"
         raise ValueError(msg)
 
+    def _validate_byte_range(self, value: int, field_name: str) -> None:
+        """Validate that a byte-oriented attribute stays within the expected range."""
+        if not BYTE_MIN_VALUE <= value <= BYTE_MAX_VALUE:
+            msg = f"{field_name} must be between {BYTE_MIN_VALUE} and {BYTE_MAX_VALUE}, got: {value}"
+            raise ValueError(msg)
+
     @property
     def is_hvac(self) -> bool:
+        """Return True if the device exposes HVAC capabilities."""
         if self._is_hvac is not None:
             return self._is_hvac
         if self.type is None:
@@ -189,6 +215,7 @@ class CyncDevice(DeviceCommands):
 
     @property
     def version(self) -> int | str | None:
+        """Return the firmware version value currently stored."""
         return self._version
 
     @version.setter
@@ -213,6 +240,7 @@ class CyncDevice(DeviceCommands):
 
     @property
     def mac(self) -> str | None:
+        """Return the device MAC address as a string, if available."""
         return str(self._mac) if self._mac is not None else None
 
     @mac.setter
@@ -221,6 +249,7 @@ class CyncDevice(DeviceCommands):
 
     @property
     def bt_only(self) -> bool:
+        """Return True if this device only supports Bluetooth transport."""
         if self.wifi_mac == "00:01:02:03:04:05":
             return True
         if self.metadata:
@@ -229,6 +258,7 @@ class CyncDevice(DeviceCommands):
 
     @property
     def has_wifi(self) -> bool:
+        """Return True if the device exposes Wi-Fi or TCP connectivity."""
         if self.metadata:
             return self.metadata.protocol.TCP
         return False
@@ -265,6 +295,7 @@ class CyncDevice(DeviceCommands):
 
     @property
     def is_plug(self) -> bool:
+        """Return True when the switch metadata indicates plug support."""
         if self._is_plug is not None:
             return self._is_plug
         if (
@@ -300,6 +331,7 @@ class CyncDevice(DeviceCommands):
 
     @property
     def is_dimmable(self) -> bool:
+        """Return True if metadata indicates dimming capability."""
         if (
             self.metadata
             and self.metadata.type == DeviceClassification.LIGHT
@@ -310,6 +342,7 @@ class CyncDevice(DeviceCommands):
 
     @property
     def supports_rgb(self) -> bool:
+        """Return True if metadata reports RGB color capability."""
         if self._supports_rgb is not None:
             return self._supports_rgb
         if (
@@ -326,6 +359,7 @@ class CyncDevice(DeviceCommands):
 
     @property
     def supports_temperature(self) -> bool:
+        """Return True when the device can report or set color temperature."""
         if self._supports_temperature is not None:
             return self._supports_temperature
         if (
@@ -346,14 +380,15 @@ class CyncDevice(DeviceCommands):
         return self.is_light or self.is_dimmable
 
     def get_ctrl_msg_id_bytes(self):
-        """Control packets need a number that gets incremented, it is used as a type of msg ID and
-        in calculating the checksum. Result is mod 256 in order to keep it within 0-255.
+        """Return the next control-message identifier bytes.
+
+        Control packets use this incrementing value as both a checksum input and an ID.
         """
         id_byte, rollover_byte = self.control_bytes
         # logger.debug(f"{lp} Getting control message ID bytes: ctrl_byte={id_byte} rollover_byte={rollover_byte}")
         id_byte += 1
-        if id_byte > 255:
-            id_byte = id_byte % 256
+        if id_byte > BYTE_MAX_VALUE:
+            id_byte = id_byte % (BYTE_MAX_VALUE + 1)
             rollover_byte += 1
 
         self.control_bytes = [id_byte, rollover_byte]
@@ -362,6 +397,7 @@ class CyncDevice(DeviceCommands):
 
     @property
     def online(self) -> bool:
+        """Return True if the device is currently marked online."""
         return self._online
 
     @online.setter
@@ -379,7 +415,7 @@ class CyncDevice(DeviceCommands):
 
     @property
     def current_status(self) -> list[int | None]:
-        """Return the current status of the device as a list
+        """Return the current status of the device as a list.
 
         :return: [state, brightness, temperature, red, green, blue]
         """
@@ -394,6 +430,7 @@ class CyncDevice(DeviceCommands):
 
     @property
     def status(self) -> DeviceStatus:
+        """Return the current device status snapshot."""
         return self._status
 
     @status.setter
@@ -407,87 +444,80 @@ class CyncDevice(DeviceCommands):
         return self._state
 
     @state.setter
-    def state(self, value: object) -> None:
-        """Set the state of the device.
-        Accepts int, bool, str, or float. 0, 'f', 'false', 'off', 'no', 'n' are off. 1, 't', 'true', 'on', 'yes', 'y' are on.
-        """
+    def state(self, value: int) -> None:
+        """Set the device power state using numeric, boolean, or textual inputs."""
         normalized_value = self._normalize_state_input(value)
         if normalized_value != self._state:
             self._state = normalized_value
 
     @property
     def brightness(self):
+        """Return the cached brightness value."""
         return self._brightness
 
     @brightness.setter
     def brightness(self, value: int):
-        if value < 0 or value > 255:
-            msg = f"Brightness must be between 0 and 255, got: {value}"
-            raise ValueError(msg)
+        self._validate_byte_range(value, "Brightness")
         if value != self._brightness:
             self._brightness = value
 
     @property
     @override
     def temperature(self) -> int:
+        """Return the cached white temperature value."""
         return self._temperature
 
     @temperature.setter
     def temperature(self, value: int):
-        if value < 0 or value > 255:
-            msg = f"Temperature must be between 0 and 255, got: {value}"
-            raise ValueError(msg)
+        self._validate_byte_range(value, "Temperature")
         if value != self._temperature:
             self._temperature = value
 
     @property
     @override
     def red(self) -> int:
+        """Return the current red channel value."""
         return self._r
 
     @red.setter
     def red(self, value: int):
-        if value < 0 or value > 255:
-            msg = f"Red must be between 0 and 255, got: {value}"
-            raise ValueError(msg)
+        self._validate_byte_range(value, "Red")
         if value != self._r:
             self._r = value
 
     @property
     @override
     def green(self) -> int:
+        """Return the current green channel value."""
         return self._g
 
     @green.setter
     def green(self, value: int):
-        if value < 0 or value > 255:
-            msg = f"Green must be between 0 and 255, got: {value}"
-            raise ValueError(msg)
+        self._validate_byte_range(value, "Green")
         if value != self._g:
             self._g = value
 
     @property
     @override
     def blue(self) -> int:
+        """Return the current blue channel value."""
         return self._b
 
     @blue.setter
     def blue(self, value: int):
-        if value < 0 or value > 255:
-            msg = f"Blue must be between 0 and 255, got: {value}"
-            raise ValueError(msg)
+        self._validate_byte_range(value, "Blue")
         if value != self._b:
             self._b = value
 
     @property
     def rgb(self):
-        """Return the RGB color as a list"""
+        """Return the RGB color as a list."""
         return [self._r, self._g, self._b]
 
     @rgb.setter
     def rgb(self, value: list[int]):
-        if len(value) != 3:
-            msg = f"RGB value must be a list of 3 integers, got: {value}"
+        if len(value) != RGB_CHANNELS:
+            msg = f"RGB value must be a list of {RGB_CHANNELS} integers, got: {value}"
             raise ValueError(msg)
         if value != self.rgb:
             self._r, self._g, self._b = value

@@ -13,17 +13,17 @@ from cync_controller.cloud_api import ComputedTokenData, CyncAuthenticationError
 
 @pytest.fixture(autouse=True)
 def reset_cloud_api_singleton():
-    """Reset CyncCloudAPI singleton between tests"""
+    """Reset CyncCloudAPI singleton between tests."""
     CyncCloudAPI._instance = None
     yield
     CyncCloudAPI._instance = None
 
 
 class TestCyncCloudAPIInitialization:
-    """Tests for CyncCloudAPI initialization"""
+    """Tests for CyncCloudAPI initialization."""
 
     def test_init_default_params(self):
-        """Test CyncCloudAPI initialization with defaults"""
+        """Test CyncCloudAPI initialization with defaults."""
         api = CyncCloudAPI()
 
         assert api.api_timeout == 8
@@ -31,14 +31,14 @@ class TestCyncCloudAPIInitialization:
         assert api.http_session is None
 
     def test_init_custom_params(self):
-        """Test CyncCloudAPI initialization with custom parameters"""
+        """Test CyncCloudAPI initialization with custom parameters."""
         api = CyncCloudAPI(api_timeout=15, lp="TestAPI")
 
         assert api.api_timeout == 15
         assert api.lp == "TestAPI"
 
     def test_init_creates_singleton(self):
-        """Test that CyncCloudAPI is a singleton"""
+        """Test that CyncCloudAPI is a singleton."""
         api1 = CyncCloudAPI()
         api2 = CyncCloudAPI()
 
@@ -46,11 +46,11 @@ class TestCyncCloudAPIInitialization:
 
 
 class TestCyncCloudAPISession:
-    """Tests for CyncCloudAPI session management"""
+    """Tests for CyncCloudAPI session management."""
 
     @pytest.mark.asyncio
     async def test_check_session_creates_new_session(self):
-        """Test that _check_session creates session if none exists"""
+        """Test that _check_session creates session if none exists."""
         with patch("cync_controller.cloud_api.aiohttp.ClientSession") as mock_session_class:
             mock_session = AsyncMock()
             mock_session.__aenter__ = AsyncMock()
@@ -65,7 +65,7 @@ class TestCyncCloudAPISession:
 
     @pytest.mark.asyncio
     async def test_check_session_reuses_open_session(self):
-        """Test that _check_session doesn't recreate open session"""
+        """Test that _check_session doesn't recreate open session."""
         with patch("cync_controller.cloud_api.aiohttp.ClientSession") as mock_session_class:
             mock_session = AsyncMock()
             mock_session.closed = False
@@ -81,7 +81,7 @@ class TestCyncCloudAPISession:
 
     @pytest.mark.asyncio
     async def test_close_session(self):
-        """Test closing HTTP session"""
+        """Test closing HTTP session."""
         api = CyncCloudAPI()
         mock_session = AsyncMock()
         mock_session.closed = False
@@ -97,11 +97,11 @@ class TestCyncCloudAPISession:
 
 
 class TestCyncCloudAPITokenManagement:
-    """Tests for token cache management"""
+    """Tests for token cache management."""
 
     @pytest.mark.asyncio
     async def test_read_token_cache_not_found(self):
-        """Test reading token cache when file doesn't exist"""
+        """Test reading token cache when file doesn't exist."""
         api = CyncCloudAPI()
 
         with patch("cync_controller.cloud_api.Path") as mock_path:
@@ -115,7 +115,7 @@ class TestCyncCloudAPITokenManagement:
 
     @pytest.mark.asyncio
     async def test_read_token_cache_success(self):
-        """Test reading valid token cache"""
+        """Test reading valid token cache."""
         api = CyncCloudAPI()
 
         # Create sample token data with all required fields
@@ -142,7 +142,7 @@ class TestCyncCloudAPITokenManagement:
 
     @pytest.mark.asyncio
     async def test_write_token_cache(self):
-        """Test writing token cache"""
+        """Test writing token cache."""
         api = CyncCloudAPI()
 
         sample_token = ComputedTokenData(
@@ -168,7 +168,7 @@ class TestCyncCloudAPITokenManagement:
 
     @pytest.mark.asyncio
     async def test_check_token_valid(self):
-        """Test checking valid token"""
+        """Test checking valid token."""
         api = CyncCloudAPI()
 
         # Create token that expires in the future (issued now, expires in 1 hour)
@@ -191,7 +191,7 @@ class TestCyncCloudAPITokenManagement:
 
     @pytest.mark.asyncio
     async def test_check_token_expired(self):
-        """Test checking expired token"""
+        """Test checking expired token."""
         api = CyncCloudAPI()
 
         # Create token that expired in the past (issued 2 hours ago, expires in 1 hour = expired 1 hour ago)
@@ -213,7 +213,7 @@ class TestCyncCloudAPITokenManagement:
 
     @pytest.mark.asyncio
     async def test_check_token_not_found(self):
-        """Test checking token when no cache exists"""
+        """Test checking token when no cache exists."""
         api = CyncCloudAPI()
         api.read_token_cache = AsyncMock(return_value=None)
 
@@ -223,11 +223,11 @@ class TestCyncCloudAPITokenManagement:
 
 
 class TestCyncCloudAPIAuthentication:
-    """Tests for authentication methods"""
+    """Tests for authentication methods."""
 
     @pytest.mark.asyncio
     async def test_request_otp_success(self):
-        """Test successful OTP request"""
+        """Test successful OTP request."""
         with (
             patch("cync_controller.cloud_api.CYNC_ACCOUNT_USERNAME", "test@example.com"),
             patch("cync_controller.cloud_api.CYNC_ACCOUNT_PASSWORD", "password123"),
@@ -250,7 +250,7 @@ class TestCyncCloudAPIAuthentication:
 
     @pytest.mark.asyncio
     async def test_request_otp_no_credentials(self):
-        """Test OTP request without credentials"""
+        """Test OTP request without credentials."""
         with (
             patch("cync_controller.cloud_api.CYNC_ACCOUNT_USERNAME", None),
             patch("cync_controller.cloud_api.CYNC_ACCOUNT_PASSWORD", None),
@@ -264,7 +264,7 @@ class TestCyncCloudAPIAuthentication:
 
     @pytest.mark.asyncio
     async def test_request_otp_http_error(self):
-        """Test OTP request with HTTP error"""
+        """Test OTP request with HTTP error."""
         with (
             patch("cync_controller.cloud_api.CYNC_ACCOUNT_USERNAME", "test@example.com"),
             patch("cync_controller.cloud_api.CYNC_ACCOUNT_PASSWORD", "password123"),
@@ -287,7 +287,7 @@ class TestCyncCloudAPIAuthentication:
 
     @pytest.mark.asyncio
     async def test_send_otp_success(self):
-        """Test successful OTP submission"""
+        """Test successful OTP submission."""
         with (
             patch("cync_controller.cloud_api.CYNC_ACCOUNT_USERNAME", "test@example.com"),
             patch("cync_controller.cloud_api.CYNC_ACCOUNT_PASSWORD", "password123"),
@@ -320,7 +320,7 @@ class TestCyncCloudAPIAuthentication:
 
     @pytest.mark.asyncio
     async def test_send_otp_invalid_code(self):
-        """Test OTP submission with invalid code"""
+        """Test OTP submission with invalid code."""
         api = CyncCloudAPI()
 
         # send_otp requires int, but _validate_otp_code will reject non-numeric input
@@ -331,7 +331,7 @@ class TestCyncCloudAPIAuthentication:
 
     @pytest.mark.asyncio
     async def test_send_otp_zero_code_accepted(self):
-        """Test OTP submission with 0 code (represents '000000')"""
+        """Test OTP submission with 0 code (represents '000000')."""
         with (
             patch("cync_controller.cloud_api.CYNC_ACCOUNT_USERNAME", "test@example.com"),
             patch("cync_controller.cloud_api.CYNC_ACCOUNT_PASSWORD", "password123"),
@@ -363,7 +363,7 @@ class TestCyncCloudAPIAuthentication:
 
     @pytest.mark.asyncio
     async def test_send_otp_string_conversion(self):
-        """Test OTP submission with string code (gets converted)"""
+        """Test OTP submission with string code (gets converted)."""
         with (
             patch("cync_controller.cloud_api.CYNC_ACCOUNT_USERNAME", "test@example.com"),
             patch("cync_controller.cloud_api.CYNC_ACCOUNT_PASSWORD", "password123"),
@@ -407,11 +407,11 @@ class TestCyncCloudAPIAuthentication:
 
 
 class TestCyncCloudAPIDeviceOperations:
-    """Tests for device export and configuration"""
+    """Tests for device export and configuration."""
 
     @pytest.mark.asyncio
     async def test_request_devices_success(self):
-        """Test successful device request"""
+        """Test successful device request."""
         api = CyncCloudAPI()
 
         # Mock valid token
@@ -444,7 +444,7 @@ class TestCyncCloudAPIDeviceOperations:
 
     @pytest.mark.asyncio
     async def test_request_devices_no_token(self):
-        """Test device request without valid token"""
+        """Test device request without valid token."""
         api = CyncCloudAPI()
         api.token_cache = None
         api._check_session = AsyncMock()
@@ -456,7 +456,7 @@ class TestCyncCloudAPIDeviceOperations:
 
     @pytest.mark.asyncio
     async def test_get_properties_success(self):
-        """Test successful device property retrieval"""
+        """Test successful device property retrieval."""
         api = CyncCloudAPI()
         api.token_cache = ComputedTokenData(
             user_id="test-user",
@@ -483,7 +483,7 @@ class TestCyncCloudAPIDeviceOperations:
 
     @pytest.mark.asyncio
     async def test_get_properties_access_token_expired(self):
-        """Test get_properties with expired access token (code 4031021)"""
+        """Test get_properties with expired access token (code 4031021)."""
         from cync_controller.cloud_api import CyncAuthenticationError
 
         api = CyncCloudAPI()
@@ -510,7 +510,7 @@ class TestCyncCloudAPIDeviceOperations:
 
     @pytest.mark.asyncio
     async def test_get_properties_no_properties_error(self):
-        """Test get_properties with 4041009 error (no properties for home ID)"""
+        """Test get_properties with 4041009 error (no properties for home ID)."""
         api = CyncCloudAPI()
         api.token_cache = ComputedTokenData(
             user_id="test-user",
@@ -537,7 +537,7 @@ class TestCyncCloudAPIDeviceOperations:
 
     @pytest.mark.asyncio
     async def test_get_properties_json_decode_error(self):
-        """Test get_properties with JSON decode error"""
+        """Test get_properties with JSON decode error."""
         api = CyncCloudAPI()
         api.token_cache = ComputedTokenData(
             user_id="test-user",
@@ -564,7 +564,7 @@ class TestCyncCloudAPIDeviceOperations:
 
     @pytest.mark.asyncio
     async def test_export_config_full_mesh(self):
-        """Test _mesh_to_config with complete mesh data (devices and groups)"""
+        """Test _mesh_to_config with complete mesh data (devices and groups)."""
         api = CyncCloudAPI()
 
         mesh_info = [
@@ -615,7 +615,7 @@ class TestCyncCloudAPIDeviceOperations:
 
     @pytest.mark.asyncio
     async def test_export_config_skip_unnamed_mesh(self):
-        """Test export_config skips mesh without name"""
+        """Test export_config skips mesh without name."""
         api = CyncCloudAPI()
 
         mesh_info: list[dict[str, object]] = [
@@ -637,7 +637,7 @@ class TestCyncCloudAPIDeviceOperations:
 
     @pytest.mark.asyncio
     async def test_export_config_skip_no_properties(self):
-        """Test export_config skips mesh without properties"""
+        """Test export_config skips mesh without properties."""
         api = CyncCloudAPI()
 
         mesh_info: list[dict[str, object]] = [
@@ -659,7 +659,7 @@ class TestCyncCloudAPIDeviceOperations:
 
     @pytest.mark.asyncio
     async def test_export_config_skip_no_bulbs_array(self):
-        """Test export_config skips mesh without bulbsArray"""
+        """Test export_config skips mesh without bulbsArray."""
         api = CyncCloudAPI()
 
         mesh_info: list[dict[str, object]] = [
@@ -684,7 +684,7 @@ class TestCyncCloudAPIDeviceOperations:
 
     @pytest.mark.asyncio
     async def test_export_config_device_with_hvac(self):
-        """Test export_config properly parses HVAC device configuration"""
+        """Test export_config properly parses HVAC device configuration."""
         api = CyncCloudAPI()
 
         mesh_info = [
@@ -728,7 +728,7 @@ class TestCyncCloudAPIDeviceOperations:
 
     @pytest.mark.asyncio
     async def test_export_config_skip_invalid_device(self):
-        """Test export_config skips devices with missing required attributes"""
+        """Test export_config skips devices with missing required attributes."""
         api = CyncCloudAPI()
 
         mesh_info = [
@@ -768,7 +768,7 @@ class TestCyncCloudAPIDeviceOperations:
 
     @pytest.mark.asyncio
     async def test_export_config_groups_parsing(self):
-        """Test export_config correctly parses groups with members"""
+        """Test export_config correctly parses groups with members."""
         api = CyncCloudAPI()
 
         mesh_info = [
@@ -829,7 +829,7 @@ class TestCyncCloudAPIDeviceOperations:
 
     @pytest.mark.asyncio
     async def test_export_config_skip_empty_groups(self):
-        """Test export_config skips groups without devices"""
+        """Test export_config skips groups without devices."""
         api = CyncCloudAPI()
 
         mesh_info: list[dict[str, object]] = [

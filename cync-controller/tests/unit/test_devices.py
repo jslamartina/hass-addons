@@ -1,5 +1,4 @@
-"""
-Unit tests for devices module.
+"""Unit tests for devices module.
 
 This file has been split into three separate files for better organization:
 - test_devices_cync_device.py - CyncDevice tests (646 lines, 41 tests)

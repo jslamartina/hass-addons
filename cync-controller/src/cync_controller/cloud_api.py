@@ -34,6 +34,9 @@ from cync_controller.logging_abstraction import get_logger
 
 logger = get_logger(__name__)
 
+OTP_MIN_CODE = 100_000
+OTP_MAX_CODE = 999_999
+
 # Cync Cloud API error codes
 CYNC_ERROR_CODE_NOT_FOUND = 4041009
 
@@ -458,7 +461,7 @@ class CyncCloudAPI:
             return None
         else:
             # Validate reasonable OTP range (typically 6 digits)
-            if not (100000 <= code_int <= 999999):
+            if not (OTP_MIN_CODE <= code_int <= OTP_MAX_CODE):
                 logger.warning(
                     "OTP code out of expected range",
                     extra={"lp": lp, "otp_length": len(str(code_int))},

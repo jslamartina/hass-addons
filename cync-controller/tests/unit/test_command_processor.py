@@ -1,5 +1,4 @@
-"""
-Unit tests for CommandProcessor queue and execution logic.
+"""Unit tests for CommandProcessor queue and execution logic.
 
 Tests for CommandProcessor command queuing, sequential execution,
 optimistic updates, error handling, and mesh refresh orchestration.
@@ -20,18 +19,18 @@ pytestmark = pytest.mark.filterwarnings(
 
 
 class TestCommandProcessorExecution:
-    """Tests for CommandProcessor queue and execution logic"""
+    """Tests for CommandProcessor queue and execution logic."""
 
     @pytest.fixture(autouse=True)
     def reset_processor_singleton(self):
-        """Reset CommandProcessor singleton between tests"""
+        """Reset CommandProcessor singleton between tests."""
         CommandProcessor._instance = None
         yield
         CommandProcessor._instance = None
 
     @pytest.mark.asyncio
     async def test_command_processor_sequential_execution(self):
-        """Test commands execute in FIFO order"""
+        """Test commands execute in FIFO order."""
         processor = CommandProcessor()
         processor._queue = asyncio.Queue()
         processor._processing = False
@@ -70,7 +69,7 @@ class TestCommandProcessorExecution:
 
     @pytest.mark.asyncio
     async def test_command_processor_optimistic_before_execute(self):
-        """Test optimistic update is called before execute"""
+        """Test optimistic update is called before execute."""
         processor = CommandProcessor()
         processor._queue = asyncio.Queue()
         processor._processing = False
@@ -104,7 +103,7 @@ class TestCommandProcessorExecution:
 
     @pytest.mark.asyncio
     async def test_command_processor_handles_execute_failure(self):
-        """Test error handling when command execution fails"""
+        """Test error handling when command execution fails."""
         processor = CommandProcessor()
         processor._queue = asyncio.Queue()
         processor._processing = False
@@ -152,7 +151,7 @@ class TestCommandProcessorExecution:
 
     @pytest.mark.asyncio
     async def test_command_processor_multiple_queued_commands(self):
-        """Test queue depth handling with many commands"""
+        """Test queue depth handling with many commands."""
         processor = CommandProcessor()
         processor._queue = asyncio.Queue()
         processor._processing = False
@@ -189,7 +188,7 @@ class TestCommandProcessorExecution:
 
     @pytest.mark.asyncio
     async def test_command_processor_queue_empties(self):
-        """Test processing stops when queue is empty"""
+        """Test processing stops when queue is empty."""
         processor = CommandProcessor()
         processor._queue = asyncio.Queue()
         processor._processing = False
@@ -229,7 +228,7 @@ class TestCommandProcessorExecution:
 
     @pytest.mark.asyncio
     async def test_command_processor_enqueue_starts_processing(self):
-        """Test that enqueuing creates processing task if not already processing"""
+        """Test that enqueuing creates processing task if not already processing."""
         processor = CommandProcessor()
         processor._queue = asyncio.Queue()
         processor._processing = False
@@ -260,7 +259,7 @@ class TestCommandProcessorExecution:
 
     @pytest.mark.asyncio
     async def test_command_processor_optimistic_update_published_first(self):
-        """Test that optimistic updates happen before device command"""
+        """Test that optimistic updates happen before device command."""
         processor = CommandProcessor()
         processor._queue = asyncio.Queue()
         processor._processing = False
@@ -297,7 +296,7 @@ class TestCommandProcessorExecution:
 
     @pytest.mark.asyncio
     async def test_command_processor_continues_after_exception(self):
-        """Test that queue processing continues after a command raises exception"""
+        """Test that queue processing continues after a command raises exception."""
         processor = CommandProcessor()
         processor._queue = asyncio.Queue()
         processor._processing = False

@@ -6,6 +6,7 @@ from typing import Any
 
 class Will:
     """MQTT Last Will and Testament message."""
+
     def __init__(
         self,
         topic: str,

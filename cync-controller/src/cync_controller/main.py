@@ -8,8 +8,13 @@ import sys
 from collections.abc import Mapping
 from functools import partial
 from pathlib import Path
+from typing import TYPE_CHECKING, Protocol, cast, runtime_checkable
 
-import uvloop
+try:
+    import uvloop
+except ImportError:  # pragma: no cover - uvloop always available in production image
+    uvloop = None
+
 import yaml
 
 from cync_controller.cloud_api import CyncCloudAPI
@@ -31,12 +36,16 @@ from cync_controller.server import NCyncServer
 from cync_controller.structs import GlobalObject
 from cync_controller.utils import check_for_uuid, check_python_version, send_sigterm, signal_handler
 
+if TYPE_CHECKING:
+    from cync_controller.structs import MQTTClientProtocol, NCyncServerProtocol
+
 # Optional dependency for .env file support
 try:
     import dotenv
 
     _has_dotenv_value = True
 except ImportError:
+    dotenv = None
     _has_dotenv_value = False
 HAS_DOTENV: bool = _has_dotenv_value
 
@@ -67,6 +76,13 @@ mqtt_logger.setLevel(logging.ERROR)
 mqtt_logger.propagate = False
 
 g = GlobalObject()
+
+
+@runtime_checkable
+class _CLIArgs(Protocol):
+    export_server: bool
+    debug: bool
+    env: Path | None
 
 
 def _parse_device_from_config(
@@ -108,7 +124,10 @@ def _parse_device_from_config(
         wifi_mac = None
 
     hvac_raw = device_data.get("hvac")
-    hvac_value: dict[str, object] | None = hvac_raw if isinstance(hvac_raw, Mapping) else None
+    hvac_value: dict[str, object] | None = None
+    if isinstance(hvac_raw, Mapping):
+        # Treat nested HVAC mapping as a plain dict[str, object] for downstream usage.
+        hvac_value = dict(cast("Mapping[str, object]", hvac_raw))
 
     fw_value = device_data.get("fw")
     firmware = fw_value if isinstance(fw_value, str) else None
@@ -155,7 +174,8 @@ def _parse_group_from_config(
     members_raw = group_data.get("members", [])
     members: list[int] = []
     if isinstance(members_raw, list):
-        for member in members_raw:
+        members_list = cast("list[object]", members_raw)
+        for member in members_list:
             if isinstance(member, int):
                 members.append(member)
             elif isinstance(member, str) and member.isdigit():
@@ -196,20 +216,24 @@ def _process_home_config(
         logger.debug("Skipping home '%s' - no ID found", home_name)
         return
 
-    home_devices = home_data.get("devices")
-    if isinstance(home_devices, dict):
-        for device_id_str, device_data in home_devices.items():
-            if isinstance(device_data, Mapping):
-                result = _parse_device_from_config(device_id_str, device_data, home_id)
+    home_devices_obj = home_data.get("devices")
+    if isinstance(home_devices_obj, dict):
+        home_devices = cast("dict[str, object]", home_devices_obj)
+        for device_id_str, device_data_obj in home_devices.items():
+            if isinstance(device_data_obj, Mapping):
+                device_mapping = cast("Mapping[str, object]", device_data_obj)
+                result = _parse_device_from_config(device_id_str, device_mapping, home_id)
                 if result:
                     device_id, device = result
                     devices[device_id] = device
 
-    home_groups = home_data.get("groups")
-    if isinstance(home_groups, dict):
-        for group_id_str, group_data in home_groups.items():
-            if isinstance(group_data, Mapping):
-                result = _parse_group_from_config(group_id_str, group_data, home_id)
+    home_groups_obj = home_data.get("groups")
+    if isinstance(home_groups_obj, dict):
+        home_groups = cast("dict[str, object]", home_groups_obj)
+        for group_id_str, group_data_obj in home_groups.items():
+            if isinstance(group_data_obj, Mapping):
+                group_mapping = cast("Mapping[str, object]", group_data_obj)
+                result = _parse_group_from_config(group_id_str, group_mapping, home_id)
                 if result:
                     group_id, group = result
                     groups[group_id] = group
@@ -234,24 +258,28 @@ async def parse_config(config_file: Path) -> tuple[dict[int, CyncDevice], dict[i
 
     try:
         with config_file.open() as f:
-            raw_config_obj: object = yaml.safe_load(f)
+            raw_config_obj = cast("Mapping[str, object] | None", yaml.safe_load(f))
     except Exception:
         logger.exception("Failed to parse config file: %s", config_file)
         raise
 
-    if not isinstance(raw_config_obj, dict):
+    if not isinstance(raw_config_obj, Mapping):
         logger.warning("Invalid config structure: expected mapping at root")
         return devices, groups
 
-    raw_config: Mapping[str, object] = raw_config_obj
-    account_data = raw_config.get("account data")
-    if not isinstance(account_data, Mapping):
+    # YAML root is a plain mapping with unknown key types; treat keys as strings
+    # for downstream processing.
+    raw_config = raw_config_obj
+    account_data_obj = raw_config.get("account data")
+    if not isinstance(account_data_obj, Mapping):
         logger.warning("No 'account data' section found in config file")
         return devices, groups
 
+    account_data = cast("Mapping[str, object]", account_data_obj)
     for home_name, home_data in account_data.items():
         if isinstance(home_data, Mapping):
-            _process_home_config(str(home_name), home_data, devices, groups)
+            typed_home_data = cast("Mapping[str, object]", home_data)
+            _process_home_config(str(home_name), typed_home_data, devices, groups)
 
     logger.info("Parsed config: %d devices, %d groups", len(devices), len(groups))
     return devices, groups
@@ -261,6 +289,7 @@ class CyncController:
     lp: str = "CyncController:"
     config_file: Path | None = None
     _instance: CyncController | None = None
+    _initialized: bool = False
 
     def __new__(cls, *_args: object, **_kwargs: object) -> CyncController:
         if cls._instance is None:
@@ -273,17 +302,22 @@ class CyncController:
         self._initialized = True
 
         check_for_uuid()
-        asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
-        g.loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(g.loop)
+        loop: asyncio.AbstractEventLoop
+        if uvloop is not None:
+            uvloop.install()
+            loop = uvloop.new_event_loop()
+        else:
+            loop = asyncio.new_event_loop()
+        g.loop = loop
+        asyncio.set_event_loop(loop)
 
         logger.info(
             " Initializing Cync Controller",
             extra={"version": CYNC_VERSION},
         )
 
-        g.loop.add_signal_handler(signal.SIGINT, partial(signal_handler, signal.SIGINT))
-        g.loop.add_signal_handler(signal.SIGTERM, partial(signal_handler, signal.SIGTERM))
+        loop.add_signal_handler(signal.SIGINT, partial(signal_handler, signal.SIGINT))
+        loop.add_signal_handler(signal.SIGTERM, partial(signal_handler, signal.SIGTERM))
 
         logger.debug("Signal handlers configured for SIGINT & SIGTERM")
 
@@ -293,7 +327,7 @@ class CyncController:
         _ = ensure_correlation_id()
 
         self.config_file = cfg_file = Path(CYNC_CONFIG_FILE_PATH).expanduser().resolve()
-        tasks = []
+        tasks: list[asyncio.Task[object]] = []
 
         if cfg_file.exists():
             logger.info(
@@ -311,12 +345,17 @@ class CyncController:
             )
 
             # Initialize core services
-            g.ncync_server = NCyncServer(devices, groups)
-            g.mqtt_client = MQTTClient()
+            ncync_server = NCyncServer(devices, groups)
+            mqtt_client = MQTTClient()
+            # Explicitly cast to protocol interfaces for type checking
+            g.ncync_server = cast("NCyncServerProtocol", cast("object", ncync_server))
+            g.mqtt_client = cast("MQTTClientProtocol", cast("object", mqtt_client))
 
             # Create async tasks for services
-            g.ncync_server.start_task = n_start = asyncio.Task(g.ncync_server.start(), name=NCYNC_START_TASK_NAME)
-            g.mqtt_client.start_task = m_start = asyncio.Task(g.mqtt_client.start(), name=MQTT_CLIENT_START_TASK_NAME)
+            n_start = asyncio.Task(ncync_server.start(), name=NCYNC_START_TASK_NAME)
+            m_start = asyncio.Task(mqtt_client.start(), name=MQTT_CLIENT_START_TASK_NAME)
+            ncync_server.start_task = n_start
+            mqtt_client.start_task = m_start
             tasks.extend([n_start, m_start])
 
             logger.info(" Starting TCP server and MQTT client...")
@@ -330,16 +369,18 @@ class CyncController:
             )
 
         # Start export server if enabled
-        if g.cli_args and g.cli_args.export_server is True:
+        cli_args = cast("_CLIArgs | None", g.cli_args)
+        if cli_args and cli_args.export_server is True:
             logger.info(" Starting export server...")
             g.cloud_api = CyncCloudAPI()
-            g.export_server = ExportServer()
-            if g.export_server is not None:
-                g.export_server.start_task = x_start = asyncio.Task(
-                    g.export_server.start(),
-                    name=EXPORT_SRV_START_TASK_NAME,
-                )
-                tasks.append(x_start)
+            export_server = ExportServer()
+            g.export_server = export_server
+            x_start = asyncio.Task(
+                export_server.start(),
+                name=EXPORT_SRV_START_TASK_NAME,
+            )
+            export_server.start_task = x_start
+            tasks.append(x_start)
 
         try:
             _ = await asyncio.gather(*tasks, return_exceptions=True)
@@ -360,7 +401,7 @@ class CyncController:
 def parse_cli():
     parser = argparse.ArgumentParser(description="Cync Controller Server")
 
-    parser.add_argument(
+    _ = parser.add_argument(
         "--export-server",
         "--enable-export-server",
         action="store_true",
@@ -368,25 +409,27 @@ def parse_cli():
         help="Enable the Cync Export Server",
     )
 
-    parser.add_argument(
+    _ = parser.add_argument(
         "-D",
         "--debug",
         action="store_true",
         help="Enable debug mode",
     )
     _ = parser.add_argument("--env", help="Path to the environment file", default=None, type=Path)
-    g.cli_args = args = parser.parse_args()
+    parsed_args = parser.parse_args()
+    g.cli_args = parsed_args
+    args = cast("_CLIArgs", cast("object", parsed_args))
 
     if args.debug:
         logger.set_level(logging.DEBUG)
-        for handler in logger.handlers:
+        for handler in cast("list[logging.Handler]", logger.handlers):
             handler.setLevel(logging.DEBUG)
         logger.info("Debug mode enabled via CLI argument")
 
     if args.env:
         env_path = args.env.expanduser().resolve()
 
-        if not HAS_DOTENV:
+        if not HAS_DOTENV or dotenv is None:
             logger.error(
                 "dotenv module not installed",
                 extra={"install_command": "pip install python-dotenv"},
@@ -436,7 +479,7 @@ def main():
         if CYNC_DEBUG:
             logger.info("Debug logging enabled via configuration")
             logger.set_level(logging.DEBUG)
-            for handler in logger.handlers:
+            for handler in cast("list[logging.Handler]", logger.handlers):
                 handler.setLevel(logging.DEBUG)
 
         check_python_version()

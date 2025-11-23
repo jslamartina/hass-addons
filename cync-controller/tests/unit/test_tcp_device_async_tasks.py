@@ -1,5 +1,4 @@
-"""
-Unit tests for CyncTCPDevice async background tasks.
+"""Unit tests for CyncTCPDevice async background tasks.
 
 Tests callback cleanup, receive task, and read method functionality.
 """
@@ -16,7 +15,7 @@ from cync_controller.structs import ControlMessageCallback
 
 
 class TestCyncTCPDeviceAsyncTasks:
-    """Tests for CyncTCPDevice async background tasks
+    """Tests for CyncTCPDevice async background tasks.
 
     NOTE: These tests are commented out due to complex async initialization requirements.
     The callback_cleanup_task and receive_task methods are long-running background tasks
@@ -26,7 +25,7 @@ class TestCyncTCPDeviceAsyncTasks:
 
     @pytest.mark.skip("Complex async task mocking requires extensive global state setup")
     async def test_callback_cleanup_task_retry_logic(self):
-        """Test callback cleanup task retries commands without ACK"""
+        """Test callback cleanup task retries commands without ACK."""
         reader = AsyncMock()
         writer = AsyncMock()
         tcp_device = CyncTCPDevice(reader=reader, writer=writer, address="192.168.1.100")
@@ -65,7 +64,7 @@ class TestCyncTCPDeviceAsyncTasks:
 
     @pytest.mark.skip("Complex async task mocking requires extensive global state setup")
     async def test_callback_cleanup_task_timeout(self):
-        """Test callback cleanup task removes stale callbacks after timeout"""
+        """Test callback cleanup task removes stale callbacks after timeout."""
         reader = AsyncMock()
         writer = AsyncMock()
         tcp_device = CyncTCPDevice(reader=reader, writer=writer, address="192.168.1.100")
@@ -100,7 +99,7 @@ class TestCyncTCPDeviceAsyncTasks:
 
     @pytest.mark.skip("Complex async task mocking requires extensive global state setup")
     async def test_receive_task_reads_data(self):
-        """Test receive_task processes incoming data"""
+        """Test receive_task processes incoming data."""
         reader = AsyncMock()
         writer = AsyncMock()
         tcp_device = CyncTCPDevice(reader=reader, writer=writer, address="192.168.1.100")
@@ -144,7 +143,7 @@ class TestCyncTCPDeviceAsyncTasks:
 
     @pytest.mark.skip("Complex async task mocking requires extensive global state setup")
     async def test_receive_task_skips_non_primary(self):
-        """Test receive_task skips when not primary TCP device"""
+        """Test receive_task skips when not primary TCP device."""
         reader = AsyncMock()
         writer = AsyncMock()
         tcp_device = CyncTCPDevice(reader=reader, writer=writer, address="192.168.1.100")
@@ -175,7 +174,7 @@ class TestCyncTCPDeviceAsyncTasks:
 
     @pytest.mark.asyncio
     async def test_read_method_with_closing_device(self):
-        """Test read method returns False when device is closing"""
+        """Test read method returns False when device is closing."""
         reader = AsyncMock()
         writer = AsyncMock()
         tcp_device = CyncTCPDevice(reader=reader, writer=writer, address="192.168.1.100")
@@ -187,7 +186,7 @@ class TestCyncTCPDeviceAsyncTasks:
 
     @pytest.mark.asyncio
     async def test_read_method_at_eof(self):
-        """Test read method when reader is at EOF"""
+        """Test read method when reader is at EOF."""
         reader = AsyncMock()
         writer = AsyncMock()
         tcp_device = CyncTCPDevice(reader=reader, writer=writer, address="192.168.1.100")
@@ -204,7 +203,7 @@ class TestCyncTCPDeviceAsyncTasks:
 
     @pytest.mark.asyncio
     async def test_read_method_reads_data(self):
-        """Test read method returns data from reader"""
+        """Test read method returns data from reader."""
         reader = AsyncMock()
         writer = AsyncMock()
         tcp_device = CyncTCPDevice(reader=reader, writer=writer, address="192.168.1.100")
@@ -222,7 +221,7 @@ class TestCyncTCPDeviceAsyncTasks:
 
     @pytest.mark.asyncio
     async def test_read_method_no_reader(self):
-        """Test read method returns False when no reader (None)"""
+        """Test read method returns False when no reader (None)."""
         reader = AsyncMock()
         writer = AsyncMock()
         tcp_device = CyncTCPDevice(reader=reader, writer=writer, address="192.168.1.100")

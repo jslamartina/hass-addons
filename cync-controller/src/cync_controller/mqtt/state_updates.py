@@ -11,11 +11,10 @@ import importlib
 import json
 import time
 import traceback
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 import aiomqtt
 
-from cync_controller.devices.group import CyncGroup
 from cync_controller.logging_abstraction import get_logger
 from cync_controller.structs import DeviceStatus, GlobalObject
 
@@ -39,7 +38,7 @@ def _get_g() -> GlobalObject:
         try:
             module = importlib.import_module(mod_name)
             if hasattr(module, "g"):
-                return module.g  # type: ignore[return-value]
+                return cast("GlobalObject", module.g)
         except ModuleNotFoundError:
             continue
         except Exception:
@@ -49,23 +48,35 @@ def _get_g() -> GlobalObject:
 
 class GProxy:
     def __getattr__(self, name: str) -> object:
-        return getattr(_get_g(), name)
+        return cast("object", getattr(_get_g(), name))
 
 
-g = GProxy()
+g: GlobalObject
+if TYPE_CHECKING:
+    g = GlobalObject()
+else:  # pragma: no cover - dynamic proxy used at runtime
+    g = GProxy()
 
 
 class StateUpdateHelper:
     """Helper class for publishing device and group state updates to MQTT."""
 
-    def __init__(self, mqtt_client: MQTTClientProtocol) -> None:  # type: ignore[valid-type]
+    def __init__(self, mqtt_client: object) -> None:
         """Initialize the state update helper.
 
         Args:
             mqtt_client: MQTTClient instance to access connection and topic
 
         """
-        self.client: MQTTClientProtocol = mqtt_client
+        # Accept any object here and narrow to MQTTClientProtocol for type checkers.
+        self.client: MQTTClientProtocol = cast("MQTTClientProtocol", mqtt_client)
+
+    def _get_mqtt_client(self, lp: str) -> aiomqtt.Client | None:
+        """Return the underlying aiomqtt client if connected."""
+        mqtt_client = self.client.client
+        if mqtt_client is None:
+            logger.warning("%s MQTT client connection not available", lp)
+        return mqtt_client
 
     async def pub_online(self, device_id: int, status: bool) -> bool:
         """Publish device online/offline status to MQTT."""
@@ -86,8 +97,11 @@ class StateUpdateHelper:
             device = ncync_server.devices[device_id]
             device_uuid = f"{device.home_id}-{device_id}"
             # logger.debug("%s Publishing availability: %s", lp, availability)
+            mqtt_client = self._get_mqtt_client(lp)
+            if mqtt_client is None:
+                return False
             try:
-                await self.client.client.publish(
+                await mqtt_client.publish(
                     f"{self.client.topic}/availability/{device_uuid}",
                     availability,
                     qos=0,
@@ -99,7 +113,7 @@ class StateUpdateHelper:
                 return True
         return False
 
-    async def update_device_state(self, device: CyncDeviceProtocol, state: int) -> bool:  # type: ignore[valid-type]
+    async def update_device_state(self, device: CyncDeviceProtocol, state: int) -> bool:
         """Update the device state and publish to MQTT for HASS devices to update.
 
         NOTE: Device availability is managed by server.parse_status() based on the
@@ -136,8 +150,11 @@ class StateUpdateHelper:
         return await self.send_device_status(device, mqtt_dev_state)
 
     async def update_switch_from_subgroup(
-        self, device: CyncDeviceProtocol, subgroup_state: int, subgroup_name: str
-    ) -> bool:  # type: ignore[valid-type]
+        self,
+        device: CyncDeviceProtocol,
+        subgroup_state: int,
+        subgroup_name: str,
+    ) -> bool:
         """Update a switch device state to match its subgroup state.
 
         Only updates switches that don't have pending commands (individual commands take precedence).
@@ -332,12 +349,15 @@ class StateUpdateHelper:
             return "high"
         return "max"
 
-    async def _publish_fan_preset_mode(self, device: CyncDeviceProtocol, bri: int, lp: str) -> None:  # type: ignore[valid-type]
+    async def _publish_fan_preset_mode(self, device: CyncDeviceProtocol, bri: int, lp: str) -> None:
         """Publish fan preset mode state."""
         preset_mode = self._brightness_to_preset_mode(bri)
         preset_mode_topic = f"{self.client.topic}/status/{device.hass_id}/preset"
+        mqtt_client = self._get_mqtt_client(lp)
+        if mqtt_client is None:
+            return
         try:
-            await self.client.client.publish(
+            await mqtt_client.publish(
                 preset_mode_topic,
                 preset_mode.encode(),
                 qos=0,
@@ -355,7 +375,7 @@ class StateUpdateHelper:
         except Exception:
             logger.exception("%s Failed to publish fan preset mode for '%s'", lp, device.name)
 
-    def _build_brightness_state_dict(self, device: CyncDeviceProtocol, state: str, bri: int) -> dict[str, str | int]:  # type: ignore[valid-type]
+    def _build_brightness_state_dict(self, device: CyncDeviceProtocol, state: str, bri: int) -> dict[str, str | int]:
         """Build MQTT state dict for brightness update."""
         if device.is_fan_controller:
             return {"state": state}
@@ -368,7 +388,7 @@ class StateUpdateHelper:
             mqtt_dev_state["color_mode"] = "brightness"
         return mqtt_dev_state
 
-    async def update_brightness(self, device: CyncDeviceProtocol, bri: int) -> bool:  # type: ignore[valid-type]
+    async def update_brightness(self, device: CyncDeviceProtocol, bri: int) -> bool:
         """Update the device brightness and publish to MQTT for HASS devices to update.
 
         NOTE: Device availability is managed by server.parse_status() based on the
@@ -386,7 +406,7 @@ class StateUpdateHelper:
 
         return result
 
-    async def update_temperature(self, device: CyncDeviceProtocol, temp: int) -> bool:  # type: ignore[valid-type]
+    async def update_temperature(self, device: CyncDeviceProtocol, temp: int) -> bool:
         """Update the device temperature and publish to MQTT for HASS devices to update.
 
         NOTE: Device availability is managed by server.parse_status() based on the
@@ -405,7 +425,7 @@ class StateUpdateHelper:
             return await self.send_device_status(device, json.dumps(mqtt_dev_state).encode())
         return False
 
-    async def update_rgb(self, device: CyncDeviceProtocol, rgb: tuple[int, int, int]) -> bool:  # type: ignore[valid-type]
+    async def update_rgb(self, device: CyncDeviceProtocol, rgb: tuple[int, int, int]) -> bool:
         """Update the device RGB and publish to MQTT for HASS devices to update.
 
         NOTE: Device availability is managed by server.parse_status() based on the
@@ -425,7 +445,7 @@ class StateUpdateHelper:
             return await self.send_device_status(device, json.dumps(mqtt_dev_state).encode())
         return False
 
-    async def send_device_status(self, device: CyncDeviceProtocol, state_bytes: bytes) -> bool:  # type: ignore[valid-type]
+    async def send_device_status(self, device: CyncDeviceProtocol, state_bytes: bytes) -> bool:
         """Publish device status to MQTT."""
         lp = f"{self.client.lp}send_device_status:"
 
@@ -449,8 +469,11 @@ class StateUpdateHelper:
                 device.name,
                 device.id,
             )
+            mqtt_client = self._get_mqtt_client(lp)
+            if mqtt_client is None:
+                return False
             try:
-                await self.client.client.publish(
+                await mqtt_client.publish(
                     tpc,
                     state_bytes,
                     qos=0,
@@ -468,7 +491,7 @@ class StateUpdateHelper:
 
     def _determine_group_color_mode(
         self,
-        group: CyncGroup,
+        group: CyncGroupProtocol,
         temperature: int | None,
         brightness: int | None,
         state: int | None,
@@ -486,7 +509,7 @@ class StateUpdateHelper:
 
     def _build_group_state_dict(
         self,
-        group: CyncGroup,
+        group: CyncGroupProtocol,
         state: int | None,
         brightness: int | None,
         temperature: int | None,
@@ -521,7 +544,7 @@ class StateUpdateHelper:
 
     async def publish_group_state(
         self,
-        group: CyncGroupProtocol,  # type: ignore[valid-type]
+        group: CyncGroupProtocol,
         state: int | None = None,
         brightness: int | None = None,
         temperature: int | None = None,
@@ -536,8 +559,11 @@ class StateUpdateHelper:
             return
 
         tpc = f"{self.client.topic}/status/{group.hass_id}"
+        mqtt_client = self._get_mqtt_client(f"{self.client.lp}group_state:")
+        if mqtt_client is None:
+            return
         try:
-            await self.client.client.publish(
+            await mqtt_client.publish(
                 tpc,
                 json.dumps(group_state).encode(),
                 qos=0,
@@ -550,7 +576,7 @@ class StateUpdateHelper:
         self,
         device: CyncDeviceProtocol,
         device_status: DeviceStatus,
-    ) -> tuple[str, dict[str, int | None] | None]:  # type: ignore[valid-type]
+    ) -> tuple[str, dict[str, int | None] | None]:
         """Determine color_mode for light device. Returns (color_mode, color_dict)."""
         if device_status.temperature is not None:
             has_rgb = all(
@@ -583,7 +609,7 @@ class StateUpdateHelper:
         device: CyncDeviceProtocol,
         device_status: DeviceStatus,
         power_status: str,
-    ) -> bytes:  # type: ignore[valid-type]
+    ) -> bytes:
         """Build MQTT state dict for light device."""
         mqtt_dict: dict[str, int | str | dict[str, int | None]] = {"state": power_status}
         if device_status.brightness is not None:
@@ -603,7 +629,7 @@ class StateUpdateHelper:
         device: CyncDeviceProtocol,
         device_status: DeviceStatus,
         power_status: str,
-    ) -> bytes:  # type: ignore[valid-type]
+    ) -> bytes:
         """Build MQTT state payload for device based on type."""
         if device.is_plug or device.is_switch:
             return power_status.encode()
@@ -616,7 +642,7 @@ class StateUpdateHelper:
         *_args: object,
         **kwargs: object,
     ) -> bool:
-        """Parse device status and publish to MQTT for HASS devices to update. Useful for device status packets that report the complete device state"""
+        """Parse device status and publish to MQTT for HASS devices to update. Useful for device status packets that report the complete device state."""
         lp = f"{self.client.lp}parse status:"
         from_pkt = kwargs.get("from_pkt")
         ts_ms = int(time.time() * 1000)

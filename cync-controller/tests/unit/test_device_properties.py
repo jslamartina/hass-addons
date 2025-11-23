@@ -9,10 +9,10 @@ from cync_controller.devices.base_device import CyncDevice
 
 
 class TestCyncDeviceCurrentStatus:
-    """Tests for device current status property"""
+    """Tests for device current status property."""
 
     def test_current_status_returns_list(self):
-        """Test current_status returns list of state values"""
+        """Test current_status returns list of state values."""
         device = CyncDevice(cync_id=0x1234)
         device.state = 1
         device.brightness = 75
@@ -34,10 +34,10 @@ class TestCyncDeviceCurrentStatus:
 
 
 class TestCyncDeviceStateConversion:
-    """Tests for state property with different input types"""
+    """Tests for state property with different input types."""
 
     def test_state_setter_with_strings(self):
-        """Test state setter accepts various string representations"""
+        """Test state setter accepts various string representations."""
         device = CyncDevice(cync_id=0x1234)
 
         # Test string "on" variations
@@ -51,7 +51,7 @@ class TestCyncDeviceStateConversion:
             assert device.state == 0
 
     def test_state_setter_with_integers(self):
-        """Test state setter accepts integer values"""
+        """Test state setter accepts integer values."""
         device = CyncDevice(cync_id=0x1234)
 
         device.state = 1
@@ -61,7 +61,7 @@ class TestCyncDeviceStateConversion:
         assert device.state == 0
 
     def test_state_setter_with_booleans(self):
-        """Test state setter accepts boolean values"""
+        """Test state setter accepts boolean values."""
         device = CyncDevice(cync_id=0x1234)
 
         device.state = True
@@ -71,14 +71,14 @@ class TestCyncDeviceStateConversion:
         assert device.state == 0
 
     def test_state_setter_invalid_value(self):
-        """Test state setter rejects invalid values"""
+        """Test state setter rejects invalid values."""
         device = CyncDevice(cync_id=0x1234)
 
         with pytest.raises(ValueError, match="Invalid value for state"):
             device.state = "invalid"  # type: ignore[assignment]
 
     def test_state_setter_invalid_type(self):
-        """Test state setter rejects invalid types"""
+        """Test state setter rejects invalid types."""
         device = CyncDevice(cync_id=0x1234)
 
         with pytest.raises(TypeError, match="Invalid type for state"):
@@ -86,10 +86,10 @@ class TestCyncDeviceStateConversion:
 
 
 class TestCyncDeviceStatusObject:
-    """Tests for device status object management"""
+    """Tests for device status object management."""
 
     def test_status_setter_and_getter(self):
-        """Test status property setter and getter"""
+        """Test status property setter and getter."""
         from cync_controller.structs import DeviceStatus
 
         device = CyncDevice(cync_id=0x1234)
@@ -109,10 +109,10 @@ class TestCyncDeviceStatusObject:
 
 
 class TestCyncDeviceVersionProperty:
-    """Tests for device version property"""
+    """Tests for device version property."""
 
     def test_version_setter_with_string(self):
-        """Test version setter with string input"""
+        """Test version setter with string input."""
         device = CyncDevice(cync_id=0x1234)
 
         device.version = "1.2.3"
@@ -122,14 +122,14 @@ class TestCyncDeviceVersionProperty:
         assert device.version == 200
 
     def test_version_setter_with_integer(self):
-        """Test version setter with integer input"""
+        """Test version setter with integer input."""
         device = CyncDevice(cync_id=0x1234)
 
         device.version = 456
         assert device.version == 456
 
     def test_version_setter_with_empty_string(self):
-        """Test version setter with empty string (returns early, doesn't log)"""
+        """Test version setter with empty string (returns early, doesn't log)."""
         device = CyncDevice(cync_id=0x1234)
 
         device.version = ""
@@ -138,7 +138,7 @@ class TestCyncDeviceVersionProperty:
         assert True  # Just verify no exception
 
     def test_version_setter_with_invalid_string(self, caplog):
-        """Test version setter with invalid string"""
+        """Test version setter with invalid string."""
         device = CyncDevice(cync_id=0x1234)
 
         device.version = "invalid"
@@ -148,43 +148,43 @@ class TestCyncDeviceVersionProperty:
 
 
 class TestCyncDevicePropertyEdgeCases:
-    """Tests for property edge cases and validation"""
+    """Tests for property edge cases and validation."""
 
     def test_is_light_setter_with_non_boolean(self):
-        """Test is_light setter logs error with non-boolean value"""
+        """Test is_light setter logs error with non-boolean value."""
         device = CyncDevice(cync_id=0x12)
         device.is_light = "not a boolean"  # type: ignore[assignment]
         assert device.is_light is False
 
     def test_is_switch_setter_with_non_boolean(self):
-        """Test is_switch setter logs error with non-boolean value"""
+        """Test is_switch setter logs error with non-boolean value."""
         device = CyncDevice(cync_id=0x12)
         device.is_switch = "not a boolean"  # type: ignore[assignment]
         assert device.is_switch is False
 
     def test_version_setter_with_invalid_string(self):
-        """Test version setter handles invalid version string"""
+        """Test version setter handles invalid version string."""
         device = CyncDevice(cync_id=0x12)
         device.version = "not.a.valid.version"
         assert device.version is None
 
     def test_mac_setter_with_conversion(self):
-        """Test mac setter converts non-string to string"""
+        """Test mac setter converts non-string to string."""
         device = CyncDevice(cync_id=0x12)
         device.mac = 12345  # type: ignore[assignment]
         assert device.mac == "12345"
 
     def test_has_wifi_property_without_metadata(self):
-        """Test has_wifi property returns False when no metadata"""
+        """Test has_wifi property returns False when no metadata."""
         device = CyncDevice(cync_id=0x12)
         assert device.has_wifi is False
 
     def test_bt_only_property_with_wifi_mac(self):
-        """Test bt_only property checks for special WiFi MAC"""
+        """Test bt_only property checks for special WiFi MAC."""
         device = CyncDevice(cync_id=0x12, wifi_mac="00:01:02:03:04:05")
         assert device.bt_only is True
 
     def test_bt_only_property_without_metadata(self):
-        """Test bt_only property returns False when no metadata and normal WiFi MAC"""
+        """Test bt_only property returns False when no metadata and normal WiFi MAC."""
         device = CyncDevice(cync_id=0x12, wifi_mac="11:22:33:44:55:66")
         assert device.bt_only is False

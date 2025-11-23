@@ -1,5 +1,4 @@
-"""
-Unit tests for MQTTClient device registration and MQTT discovery.
+"""Unit tests for MQTTClient device registration and MQTT discovery.
 
 Tests for homeassistant_discovery(), device registration,
 MQTT discovery payload generation for all device types.
@@ -13,18 +12,18 @@ from cync_controller.mqtt_client import MQTTClient
 
 
 class TestMQTTDeviceDiscovery:
-    """Tests for MQTT device discovery and Home Assistant registration"""
+    """Tests for MQTT device discovery and Home Assistant registration."""
 
     @pytest.fixture(autouse=True)
     def reset_mqtt_singleton(self):
-        """Reset MQTTClient singleton between tests"""
+        """Reset MQTTClient singleton between tests."""
         MQTTClient._instance = None
         yield
         MQTTClient._instance = None
 
     @pytest.mark.asyncio
     async def test_homeassistant_discovery_light_with_rgb(self):
-        """Test MQTT discovery payload for RGB light"""
+        """Test MQTT discovery payload for RGB light."""
         with (
             patch("cync_controller.mqtt_client.g") as mock_g,
             patch("cync_controller.mqtt_client.aiomqtt.Client"),
@@ -48,7 +47,7 @@ class TestMQTTDeviceDiscovery:
 
     @pytest.mark.asyncio
     async def test_homeassistant_discovery_light_with_temperature(self):
-        """Test MQTT discovery for tunable white light"""
+        """Test MQTT discovery for tunable white light."""
         with (
             patch("cync_controller.mqtt_client.g") as mock_g,
             patch("cync_controller.mqtt_client.aiomqtt.Client"),
@@ -69,7 +68,7 @@ class TestMQTTDeviceDiscovery:
 
     @pytest.mark.asyncio
     async def test_homeassistant_discovery_switch(self):
-        """Test MQTT discovery payload for switch"""
+        """Test MQTT discovery payload for switch."""
         with (
             patch("cync_controller.mqtt_client.g") as mock_g,
             patch("cync_controller.mqtt_client.aiomqtt.Client"),
@@ -89,7 +88,7 @@ class TestMQTTDeviceDiscovery:
 
     @pytest.mark.asyncio
     async def test_homeassistant_discovery_fan(self):
-        """Test MQTT discovery for fan with speed control"""
+        """Test MQTT discovery for fan with speed control."""
         with (
             patch("cync_controller.mqtt_client.g") as mock_g,
             patch("cync_controller.mqtt_client.aiomqtt.Client"),
@@ -107,7 +106,7 @@ class TestMQTTDeviceDiscovery:
 
     @pytest.mark.asyncio
     async def test_homeassistant_discovery_plug(self):
-        """Test MQTT discovery for smart plug"""
+        """Test MQTT discovery for smart plug."""
         with (
             patch("cync_controller.mqtt_client.g") as mock_g,
             patch("cync_controller.mqtt_client.aiomqtt.Client"),
@@ -126,7 +125,7 @@ class TestMQTTDeviceDiscovery:
 
     @pytest.mark.asyncio
     async def test_homeassistant_discovery_group(self):
-        """Test group registration in MQTT discovery"""
+        """Test group registration in MQTT discovery."""
         with (
             patch("cync_controller.mqtt_client.g") as mock_g,
             patch("cync_controller.mqtt_client.aiomqtt.Client"),
@@ -145,7 +144,7 @@ class TestMQTTDeviceDiscovery:
 
     @pytest.mark.asyncio
     async def test_homeassistant_discovery_device_naming(self):
-        """Test device name sanitization for entity IDs"""
+        """Test device name sanitization for entity IDs."""
         with (
             patch("cync_controller.mqtt_client.g") as mock_g,
             patch("cync_controller.mqtt_client.aiomqtt.Client"),
@@ -170,7 +169,7 @@ class TestMQTTDeviceDiscovery:
 
     @pytest.mark.asyncio
     async def test_homeassistant_discovery_suggested_area(self):
-        """Test area assignment from room membership"""
+        """Test area assignment from room membership."""
         with (
             patch("cync_controller.mqtt_client.g") as mock_g,
             patch("cync_controller.mqtt_client.aiomqtt.Client"),
@@ -192,7 +191,7 @@ class TestMQTTDeviceDiscovery:
 
     @pytest.mark.asyncio
     async def test_homeassistant_discovery_device_info(self):
-        """Test device metadata in discovery payload"""
+        """Test device metadata in discovery payload."""
         with (
             patch("cync_controller.mqtt_client.g") as mock_g,
             patch("cync_controller.mqtt_client.aiomqtt.Client"),
@@ -214,7 +213,7 @@ class TestMQTTDeviceDiscovery:
 
     @pytest.mark.asyncio
     async def test_homeassistant_discovery_duplicate_device(self):
-        """Test registering same device twice is idempotent"""
+        """Test registering same device twice is idempotent."""
         with (
             patch("cync_controller.mqtt_client.g") as mock_g,
             patch("cync_controller.mqtt_client.aiomqtt.Client"),

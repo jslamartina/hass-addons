@@ -1,5 +1,4 @@
-"""
-Unit tests for instrumentation module.
+"""Unit tests for instrumentation module.
 
 Tests timing decorators and performance tracking functionality.
 """
@@ -14,10 +13,10 @@ from cync_controller.instrumentation import measure_time, timed, timed_async
 
 
 class TestMeasureTime:
-    """Tests for measure_time function"""
+    """Tests for measure_time function."""
 
     def test_measure_time_returns_milliseconds(self):
-        """Test that measure_time returns elapsed time in milliseconds"""
+        """Test that measure_time returns elapsed time in milliseconds."""
         start = time.perf_counter()
         time.sleep(0.01)  # Sleep 10ms
         elapsed_ms = measure_time(start)
@@ -26,7 +25,7 @@ class TestMeasureTime:
         assert 5 < elapsed_ms < 30
 
     def test_measure_time_precision(self):
-        """Test that measure_time provides millisecond precision"""
+        """Test that measure_time provides millisecond precision."""
         start = time.perf_counter()
         time.sleep(0.001)  # Sleep 1ms
         elapsed_ms = measure_time(start)
@@ -36,7 +35,7 @@ class TestMeasureTime:
         assert elapsed_ms > 0
 
     def test_measure_time_zero_elapsed(self):
-        """Test measure_time with no elapsed time"""
+        """Test measure_time with no elapsed time."""
         start = time.perf_counter()
         elapsed_ms = measure_time(start)
 
@@ -45,10 +44,10 @@ class TestMeasureTime:
 
 
 class TestTimedDecorator:
-    """Tests for timed decorator (sync)"""
+    """Tests for timed decorator (sync)."""
 
     def test_timed_decorator_wrapped_function_executes(self):
-        """Test that timed decorator wraps function and it executes"""
+        """Test that timed decorator wraps function and it executes."""
 
         @timed("test_operation")
         def test_function():
@@ -59,7 +58,7 @@ class TestTimedDecorator:
         assert result == "result"
 
     def test_timed_decorator_preserves_function_name(self):
-        """Test that timed decorator preserves original function name"""
+        """Test that timed decorator preserves original function name."""
 
         @timed()
         def my_function():
@@ -68,7 +67,7 @@ class TestTimedDecorator:
         assert my_function.__name__ == "my_function"
 
     def test_timed_decorator_with_arguments(self):
-        """Test that timed decorator works with function arguments"""
+        """Test that timed decorator works with function arguments."""
 
         @timed("test_operation")
         def add(a: int, b: int) -> int:
@@ -79,7 +78,7 @@ class TestTimedDecorator:
         assert result == 5
 
     def test_timed_decorator_with_kwargs(self):
-        """Test that timed decorator works with keyword arguments"""
+        """Test that timed decorator works with keyword arguments."""
 
         @timed("test_operation")
         def greet(name, greeting="Hello"):
@@ -91,11 +90,11 @@ class TestTimedDecorator:
 
 
 class TestTimedAsyncDecorator:
-    """Tests for timed_async decorator"""
+    """Tests for timed_async decorator."""
 
     @pytest.mark.asyncio
     async def test_timed_async_decorator_preserved_function_name(self):
-        """Test that timed_async decorator preserves function name"""
+        """Test that timed_async decorator preserves function name."""
 
         @timed_async()
         async def my_async_function():
@@ -105,7 +104,7 @@ class TestTimedAsyncDecorator:
 
     @pytest.mark.asyncio
     async def test_timed_async_decorator_with_arguments(self):
-        """Test that timed_async decorator works with async function arguments"""
+        """Test that timed_async decorator works with async function arguments."""
 
         @timed_async("test_operation")
         async def async_add(a: int, b: int) -> int:
@@ -118,10 +117,10 @@ class TestTimedAsyncDecorator:
 
 
 class TestTimingThresholds:
-    """Tests for timing threshold warnings"""
+    """Tests for timing threshold warnings."""
 
     def test_timed_decorator_executes_successfully(self):
-        """Test that timed decorator executes function correctly"""
+        """Test that timed decorator executes function correctly."""
 
         @timed("test_op")
         def test_function():
@@ -133,7 +132,7 @@ class TestTimingThresholds:
 
     @pytest.mark.asyncio
     async def test_timed_async_decorator_executes_successfully(self):
-        """Test that timed_async decorator executes async function correctly"""
+        """Test that timed_async decorator executes async function correctly."""
 
         @timed_async("test_async_op")
         async def test_async_function():

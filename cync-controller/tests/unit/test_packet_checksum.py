@@ -1,5 +1,4 @@
-"""
-Unit tests for packet_checksum module.
+"""Unit tests for packet_checksum module.
 
 Tests checksum calculation and insertion for Cync protocol packets.
 """
@@ -14,10 +13,10 @@ from cync_controller.packet_checksum import (
 
 
 class TestCalculateChecksumBetweenMarkers:
-    """Tests for calculate_checksum_between_markers function"""
+    """Tests for calculate_checksum_between_markers function."""
 
     def test_calculate_checksum_simple_packet(self):
-        """Test checksum calculation for a simple packet"""
+        """Test checksum calculation for a simple packet."""
         # Create packet with 0x7E markers
         # Structure: ... 0x7E ... [data to sum] ... checksum 0x7E
         packet = bytes(
@@ -46,7 +45,7 @@ class TestCalculateChecksumBetweenMarkers:
         assert result == 6
 
     def test_calculate_checksum_with_larger_sum(self):
-        """Test checksum calculation with sum > 255"""
+        """Test checksum calculation with sum > 255."""
         packet = bytes(
             [
                 0x7E,  # Start marker (index 0)
@@ -70,7 +69,7 @@ class TestCalculateChecksumBetweenMarkers:
         assert result == 253
 
     def test_calculate_checksum_modulo_256(self):
-        """Test that checksum correctly applies modulo 256"""
+        """Test that checksum correctly applies modulo 256."""
         packet = bytes(
             [
                 0x7E,
@@ -95,7 +94,7 @@ class TestCalculateChecksumBetweenMarkers:
         assert result == 0
 
     def test_calculate_checksum_all_zeros(self):
-        """Test checksum with all zero data bytes"""
+        """Test checksum with all zero data bytes."""
         packet = bytes(
             [
                 0x7E,
@@ -118,7 +117,7 @@ class TestCalculateChecksumBetweenMarkers:
         assert result == 0
 
     def test_calculate_checksum_all_ones(self):
-        """Test checksum with all 0xFF data bytes"""
+        """Test checksum with all 0xFF data bytes."""
         packet = bytes(
             [
                 0x7E,
@@ -141,7 +140,7 @@ class TestCalculateChecksumBetweenMarkers:
         assert result == 254
 
     def test_calculate_checksum_custom_offset(self):
-        """Test checksum calculation with custom offset"""
+        """Test checksum calculation with custom offset."""
         packet = bytes(
             [
                 0x7E,
@@ -166,7 +165,7 @@ class TestCalculateChecksumBetweenMarkers:
         assert result == 210  # Actual result from implementation
 
     def test_calculate_checksum_with_zero_offset(self):
-        """Test checksum calculation with zero offset"""
+        """Test checksum calculation with zero offset."""
         packet = bytes(
             [
                 0x7E,  # Start marker (index 0)
@@ -185,7 +184,7 @@ class TestCalculateChecksumBetweenMarkers:
         assert result == 132  # Includes the 0x7E marker
 
     def test_calculate_checksum_minimal_valid_packet(self):
-        """Test checksum with minimal valid packet"""
+        """Test checksum with minimal valid packet."""
         # Minimal: 0x7E + offset(6) + 1 data byte + checksum + 0x7E
         packet = bytes(
             [
@@ -207,7 +206,7 @@ class TestCalculateChecksumBetweenMarkers:
         assert result == 5
 
     def test_calculate_checksum_long_data_section(self):
-        """Test checksum with long data section"""
+        """Test checksum with long data section."""
         data = [0x01] * 100  # 100 bytes of 0x01
         packet = bytes([0x7E] + [0x00] * 6 + data + [0x00, 0x7E])
 
@@ -217,7 +216,7 @@ class TestCalculateChecksumBetweenMarkers:
         assert result == 100
 
     def test_calculate_checksum_marker_at_start(self):
-        """Test packet with 0x7E at the very beginning"""
+        """Test packet with 0x7E at the very beginning."""
         packet = bytes(
             [
                 0x7E,  # Start marker at index 0
@@ -239,14 +238,14 @@ class TestCalculateChecksumBetweenMarkers:
         assert result == 30
 
     def test_calculate_checksum_raises_on_no_markers(self):
-        """Test that function raises ValueError if no 0x7E marker found"""
+        """Test that function raises ValueError if no 0x7E marker found."""
         packet = bytes([0x00, 0x01, 0x02, 0x03])
 
         with pytest.raises(ValueError, match="subsection not found"):
             _ = calculate_checksum_between_markers(packet)
 
     def test_calculate_checksum_raises_on_packet_too_short(self):
-        """Test that function raises ValueError if packet is too short"""
+        """Test that function raises ValueError if packet is too short."""
         # Packet with marker but not enough space for offset + data
         packet = bytes([0x7E, 0x00, 0x00, 0x7E])
 
@@ -254,7 +253,7 @@ class TestCalculateChecksumBetweenMarkers:
             _ = calculate_checksum_between_markers(packet)
 
     def test_calculate_checksum_raises_on_insufficient_offset(self):
-        """Test ValueError when offset is too large for packet"""
+        """Test ValueError when offset is too large for packet."""
         packet = bytes(
             [
                 0x7E,
@@ -270,7 +269,7 @@ class TestCalculateChecksumBetweenMarkers:
             _ = calculate_checksum_between_markers(packet)
 
     def test_calculate_checksum_with_large_offset(self):
-        """Test checksum with large custom offset"""
+        """Test checksum with large custom offset."""
         packet = bytes(
             [
                 0x7E,
@@ -295,7 +294,7 @@ class TestCalculateChecksumBetweenMarkers:
         assert result == 15
 
     def test_calculate_checksum_default_offset_constant(self):
-        """Test that default offset constant is used correctly"""
+        """Test that default offset constant is used correctly."""
         packet = bytes(
             [
                 0x7E,
@@ -319,7 +318,7 @@ class TestCalculateChecksumBetweenMarkers:
         assert DEFAULT_OFFSET_AFTER_START == 6
 
     def test_calculate_checksum_empty_data_section(self):
-        """Test checksum when there's no data between offset and checksum"""
+        """Test checksum when there's no data between offset and checksum."""
         # Structure: 0x7E + offset(6) + checksum + 0x7E
         # With default offset, this leaves no data bytes to sum
         packet = bytes(
@@ -343,10 +342,10 @@ class TestCalculateChecksumBetweenMarkers:
 
 
 class TestInsertChecksumInPlace:
-    """Tests for insert_checksum_in_place function"""
+    """Tests for insert_checksum_in_place function."""
 
     def test_insert_checksum_basic(self):
-        """Test basic checksum insertion"""
+        """Test basic checksum insertion."""
         packet = bytearray(
             [
                 0x7E,
@@ -369,7 +368,7 @@ class TestInsertChecksumInPlace:
         assert packet[10] == 6
 
     def test_insert_checksum_modifies_packet_in_place(self):
-        """Test that function modifies the packet in place"""
+        """Test that function modifies the packet in place."""
         original = bytearray(
             [
                 0x7E,
@@ -394,7 +393,7 @@ class TestInsertChecksumInPlace:
         assert packet[9] == 254
 
     def test_insert_checksum_with_custom_offset(self):
-        """Test checksum insertion with custom offset"""
+        """Test checksum insertion with custom offset."""
         packet = bytearray(
             [
                 0x7E,
@@ -414,7 +413,7 @@ class TestInsertChecksumInPlace:
         assert packet[6] == 215
 
     def test_insert_checksum_at_different_indices(self):
-        """Test checksum insertion at various indices"""
+        """Test checksum insertion at various indices."""
         packet = bytearray(
             [
                 0x7E,
@@ -435,7 +434,7 @@ class TestInsertChecksumInPlace:
         assert packet[8] == 10
 
     def test_insert_checksum_overwrites_existing_value(self):
-        """Test that checksum overwrites existing byte"""
+        """Test that checksum overwrites existing byte."""
         packet = bytearray(
             [
                 0x7E,
@@ -457,7 +456,7 @@ class TestInsertChecksumInPlace:
         assert packet[8] != 0xAB
 
     def test_insert_checksum_zero_result(self):
-        """Test insertion when calculated checksum is zero"""
+        """Test insertion when calculated checksum is zero."""
         packet = bytearray(
             [
                 0x7E,
@@ -477,7 +476,7 @@ class TestInsertChecksumInPlace:
         assert packet[7] == 0
 
     def test_insert_checksum_with_large_sum(self):
-        """Test insertion with sum requiring modulo"""
+        """Test insertion with sum requiring modulo."""
         packet = bytearray(
             [
                 0x7E,
@@ -500,7 +499,7 @@ class TestInsertChecksumInPlace:
         assert packet[10] == 253
 
     def test_insert_checksum_preserves_other_bytes(self):
-        """Test that insertion doesn't modify other bytes"""
+        """Test that insertion doesn't modify other bytes."""
         packet = bytearray(
             [
                 0xAA,  # Should not change
@@ -525,14 +524,14 @@ class TestInsertChecksumInPlace:
         assert packet[9] == 1
 
     def test_insert_checksum_raises_on_invalid_packet(self):
-        """Test that invalid packet raises appropriate error"""
+        """Test that invalid packet raises appropriate error."""
         packet = bytearray([0x00, 0x01, 0x02])
 
         with pytest.raises(ValueError, match=r".*"):
             insert_checksum_in_place(packet, checksum_index=1)
 
     def test_insert_checksum_on_minimal_packet(self):
-        """Test insertion on minimal valid packet"""
+        """Test insertion on minimal valid packet."""
         packet = bytearray(
             [
                 0x7E,
@@ -553,7 +552,7 @@ class TestInsertChecksumInPlace:
         assert packet[8] == 7
 
     def test_insert_checksum_with_zero_offset(self):
-        """Test insertion with zero offset"""
+        """Test insertion with zero offset."""
         packet = bytearray(
             [
                 0x7E,  # Index 0
@@ -570,7 +569,7 @@ class TestInsertChecksumInPlace:
         assert packet[3] == 133
 
     def test_insert_checksum_idempotent(self):
-        """Test that inserting checksum twice gives same result"""
+        """Test that inserting checksum twice gives same result."""
         packet1 = bytearray(
             [
                 0x7E,

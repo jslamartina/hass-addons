@@ -103,7 +103,7 @@ class CloudRelayConnection:
 
     @timed_async("cloud_connect")
     async def connect_to_cloud(self):
-        """Establish SSL connection to Cync cloud server"""
+        """Establish SSL connection to Cync cloud server."""
         try:
             # Create SSL context for cloud connection
             ssl_context = ssl.create_default_context()
@@ -163,7 +163,7 @@ class CloudRelayConnection:
             return True
 
     async def start_relay(self):
-        """Start the relay process"""
+        """Start the relay process."""
         _ = ensure_correlation_id()  # Ensure correlation tracking for this connection
 
         # Show security warning if SSL verification is disabled
@@ -273,7 +273,7 @@ class CloudRelayConnection:
         dest_writer: asyncio.StreamWriter | None,
         direction: str,
     ):
-        """Forward packets while inspecting and logging"""
+        """Forward packets while inspecting and logging."""
         try:
             while True:
                 data = await source_reader.read(4096)
@@ -304,27 +304,51 @@ class CloudRelayConnection:
                     )
 
                 # Extract status updates for MQTT (for 0x43 DEVICE_INFO packets)
-                if parsed and "device_statuses" in parsed:
-                    for status in parsed["device_statuses"]:
-                        # Convert parsed status to raw_state format for existing parse_status
-                        raw_state = bytearray(8)
-                        raw_state[0] = status["device_id"]
-                        raw_state[1] = 1 if status["state"] == "ON" else 0
-                        raw_state[2] = status["brightness"]
-                        raw_state[3] = status.get("temp", 0) if status.get("mode") == "WHITE" else 254
-                        # RGB values (parse from hex color if present)
-                        if status.get("mode") == "RGB" and "color" in status:
-                            color_hex = status["color"].lstrip("#")
-                            raw_state[4] = int(color_hex[0:2], 16)  # R
-                            raw_state[5] = int(color_hex[2:4], 16)  # G
-                            raw_state[6] = int(color_hex[4:6], 16)  # B
-                        else:
-                            raw_state[4] = raw_state[5] = raw_state[6] = 0
-                        raw_state[7] = 1 if status["online"] else 0
+                if parsed:
+                    statuses_obj = parsed.get("device_statuses")
+                    if isinstance(statuses_obj, list):
+                        status_dicts: list[dict[str, object]] = [
+                            cast(dict[str, object], status)
+                            for status in statuses_obj
+                            if isinstance(status, dict)
+                        ]
+                        for status_entry in status_dicts:
+                            device_id_obj = status_entry.get("device_id")
+                            if not isinstance(device_id_obj, int):
+                                continue
+                            brightness_obj = status_entry.get("brightness")
+                            brightness = int(brightness_obj) if isinstance(brightness_obj, int) else 0
+                            state_raw = status_entry.get("state")
+                            state_str = str(state_raw) if state_raw is not None else "OFF"
+                            mode_obj = status_entry.get("mode")
+                            mode = str(mode_obj) if mode_obj is not None else None
+                            temp_obj = status_entry.get("temp")
+                            temp_value = int(temp_obj) if isinstance(temp_obj, int) else 0
+                            online_flag = bool(status_entry.get("online"))
 
-                        # Publish to MQTT using existing infrastructure
-                        if g.ncync_server:
-                            await g.ncync_server.parse_status(bytes(raw_state), from_pkt="0x43")
+                            raw_state = bytearray(8)
+                            raw_state[0] = device_id_obj
+                            raw_state[1] = 1 if state_str == "ON" else 0
+                            raw_state[2] = brightness
+                            raw_state[3] = temp_value if mode == "WHITE" else 254
+
+                            if mode == "RGB":
+                                color_value = status_entry.get("color")
+                                color_hex = str(color_value) if color_value is not None else ""
+                                color_hex = color_hex.lstrip("#")
+                                try:
+                                    raw_state[4] = int(color_hex[0:2], 16)
+                                    raw_state[5] = int(color_hex[2:4], 16)
+                                    raw_state[6] = int(color_hex[4:6], 16)
+                                except (ValueError, IndexError):
+                                    raw_state[4] = raw_state[5] = raw_state[6] = 0
+                            else:
+                                raw_state[4] = raw_state[5] = raw_state[6] = 0
+                            raw_state[7] = 1 if online_flag else 0
+
+                            ncync_server = g.ncync_server
+                            if ncync_server is not None:
+                                await ncync_server.parse_status(bytes(raw_state), from_pkt="0x43")
 
                 # Forward to destination (if cloud forwarding enabled)
                 if dest_writer:
@@ -362,7 +386,7 @@ class CloudRelayConnection:
             )
 
     async def _check_injection_commands(self):
-        """Periodically check for packet injection commands (debug feature)"""
+        """Periodically check for packet injection commands (debug feature)."""
         inject_file = "/tmp/cync_inject_command.txt"
         raw_inject_file = "/tmp/cync_inject_raw_bytes.txt"
 
@@ -449,7 +473,7 @@ class CloudRelayConnection:
             )
 
     def _craft_mode_packet(self, endpoint: bytes, counter: int, mode_byte: int) -> bytes:
-        """Craft a mode query/command packet"""
+        """Craft a mode query/command packet."""
         inner_counter = (0x0D + counter) & 0xFF
         inner_counter2 = (0x0E + counter) & 0xFF
 
@@ -498,7 +522,7 @@ class CloudRelayConnection:
         return bytes(packet)
 
     async def close(self):
-        """Clean up connections"""
+        """Clean up connections."""
         logger.debug(
             " Closing relay connection",
             extra={"client_addr": self.client_addr},

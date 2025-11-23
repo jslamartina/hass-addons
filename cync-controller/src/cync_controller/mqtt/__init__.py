@@ -1,5 +1,4 @@
-"""
-MQTT client package for Cync Controller.
+"""MQTT client package for Cync Controller.
 
 Provides MQTT communication, device discovery, command processing, and state management.
 

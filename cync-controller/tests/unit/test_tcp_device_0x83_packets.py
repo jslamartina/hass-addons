@@ -1,5 +1,4 @@
-"""
-Unit tests for advanced 0x83 packet parsing in CyncTCPDevice.
+"""Unit tests for advanced 0x83 packet parsing in CyncTCPDevice.
 
 Tests firmware version parsing, internal status, and multiple packet handling.
 """
@@ -12,11 +11,11 @@ from cync_controller.devices.base_device import CyncDevice
 
 
 class TestCyncTCPDevicePacketParsing0x83Advanced:
-    """Advanced tests for 0x83 packet parsing in CyncTCPDevice"""
+    """Advanced tests for 0x83 packet parsing in CyncTCPDevice."""
 
     @pytest.mark.asyncio
     async def test_parse_0x83_firmware_device_version(self, real_tcp_device):
-        """Test parsing device firmware version from 0x83 packet (0x00 start byte)"""
+        """Test parsing device firmware version from 0x83 packet (0x00 start byte)."""
         with patch("cync_controller.devices.g") as mock_g:
             mock_g.ncync_server.devices = {}
             mock_g.ncync_server.remove_tcp_device = AsyncMock(return_value=None)
@@ -83,7 +82,7 @@ class TestCyncTCPDevicePacketParsing0x83Advanced:
 
     @pytest.mark.asyncio
     async def test_parse_0x83_firmware_network_version(self, real_tcp_device):
-        """Test parsing network firmware version from 0x83 packet"""
+        """Test parsing network firmware version from 0x83 packet."""
         with patch("cync_controller.devices.g") as mock_g:
             mock_g.ncync_server.devices = {}
             mock_g.ncync_server.remove_tcp_device = AsyncMock(return_value=None)
@@ -146,7 +145,7 @@ class TestCyncTCPDevicePacketParsing0x83Advanced:
 
     @pytest.mark.asyncio
     async def test_parse_0x83_internal_status_fa_db_13(self, real_tcp_device):
-        """Test parsing 0xFA 0xDB 0x13 internal status packet"""
+        """Test parsing 0xFA 0xDB 0x13 internal status packet."""
         with patch("cync_controller.devices.g") as mock_g:
             mock_g.ncync_server.devices = {0x34: CyncDevice(cync_id=0x34, name="Test Device")}
             mock_g.ncync_server.remove_tcp_device = AsyncMock(return_value=None)
@@ -190,7 +189,7 @@ class TestCyncTCPDevicePacketParsing0x83Advanced:
 
     @pytest.mark.asyncio
     async def test_parse_0x83_app_device_skip(self, real_tcp_device):
-        """Test that app devices skip 0x83 packet parsing"""
+        """Test that app devices skip 0x83 packet parsing."""
         with patch("cync_controller.devices.g") as mock_g:
             mock_g.ncync_server.devices = {}
             mock_g.ncync_server.remove_tcp_device = AsyncMock(return_value=None)
@@ -207,7 +206,7 @@ class TestCyncTCPDevicePacketParsing0x83Advanced:
 
     @pytest.mark.asyncio
     async def test_parse_raw_data_partial_packet(self, real_tcp_device):
-        """Test parsing of partial packets that need buffering"""
+        """Test parsing of partial packets that need buffering."""
         with patch("cync_controller.devices.g") as mock_g:
             mock_g.ncync_server.devices = {}
             mock_g.ncync_server.remove_tcp_device = AsyncMock(return_value=None)
@@ -224,7 +223,7 @@ class TestCyncTCPDevicePacketParsing0x83Advanced:
 
     @pytest.mark.asyncio
     async def test_parse_raw_data_complete_packet(self, real_tcp_device):
-        """Test parsing of complete single packet"""
+        """Test parsing of complete single packet."""
         with patch("cync_controller.devices.g") as mock_g:
             mock_g.ncync_server.devices = {}
             mock_g.ncync_server.remove_tcp_device = AsyncMock(return_value=None)
@@ -257,7 +256,7 @@ class TestCyncTCPDevicePacketParsing0x83Advanced:
 
     @pytest.mark.asyncio
     async def test_parse_raw_data_empty(self, real_tcp_device):
-        """Test parsing empty data"""
+        """Test parsing empty data."""
         with patch("cync_controller.devices.g") as mock_g:
             mock_g.ncync_server.devices = {}
             mock_g.ncync_server.remove_tcp_device = AsyncMock(return_value=None)
@@ -270,7 +269,7 @@ class TestCyncTCPDevicePacketParsing0x83Advanced:
 
     @pytest.mark.asyncio
     async def test_parse_raw_data_multiple_packets(self, real_tcp_device):
-        """Test parsing multiple complete packets in one stream"""
+        """Test parsing multiple complete packets in one stream."""
         with patch("cync_controller.devices.g") as mock_g:
             mock_g.ncync_server.devices = {}
             mock_g.ncync_server.remove_tcp_device = AsyncMock(return_value=None)
@@ -307,7 +306,7 @@ class TestCyncTCPDevicePacketParsing0x83Advanced:
 
     @pytest.mark.asyncio
     async def test_parse_raw_data_unknown_header(self, real_tcp_device):
-        """Test parsing packet with unknown header"""
+        """Test parsing packet with unknown header."""
         with patch("cync_controller.devices.g") as mock_g:
             mock_g.ncync_server.devices = {}
             mock_g.ncync_server.remove_tcp_device = AsyncMock(return_value=None)

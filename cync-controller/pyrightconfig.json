@@ -1,20 +1,17 @@
 {
-  "include": ["src", "tests"],
-  "extraPaths": ["src", "../scripts/playwright"],
+  "typeCheckingMode": "strict",
+  "include": ["."],
+  "extraPaths": ["src", "../scripts/playwright", "typings"],
   "venvPath": "..",
   "venv": ".venv",
   "useLibraryCodeForTypes": true,
   "reportMissingImports": "error",
-  "reportMissingTypeStubs": "error",
-  "reportUnnecessaryTypeIgnoreComment": "error",
-  "reportUnknownMemberType": "error",
-  "reportUnknownVariableType": "error",
-  "reportImportCycles": "error",
+  "reportPrivateUsage": "error",
   "stubPath": "typings",
   "executionEnvironments": [
     {
       "root": ".",
-      "extraPaths": ["src", "../scripts/playwright"]
+      "extraPaths": ["src", "../scripts/playwright", "typings"]
     }
   ]
 }

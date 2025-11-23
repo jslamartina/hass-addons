@@ -22,6 +22,7 @@ from cync_controller.const import (
 )
 from cync_controller.logging_abstraction import get_logger
 from cync_controller.mqtt.commands import CommandProcessor, SetBrightnessCommand, SetPowerCommand
+from cync_controller.mqtt.state_updates import StateUpdateHelper
 from cync_controller.structs import DeviceStatus, FanSpeed, GlobalObject
 
 if TYPE_CHECKING:
@@ -322,18 +323,22 @@ class CommandRouter:
 
             if device:
                 tasks.append(device.set_temperature(cync_temp))
-            elif target and hasattr(target, "set_temperature"):
-                set_temp = cast(
-                    "Callable[[int], Coroutine[object, object, object]]",
-                    target.set_temperature,
-                )
-                tasks.append(set_temp(cync_temp))
-            else:
-                logger.warning(
-                    "%s Color temperature command missing target (type=%s), skipping",
-                    lp,
-                    target_type,
-                )
+            elif target:
+                # Use getattr/callable instead of attribute access on protocol to
+                # avoid false-positive type checker errors while still being safe.
+                set_temp = getattr(target, "set_temperature", None)
+                if callable(set_temp):
+                    typed_set_temp = cast(
+                        "Callable[[int], Coroutine[object, object, object]]",
+                        set_temp,
+                    )
+                    tasks.append(typed_set_temp(cync_temp))
+                else:
+                    logger.warning(
+                        "%s Color temperature command missing target (type=%s), skipping",
+                        lp,
+                        target_type,
+                    )
 
         if "color" in json_data:
             color_payload = cast("dict[str, object]", json_data["color"])
@@ -341,18 +346,20 @@ class CommandRouter:
 
             if device:
                 tasks.append(device.set_rgb(*color_values))
-            elif target and hasattr(target, "set_rgb"):
-                set_rgb = cast(
-                    "Callable[[int, int, int], Coroutine[object, object, object]]",
-                    target.set_rgb,
-                )
-                tasks.append(set_rgb(*color_values))
-            else:
-                logger.warning(
-                    "%s Color command missing RGB-capable target (type=%s), skipping",
-                    lp,
-                    target_type,
-                )
+            elif target:
+                set_rgb = getattr(target, "set_rgb", None)
+                if callable(set_rgb):
+                    typed_set_rgb = cast(
+                        "Callable[[int, int, int], Coroutine[object, object, object]]",
+                        set_rgb,
+                    )
+                    tasks.append(typed_set_rgb(*color_values))
+                else:
+                    logger.warning(
+                        "%s Color command missing RGB-capable target (type=%s), skipping",
+                        lp,
+                        target_type,
+                    )
 
     async def _handle_json_payload(
         self,
@@ -416,14 +423,16 @@ class CommandRouter:
             birth_delay,
         )
         await asyncio.sleep(birth_delay)
-        await self.client.homeassistant_discovery()
+        _ = await self.client.homeassistant_discovery()
         await asyncio.sleep(2)
         ncync_server = self._get_ncync_server(lp)
-        state_updates = self.client.state_updates
+        state_updates_obj = self.client.state_updates
         mqtt_client = self.client.client
-        if ncync_server is None or state_updates is None or mqtt_client is None:
+        if ncync_server is None or state_updates_obj is None or mqtt_client is None:
             logger.warning("%s Cannot process HASS birth without server, state helper, and MQTT client", lp)
             return
+
+        state_updates = cast("StateUpdateHelper", state_updates_obj)
 
         for device in ncync_server.devices.values():
             if device.id is None:
@@ -538,16 +547,17 @@ class CommandRouter:
                     topic_text,
                 )
                 continue
-            if len(payload) == 0:
+            payload_union = cast("bytes | bytearray | memoryview[bytes]", payload)
+            payload_bytes = bytes(payload_union)
+            if len(payload_bytes) == 0:
                 logger.debug(
                     "%s Received empty/None payload (%s) for topic: %s , skipping...",
                     lp,
-                    payload,
+                    payload_bytes,
                     topic_text,
                 )
                 continue
 
-            payload_bytes = bytes(payload)
             logger.info(
                 "%s >>> MQTT MESSAGE RECEIVED: topic=%s, payload_len=%d, payload=%s",
                 lp,

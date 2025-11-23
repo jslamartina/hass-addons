@@ -6,7 +6,7 @@ Provides command pattern implementation for optimistic updates and device contro
 from __future__ import annotations
 
 import asyncio
-from typing import TYPE_CHECKING, Any, cast, override
+from typing import TYPE_CHECKING, cast, override
 
 from cync_controller.devices.group import CyncGroup
 from cync_controller.logging_abstraction import get_logger
@@ -14,6 +14,7 @@ from cync_controller.structs import GlobalObject
 
 if TYPE_CHECKING:
     from cync_controller.devices.tcp_device import CyncTCPDevice
+    from cync_controller.structs import CyncDeviceProtocol, CyncGroupProtocol
 
 SentBridge = tuple["CyncTCPDevice", int]
 type SentBridgeList = list["CyncTCPDevice"] | list[SentBridge]
@@ -56,7 +57,11 @@ class DeviceCommand:
 class CommandProcessor:
     """Singleton processor for device commands with sequential mesh refresh."""
 
-    _instance = None
+    _instance: CommandProcessor | None = None
+    _initialized: bool = False
+    lp: str = "CommandProcessor:"
+    _queue: asyncio.Queue[DeviceCommand]
+    _processing: bool
 
     def __new__(cls):
         if cls._instance is None:
@@ -65,11 +70,10 @@ class CommandProcessor:
 
     def __init__(self) -> None:
         """Initialize command processor."""
-        if not hasattr(self, "_initialized"):
-            self._queue: asyncio.Queue[DeviceCommand] = asyncio.Queue()
-            self._processing: bool = False
+        if not self._initialized:
+            self._queue = asyncio.Queue[DeviceCommand]()
+            self._processing = False
             self._initialized = True
-            self.lp = "CommandProcessor:"
 
     def _normalize_sent_bridges(
         self,
@@ -134,7 +138,7 @@ class CommandProcessor:
 
         try:
             while not self._queue.empty():
-                cmd: DeviceCommand = cast("DeviceCommand", await self._queue.get())
+                cmd = await self._queue.get()
 
                 logger.info("%s Processing: %s", lp, cmd)
                 logger.debug(
@@ -207,7 +211,7 @@ class CommandProcessor:
 class SetPowerCommand(DeviceCommand):
     """Command to set device or group power state."""
 
-    def __init__(self, device_or_group, state: int) -> None:
+    def __init__(self, device_or_group: CyncDeviceProtocol | CyncGroupProtocol, state: int) -> None:
         """Initialize set power command.
 
         Args:
@@ -215,32 +219,37 @@ class SetPowerCommand(DeviceCommand):
             state: Power state (0=OFF, 1=ON)
 
         """
-        super().__init__("set_power", device_or_group.id, state=state)
-        self.device_or_group = device_or_group
-        self.state = state
+        device_id = device_or_group.id
+        if device_id is None:
+            msg = "Device or group ID cannot be None for SetPowerCommand"
+            raise ValueError(msg)
+
+        super().__init__("set_power", device_id, state=state)
+        self.device_or_group: CyncDeviceProtocol | CyncGroupProtocol = device_or_group
+        self.state: int = state
 
     @override
     async def publish_optimistic(self) -> None:
         """Publish optimistic state update for the device and its group."""
         if isinstance(self.device_or_group, CyncGroup):
             # For groups: sync_group_devices will be called in set_power()
-            pass
-        else:
-            # For individual devices: publish optimistic state immediately
-            if g.mqtt_client is not None:
-                await g.mqtt_client.update_device_state(self.device_or_group, self.state)
+            return
 
-            # If this is a switch, also sync its group
-            try:
-                if self.device_or_group.is_switch:
-                    device: Any = cast("Any", self.device_or_group)
-                    if g.ncync_server and g.ncync_server.groups and g.mqtt_client is not None:
-                        for group_id, group in g.ncync_server.groups.items():
-                            if device.id in group.member_ids:
-                                # Sync all group devices to match this switch's new state
-                                await g.mqtt_client.sync_group_devices(group_id, self.state, group.name)
-            except Exception as e:
-                logger.warning("Group sync failed for switch: %s", e)
+        # For individual devices: publish optimistic state immediately
+        device = cast("CyncDeviceProtocol", self.device_or_group)
+        if g.mqtt_client is not None:
+            _ = await g.mqtt_client.update_device_state(device, self.state)
+
+        # If this is a switch, also sync its group
+        try:
+            if device.is_switch and g.ncync_server and g.ncync_server.groups and g.mqtt_client is not None:
+                for group_id, group in g.ncync_server.groups.items():
+                    if device.id in group.member_ids:
+                        # Sync all group devices to match this switch's new state
+                        group_name = group.name or f"Group {group_id}"
+                        _ = await g.mqtt_client.sync_group_devices(group_id, self.state, group_name)
+        except Exception as e:
+            logger.warning("Group sync failed for switch: %s", e)
 
     @override
     async def execute(self) -> CommandExecuteResult:
@@ -251,7 +260,7 @@ class SetPowerCommand(DeviceCommand):
 class SetBrightnessCommand(DeviceCommand):
     """Command to set device brightness."""
 
-    def __init__(self, device_or_group, brightness: int) -> None:
+    def __init__(self, device_or_group: CyncDeviceProtocol | CyncGroupProtocol, brightness: int) -> None:
         """Initialize set brightness command.
 
         Args:
@@ -259,19 +268,25 @@ class SetBrightnessCommand(DeviceCommand):
             brightness: Brightness value (0-100)
 
         """
-        super().__init__("set_brightness", device_or_group.id, brightness=brightness)
-        self.device_or_group = device_or_group
-        self.brightness = brightness
+        device_id = device_or_group.id
+        if device_id is None:
+            msg = "Device or group ID cannot be None for SetBrightnessCommand"
+            raise ValueError(msg)
+
+        super().__init__("set_brightness", device_id, brightness=brightness)
+        self.device_or_group: CyncDeviceProtocol | CyncGroupProtocol = device_or_group
+        self.brightness: int = brightness
 
     @override
     async def publish_optimistic(self) -> None:
         """Publish optimistic brightness update for the device."""
         if isinstance(self.device_or_group, CyncGroup):
-            # For groups: sync_group_devices will be called in cole_dset_brightness()
-            pass
+            # For groups: sync_group_devices will be called in set_brightness()
+            return
         # For individual devices: publish optimistic brightness immediately
-        elif g.mqtt_client is not None:
-            await g.mqtt_client.update_brightness(self.device_or_group, self.brightness)
+        if g.mqtt_client is not None:
+            device = cast("CyncDeviceProtocol", self.device_or_group)
+            _ = await g.mqtt_client.update_brightness(device, self.brightness)
 
     @override
     async def execute(self) -> CommandExecuteResult:

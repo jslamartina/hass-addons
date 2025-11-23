@@ -1,5 +1,4 @@
-"""
-Backward compatibility wrapper for MQTTClient.
+"""Backward compatibility wrapper for MQTTClient.
 
 This module re-exports MQTTClient, command classes, aiomqtt, g, and constants from the mqtt modules to maintain
 backward compatibility with existing imports and test patches:
