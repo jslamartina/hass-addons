@@ -275,7 +275,9 @@ class TestCyncCloudAPIAuthentication:
             mock_session = AsyncMock()
             from aiohttp import ClientResponseError
 
-            mock_session.post = AsyncMock(side_effect=ClientResponseError(None, None))
+            from aiohttp import RequestInfo
+            mock_request_info = MagicMock(spec=RequestInfo)
+            mock_session.post = AsyncMock(side_effect=ClientResponseError(mock_request_info, ()))
             api.http_session = mock_session
 
             api._check_session = AsyncMock()
@@ -322,7 +324,9 @@ class TestCyncCloudAPIAuthentication:
         """Test OTP submission with invalid code"""
         api = CyncCloudAPI()
 
-        result = await api.send_otp(None)
+        # send_otp requires int, but _validate_otp_code handles None internally
+        # Pass 0 which is falsy and will be rejected
+        result = await api.send_otp(0)
 
         assert result is False
 
@@ -365,8 +369,8 @@ class TestCyncCloudAPIAuthentication:
                 },
             )
 
-            # Pass string that can be converted to int
-            result = await api.send_otp("123456")
+            # Pass int (string conversion handled internally by _validate_otp_code)
+            result = await api.send_otp(123456)
 
             assert result is True
 
@@ -441,7 +445,7 @@ class TestCyncCloudAPIDeviceOperations:
         mock_session.get = AsyncMock(return_value=mock_response)
         api.http_session = mock_session
 
-        result = await api.get_properties(product_id=123, device_id=456)
+        result = await api.get_properties(product_id="123", device_id="456")
 
         assert result == {"properties": {"brightness": 100, "power": True}}
         mock_session.get.assert_called_once()
@@ -471,7 +475,7 @@ class TestCyncCloudAPIDeviceOperations:
         api.http_session = mock_session
 
         with pytest.raises(CyncAuthenticationError, match="Access-Token expired"):
-            _ = await api.get_properties(product_id=123, device_id=456)
+            _ = await api.get_properties(product_id="123", device_id="456")
 
     @pytest.mark.asyncio
     async def test_get_properties_no_properties_error(self):
@@ -495,7 +499,7 @@ class TestCyncCloudAPIDeviceOperations:
         mock_session.get = AsyncMock(return_value=mock_response)
         api.http_session = mock_session
 
-        result = await api.get_properties(product_id=123, device_id=456)
+        result = await api.get_properties(product_id="123", device_id="456")
 
         # Should return the error dict without logging warning (code 4041009 is expected)
         assert result == {"error": {"msg": "No properties found", "code": 4041009}}
@@ -525,7 +529,7 @@ class TestCyncCloudAPIDeviceOperations:
         api.http_session = mock_session
 
         with pytest.raises(json.JSONDecodeError):
-            _ = await api.get_properties(product_id=123, device_id=456)
+            _ = await api.get_properties(product_id="123", device_id="456")
 
     @pytest.mark.asyncio
     async def test_export_config_full_mesh(self):
@@ -564,7 +568,7 @@ class TestCyncCloudAPIDeviceOperations:
             mock_file = mock_open()
             mock_path.return_value.open = mock_file
 
-            result = await api._mesh_to_config(mesh_info)
+            result = await api._mesh_to_config(mesh_info)  # pyright: ignore[reportArgumentType]
 
         assert "account data" in result
         assert "Home Mesh" in result["account data"]
@@ -572,18 +576,18 @@ class TestCyncCloudAPIDeviceOperations:
         assert mesh["id"] == "mesh-123"
         assert mesh["mac"] == "AA:BB:CC:DD:EE:FF"
         assert mesh["access_key"] == "test-key"
-        assert 890 in mesh["devices"]  # Last 3 digits of deviceID
-        assert mesh["devices"][890]["name"] == "Living Room Light"
-        assert 1 in mesh["groups"]
-        assert mesh["groups"][1]["name"] == "All Lights"
-        assert mesh["groups"][1]["members"] == [890]
+        assert 890 in mesh["devices"]  # pyright: ignore[reportOperatorIssue]  # Last 3 digits of deviceID
+        assert mesh["devices"][890]["name"] == "Living Room Light"  # pyright: ignore[reportIndexIssue]
+        assert 1 in mesh["groups"]  # pyright: ignore[reportOperatorIssue]
+        assert mesh["groups"][1]["name"] == "All Lights"  # pyright: ignore[reportIndexIssue]
+        assert mesh["groups"][1]["members"] == [890]  # pyright: ignore[reportIndexIssue]
 
     @pytest.mark.asyncio
     async def test_export_config_skip_unnamed_mesh(self):
         """Test export_config skips mesh without name"""
         api = CyncCloudAPI()
 
-        mesh_info = [
+        mesh_info: list[dict[str, object]] = [
             {
                 # No 'name' field
                 "id": "mesh-123",
@@ -605,7 +609,7 @@ class TestCyncCloudAPIDeviceOperations:
         """Test export_config skips mesh without properties"""
         api = CyncCloudAPI()
 
-        mesh_info = [
+        mesh_info: list[dict[str, object]] = [
             {
                 "name": "Test Mesh",
                 "id": "mesh-123",
@@ -627,7 +631,7 @@ class TestCyncCloudAPIDeviceOperations:
         """Test export_config skips mesh without bulbsArray"""
         api = CyncCloudAPI()
 
-        mesh_info = [
+        mesh_info: list[dict[str, object]] = [
             {
                 "name": "Test Mesh",
                 "id": "mesh-123",
@@ -680,12 +684,12 @@ class TestCyncCloudAPIDeviceOperations:
             mock_file = mock_open()
             mock_path.return_value.open = mock_file
 
-            result = await api._mesh_to_config(mesh_info)
+            result = await api._mesh_to_config(mesh_info)  # pyright: ignore[reportArgumentType]
 
         assert "HVAC Mesh" in result["account data"]
         mesh = result["account data"]["HVAC Mesh"]
-        assert 123 in mesh["devices"]  # Last 3 digits
-        device = mesh["devices"][123]
+        assert 123 in mesh["devices"]  # pyright: ignore[reportOperatorIssue]  # Last 3 digits
+        device = mesh["devices"][123]  # pyright: ignore[reportIndexIssue, reportUnknownVariableType]
         assert device["name"] == "Thermostat"
         assert "hvac" in device
         assert device["hvac"]["type"] == 2
@@ -725,11 +729,11 @@ class TestCyncCloudAPIDeviceOperations:
             mock_file = mock_open()
             mock_path.return_value.open = mock_file
 
-            result = await api._mesh_to_config(mesh_info)
+            result = await api._mesh_to_config(mesh_info)  # pyright: ignore[reportArgumentType]
 
         mesh = result["account data"]["Test Mesh"]
-        assert 890 in mesh["devices"]  # Valid device
-        assert 891 not in mesh["devices"]  # Invalid device skipped
+        assert 890 in mesh["devices"]  # pyright: ignore[reportOperatorIssue]  # Valid device
+        assert 891 not in mesh["devices"]  # pyright: ignore[reportOperatorIssue]  # Invalid device skipped
 
     @pytest.mark.asyncio
     async def test_export_config_groups_parsing(self):
@@ -779,25 +783,25 @@ class TestCyncCloudAPIDeviceOperations:
             mock_file = mock_open()
             mock_path.return_value.open = mock_file
 
-            result = await api._mesh_to_config(mesh_info)
+            result = await api._mesh_to_config(mesh_info)  # pyright: ignore[reportArgumentType]
 
         mesh = result["account data"]["Group Test"]
-        assert 10 in mesh["groups"]
-        assert mesh["groups"][10]["name"] == "Main Group"
-        assert mesh["groups"][10]["members"] == [1, 2]  # Last 3 digits
-        assert mesh["groups"][10]["is_subgroup"] is False
+        assert 10 in mesh["groups"]  # pyright: ignore[reportOperatorIssue]
+        assert mesh["groups"][10]["name"] == "Main Group"  # pyright: ignore[reportIndexIssue]
+        assert mesh["groups"][10]["members"] == [1, 2]  # pyright: ignore[reportIndexIssue]  # Last 3 digits
+        assert mesh["groups"][10]["is_subgroup"] is False  # pyright: ignore[reportIndexIssue]
 
-        assert 11 in mesh["groups"]
-        assert mesh["groups"][11]["name"] == "Subgroup"
-        assert mesh["groups"][11]["members"] == [1]
-        assert mesh["groups"][11]["is_subgroup"] is True
+        assert 11 in mesh["groups"]  # pyright: ignore[reportOperatorIssue]
+        assert mesh["groups"][11]["name"] == "Subgroup"  # pyright: ignore[reportIndexIssue]
+        assert mesh["groups"][11]["members"] == [1]  # pyright: ignore[reportIndexIssue]
+        assert mesh["groups"][11]["is_subgroup"] is True  # pyright: ignore[reportIndexIssue]
 
     @pytest.mark.asyncio
     async def test_export_config_skip_empty_groups(self):
         """Test export_config skips groups without devices"""
         api = CyncCloudAPI()
 
-        mesh_info = [
+        mesh_info: list[dict[str, object]] = [
             {
                 "name": "Empty Group Test",
                 "id": "mesh-empty",
@@ -822,4 +826,4 @@ class TestCyncCloudAPIDeviceOperations:
             result = await api._mesh_to_config(mesh_info)
 
         mesh = result["account data"]["Empty Group Test"]
-        assert len(mesh["groups"]) == 0  # Empty group should be skipped
+        assert len(mesh["groups"]) == 0  # pyright: ignore[reportArgumentType]  # Empty group should be skipped

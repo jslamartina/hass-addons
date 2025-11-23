@@ -15,11 +15,151 @@ import uvloop
 from pydantic import BaseModel
 
 if TYPE_CHECKING:
+    from typing import Protocol
+
+    import aiomqtt
+
     from cync_controller.cloud_api import CyncCloudAPI
+    from cync_controller.devices.base_device import CyncDevice
+    from cync_controller.devices.group import CyncGroup
+    from cync_controller.devices.tcp_device import CyncTCPDevice
     from cync_controller.exporter import ExportServer
     from cync_controller.main import CyncController
     from cync_controller.mqtt.client import MQTTClient
-    from cync_controller.server import NCyncServer
+
+    class CyncDeviceProtocol(Protocol):
+        """Protocol for CyncDevice to break circular dependency."""
+
+        id: int | None
+        name: str | None
+        type: int | None
+        home_id: int | None
+        hass_id: str
+        wifi_mac: str | None
+        state: int
+        brightness: int | None
+        temperature: int | None
+        red: int | None
+        green: int | None
+        blue: int | None
+        online: bool
+        metadata: object | None
+
+        @property
+        def mac(self) -> str | None:
+            """MAC address property."""
+            ...
+
+        @property
+        def version(self) -> int | None:
+            """Firmware version property."""
+            ...
+
+        @property
+        def is_switch(self) -> bool:
+            """Whether device is a switch."""
+            ...
+
+        @property
+        def is_light(self) -> bool:
+            """Whether device is a light."""
+            ...
+
+        @property
+        def is_plug(self) -> bool:
+            """Whether device is a plug."""
+            ...
+
+        @property
+        def is_fan_controller(self) -> bool:
+            """Whether device is a fan controller."""
+            ...
+
+        @property
+        def supports_temperature(self) -> bool:
+            """Whether device supports temperature control."""
+            ...
+
+        @property
+        def supports_rgb(self) -> bool:
+            """Whether device supports RGB color."""
+            ...
+
+        @property
+        def bt_only(self) -> bool:
+            """Whether device is Bluetooth-only."""
+            ...
+
+    class MQTTClientProtocol(Protocol):
+        """Protocol for MQTTClient to break circular dependency."""
+
+        lp: str
+        topic: str
+        ha_topic: str
+        client: aiomqtt.Client | None
+
+        @property
+        def is_connected(self) -> bool:
+            """Check if MQTT client is connected."""
+            ...
+
+        def set_connected(self, connected: bool) -> None:
+            """Set the connection state."""
+            ...
+
+        def cync2kelvin(self, ct: int) -> int:
+            """Convert Cync white temp to Kelvin."""
+            ...
+
+        async def publish(self, topic: str, msg_data: bytes) -> bool:
+            """Publish a message to the MQTT broker."""
+            ...
+
+        async def publish_json_msg(self, topic: str, msg_data: dict[str, object]) -> bool:
+            """Publish a JSON message to the MQTT broker."""
+            ...
+
+    class CyncGroupProtocol(Protocol):
+        """Protocol defining CyncGroup attributes accessed in discovery."""
+
+        id: int | None
+        name: str | None
+        home_id: int | None
+        hass_id: str
+        is_subgroup: bool
+        member_ids: list[int]
+
+        @property
+        def supports_temperature(self) -> bool:
+            """Whether group supports temperature control."""
+            ...
+
+        @property
+        def supports_rgb(self) -> bool:
+            """Whether group supports RGB color."""
+            ...
+
+    class CyncTCPDeviceProtocol(Protocol):
+        """Protocol for CyncTCPDevice to break circular dependency."""
+
+        connected_at: float
+        ready_to_control: bool
+        # Add other attributes/methods of CyncTCPDevice that are accessed
+        # For example:
+        # async def ask_for_mesh_info(self, force_refresh: bool, refresh_id: str) -> None: ...
+
+    class ExportServerProtocol(Protocol):
+        """Protocol defining ExportServer attributes accessed in discovery."""
+
+        running: bool
+
+    class NCyncServerProtocol(Protocol):
+        """Protocol for NCyncServer to break circular dependency."""
+
+        devices: dict[int, CyncDeviceProtocol]
+        groups: dict[int, CyncGroupProtocol]
+        tcp_devices: dict[str, CyncTCPDeviceProtocol | None]
+        running: bool
 
 from cync_controller.const import *
 
@@ -57,7 +197,7 @@ class GlobalObjEnv(BaseModel):
 
 class GlobalObject:
     cync_lan: CyncController | None = None
-    ncync_server: NCyncServer | None = None
+    ncync_server: NCyncServerProtocol | None = None  # type: ignore[assignment]
     mqtt_client: MQTTClient | None = None
     loop: uvloop.Loop | asyncio.AbstractEventLoop | None = None
     export_server: ExportServer | None = None

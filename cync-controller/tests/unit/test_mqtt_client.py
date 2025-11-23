@@ -8,7 +8,7 @@ import asyncio
 import contextlib
 import json
 import time
-from typing import cast
+from typing import Any, cast
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -29,9 +29,9 @@ pytestmark = pytest.mark.filterwarnings("ignore:There is no current event loop:D
 @pytest.fixture(autouse=True)
 def reset_mqtt_singleton():
     """Reset MQTTClient singleton between tests"""
-    MQTTClient._instance = None
+    MQTTClient._instance = None  # type: ignore[reportPrivateUsage]
     yield
-    MQTTClient._instance = None
+    MQTTClient._instance = None  # type: ignore[reportPrivateUsage]
 
 
 class TestSlugify:
@@ -204,7 +204,7 @@ class TestMQTTClientConnection:
             assert client._connected is False
 
     @pytest.mark.asyncio
-    async def test_connect_bad_credentials(self, caplog):
+    async def test_connect_bad_credentials(self, caplog: Any):  # type: ignore[assignment]
         """Test connection with bad credentials"""
         with (
             patch("cync_controller.mqtt_client.g") as mock_g,
@@ -230,7 +230,7 @@ class TestMQTTClientConnection:
             connected = await client.connect()
 
             assert connected is False
-            assert "Bad username or password" in caplog.text
+            assert "Bad username or password" in caplog.text  # type: ignore[reportAny]
             mock_sigterm.assert_called_once()
 
 
@@ -244,7 +244,7 @@ class TestMQTTClientPublishing:
             mock_g.uuid = "test-uuid"
 
             client = MQTTClient()
-            client._connected = True  # Must be connected to publish
+            client._connected = True  # type: ignore[reportPrivateUsage]  # Must be connected to publish
             client.client.publish = AsyncMock()
 
             result = await client.publish("test/topic", b"test_payload")
@@ -275,7 +275,7 @@ class TestMQTTClientPublishing:
             assert published_data == test_data
 
     @pytest.mark.asyncio
-    async def test_publish_json_msg_error_handling(self, caplog):
+    async def test_publish_json_msg_error_handling(self, caplog: Any):  # type: ignore[assignment]
         """Test publish_json_msg handles errors gracefully"""
         with patch("cync_controller.mqtt_client.g") as mock_g:
             mock_g.uuid = "test-uuid"
@@ -287,6 +287,7 @@ class TestMQTTClientPublishing:
             result = await client.publish_json_msg("test/topic", test_data)
 
             assert result is False
+            _ = caplog  # Suppress unused parameter warning
 
 
 class TestMQTTClientAvailability:
@@ -307,7 +308,7 @@ class TestMQTTClientAvailability:
 
             client = MQTTClient()
             client.topic = "cync_lan"
-            client._connected = True
+            client._connected = True  # type: ignore[reportPrivateUsage]
             client.client.publish = AsyncMock()
 
             result = await client.pub_online(0x1234, True)
@@ -331,7 +332,7 @@ class TestMQTTClientAvailability:
 
             client = MQTTClient()
             client.topic = "cync_lan"
-            client._connected = True
+            client._connected = True  # type: ignore[reportPrivateUsage]
             client.client.publish = AsyncMock()
 
             result = await client.pub_online(0x1234, False)
@@ -382,12 +383,12 @@ class TestMQTTClientStateUpdates:
 
             client = MQTTClient()
             client.topic = "cync_lan"
-            client._connected = True
+            client._connected = True  # type: ignore[reportPrivateUsage]
             client.client = MagicMock()
             client.client.publish = AsyncMock()
             client.state_updates.send_device_status = AsyncMock(return_value=True)
 
-            result = await client.update_device_state(mock_device, 1)
+            result = await client.update_device_state(mock_device, 1)  # pyright: ignore[reportUnknownMemberType]
 
             assert result is True
             # Should call send_device_status
@@ -417,11 +418,11 @@ class TestMQTTClientStateUpdates:
 
             client = MQTTClient()
             client.topic = "cync_lan"
-            client._connected = True
+            client._connected = True  # type: ignore[reportPrivateUsage]
             client.client = MagicMock()
             client.client.publish = AsyncMock()
 
-            result = await client.update_device_state(mock_device, 0)
+            result = await client.update_device_state(mock_device, 0)  # pyright: ignore[reportUnknownMemberType]
 
             assert result is True
             # Should call publish
@@ -440,12 +441,12 @@ class TestMQTTClientStateUpdates:
 
             client = MQTTClient()
             client.topic = "cync_lan"
-            client._connected = True
+            client._connected = True  # type: ignore[reportPrivateUsage]
             client.client = MagicMock()
             client.client.publish = AsyncMock()
             client.state_updates.send_device_status = AsyncMock(return_value=True)
 
-            result = await client.update_brightness(mock_device, 75)
+            result = await client.update_brightness(mock_device, 75)  # pyright: ignore[reportUnknownMemberType]
 
             assert result is True
             # Should call send_device_status with brightness
@@ -464,12 +465,12 @@ class TestMQTTClientStateUpdates:
 
             client = MQTTClient()
             client.topic = "cync_lan"
-            client._connected = True
+            client._connected = True  # type: ignore[reportPrivateUsage]
             client.client = MagicMock()
             client.client.publish = AsyncMock()
             client.state_updates.send_device_status = AsyncMock(return_value=True)
 
-            result = await client.update_temperature(mock_device, 50)
+            result = await client.update_temperature(mock_device, 50)  # pyright: ignore[reportUnknownMemberType]
 
             assert result is True
             # Should call send_device_status with temperature
@@ -490,12 +491,12 @@ class TestMQTTClientStateUpdates:
 
             client = MQTTClient()
             client.topic = "cync_lan"
-            client._connected = True
+            client._connected = True  # type: ignore[reportPrivateUsage]
             client.client = MagicMock()
             client.client.publish = AsyncMock()
             client.state_updates.send_device_status = AsyncMock(return_value=True)
 
-            result = await client.update_rgb(mock_device, (255, 128, 64))
+            result = await client.update_rgb(mock_device, (255, 128, 64))  # pyright: ignore[reportUnknownMemberType]
 
             assert result is True
             # Should call send_device_status with RGB
@@ -522,7 +523,7 @@ class TestMQTTClientBirthWill:
 
             client = MQTTClient()
             client.topic = "cync_lan"
-            client._connected = True
+            client._connected = True  # type: ignore[reportPrivateUsage]
 
             result = await client.send_birth_msg()
 
@@ -541,7 +542,7 @@ class TestMQTTClientBirthWill:
 
             client = MQTTClient()
             client.topic = "cync_lan"
-            client._connected = True
+            client._connected = True  # type: ignore[reportPrivateUsage]
             client.client.publish = AsyncMock()
 
             result = await client.send_will_msg()
@@ -629,11 +630,11 @@ class TestMQTTClientBrightnessConversion:
             client = MQTTClient()
 
             # Test boundary values
-            assert client._brightness_to_percentage(0) == 0
-            assert client._brightness_to_percentage(255) == 100
+            assert client._brightness_to_percentage(0) == 0  # type: ignore[reportPrivateUsage]
+            assert client._brightness_to_percentage(255) == 100  # type: ignore[reportPrivateUsage]
 
             # Test mid-range
-            result = client._brightness_to_percentage(128)
+            result = client._brightness_to_percentage(128)  # type: ignore[reportPrivateUsage]
             # 128/255 * 100  50
             assert 49 <= result <= 51
 
@@ -681,7 +682,7 @@ class TestMQTTClientDiscovery:
             client = MQTTClient()
             client.topic = "cync_lan"
             client.ha_topic = "homeassistant"
-            client._connected = True
+            client._connected = True  # type: ignore[reportPrivateUsage]
             # Mock all internal methods called by discovery
             client.publish_json_msg = AsyncMock(return_value=True)
             client.pub_online = AsyncMock(return_value=True)
@@ -708,7 +709,7 @@ class TestMQTTClientDiscovery:
             mock_g.ncync_server.groups = {}
 
             client = MQTTClient()
-            client._connected = True
+            client._connected = True  # type: ignore[reportPrivateUsage]
             client.publish_json_msg = AsyncMock(return_value=True)
             # Mock the discovery's create_bridge_device method
             client.discovery.create_bridge_device = AsyncMock(return_value=True)
@@ -736,7 +737,7 @@ class TestDeviceCommand:
 
             assert cmd.cmd_type == "set_power"
             assert cmd.device_id == "device_1234"
-            assert cmd.params == {"state": 1}
+            assert cmd.params == {"state": 1}  # pyright: ignore[reportUnknownMemberType]
             assert cmd.timestamp == 1234.567
 
     def test_device_command_with_multiple_params(self):
@@ -748,7 +749,7 @@ class TestDeviceCommand:
 
             assert cmd.cmd_type == "set_rgb"
             assert cmd.device_id == 0x5678
-            assert cmd.params == {"red": 255, "green": 128, "blue": 64}
+            assert cmd.params == {"red": 255, "green": 128, "blue": 64}  # pyright: ignore[reportUnknownMemberType]
             assert cmd.timestamp == 9876.543
 
     def test_device_command_with_no_params(self):
@@ -760,7 +761,7 @@ class TestDeviceCommand:
 
             assert cmd.cmd_type == "set_power"
             assert cmd.device_id == "group_9999"
-            assert cmd.params == {}
+            assert cmd.params == {}  # pyright: ignore[reportUnknownMemberType]
             assert cmd.timestamp == 1111.222
 
     def test_device_command_timestamp_uniqueness(self):
@@ -855,11 +856,11 @@ class TestCommandProcessor:
         processor = CommandProcessor()
 
         # Call __init__ again should not create new queue
-        original_queue = processor._queue
+        original_queue: Any = processor._queue  # pyright: ignore[reportUnknownMemberType, reportUnknownVariableType]
         processor.__init__()
 
         # Queue should be the same
-        assert processor._queue is original_queue
+        assert processor._queue is original_queue  # pyright: ignore[reportUnknownMemberType]
 
     @pytest.mark.asyncio
     async def test_command_processor_enqueue_command(self):
@@ -873,7 +874,7 @@ class TestCommandProcessor:
             await processor.enqueue(cmd)
 
             # Verify command was added to queue
-            assert not processor._queue.empty()
+            assert not processor._queue.empty()  # pyright: ignore[reportUnknownMemberType]
 
     @pytest.mark.asyncio
     async def test_command_processor_queue_fifo_ordering(self):
@@ -892,9 +893,9 @@ class TestCommandProcessor:
             await processor.enqueue(cmd3)
 
             # Dequeue and verify FIFO order
-            dequeued1: DeviceCommand = cast(DeviceCommand, await processor._queue.get())
-            dequeued2: DeviceCommand = cast(DeviceCommand, await processor._queue.get())
-            dequeued3: DeviceCommand = cast(DeviceCommand, await processor._queue.get())
+            dequeued1: DeviceCommand = cast(DeviceCommand, await processor._queue.get())  # pyright: ignore[reportUnknownMemberType]
+            dequeued2: DeviceCommand = cast(DeviceCommand, await processor._queue.get())  # pyright: ignore[reportUnknownMemberType]
+            dequeued3: DeviceCommand = cast(DeviceCommand, await processor._queue.get())  # pyright: ignore[reportUnknownMemberType]
 
             assert dequeued1.cmd_type == "set_power"
             assert dequeued2.cmd_type == "set_brightness"
@@ -1062,9 +1063,9 @@ class TestMQTTClientKelvinConversion:
 @pytest.fixture(autouse=True)
 def reset_command_processor_singleton():
     """Reset CommandProcessor singleton between tests"""
-    CommandProcessor._instance = None
+    CommandProcessor._instance = None  # type: ignore[reportPrivateUsage]
     yield
-    CommandProcessor._instance = None
+    CommandProcessor._instance = None  # type: ignore[reportPrivateUsage]
 
 
 class TestSetPowerCommand:
@@ -1080,7 +1081,7 @@ class TestSetPowerCommand:
         assert cmd.cmd_type == "set_power"
         assert cmd.device_id == 42
         assert cmd.state == 1
-        assert cmd.device_or_group is device
+        assert cmd.device_or_group is device  # pyright: ignore[reportUnknownMemberType]
 
     @pytest.mark.asyncio
     async def test_set_power_command_execute_calls_set_power(self):
@@ -1167,7 +1168,7 @@ class TestSetBrightnessCommand:
         assert cmd.cmd_type == "set_brightness"
         assert cmd.device_id == 42
         assert cmd.brightness == 50
-        assert cmd.device_or_group is device
+        assert cmd.device_or_group is device  # pyright: ignore[reportUnknownMemberType]
 
     @pytest.mark.asyncio
     async def test_set_brightness_command_execute_calls_set_brightness(self):
@@ -1229,7 +1230,7 @@ class TestCommandProcessorQueue:
         await processor.enqueue(mock_command)
 
         # Command should be in queue
-        assert processor._queue.qsize() == 1
+        assert processor._queue.qsize() == 1  # pyright: ignore[reportUnknownMemberType]
 
     @pytest.mark.asyncio
     async def test_enqueue_starts_processing(self):
@@ -1355,19 +1356,19 @@ class TestCommandProcessorExecution:
             await asyncio.sleep(0.1)
 
             # Command should have been removed from queue despite failure
-            assert processor._processing is False or processor._queue.empty()
+            assert processor._processing is False or processor._queue.empty()  # pyright: ignore[reportUnknownMemberType]
 
     @pytest.mark.asyncio
     async def test_process_next_processes_multiple_commands_sequentially(self):
         """Test that process_next processes multiple commands in order"""
         processor = CommandProcessor()
 
-        call_order = []
+        call_order: list[str] = []
 
         def make_mock_command(name: str):
             mock = MagicMock(spec=DeviceCommand)
-            mock.publish_optimistic = AsyncMock(side_effect=lambda: call_order.append(f"{name}_optimistic"))
-            mock.execute = AsyncMock(side_effect=lambda: call_order.append(f"{name}_execute"))
+            mock.publish_optimistic = AsyncMock(side_effect=lambda: call_order.append(f"{name}_optimistic"))  # type: ignore[reportUnknownMemberType]
+            mock.execute = AsyncMock(side_effect=lambda: call_order.append(f"{name}_execute"))  # type: ignore[reportUnknownMemberType]
             mock.cmd_type = f"{name}_command"
             mock.device_id = 42
             return mock
@@ -1446,7 +1447,7 @@ class TestMQTTUpdateDeviceFromSubgroup:
             client.client = MagicMock()
             client.client.publish = AsyncMock()
 
-            result = await client.update_switch_from_subgroup(mock_device, 1, "Subgroup")
+            result = await client.update_switch_from_subgroup(mock_device, 1, "Subgroup")  # pyright: ignore[reportUnknownMemberType]
 
             assert result is True
             assert mock_device.state == 1
@@ -1463,7 +1464,7 @@ class TestMQTTUpdateDeviceFromSubgroup:
             mock_device.name = "Light"
 
             client = MQTTClient()
-            result = await client.update_switch_from_subgroup(mock_device, 1, "Subgroup")
+            result = await client.update_switch_from_subgroup(mock_device, 1, "Subgroup")  # pyright: ignore[reportUnknownMemberType]
 
             assert result is False
 
@@ -1479,7 +1480,7 @@ class TestMQTTUpdateDeviceFromSubgroup:
             mock_device.name = "Switch"
 
             client = MQTTClient()
-            result = await client.update_switch_from_subgroup(mock_device, 1, "Subgroup")
+            result = await client.update_switch_from_subgroup(mock_device, 1, "Subgroup")  # pyright: ignore[reportUnknownMemberType]
 
             assert result is False
 
@@ -1499,11 +1500,11 @@ class TestMQTTUpdateDeviceFromSubgroup:
 
             client = MQTTClient()
             client.topic = "cync_lan"
-            client._connected = True
+            client._connected = True  # type: ignore[reportPrivateUsage]
             client.client = MagicMock()
             client.client.publish = AsyncMock()
 
-            result = await client.update_switch_from_subgroup(mock_device, 0, "Subgroup")
+            result = await client.update_switch_from_subgroup(mock_device, 0, "Subgroup")  # pyright: ignore[reportUnknownMemberType]
 
             assert result is True
             # Should publish OFF state
@@ -1544,7 +1545,7 @@ class TestMQTTSyncGroupSwitches:
             mock_g.ncync_server.devices = {1: switch1, 2: switch2}
 
             client = MQTTClient()
-            client._connected = True
+            client._connected = True  # type: ignore[reportPrivateUsage]
             client.client = MagicMock()
             client.client.publish = AsyncMock()
 
@@ -1589,7 +1590,7 @@ class TestMQTTSyncGroupSwitches:
             mock_g.ncync_server.devices = {1: switch1}
 
             client = MQTTClient()
-            client._connected = True
+            client._connected = True  # type: ignore[reportPrivateUsage]
             client.client = MagicMock()
             client.client.publish = AsyncMock()
 
@@ -1632,7 +1633,7 @@ class TestMQTTSyncGroupDevices:
             mock_g.ncync_server.devices = {1: switch, 2: light}
 
             client = MQTTClient()
-            client._connected = True
+            client._connected = True  # type: ignore[reportPrivateUsage]
             client.client = MagicMock()
             client.client.publish = AsyncMock()
 
@@ -1726,7 +1727,7 @@ class TestMQTTReceiverTask:
             mock_client_class.return_value = mock_client
 
             client = MQTTClient()
-            client._connected = True
+            client._connected = True  # type: ignore[reportPrivateUsage]
 
             # Should not raise exception, just skip
             with contextlib.suppress(StopAsyncIteration):
@@ -1760,7 +1761,7 @@ class TestMQTTReceiverTask:
             mock_client_class.return_value = mock_client
 
             client = MQTTClient()
-            client._connected = True
+            client._connected = True  # type: ignore[reportPrivateUsage]
 
             # Should not raise exception, just skip
             with contextlib.suppress(StopAsyncIteration):
@@ -1790,7 +1791,7 @@ class TestMQTTReceiverTask:
             mock_client_class.return_value = mock_client
 
             client = MQTTClient()
-            client._connected = True
+            client._connected = True  # type: ignore[reportPrivateUsage]
 
             # start_receiver_task is a coroutine that becomes an async generator when awaited
             # Run it as a task then cancel to simulate single message processing
@@ -1831,9 +1832,11 @@ class TestMQTTGroupCommandHandling:
 
             # Should enqueue SetPowerCommand for group
             cmd = SetPowerCommand(group, 1)
-            await CommandProcessor().enqueue(cmd)
+            processor = CommandProcessor()
+            processor.enqueue = AsyncMock()  # type: ignore[assignment]
+            await processor.enqueue(cmd)
 
-            CommandProcessor().enqueue.assert_called_once()
+            processor.enqueue.assert_called_once()  # type: ignore[reportAny]
 
     @pytest.mark.asyncio
     async def test_group_brightness_command(self):
@@ -1850,14 +1853,15 @@ class TestMQTTGroupCommandHandling:
             mock_g.ncync_server.devices = {}
 
             _ = MQTTClient()
-            CommandProcessor().enqueue = AsyncMock()
+            processor = CommandProcessor()
+            processor.enqueue = AsyncMock()  # type: ignore[assignment]
 
             # Simulate brightness command
 
             cmd = SetBrightnessCommand(group, 75)
-            await CommandProcessor().enqueue(cmd)
+            await processor.enqueue(cmd)
 
-            CommandProcessor().enqueue.assert_called_once()
+            processor.enqueue.assert_called_once()  # type: ignore[reportAny]
 
     @pytest.mark.asyncio
     async def test_group_not_found_handling(self):
@@ -1990,11 +1994,11 @@ class TestMQTTParseDeviceStatus:
 
             client = MQTTClient()
             client.topic = "cync_lan"
-            client._connected = True
+            client._connected = True  # type: ignore[reportPrivateUsage]
             client.client = MagicMock()
             client.client.publish = AsyncMock()
 
-            result = await client.parse_device_status(1, device_status, from_pkt="test")
+            result = await client.parse_device_status(1, device_status, from_pkt="test")  # pyright: ignore[reportUnknownMemberType]
 
             assert result is True
             client.client.publish.assert_called_once()
@@ -2031,11 +2035,11 @@ class TestMQTTParseDeviceStatus:
 
             client = MQTTClient()
             client.topic = "cync_lan"
-            client._connected = True
+            client._connected = True  # type: ignore[reportPrivateUsage]
             client.client = MagicMock()
             client.client.publish = AsyncMock()
 
-            result = await client.parse_device_status(1, device_status, from_pkt="test")
+            result = await client.parse_device_status(1, device_status, from_pkt="test")  # pyright: ignore[reportUnknownMemberType]
 
             assert result is True
             client.client.publish.assert_called_once()
@@ -2072,11 +2076,11 @@ class TestMQTTParseDeviceStatus:
 
             client = MQTTClient()
             client.topic = "cync_lan"
-            client._connected = True
+            client._connected = True  # type: ignore[reportPrivateUsage]
             client.client = MagicMock()
             client.client.publish = AsyncMock()
 
-            result = await client.parse_device_status(1, device_status, from_pkt="test")
+            result = await client.parse_device_status(1, device_status, from_pkt="test")  # pyright: ignore[reportUnknownMemberType]
 
             assert result is True
             client.client.publish.assert_called_once()
@@ -2100,12 +2104,12 @@ class TestMQTTParseDeviceStatus:
             mock_g.ncync_server.devices = {1: device}
 
             client = MQTTClient()
-            client._connected = True
+            client._connected = True  # type: ignore[reportPrivateUsage]
             client.client = MagicMock()
             client.client.publish = AsyncMock()
 
             # Should return False and not call send_device_status
-            result = await client.parse_device_status(1, device_status, from_pkt="mesh info")
+            result = await client.parse_device_status(1, device_status, from_pkt="mesh info")  # pyright: ignore[reportUnknownMemberType]
 
             assert result is False
             client.client.publish.assert_not_called()
@@ -2123,7 +2127,7 @@ class TestMQTTParseDeviceStatus:
 
             device_status = DeviceStatus(state=1)
 
-            result = await client.parse_device_status(999, device_status)
+            result = await client.parse_device_status(999, device_status)  # pyright: ignore[reportUnknownMemberType]
 
             assert result is False
 
@@ -2148,11 +2152,11 @@ class TestMQTTParseDeviceStatus:
 
             client = MQTTClient()
             client.topic = "cync_lan"
-            client._connected = True
+            client._connected = True  # type: ignore[reportPrivateUsage]
             client.client = MagicMock()
             client.client.publish = AsyncMock()
 
-            result = await client.parse_device_status(1, device_status, from_pkt="0x83")
+            result = await client.parse_device_status(1, device_status, from_pkt="0x83")  # pyright: ignore[reportUnknownMemberType]
 
             assert result is True
             # Should publish plain ON/OFF bytes (not JSON)
@@ -2179,11 +2183,11 @@ class TestMQTTParseDeviceStatus:
 
             client = MQTTClient()
             client.topic = "cync_lan"
-            client._connected = True
+            client._connected = True  # type: ignore[reportPrivateUsage]
             client.client = MagicMock()
             client.client.publish = AsyncMock()
 
-            result = await client.parse_device_status(1, device_status)
+            result = await client.parse_device_status(1, device_status)  # pyright: ignore[reportUnknownMemberType]
 
             assert result is True
             # Should publish preset mode
@@ -2281,11 +2285,11 @@ class TestMQTTUpdateDeviceStateEdgeCases:
 
             client = MQTTClient()
             client.topic = "cync_lan"
-            client._connected = True
+            client._connected = True  # type: ignore[reportPrivateUsage]
             client.client = MagicMock()
             client.client.publish = AsyncMock()
 
-            result = await client.update_device_state(device, 1)
+            result = await client.update_device_state(device, 1)  # pyright: ignore[reportUnknownMemberType]
 
             assert result is True
             assert device.state == 1
@@ -2309,11 +2313,11 @@ class TestMQTTUpdateDeviceStateEdgeCases:
 
             client = MQTTClient()
             client.topic = "cync_lan"
-            client._connected = True
+            client._connected = True  # type: ignore[reportPrivateUsage]
             client.client = MagicMock()
             client.client.publish = AsyncMock()
 
-            result = await client.update_device_state(device, 1)
+            result = await client.update_device_state(device, 1)  # pyright: ignore[reportUnknownMemberType]
 
             assert result is True
             assert device.state == 1
@@ -2336,11 +2340,11 @@ class TestMQTTUpdateDeviceStateEdgeCases:
 
             client = MQTTClient()
             client.topic = "cync_lan"
-            client._connected = True
+            client._connected = True  # type: ignore[reportPrivateUsage]
             client.client = MagicMock()
             client.client.publish = AsyncMock()
 
-            result = await client.update_device_state(device, 1)
+            result = await client.update_device_state(device, 1)  # pyright: ignore[reportUnknownMemberType]
 
             assert result is True
             assert device.state == 1
@@ -2381,11 +2385,11 @@ class TestRegisterSingleDevice:
             client = MQTTClient()
             client.topic = "cync_lan"
             client.ha_topic = "homeassistant"
-            client._connected = True
+            client._connected = True  # type: ignore[reportPrivateUsage]
             client.client = AsyncMock()
             client.client.publish = AsyncMock()
 
-            result = await client.register_single_device(device)
+            result = await client.register_single_device(device)  # pyright: ignore[reportUnknownMemberType]
 
             assert result is True
             client.client.publish.assert_called()
@@ -2407,11 +2411,11 @@ class TestRegisterSingleDevice:
     async def test_register_device_without_connection(self):
         """Test that register_single_device returns False when not connected"""
         client = MQTTClient()
-        client._connected = False
+        client._connected = False  # type: ignore[reportPrivateUsage]
 
         device = MagicMock()
 
-        result = await client.register_single_device(device)
+        result = await client.register_single_device(device)  # pyright: ignore[reportUnknownMemberType]
 
         assert result is False
 
@@ -2445,11 +2449,11 @@ class TestRegisterSingleDevice:
             client = MQTTClient()
             client.topic = "cync_lan"
             client.ha_topic = "homeassistant"
-            client._connected = True
+            client._connected = True  # type: ignore[reportPrivateUsage]
             client.client = AsyncMock()
             client.client.publish = AsyncMock()
 
-            result = await client.register_single_device(device)
+            result = await client.register_single_device(device)  # pyright: ignore[reportUnknownMemberType]
 
             assert result is True
             call_args = client.client.publish.call_args_list[0]
@@ -2499,11 +2503,11 @@ class TestRegisterSingleDevice:
             client = MQTTClient()
             client.topic = "cync_lan"
             client.ha_topic = "homeassistant"
-            client._connected = True
+            client._connected = True  # type: ignore[reportPrivateUsage]
             client.client = AsyncMock()
             client.client.publish = AsyncMock()
 
-            result = await client.register_single_device(device)
+            result = await client.register_single_device(device)  # pyright: ignore[reportUnknownMemberType]
 
             assert result is True
             call_args = client.client.publish.call_args_list[0]
@@ -2542,11 +2546,11 @@ class TestRegisterSingleDevice:
             client = MQTTClient()
             client.topic = "cync_lan"
             client.ha_topic = "homeassistant"
-            client._connected = True
+            client._connected = True  # type: ignore[reportPrivateUsage]
             client.client = AsyncMock()
             client.client.publish = AsyncMock()
 
-            result = await client.register_single_device(device)
+            result = await client.register_single_device(device)  # pyright: ignore[reportUnknownMemberType]
 
             assert result is True
             call_args = client.client.publish.call_args_list[0]

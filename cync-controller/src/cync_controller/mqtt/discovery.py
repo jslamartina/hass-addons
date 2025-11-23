@@ -31,101 +31,13 @@ from cync_controller.metadata.model_info import DeviceClassification, DeviceType
 from cync_controller.structs import GlobalObject
 
 if TYPE_CHECKING:
-    from cync_controller.mqtt.client import MQTTClient
-
-    class CyncDeviceProtocol(Protocol):
-        """Protocol defining CyncDevice attributes accessed in discovery."""
-
-        id: int | None
-        name: str | None
-        type: int | None
-        home_id: int | None
-        hass_id: str
-        wifi_mac: str | None
-        metadata: DeviceTypeInfo | None
-
-        @property
-        def mac(self) -> str | None:
-            """MAC address property."""
-            ...
-
-        @property
-        def version(self) -> int | None:
-            """Firmware version property."""
-            ...
-
-        @property
-        def is_switch(self) -> bool:
-            """Whether device is a switch."""
-            ...
-
-        @property
-        def is_light(self) -> bool:
-            """Whether device is a light."""
-            ...
-
-        @property
-        def is_fan_controller(self) -> bool:
-            """Whether device is a fan controller."""
-            ...
-
-        @property
-        def supports_brightness(self) -> bool:
-            """Whether device supports brightness control."""
-            ...
-
-        @property
-        def supports_temperature(self) -> bool:
-            """Whether device supports temperature control."""
-            ...
-
-        @property
-        def supports_rgb(self) -> bool:
-            """Whether device supports RGB color."""
-            ...
-
-        @property
-        def brightness(self) -> int | None:
-            """Current brightness level."""
-            ...
-
-        @property
-        def bt_only(self) -> bool:
-            """Whether device is Bluetooth-only."""
-            ...
-
-    class CyncGroupProtocol(Protocol):
-        """Protocol defining CyncGroup attributes accessed in discovery."""
-
-        id: int | None
-        name: str | None
-        home_id: int | None
-        hass_id: str
-        is_subgroup: bool
-        member_ids: list[int]
-
-        @property
-        def supports_temperature(self) -> bool:
-            """Whether group supports temperature control."""
-            ...
-
-        @property
-        def supports_rgb(self) -> bool:
-            """Whether group supports RGB color."""
-            ...
-
-    class NCyncServerProtocol(Protocol):
-        """Protocol defining NCyncServer attributes accessed in discovery."""
-
-        devices: dict[int, CyncDeviceProtocol]
-        groups: dict[int, CyncGroupProtocol]
-        tcp_devices: dict[str, Any]
-        running: bool
-
-    class ExportServerProtocol(Protocol):
-        """Protocol defining ExportServer attributes accessed in discovery."""
-
-        running: bool
+    from cync_controller.structs import (
+        CyncDeviceProtocol,
+        CyncGroupProtocol,
+        ExportServerProtocol,
+        MQTTClientProtocol,
+        NCyncServerProtocol,
+    )
 
 
 logger = get_logger(__name__)
@@ -166,9 +78,9 @@ def slugify(text: str) -> str:
 class DiscoveryHelper:
     """Helper class for MQTT discovery operations."""
 
-    def __init__(self, mqtt_client: MQTTClient) -> None:
+    def __init__(self, mqtt_client: MQTTClientProtocol) -> None:  # type: ignore[valid-type]
         """Initialize discovery helper."""
-        self.client: MQTTClient = mqtt_client
+        self.client: MQTTClientProtocol = mqtt_client  # type: ignore[assignment]
 
     def _extract_suggested_area(self, device: CyncDeviceProtocol, lp: str) -> str | None:
         """Extract suggested area from group membership or device name."""
