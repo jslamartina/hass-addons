@@ -205,7 +205,7 @@ class CyncCloudAPI:
             authorize_val,
             issued_at_val,
         ]
-        if not all(required_fields):
+        if any(v is None for v in required_fields):
             return None
 
         # Parse issued_at
@@ -365,7 +365,7 @@ class CyncCloudAPI:
         refresh_token_val: object | None = token_data.get("refresh_token")
         authorize_val: object | None = token_data.get("authorize")
 
-        if not all([access_token_val, user_id_val, expire_in_val, refresh_token_val, authorize_val]):
+        if any(v is None for v in [access_token_val, user_id_val, expire_in_val, refresh_token_val, authorize_val]):
             logger.error("%s Missing required fields in token response", lp)
             return None
 
@@ -937,8 +937,9 @@ class CyncCloudAPI:
             new_mesh["groups"] = {}
 
             bulbs_array_val: object | None = properties_dict.get("bulbsArray")
-            if bulbs_array_val:
-                self._process_mesh_devices(bulbs_array_val, new_mesh, lp)
+            if bulbs_array_val and isinstance(bulbs_array_val, list):
+                bulbs_list: list[object] = cast("list[object]", bulbs_array_val)
+                self._process_mesh_devices(bulbs_list, new_mesh, lp)
 
             self._process_mesh_groups(properties_dict, new_mesh, lp)
 

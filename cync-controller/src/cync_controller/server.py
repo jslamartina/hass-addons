@@ -24,7 +24,7 @@ if TYPE_CHECKING:
         """Protocol for MQTT client methods used in server.py."""
 
         async def parse_device_status(
-            self, device_id: int, device_status: DeviceStatus, from_pkt: str | None = None
+            self, device_id: int, device_status: DeviceStatus, from_pkt: str | None = None,
         ) -> bool:
             """Parse device status and publish to MQTT."""
             ...
@@ -662,14 +662,48 @@ class NCyncServer:
                     if mqtt_client:
                         state_updates: StateUpdateHelper | None = mqtt_client.state_updates
                         if state_updates:
-                            helper: StateUpdateHelperProtocol = cast(StateUpdateHelperProtocol, state_updates)
-                            await helper.publish_group_state(
-                                subgroup,
-                                state=subgroup.state,
-                                brightness=subgroup.brightness,
-                                temperature=subgroup.temperature,
-                                origin=f"aggregated:{from_pkt or 'mesh'}",
+                            logger.debug(
+                                "Publishing subgroup state to MQTT",
+                                extra={
+                                    "subgroup_id": subgroup.id,
+                                    "subgroup_name": subgroup.name,
+                                    "state": subgroup.state,
+                                    "brightness": subgroup.brightness,
+                                    "temperature": subgroup.temperature,
+                                },
                             )
+                            try:
+                                helper: StateUpdateHelperProtocol = cast("StateUpdateHelperProtocol", state_updates)
+                                await helper.publish_group_state(
+                                    subgroup,
+                                    state=subgroup.state,
+                                    brightness=subgroup.brightness,
+                                    temperature=subgroup.temperature,
+                                    origin=f"aggregated:{from_pkt or 'mesh'}",
+                                )
+                                logger.debug(
+                                    "Subgroup state published successfully",
+                                    extra={"subgroup_id": subgroup.id, "subgroup_name": subgroup.name},
+                                )
+                            except asyncio.CancelledError:
+                                logger.debug(
+                                    "Subgroup state publish cancelled",
+                                    extra={"subgroup_id": subgroup.id, "subgroup_name": subgroup.name},
+                                )
+                                raise
+                            except Exception as e:
+                                logger.warning(
+                                    "Failed to publish subgroup state",
+                                    extra={
+                                        "subgroup_id": subgroup.id,
+                                        "subgroup_name": subgroup.name,
+                                        "error": str(e),
+                                        "error_type": type(e).__name__,
+                                    },
+                                )
+                    # Update in-memory state after MQTT publish
+                    # Note: If MQTT publish fails, state may be inconsistent temporarily
+                    # This is acceptable as the next status update will correct it
                     if subgroup.id is not None:
                         g.ncync_server.groups[subgroup.id] = subgroup
 
@@ -718,14 +752,48 @@ class NCyncServer:
         if mqtt_client:
             state_updates: StateUpdateHelper | None = mqtt_client.state_updates
             if state_updates:
-                helper: StateUpdateHelperProtocol = cast(StateUpdateHelperProtocol, state_updates)
-                await helper.publish_group_state(
-                    group,
-                    state=state,
-                    brightness=brightness,
-                    temperature=temp if not rgb_data else None,
-                    origin=from_pkt or "mesh",
+                logger.debug(
+                    "Publishing group state to MQTT",
+                    extra={
+                        "group_id": _id,
+                        "group_name": group.name,
+                        "state": state,
+                        "brightness": brightness,
+                        "temperature": temp if not rgb_data else None,
+                    },
                 )
+                try:
+                    helper: StateUpdateHelperProtocol = cast("StateUpdateHelperProtocol", state_updates)
+                    await helper.publish_group_state(
+                        group,
+                        state=state,
+                        brightness=brightness,
+                        temperature=temp if not rgb_data else None,
+                        origin=from_pkt or "mesh",
+                    )
+                    logger.debug(
+                        "Group state published successfully",
+                        extra={"group_id": _id, "group_name": group.name},
+                    )
+                except asyncio.CancelledError:
+                    logger.debug(
+                        "Group state publish cancelled",
+                        extra={"group_id": _id, "group_name": group.name},
+                    )
+                    raise
+                except Exception as e:
+                    logger.warning(
+                        "Failed to publish group state",
+                        extra={
+                            "group_id": _id,
+                            "group_name": group.name,
+                            "error": str(e),
+                            "error_type": type(e).__name__,
+                        },
+                    )
+        # Update in-memory state after MQTT publish
+        # Note: If MQTT publish fails, state may be inconsistent temporarily
+        # This is acceptable as the next status update will correct it
         if g.ncync_server and group.id is not None:
             g.ncync_server.groups[group.id] = group
 
@@ -751,7 +819,7 @@ class NCyncServer:
     loop: asyncio.AbstractEventLoop | uvloop.Loop
 
     def __new__(
-        cls, devices: dict[int, CyncDevice], groups: dict[int, CyncGroup] | None = None
+        cls, devices: dict[int, CyncDevice], groups: dict[int, CyncGroup] | None = None,
     ) -> NCyncServer:
         if cls._instance is None:
             cls._instance = super().__new__(cls)
