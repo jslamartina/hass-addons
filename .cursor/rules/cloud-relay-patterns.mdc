@@ -35,28 +35,25 @@ description: Cloud relay mode patterns and limitations
 
 ## LAN-only relay (privacy mode, blocks cloud)
 ./scripts/configure-addon.sh preset-lan-only
-$()$(
-  markdown
+```
 
-  ## Configuration Options
+## Configuration Options
 
-)$()yaml
+```yaml
 cloud_relay:
-enabled: false                # Enable relay mode
-forward_to_cloud: true        # Forward packets to cloud
-cloud_server: "35.196.85.236" # Cync cloud IP
-cloud_port: 23779             # Cync cloud port
-debug_packet_logging: false   # Verbose packet logging
-$()$(
-  markdown
+  enabled: false                # Enable relay mode
+  forward_to_cloud: true        # Forward packets to cloud
+  cloud_server: "35.196.85.236" # Cync cloud IP
+  cloud_port: 23779             # Cync cloud port
+  debug_packet_logging: false   # Verbose packet logging
+  # disable_ssl_verification: true  # INSECURE - see warning below
+```
 
-  **Security Warning:** Never use
-)disable_ssl_verification: true$(
-  in production.
+**Security Warning:** Never use `disable_ssl_verification: true` in production.
 
-  ## Switching Modes
+## Switching Modes
 
-)$()bash
+```bash
 ## Enable relay for debugging
 ./scripts/configure-addon.sh preset-relay-debug
 
