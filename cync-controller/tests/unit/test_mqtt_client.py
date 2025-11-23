@@ -27,26 +27,29 @@ pytestmark = pytest.mark.filterwarnings("ignore:There is no current event loop:D
 
 
 # Factory functions for typed mocks
-def create_mock_mqtt_client() -> Any:  # type: ignore[reportExplicitAny]
+# pyright: reportAny=false, reportExplicitAny=false
+def create_mock_mqtt_client() -> Any:
     """
     Create a fully mockable MQTT client mock.
 
     Returns Any to allow flexible mocking while maintaining type safety elsewhere.
     """
-    return MagicMock()
+    return MagicMock()  # type: ignore[reportAny]
 
 
-def create_mock_aiomqtt_client() -> Any:  # type: ignore[reportExplicitAny]
+# pyright: reportAny=false, reportExplicitAny=false
+def create_mock_aiomqtt_client() -> Any:
     """
     Create a fully mockable aiomqtt.Client mock.
 
     Returns Any to allow flexible mocking while maintaining type safety elsewhere.
     """
-    mock_client = MagicMock()
-    mock_client.publish = AsyncMock()
-    return mock_client
+    mock_client = MagicMock()  # type: ignore[reportAny]
+    mock_client.publish = AsyncMock()  # type: ignore[reportAny]
+    return mock_client  # type: ignore[reportAny]
 
 
+# pyright: reportPrivateUsage=false
 @pytest.fixture(autouse=True)
 def reset_mqtt_singleton():
     """Reset MQTTClient singleton between tests"""
@@ -225,7 +228,7 @@ class TestMQTTClientConnection:
             assert client.is_connected is False
 
     @pytest.mark.asyncio
-    async def test_connect_bad_credentials(self, caplog: Any):  # type: ignore[assignment, reportExplicitAny]
+    async def test_connect_bad_credentials(self, caplog: Any):  # type: ignore[assignment, reportAny, reportExplicitAny]
         """Test connection with bad credentials"""
         with (
             patch("cync_controller.mqtt_client.g") as mock_g,
@@ -292,7 +295,7 @@ class TestMQTTClientPublishing:
             call_args = mock_mqtt_client.publish.call_args  # type: ignore[reportAny]
             assert call_args[0][0] == "test/topic"  # type: ignore[reportAny]
             # Payload is the second positional arg
-            published_data = json.loads(call_args[0][1])  # type: ignore[reportAny]
+            published_data: dict[str, Any] = json.loads(call_args[0][1])  # type: ignore[reportAny]
             assert published_data == test_data
 
     @pytest.mark.asyncio
@@ -653,6 +656,7 @@ class TestMQTTClientTemperatureConversion:
                 assert abs(back_to_cync - cync_temp) <= 2
 
 
+# pyright: reportPrivateUsage=false
 class TestMQTTClientBrightnessConversion:
     """Tests for brightness conversion methods"""
 
@@ -868,6 +872,7 @@ class TestDeviceCommand:
             assert "params={}" in repr_str or "params=[]" in repr_str
 
 
+# pyright: reportPrivateUsage=false
 class TestCommandProcessor:
     """Tests for CommandProcessor singleton and queue operations"""
 
@@ -1099,6 +1104,7 @@ class TestMQTTClientKelvinConversion:
                 assert abs(recovered_k - original_k) <= 20
 
 
+# pyright: reportPrivateUsage=false
 @pytest.fixture(autouse=True)
 def reset_command_processor_singleton():
     """Reset CommandProcessor singleton between tests"""
@@ -1253,6 +1259,7 @@ class TestSetBrightnessCommand:
             mock_g.mqtt_client.update_device_state.assert_not_called()
 
 
+# pyright: reportPrivateUsage=false
 class TestCommandProcessorQueue:
     """Tests for CommandProcessor queue management"""
 
@@ -1309,6 +1316,7 @@ class TestCommandProcessorQueue:
         await processor.enqueue(mock_command)
 
 
+# pyright: reportPrivateUsage=false
 class TestCommandProcessorExecution:
     """Tests for CommandProcessor command execution"""
 
@@ -2234,6 +2242,7 @@ class TestMQTTParseDeviceStatus:
             mock_mqtt_client.publish.assert_called()  # type: ignore[reportAny]
 
 
+# pyright: reportPrivateUsage=false
 class TestMQTTTriggerStatusRefresh:
     """Tests for trigger_status_refresh method"""
 
@@ -2435,8 +2444,8 @@ class TestRegisterSingleDevice:
             mock_mqtt_client.publish.assert_called()  # type: ignore[reportAny]
             # Verify the entity was published with correct structure
             call_args = mock_mqtt_client.publish.call_args_list[0]  # type: ignore[reportAny, reportUnknownMemberType]
-            topic = call_args[0][0]  # type: ignore[reportAny]
-            payload = json.loads(call_args[0][1])  # type: ignore[reportAny]
+            topic: str = call_args[0][0]  # type: ignore[reportAny]
+            payload: dict[str, Any] = json.loads(call_args[0][1])  # type: ignore[reportAny]
 
             assert "homeassistant" in topic
             assert "light" in topic
@@ -2497,8 +2506,8 @@ class TestRegisterSingleDevice:
 
             assert result is True
             call_args = mock_mqtt_client.publish.call_args_list[0]  # type: ignore[reportAny, reportUnknownMemberType]
-            topic = call_args[0][0]  # type: ignore[reportAny]
-            payload = json.loads(call_args[0][1])  # type: ignore[reportAny]
+            topic: str = call_args[0][0]  # type: ignore[reportAny]
+            payload: dict[str, Any] = json.loads(call_args[0][1])  # type: ignore[reportAny]
 
             assert "switch" in topic
             # Switches shouldn't have schema field
@@ -2551,7 +2560,7 @@ class TestRegisterSingleDevice:
 
             assert result is True
             call_args = mock_mqtt_client.publish.call_args_list[0]  # type: ignore[reportAny]
-            payload = json.loads(call_args[0][1])
+            payload: dict[str, Any] = json.loads(call_args[0][1])  # type: ignore[reportAny]
 
             # Verify suggested_area is set from group
             assert payload["device"]["suggested_area"] == "Living Room"
@@ -2594,7 +2603,7 @@ class TestRegisterSingleDevice:
 
             assert result is True
             call_args = mock_mqtt_client.publish.call_args_list[0]  # type: ignore[reportAny]
-            payload = json.loads(call_args[0][1])
+            payload: dict[str, Any] = json.loads(call_args[0][1])  # type: ignore[reportAny]
 
             # Verify suggested_area was extracted from name (Bedroom Light 1 -> Bedroom)
             assert payload["device"]["suggested_area"] == "Bedroom"
