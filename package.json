@@ -65,7 +65,7 @@
     "typescript-eslint": "^8.47.0"
   },
   "dependencies": {
-    "@brave/brave-search-mcp-server": "^2.0.59",
+    "@brave/brave-search-mcp-server": "^2.0.60",
     "@modelcontextprotocol/server-filesystem": "^2025.8.21",
     "node-fetch": "^3.3.2",
     "sh-syntax": "^0.5.8",
