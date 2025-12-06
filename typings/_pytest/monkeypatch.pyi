@@ -16,9 +16,7 @@ class MonkeyPatch:
         **kwargs: Any,
     ) -> None: ...
     @overload
-    def setattr(
-        self, target: str, value: Any, *, raising: bool = ..., **kwargs: Any
-    ) -> None: ...
+    def setattr(self, target: str, value: Any, *, raising: bool = ..., **kwargs: Any) -> None: ...
     def setattr(
         self,
         target: str | object,

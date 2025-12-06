@@ -116,7 +116,7 @@ Response text streams cleanly without markup interruptions.
 
 **API Key**: Set via environment variable `BRAVE_AI_GROUNDING_API_KEY` or `.env` file in package directory
 
-**CLI Tool**: `brave-ai-grounding-cli` (installed via `pip install -e tools/brave-ai-grounding-cli/`)
+**CLI Tool**: `brave-ai-grounding-cli` (installed via `pip install -e .` from repo root)
 
 **Setup**: Copy `.env.example` to `.env` and add your API key (see package README)
 

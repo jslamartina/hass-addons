@@ -5,44 +5,54 @@ These helpers work with pytest-playwright and enable comprehensive e2e testing.
 """
 
 import json
-import subprocess
+import os
 import time
-from typing import Any
+from functools import lru_cache
+from typing import cast
+
+import httpx
+from httpx import Client
+
+JSONDict = dict[str, object]
+LogEntry = JSONDict
+HTTP_OK = 200
+SUPERVISOR_BASE_URL = "http://supervisor"
+SUPERVISOR_TIMEOUT = 30.0
 
 
-def get_supervisor_token() -> str:
-    """Get Supervisor API token from hassio_cli container.
+def _supervisor_headers(token: str) -> dict[str, str]:
+    """Build headers for Supervisor API calls."""
+    return {"Authorization": f"Bearer {token}"}
 
-    Returns:
-        Supervisor token string
 
-    Raises:
-        RuntimeError: If token cannot be retrieved
-
-    """
-    try:
-        result = subprocess.run(
-            ["docker", "exec", "hassio_cli", "env"],
-            capture_output=True,
-            text=True,
-            check=True,
-            timeout=30,
+def _supervisor_request(method: str, path: str, token: str, **kwargs: object) -> httpx.Response:
+    """Perform a Supervisor API request."""
+    with Client(
+        base_url=SUPERVISOR_BASE_URL,
+        timeout=SUPERVISOR_TIMEOUT,
+    ) as client:
+        response = client.request(
+            method,
+            path,
+            headers=_supervisor_headers(token),
+            **kwargs,
         )
-
-        for line in result.stdout.splitlines():
-            if line.startswith("SUPERVISOR_TOKEN="):
-                token = line.split("=", 1)[1].strip()
-                if token:
-                    return token
-
-        raise RuntimeError("SUPERVISOR_TOKEN not found in hassio_cli environment")
-
-    except subprocess.CalledProcessError as e:
-        msg = f"Failed to get supervisor token: {e}"
-        raise RuntimeError(msg) from e
+    response.raise_for_status()
+    return response
 
 
-def get_addon_config(addon_slug: str) -> dict[str, Any]:
+@lru_cache(maxsize=1)
+def get_supervisor_token() -> str:
+    """Get Supervisor API token from environment."""
+    token = os.environ.get("SUPERVISOR_TOKEN") or os.environ.get("HASSIO_TOKEN")
+    if token:
+        return token
+
+    msg = "Supervisor token not found; set SUPERVISOR_TOKEN in the environment"
+    raise RuntimeError(msg)
+
+
+def get_addon_config(addon_slug: str) -> JSONDict:
     """Get current add-on configuration via Supervisor API.
 
     Args:
@@ -54,28 +64,19 @@ def get_addon_config(addon_slug: str) -> dict[str, Any]:
     """
     token = get_supervisor_token()
 
-    result = subprocess.run(
-        [
-            "docker",
-            "exec",
-            "hassio_cli",
-            "curl",
-            "-sSL",
-            "-H",
-            f"Authorization: Bearer {token}",
-            f"http://supervisor/addons/{addon_slug}/info",
-        ],
-        capture_output=True,
-        text=True,
-        check=True,
-        timeout=30,
-    )
-
-    data = json.loads(result.stdout)
-    return data.get("data", {}).get("options", {})
+    response = _supervisor_request("GET", f"/addons/{addon_slug}/info", token)
+    raw_data: object = response.json()
+    if not isinstance(raw_data, dict):
+        return {}
+    data: JSONDict = cast(JSONDict, raw_data)
+    data_section: object = data.get("data")
+    if not isinstance(data_section, dict):
+        return {}
+    options: object = data_section.get("options")
+    return cast(JSONDict, options) if isinstance(options, dict) else {}
 
 
-def update_addon_config(addon_slug: str, config: dict[str, Any]) -> bool:
+def update_addon_config(addon_slug: str, config: JSONDict) -> bool:
     """Update add-on configuration via Supervisor API.
 
     Args:
@@ -87,37 +88,16 @@ def update_addon_config(addon_slug: str, config: dict[str, Any]) -> bool:
 
     """
     token = get_supervisor_token()
-    config_json = json.dumps({"options": config})
-
-    result = subprocess.run(
-        [
-            "docker",
-            "exec",
-            "hassio_cli",
-            "curl",
-            "-sSL",
-            "-w",
-            "\n%{http_code}",
-            "-X",
+    try:
+        response = _supervisor_request(
             "POST",
-            "-H",
-            f"Authorization: Bearer {token}",
-            "-H",
-            "Content-Type: application/json",
-            "-d",
-            config_json,
-            f"http://supervisor/addons/{addon_slug}/options",
-        ],
-        capture_output=True,
-        text=True,
-        check=False,
-        timeout=30,
-    )
-
-    lines = result.stdout.strip().splitlines()
-    http_code = int(lines[-1]) if lines else 0
-
-    return http_code == 200
+            f"/addons/{addon_slug}/options",
+            token,
+            json={"options": config},
+        )
+    except httpx.HTTPError:
+        return False
+    return response.status_code == HTTP_OK
 
 
 def update_debug_log_level(addon_slug: str, enabled: bool) -> bool:
@@ -147,32 +127,15 @@ def restart_addon(addon_slug: str) -> bool:
 
     """
     token = get_supervisor_token()
-
-    result = subprocess.run(
-        [
-            "docker",
-            "exec",
-            "hassio_cli",
-            "curl",
-            "-sSL",
-            "-w",
-            "\n%{http_code}",
-            "-X",
+    try:
+        response = _supervisor_request(
             "POST",
-            "-H",
-            f"Authorization: Bearer {token}",
-            f"http://supervisor/addons/{addon_slug}/restart",
-        ],
-        capture_output=True,
-        text=True,
-        check=False,
-        timeout=30,
-    )
-
-    lines = result.stdout.strip().splitlines()
-    http_code = int(lines[-1]) if lines else 0
-
-    return http_code == 200
+            f"/addons/{addon_slug}/restart",
+            token,
+        )
+    except httpx.HTTPError:
+        return False
+    return response.status_code == HTTP_OK
 
 
 def restart_addon_and_wait(addon_slug: str, wait_seconds: int = 5) -> None:
@@ -187,11 +150,10 @@ def restart_addon_and_wait(addon_slug: str, wait_seconds: int = 5) -> None:
         msg = f"Failed to restart add-on: {addon_slug}"
         raise RuntimeError(msg)
 
-    print(f"✓ Add-on restart initiated, waiting {wait_seconds}s for startup...")
     time.sleep(wait_seconds)
 
 
-def get_addon_status(addon_slug: str) -> dict[str, Any]:
+def get_addon_status(addon_slug: str) -> JSONDict:
     """Get add-on status information via Supervisor API.
 
     Args:
@@ -202,29 +164,16 @@ def get_addon_status(addon_slug: str) -> dict[str, Any]:
 
     """
     token = get_supervisor_token()
-
-    result = subprocess.run(
-        [
-            "docker",
-            "exec",
-            "hassio_cli",
-            "curl",
-            "-sSL",
-            "-H",
-            f"Authorization: Bearer {token}",
-            f"http://supervisor/addons/{addon_slug}/info",
-        ],
-        capture_output=True,
-        text=True,
-        check=True,
-        timeout=30,
-    )
-
-    data = json.loads(result.stdout)
-    return data.get("data", {})
+    response = _supervisor_request("GET", f"/addons/{addon_slug}/info", token)
+    raw_data: object = response.json()
+    if not isinstance(raw_data, dict):
+        return {}
+    data: JSONDict = cast(JSONDict, raw_data)
+    info: object = data.get("data")
+    return cast(JSONDict, info) if isinstance(info, dict) else {}
 
 
-def read_json_logs(addon_slug: str, lines: int = 100) -> list[dict[str, Any]]:
+def read_json_logs(addon_slug: str, lines: int = 100) -> list[LogEntry]:
     """Read JSON logs from add-on container.
 
     Args:
@@ -235,29 +184,25 @@ def read_json_logs(addon_slug: str, lines: int = 100) -> list[dict[str, Any]]:
         List of log entry dictionaries
 
     """
-    # Container name uses hyphens: "addon_local_cync-controller"
-    container_name = f"addon_{addon_slug}"
-    log_file = "/var/log/cync_controller.json"
-
-    result = subprocess.run(
-        ["docker", "exec", container_name, "tail", f"-{lines}", log_file],
-        capture_output=True,
-        text=True,
-        check=False,
-        timeout=30,
-    )
-
-    if result.returncode != 0:
-        print(f"Warning: Could not read JSON logs: {result.stderr}")
+    token = get_supervisor_token()
+    try:
+        response = _supervisor_request(
+            "GET",
+            f"/addons/{addon_slug}/logs",
+            token,
+        )
+    except httpx.HTTPError:
         return []
 
-    logs: list[dict[str, Any]] = []
-    for line in result.stdout.splitlines():
-        line = line.strip()
+    logs: list[LogEntry] = []
+    for raw_line in response.text.splitlines()[-lines:]:
+        line = raw_line.strip()
         if not line:
             continue
         try:
-            logs.append(json.loads(line))
+            parsed: object = json.loads(line)
+            if isinstance(parsed, dict):
+                logs.append(cast(LogEntry, parsed))
         except json.JSONDecodeError:
             # Skip malformed lines
             continue
@@ -276,24 +221,18 @@ def read_human_logs(addon_slug: str, lines: int = 100) -> str:
         Log output as string
 
     """
-    result = subprocess.run(
-        ["ha", "addons", "logs", addon_slug],
-        capture_output=True,
-        text=True,
-        check=False,
-        timeout=30,
+    token = get_supervisor_token()
+    response = _supervisor_request(
+        "GET",
+        f"/addons/{addon_slug}/logs",
+        token,
     )
 
-    if result.returncode != 0:
-        msg = f"Failed to read logs: {result.stderr}"
-        raise RuntimeError(msg)
-
-    # Return last N lines
-    all_lines = result.stdout.splitlines()
+    all_lines = response.text.splitlines()
     return "\n".join(all_lines[-lines:])
 
 
-def get_log_levels_from_json(logs: list[dict[str, Any]]) -> set[str]:
+def get_log_levels_from_json(logs: list[LogEntry]) -> set[str]:
     """Extract unique log levels from parsed JSON logs.
 
     Args:
@@ -305,12 +244,13 @@ def get_log_levels_from_json(logs: list[dict[str, Any]]) -> set[str]:
     """
     levels: set[str] = set()
     for entry in logs:
-        if "level" in entry:
-            levels.add(entry["level"])
+        level_val = entry.get("level")
+        if isinstance(level_val, str):
+            levels.add(level_val)
     return levels
 
 
-def count_log_levels(logs: list[dict[str, Any]]) -> dict[str, int]:
+def count_log_levels(logs: list[LogEntry]) -> dict[str, int]:
     """Count occurrences of each log level.
 
     Args:
@@ -322,16 +262,16 @@ def count_log_levels(logs: list[dict[str, Any]]) -> dict[str, int]:
     """
     counts: dict[str, int] = {}
     for entry in logs:
-        if "level" in entry:
-            level = entry["level"]
-            counts[level] = counts.get(level, 0) + 1
+        level_val = entry.get("level")
+        if isinstance(level_val, str):
+            counts[level_val] = counts.get(level_val, 0) + 1
     return counts
 
 
 def filter_logs_by_level(
-    logs: list[dict[str, Any]],
+    logs: list[LogEntry],
     level: str,
-) -> list[dict[str, Any]]:
+) -> list[LogEntry]:
     """Filter logs to only entries of a specific level.
 
     Args:
@@ -346,9 +286,9 @@ def filter_logs_by_level(
 
 
 def filter_logs_by_logger(
-    logs: list[dict[str, Any]],
+    logs: list[LogEntry],
     logger_name: str,
-) -> list[dict[str, Any]]:
+) -> list[LogEntry]:
     """Filter logs to only entries from a specific logger.
 
     Args:
@@ -411,27 +351,24 @@ def apply_addon_preset(
     }
 
     if preset_name not in presets:
-        print(f"✗ Unknown preset: {preset_name}")
         return False
 
     # Merge preset into current config
     config_updates = presets[preset_name]
     for key, value in config_updates.items():
-        if key in current_config:
-            # All preset values are dicts, merge nested dicts
-            if isinstance(value, dict):  # pyright: ignore[reportUnnecessaryIsInstance]
-                current_config[key].update(value)
-            else:
-                current_config[key] = value
+        existing_value = current_config.get(key)
+        if isinstance(existing_value, dict):
+            existing_dict = cast(dict[str, object], existing_value)
+            existing_dict.update(value)
         else:
             current_config[key] = value
 
     # Update config
     success = update_addon_config(addon_slug, current_config)
     if success:
-        print(f"✓ Applied preset: {preset_name}")
+        pass
     else:
-        print(f"✗ Failed to apply preset: {preset_name}")
+        pass
     return success
 
 
@@ -445,20 +382,16 @@ def stop_addon(addon_slug: str) -> bool:
         True if stop initiated successfully
 
     """
-    result = subprocess.run(
-        ["docker", "exec", "hassio_cli", "ha", "addons", "stop", addon_slug],
-        capture_output=True,
-        text=True,
-        check=False,
-        timeout=30,
-    )
-
-    if result.returncode != 0:
-        print(
-            f"stop_addon failed for {addon_slug}: returncode={result.returncode}, stdout={result.stdout}, stderr={result.stderr}",
+    token = get_supervisor_token()
+    try:
+        response = _supervisor_request(
+            "POST",
+            f"/addons/{addon_slug}/stop",
+            token,
         )
-
-    return result.returncode == 0
+    except httpx.HTTPError:
+        return False
+    return response.status_code == HTTP_OK
 
 
 def start_addon(addon_slug: str) -> bool:
@@ -471,18 +404,13 @@ def start_addon(addon_slug: str) -> bool:
         True if start initiated successfully
 
     """
-    # Start the process and don't wait for completion since EMQX takes a while to start
-    process = subprocess.Popen(
-        ["docker", "exec", "hassio_cli", "ha", "addons", "start", addon_slug],
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
-    )
-
-    # Give it a moment to initiate
-    time.sleep(0.5)
-
-    # Return true immediately if process is still running (start initiated successfully)
-    # If it already exited, check the return code
-    if process.poll() is None:
-        return True
-    return process.returncode == 0
+    token = get_supervisor_token()
+    try:
+        response = _supervisor_request(
+            "POST",
+            f"/addons/{addon_slug}/start",
+            token,
+        )
+    except httpx.HTTPError:
+        return False
+    return response.status_code == HTTP_OK

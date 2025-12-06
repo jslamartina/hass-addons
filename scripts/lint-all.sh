@@ -94,48 +94,25 @@ fi
 # shellcheck disable=SC2329  # run_pyright is invoked indirectly via run_with_limit
 run_pyright() {
   local pyright_cmd=()
-  local failed_file
-  failed_file="$(mktemp)"
 
-  # Use basedpyright CLI (stricter, matches VS Code extension)
   if command -v basedpyright > /dev/null 2>&1; then
     pyright_cmd=("basedpyright")
     log_info "Using basedpyright from PATH: $(command -v basedpyright)"
   else
     log_error "basedpyright not found. Install via: pip install basedpyright"
-    rm -f "$failed_file"
     return 1
   fi
 
-  # Check python-rebuild-tcp-comm
-  if [ -f "$REPO_ROOT/python-rebuild-tcp-comm/pyrightconfig.json" ]; then
-    log_info "Checking python-rebuild-tcp-comm..."
-    (
-      cd "$REPO_ROOT/python-rebuild-tcp-comm"
-      if ! "${pyright_cmd[@]}" --project pyrightconfig.json; then
-        echo "1" > "$failed_file"
-      fi
-    )
+  if [ -f "$REPO_ROOT/pyrightconfig.json" ]; then
+    log_info "Checking repository pyrightconfig.json..."
+    if ! "${pyright_cmd[@]}" --project "$REPO_ROOT/pyrightconfig.json"; then
+      return 1
+    fi
+  else
+    log_warn "pyrightconfig.json not found at repository root; skipping type check."
   fi
 
-  # Check cync-controller
-  if [ -f "$REPO_ROOT/cync-controller/pyrightconfig.json" ]; then
-    log_info "Checking cync-controller..."
-    (
-      cd "$REPO_ROOT/cync-controller"
-      if ! "${pyright_cmd[@]}" --project pyrightconfig.json; then
-        echo "1" > "$failed_file"
-      fi
-    )
-  fi
-
-  # Check if any failures occurred
-  local failed=0
-  if [ -f "$failed_file" ] && [ -s "$failed_file" ]; then
-    failed=1
-  fi
-  rm -f "$failed_file"
-  return "$failed"
+  return 0
 }
 
 # Python type checking with basedpyright

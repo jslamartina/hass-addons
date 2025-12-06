@@ -217,6 +217,7 @@ dist/
 code-reviews/**
 working-files/**
 error_reports/**
+**/captures/**
 
 .ruff_cache/
 **/__pycache__/

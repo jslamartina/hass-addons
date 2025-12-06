@@ -6,16 +6,16 @@ Python script to automate Home Assistant onboarding using the reverse-engineered
 
 ```bash
 ## Basic usage (uses default credentials from hass-credentials.env)
-python3 scripts/automate-onboarding.py
+python3 scripts/automate_onboarding.py
 
 ## With custom URL
-HA_URL=http://localhost:8123 python3 scripts/automate-onboarding.py
+HA_URL=http://localhost:8123 python3 scripts/automate_onboarding.py
 
 ## With custom credentials
 HA_URL=http://localhost:8123 \
   HASS_USERNAME=dev \
   HASS_PASSWORD=dev \
-  python3 scripts/automate-onboarding.py
+  python3 scripts/automate_onboarding.py
 ```
 
 ## Environment Variables
@@ -80,7 +80,7 @@ Based on reverse-engineered protocol analysis:
 ### Default (Chicago)
 
 ```bash
-python3 scripts/automate-onboarding.py
+python3 scripts/automate_onboarding.py
 ```
 
 ### Custom Location
@@ -90,14 +90,14 @@ ONBOARDING_LATITUDE=40.7128 \
   ONBOARDING_LONGITUDE=-74.0060 \
   ONBOARDING_TIME_ZONE=America/New_York \
   ONBOARDING_UNIT_SYSTEM=imperial \
-  python3 scripts/automate-onboarding.py
+  python3 scripts/automate_onboarding.py
 ```
 
 ### Enable Analytics
 
 ```bash
 ONBOARDING_ANALYTICS=true \
-  python3 scripts/automate-onboarding.py
+  python3 scripts/automate_onboarding.py
 ```
 
 ## Dependencies

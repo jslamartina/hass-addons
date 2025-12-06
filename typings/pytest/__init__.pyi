@@ -1,7 +1,7 @@
 from collections.abc import Awaitable, Callable
 from contextlib import AbstractContextManager
 from types import TracebackType
-from typing import Any, Generic, NoReturn, TypeVar
+from typing import Any, NoReturn, TypeVar
 
 from . import logging as logging
 
@@ -11,8 +11,10 @@ _E = TypeVar("_E", bound=BaseException)
 class _MarkDecorator:
     def __call__(self, obj: Callable[..., _T]) -> Callable[..., _T]: ...
 
-class _Mark(Generic[_T]):
+class _Mark[T]:
     asyncio: Callable[[Callable[..., Awaitable[_T]]], Callable[..., Awaitable[_T]]]
+    parametrize: Callable[..., _MarkDecorator]
+    filterwarnings: Callable[..., _MarkDecorator]
 
     def __getattr__(self, name: str) -> _MarkDecorator: ...
 

@@ -1,0 +1,1059 @@
+"""MQTT discovery helpers for Home Assistant device registration.
+
+Provides device and bridge discovery functionality for MQTT integration.
+"""
+
+from __future__ import annotations
+
+import asyncio
+import importlib
+import json
+import re
+import unicodedata
+from typing import TYPE_CHECKING, cast
+
+import aiomqtt
+
+from cync_controller.const import (
+    CYNC_BRIDGE_DEVICE_REGISTRY_CONF,
+    CYNC_BRIDGE_OBJ_ID,
+    CYNC_EXPOSE_DEVICE_LIGHTS,
+    CYNC_MANUFACTURER,
+    CYNC_MAXK,
+    CYNC_MINK,
+    CYNC_VERSION,
+    FACTORY_EFFECTS_BYTES,
+    ORIGIN_STRUCT,
+)
+from cync_controller.logging_abstraction import get_logger
+from cync_controller.metadata.model_info import DeviceClassification, device_type_map
+
+# Import g directly from structs to avoid circular dependency with mqtt_client.py
+from cync_controller.structs import GlobalObject
+
+if TYPE_CHECKING:
+    from cync_controller.structs import (
+        CyncDeviceProtocol,
+        CyncGroupProtocol,
+        MQTTClientProtocol,
+    )
+
+
+logger = get_logger(__name__)
+
+
+def _get_g() -> GlobalObject:
+    """Return shared GlobalObject honoring legacy/mock patch points."""
+    for mod_name in (
+        "cync_controller.mqtt_client",
+        "cync_controller.devices.shared",
+        "cync_controller.devices",
+    ):
+        try:
+            module = importlib.import_module(mod_name)
+            if hasattr(module, "g"):
+                return cast("GlobalObject", module.g)
+        except ModuleNotFoundError:
+            continue
+        except Exception:
+            logger.debug("Failed to import %s for global object lookup", mod_name, exc_info=True)
+            continue
+    return GlobalObject()
+
+
+class GProxy:
+    """Proxy that forwards attribute access to the global object helper."""
+
+    def __getattr__(self, name: str) -> object:
+        """Delegate attribute access to the shared GlobalObject instance."""
+        return cast("object", getattr(_get_g(), name))
+
+
+g: GlobalObject
+if TYPE_CHECKING:
+    g = GlobalObject()
+else:  # pragma: no cover - dynamic proxy used at runtime
+    g = GProxy()
+bridge_device_reg_struct = CYNC_BRIDGE_DEVICE_REGISTRY_CONF
+
+# Constants for magic values
+FW_VERSION_LENGTH_5 = 5
+FW_VERSION_LENGTH_2 = 2
+BRIGHTNESS_OFF = 0
+BRIGHTNESS_LOW = 25
+BRIGHTNESS_MEDIUM = 50
+BRIGHTNESS_HIGH = 75
+BRIGHTNESS_MAX = 100
+OTP_MIN = 0
+OTP_MAX = 999999
+
+
+def slugify(text: str) -> str:
+    """Convert text to a slug suitable for entity IDs.
+
+    E.g., 'Hallway Lights' -> 'hallway_lights'
+    """
+    # Normalize unicode characters
+    text = unicodedata.normalize("NFKD", text)
+    # Remove non-ASCII characters
+    text = text.encode("ascii", "ignore").decode("ascii")
+    # Convert to lowercase
+    text = text.lower()
+    # Replace spaces and special characters with underscores
+    text = re.sub(r"[^\w\s-]", "", text)
+    text = re.sub(r"[-\s]+", "_", text)
+    # Remove leading/trailing underscores
+    return text.strip("_")
+
+
+class DiscoveryHelper:
+    """Helper class for MQTT discovery operations."""
+
+    def __init__(self, mqtt_client: MQTTClientProtocol) -> None:
+        """Initialize discovery helper."""
+        self.client: MQTTClientProtocol = mqtt_client
+
+    @staticmethod
+    def _preset_from_brightness(brightness: int) -> str:
+        """Map brightness value to fan preset mode."""
+        presets = {
+            BRIGHTNESS_OFF: "off",
+            BRIGHTNESS_LOW: "low",
+            BRIGHTNESS_MEDIUM: "medium",
+            BRIGHTNESS_HIGH: "high",
+            BRIGHTNESS_MAX: "max",
+        }
+        if brightness in presets:
+            return presets[brightness]
+        if brightness < BRIGHTNESS_LOW:
+            return "low"
+        if brightness < BRIGHTNESS_MEDIUM:
+            return "medium"
+        if brightness < BRIGHTNESS_HIGH:
+            return "high"
+        return "max"
+
+    @staticmethod
+    def _build_device_version_and_model(device: CyncDeviceProtocol) -> tuple[str, str]:
+        """Return firmware version string and model string for the device."""
+        dev_fw_version = str(device.version) if device.version is not None else ""
+        ver_str = "Unknown"
+        fw_len = len(dev_fw_version)
+        if fw_len == FW_VERSION_LENGTH_5:
+            if dev_fw_version != "00000":
+                ver_str = f"{dev_fw_version[0]}.{dev_fw_version[1]}.{dev_fw_version[2:]}"
+        elif fw_len == FW_VERSION_LENGTH_2:
+            ver_str = f"{dev_fw_version[0]}.{dev_fw_version[1]}"
+
+        model_str = "Unknown"
+        if device.type in device_type_map:
+            model_str = device_type_map[device.type].model_string
+        return ver_str, model_str
+
+    @staticmethod
+    def _build_connections(device: CyncDeviceProtocol) -> list[tuple[str, str]]:
+        """Build connection identifiers for the device."""
+        dev_connections: list[tuple[str, str]] = []
+        if device.mac:
+            dev_connections.append(("bluetooth", device.mac.casefold()))
+        if not device.bt_only and device.wifi_mac:
+            dev_connections.append(("mac", device.wifi_mac.casefold()))
+        return dev_connections
+
+    def _extract_suggested_area(self, device: CyncDeviceProtocol, lp: str) -> str | None:
+        """Extract suggested area from group membership or device name."""
+        suggested_area: str | None = None
+        ncync_server = g.ncync_server
+        if ncync_server is not None:
+            for group in ncync_server.groups.values():
+                if not group.is_subgroup and device.id in group.member_ids:
+                    suggested_area = group.name
+                    logger.debug(
+                        "%s Using group '%s' as area for device '%s' (ID: %s)",
+                        lp,
+                        suggested_area,
+                        device.name,
+                        device.id,
+                    )
+                    break
+
+        # Fallback: Extract area from device name if not in any room group
+        if not suggested_area and device.name:
+            # Common device type suffixes to remove
+            suffixes = [
+                "Switch",
+                "Light",
+                "Floodlight",
+                "Lamp",
+                "Bulb",
+                "Dimmer",
+                "Plug",
+                "Outlet",
+                "Fan",
+            ]
+            name_parts: list[str] = device.name.strip().split()
+            # Remove trailing numbers (e.g., "Floodlight 1" -> "Floodlight")
+            if name_parts and name_parts[-1].isdigit():
+                name_parts = name_parts[:-1]
+            # Remove device type suffix
+            for suffix in suffixes:
+                if name_parts and name_parts[-1] == suffix:
+                    name_parts = name_parts[:-1]
+                    break
+            # The first word is the area name
+            if name_parts:
+                suggested_area = name_parts[0]
+                logger.debug(
+                    "%s Extracted area '%s' from device name '%s' (fallback, not in any room group)",
+                    lp,
+                    suggested_area,
+                    device.name,
+                )
+        return suggested_area
+
+    def _build_device_registry_struct(  # noqa: PLR0913
+        self,
+        unique_id: str,
+        device: CyncDeviceProtocol,
+        dev_connections: list[tuple[str, str]],
+        ver_str: str,
+        model_str: str,
+        suggested_area: str | None,
+    ) -> dict[str, object]:
+        """Build device registry structure for Home Assistant."""
+        device_registry_struct: dict[str, object] = {
+            "identifiers": [unique_id],
+            "manufacturer": CYNC_MANUFACTURER,
+            "connections": dev_connections,
+            "name": device.name,
+            "sw_version": ver_str,
+            "model": model_str,
+            "via_device": str(g.uuid),
+        }
+        if suggested_area:
+            device_registry_struct["suggested_area"] = suggested_area
+        return device_registry_struct
+
+    def _determine_device_type(self, device: CyncDeviceProtocol, lp: str) -> str:
+        """Determine device type (light, switch, or fan)."""
+        dev_type = "light"  # Default fallback
+        metadata = device.metadata
+        if device.is_switch:
+            logger.debug(
+                "%s Device '%s' classified as switch (type: %s)",
+                lp,
+                device.name,
+                metadata.type if metadata else "None",
+            )
+            # Preserve fan controllers as fan regardless of flag
+            if metadata and getattr(metadata.capabilities, "fan", False):
+                dev_type = "fan"
+                logger.debug("%s Device '%s' reclassified as fan", lp, device.name)
+            else:
+                dev_type = "switch"
+        elif device.is_light:
+            dev_type = "light"
+            logger.debug("%s Device '%s' classified as light", lp, device.name)
+        # For unknown devices, try to infer from device type if available
+        elif device.type is not None and device.type in device_type_map:
+            # This shouldn't happen if metadata is properly set, but just in case
+            metadata_type = device_type_map[device.type].type
+            if metadata_type == DeviceClassification.SWITCH:
+                dev_type = "switch"
+                logger.debug(
+                    "%s Device '%s' classified as switch from device_type_map",
+                    lp,
+                    device.name,
+                )
+            elif metadata_type == DeviceClassification.LIGHT:
+                dev_type = "light"
+                logger.debug(
+                    "%s Device '%s' classified as light from device_type_map",
+                    lp,
+                    device.name,
+                )
+            else:
+                logger.debug(
+                    "%s Device '%s' unknown metadata type: %s, defaulting to light",
+                    lp,
+                    device.name,
+                    metadata_type,
+                )
+        else:
+            logger.debug(
+                ("%s Device '%s' unknown device type %s, defaulting to light (is_light: %s, is_switch: %s)"),
+                lp,
+                device.name,
+                device.type,
+                device.is_light,
+                device.is_switch,
+            )
+        return dev_type
+
+    def _build_entity_registry_struct(  # noqa: PLR0913
+        self,
+        device: CyncDeviceProtocol,
+        device_uuid: str,
+        unique_id: str,
+        default_entity_id: str,
+        dev_type: str,
+        device_registry_struct: dict[str, object],
+    ) -> dict[str, object]:
+        """Build entity registry structure for Home Assistant."""
+        entity_registry_struct: dict[str, object] = {
+            "default_entity_id": default_entity_id,
+            "name": None,
+            "command_topic": f"{self.client.topic}/set/{device_uuid}",
+            "state_topic": f"{self.client.topic}/status/{device_uuid}",
+            "avty_t": f"{self.client.topic}/availability/{device_uuid}",
+            "pl_avail": "online",
+            "pl_not_avail": "offline",
+            "state_on": "ON",
+            "state_off": "OFF",
+            "unique_id": unique_id,
+            "schema": "json",
+            "origin": {
+                "name": "cync-controller",
+                "sw_version": "0.2.1a1",
+                "support_url": "https://github.com/jslamartina/hass-addons",
+            },
+            "device": device_registry_struct,
+        }
+
+        if dev_type == "light":
+            # For true lights, always include brightness. For switches exposed as lights, include
+            # brightness only if the switch supports dimming.
+            # ALL lights with brightness must declare color modes (Home Assistant requirement)
+            switch_dimmable = (
+                bool(
+                    getattr(
+                        getattr(device.metadata, "capabilities", None),
+                        "dimmable",
+                        False,
+                    ),
+                )
+                if device.is_switch
+                else False
+            )
+            # Always add brightness for true lights (not switches), or for dimmable switches
+            if not device.is_switch or switch_dimmable:
+                entity_registry_struct.update({"brightness": True, "brightness_scale": 100})
+                entity_registry_struct["supported_color_modes"] = []
+                if device.supports_temperature:
+                    entity_registry_struct["supported_color_modes"].append("color_temp")
+                    entity_registry_struct["color_temp_kelvin"] = True
+                    entity_registry_struct["min_kelvin"] = CYNC_MINK
+                    entity_registry_struct["max_kelvin"] = CYNC_MAXK
+                if device.supports_rgb:
+                    entity_registry_struct["supported_color_modes"].append("rgb")
+                    entity_registry_struct["effect"] = True
+                    entity_registry_struct["effect_list"] = list(FACTORY_EFFECTS_BYTES.keys())
+                if not entity_registry_struct["supported_color_modes"]:
+                    entity_registry_struct["supported_color_modes"] = ["brightness"]
+            else:
+                # on/off light only (non-dimmable switch exposed as light)
+                _ = entity_registry_struct.pop("brightness", None)
+                _ = entity_registry_struct.pop("brightness_scale", None)
+                _ = entity_registry_struct.pop("supported_color_modes", None)
+        elif dev_type == "switch":
+            # Switch entities should not declare JSON schema
+            _ = entity_registry_struct.pop("schema", None)
+        elif dev_type == "fan":
+            entity_registry_struct["platform"] = "fan"
+            # fan can be controlled via light control structs:
+            # brightness -> max=255, high=191, medium=128, low=50, off=0
+            _ = entity_registry_struct.pop("state_on", None)
+            _ = entity_registry_struct.pop("state_off", None)
+            _ = entity_registry_struct.pop("schema", None)
+            entity_registry_struct["state_topic"] = f"{self.client.topic}/status/{device_uuid}"
+            entity_registry_struct["command_topic"] = f"{self.client.topic}/set/{device_uuid}"
+            entity_registry_struct["payload_on"] = "ON"
+            entity_registry_struct["payload_off"] = "OFF"
+            entity_registry_struct["preset_mode_command_topic"] = f"{self.client.topic}/set/{device_uuid}/preset"
+            entity_registry_struct["preset_mode_state_topic"] = f"{self.client.topic}/status/{device_uuid}/preset"
+            entity_registry_struct["preset_modes"] = [
+                "off",
+                "low",
+                "medium",
+                "high",
+                "max",
+            ]
+        return entity_registry_struct
+
+    async def _publish_fan_preset_mode(self, device: CyncDeviceProtocol, lp: str) -> None:
+        """Publish initial fan preset mode based on current brightness."""
+        if device.is_fan_controller and device.brightness is not None:
+            bri = device.brightness
+            preset_mode = self._preset_from_brightness(bri)
+
+            preset_mode_topic = f"{self.client.topic}/status/{device.hass_id}/preset"
+            mqtt_client = self.client.client
+            if mqtt_client is None:
+                logger.warning("%s MQTT client connection not available for fan preset publish", lp)
+                return
+            try:
+                await mqtt_client.publish(
+                    preset_mode_topic,
+                    preset_mode.encode(),
+                    qos=0,
+                    retain=True,
+                    timeout=3.0,
+                )
+                logger.info(
+                    "%s FAN INITIAL PRESET: Published '%s' (brightness=%s) for '%s' to %s",
+                    lp,
+                    preset_mode,
+                    bri,
+                    device.name,
+                    preset_mode_topic,
+                )
+            except Exception:
+                logger.warning(
+                    "%s Failed to publish initial fan preset mode for '%s'",
+                    lp,
+                    device.name,
+                )
+
+    async def register_single_device(self, device: CyncDeviceProtocol) -> bool:
+        """Register a single device with Home Assistant via MQTT discovery."""
+        lp = f"{self.client.lp}hass:"
+        if not self.client.is_connected:
+            return False
+
+        mqtt_client = self.client.client
+        if mqtt_client is None:
+            logger.warning("%s MQTT client connection not available for device registration", lp)
+            return False
+
+        try:
+            device_uuid: str = device.hass_id
+            unique_id = f"{device.home_id}_{device.id}"
+            # Generate entity ID from device name (e.g., "Hallway Light" -> "hallway_light")
+            entity_slug = slugify(device.name) if device.name else f"device_{device.id}"
+            ver_str, model_str = self._build_device_version_and_model(device)
+            dev_connections = self._build_connections(device)
+
+            suggested_area = self._extract_suggested_area(device, lp)
+            device_registry_struct = self._build_device_registry_struct(
+                unique_id,
+                device,
+                dev_connections,
+                ver_str,
+                model_str,
+                suggested_area,
+            )
+            dev_type = self._determine_device_type(device, lp)
+
+            # Generate default entity ID based on device type
+            final_platform = "fan" if dev_type == "fan" else dev_type
+            default_entity_id = f"{final_platform}.{entity_slug}"
+
+            entity_registry_struct = self._build_entity_registry_struct(
+                device,
+                device_uuid,
+                unique_id,
+                default_entity_id,
+                dev_type,
+                device_registry_struct,
+            )
+
+            # Conditionally publish device discovery: skip device-level lights if feature flag is off
+            if dev_type == "light" and not CYNC_EXPOSE_DEVICE_LIGHTS:
+                logger.info(
+                    "%s Skipping device light discovery for '%s' due to feature flag",
+                    lp,
+                    device.name,
+                )
+                return True
+
+            tpc_str_template = "{0}/{1}/{2}/config"
+            tpc = tpc_str_template.format(self.client.ha_topic, dev_type, device_uuid)
+            try:
+                json_payload = json.dumps(entity_registry_struct, indent=2)
+                logger.info(
+                    "%s Registering %s device: %s (ID: %s)",
+                    lp,
+                    dev_type,
+                    device.name,
+                    device.id,
+                )
+                _ = await mqtt_client.publish(
+                    tpc,
+                    json_payload.encode(),
+                    qos=0,
+                    retain=False,
+                )
+
+                await self._publish_fan_preset_mode(device, lp)
+
+            except Exception:
+                logger.exception("%s Unable to publish MQTT message for %s", lp, device.name)
+                return False
+            else:
+                return True
+        except Exception:
+            logger.exception("%s Error registering device %s", lp, device.name)
+            return False
+
+    async def _register_device_in_discovery(self, device: CyncDeviceProtocol, lp: str) -> None:
+        """Register a single device during homeassistant_discovery (uses ORIGIN_STRUCT)."""
+        device_uuid = device.hass_id
+        unique_id = f"{device.home_id}_{device.id}"
+        entity_slug = slugify(device.name) if device.name else f"device_{device.id}"
+        dev_fw_version = str(device.version) if device.version is not None else ""
+        ver_str = "Unknown"
+        fw_len = len(dev_fw_version)
+        if fw_len == FW_VERSION_LENGTH_5:
+            if dev_fw_version != "00000":
+                ver_str = f"{dev_fw_version[0]}.{dev_fw_version[1]}.{dev_fw_version[2:]}"
+        elif fw_len == FW_VERSION_LENGTH_2:
+            ver_str = f"{dev_fw_version[0]}.{dev_fw_version[1]}"
+        model_str = "Unknown"
+        if device.type in device_type_map:
+            model_str = device_type_map[device.type].model_string
+        dev_connections: list[tuple[str, str]] = []
+        if device.mac:
+            dev_connections.append(("bluetooth", device.mac.casefold()))
+        if not device.bt_only and device.wifi_mac:
+            dev_connections.append(("mac", device.wifi_mac.casefold()))
+
+        suggested_area = self._extract_suggested_area(device, lp)
+        device_registry_struct_ha = self._build_device_registry_struct(
+            unique_id,
+            device,
+            dev_connections,
+            ver_str,
+            model_str,
+            suggested_area,
+        )
+        dev_type = self._determine_device_type(device, lp)
+
+        # Generate default entity ID based on device type (same logic as register_single_device)
+        final_platform = "fan" if dev_type == "fan" else dev_type
+        default_entity_id = f"{final_platform}.{entity_slug}"
+
+        entity_registry_struct_ha = self._build_entity_registry_struct(
+            device,
+            device_uuid,
+            unique_id,
+            default_entity_id,
+            dev_type,
+            device_registry_struct_ha,
+        )
+        # Override origin to use ORIGIN_STRUCT instead of hardcoded
+        entity_registry_struct_ha["origin"] = ORIGIN_STRUCT
+        entity_registry_struct_ha["optimistic"] = False
+
+        if dev_type == "light" and not CYNC_EXPOSE_DEVICE_LIGHTS:
+            logger.info(
+                "%s Skipping device light discovery for '%s' due to feature flag",
+                lp,
+                device.name,
+            )
+            return
+
+        tpc_str_template = "{0}/{1}/{2}/config"
+        tpc = tpc_str_template.format(self.client.ha_topic, dev_type, device_uuid)
+        try:
+            json_payload = json.dumps(entity_registry_struct_ha, indent=2)
+            mqtt_client = self.client.client
+            if mqtt_client is None:
+                logger.warning("%s MQTT client connection not available for device discovery registration", lp)
+                return
+            _ = await mqtt_client.publish(
+                tpc,
+                json_payload.encode(),
+                qos=0,
+                retain=False,
+            )
+            logger.info(
+                "%s Registered %s: %s (ID: %s)",
+                lp,
+                dev_type,
+                device.name,
+                device.id,
+            )
+            await self._publish_fan_preset_mode(device, lp)
+        except Exception:
+            logger.exception("%s - Unable to publish mqtt message... skipped", lp)
+
+    async def trigger_device_rediscovery(self) -> bool:
+        """Trigger rediscovery of all devices currently in the devices dictionary."""
+        lp = f"{self.client.lp}hass:"
+        if not self.client.is_connected:
+            return False
+
+        logger.info("%s Triggering device rediscovery...", lp)
+        server = g.ncync_server
+        try:
+            if server is not None:
+                for device in server.devices.values():
+                    _ = await self.register_single_device(device)
+        except Exception:
+            logger.exception("%s Error during device rediscovery", lp)
+            return False
+        else:
+            logger.info("%s Device rediscovery completed", lp)
+            return True
+
+    async def _register_group_in_discovery(self, group: CyncGroupProtocol, lp: str) -> None:
+        """Register a single subgroup during homeassistant_discovery."""
+        server = g.ncync_server
+        if server is None:
+            return
+
+        group_uuid = group.hass_id
+        unique_id = f"{group.home_id}_group_{group.id}"
+
+        # Check if group contains any light-compatible devices
+        has_light_devices = any(
+            member_id in server.devices and server.devices[member_id].is_light for member_id in group.member_ids
+        )
+
+        logger.info(
+            "[SUBGROUP_CHECK] Group '%s' (ID: %s) - has_light_devices=%s, member_count=%d",
+            group.name,
+            group.id,
+            has_light_devices,
+            len(group.member_ids),
+        )
+
+        if not has_light_devices:
+            logger.info(
+                "%s Skipping light entity for group '%s' (ID: %s) - no light-compatible devices",
+                lp,
+                group.name,
+                group.id,
+            )
+            return
+
+        entity_slug = slugify(group.name) if group.name else f"group_{group.id}"
+        default_entity_id = f"light.{entity_slug}"
+
+        group_device_registry_struct: dict[str, object] = {
+            "identifiers": [unique_id],
+            "manufacturer": CYNC_MANUFACTURER,
+            "name": group.name,
+            "model": "Cync Subgroup",
+            "via_device": str(g.uuid),
+        }
+
+        group_entity_registry_struct: dict[str, object] = {
+            "default_entity_id": default_entity_id,
+            "name": None,
+            "command_topic": f"{self.client.topic}/set/{group_uuid}",
+            "state_topic": f"{self.client.topic}/status/{group_uuid}",
+            "avty_t": f"{self.client.topic}/availability/{group_uuid}",
+            "pl_avail": "online",
+            "pl_not_avail": "offline",
+            "state_on": "ON",
+            "state_off": "OFF",
+            "unique_id": unique_id,
+            "schema": "json",
+            "origin": ORIGIN_STRUCT,
+            "device": group_device_registry_struct,
+            "optimistic": False,
+        }
+
+        group_entity_registry_struct.update({"brightness": True, "brightness_scale": 100})
+        group_entity_registry_struct["supported_color_modes"] = []
+        if group.supports_temperature:
+            group_entity_registry_struct["supported_color_modes"].append("color_temp")
+            group_entity_registry_struct["color_temp_kelvin"] = True
+            group_entity_registry_struct["min_kelvin"] = CYNC_MINK
+            group_entity_registry_struct["max_kelvin"] = CYNC_MAXK
+        if group.supports_rgb:
+            group_entity_registry_struct["supported_color_modes"].append("rgb")
+        if not group_entity_registry_struct["supported_color_modes"]:
+            group_entity_registry_struct["supported_color_modes"] = ["brightness"]
+
+        tpc_str_template = "{0}/{1}/{2}/config"
+        tpc = tpc_str_template.format(self.client.ha_topic, "light", group_uuid)
+        try:
+            json_payload = json.dumps(group_entity_registry_struct, indent=2)
+            logger.debug("%s GROUP JSON for %s:\n%s", lp, group.name, json_payload)
+            logger.info(
+                "[SUBGROUP_PUBLISHING] Publishing group '%s' to topic: %s",
+                group.name,
+                tpc,
+            )
+            mqtt_client = self.client.client
+            if mqtt_client is None:
+                logger.warning("%s MQTT client connection not available for subgroup registration", lp)
+                return
+            publish_result = await mqtt_client.publish(
+                tpc,
+                json_payload.encode(),
+                qos=0,
+                retain=False,
+            )
+            logger.info(
+                "[SUBGROUP_PUBLISHED] ✓ Group '%s' (ID: %s) published successfully. Result: %s",
+                group.name,
+                group.id,
+                publish_result,
+            )
+            logger.info(
+                "%s Registered group '%s' (ID: %s) with %s devices",
+                lp,
+                group.name,
+                group.id,
+                len(group.member_ids),
+            )
+        except Exception:
+            logger.exception(
+                "[SUBGROUP_ERROR] ✗ Failed to publish group '%s' (ID: %s) to topic %s",
+                group.name,
+                group.id,
+                tpc,
+            )
+
+    async def homeassistant_discovery(self) -> bool:
+        """Build each configured Cync device for HASS device registry."""
+        lp = f"{self.client.lp}hass:"
+        ret = False
+        if self.client.is_connected:
+            logger.info("%s Starting device discovery...", lp)
+            _ = await self.create_bridge_device()
+            try:
+                server = g.ncync_server
+                if server is not None:
+                    for device in server.devices.values():
+                        await self._register_device_in_discovery(device, lp)
+
+                # Register groups (only subgroups)
+                subgroups: list[CyncGroupProtocol] = []
+                if server is not None:
+                    subgroups = [grp for grp in server.groups.values() if grp.is_subgroup]
+                logger.info("%s Registering %s subgroups...", lp, len(subgroups))
+                for group in subgroups:
+                    await self._register_group_in_discovery(group, lp)
+
+            except aiomqtt.MqttCodeError as mqtt_code_exc:
+                logger.warning("%s [MqttError] -> %s", lp, mqtt_code_exc)
+                self.client.set_connected(False)
+            except asyncio.CancelledError as can_exc:
+                logger.warning("%s [Task Cancelled] -> %s", lp, can_exc)
+                raise
+            except Exception:
+                logger.exception("%s [Exception]", lp)
+            else:
+                ret = True
+        logger.debug("%s Discovery complete (success: %s)", lp, ret)
+        return ret
+
+    async def _create_bridge_button_entities(
+        self,
+        bridge_base_unique_id: str,
+        bridge_device_reg_struct: dict[str, object],
+        template_tpc: str,
+        lp: str,
+    ) -> bool:
+        """Create button entities for bridge device."""
+        entity_type = "button"
+        ret = True
+
+        entity_unique_id = f"{bridge_base_unique_id}_restart"
+        restart_btn_entity_struct: dict[str, object] = {
+            "platform": "button",
+            "object_id": CYNC_BRIDGE_OBJ_ID + "_restart",
+            "command_topic": f"{self.client.topic}/set/bridge/restart",
+            "state_topic": f"{self.client.topic}/status/bridge/restart",
+            "avty_t": f"{self.client.topic}/availability/bridge",
+            "name": "Restart Cync Controller",
+            "unique_id": entity_unique_id,
+            "schema": "json",
+            "origin": ORIGIN_STRUCT,
+            "device": bridge_device_reg_struct,
+        }
+        if not await self.client.publish_json_msg(
+            template_tpc.format(self.client.ha_topic, entity_type, entity_unique_id),
+            restart_btn_entity_struct,
+        ):
+            logger.error("%s Failed to publish restart button entity config", lp)
+            ret = False
+
+        for btn_config in [
+            {
+                "unique_id": f"{bridge_base_unique_id}_start_export",
+                "object_id": f"{bridge_base_unique_id}_start_export",
+                "command_topic": f"{self.client.topic}/set/bridge/export/start",
+                "state_topic": f"{self.client.topic}/status/bridge/export/start",
+                "name": "Start Export",
+            },
+            {
+                "unique_id": f"{bridge_base_unique_id}_refresh_status",
+                "object_id": CYNC_BRIDGE_OBJ_ID + "_refresh_status",
+                "command_topic": f"{self.client.topic}/set/bridge/refresh_status",
+                "state_topic": f"{self.client.topic}/status/bridge/refresh_status",
+                "name": "Refresh Device Status",
+            },
+            {
+                "unique_id": f"{bridge_base_unique_id}_submit_otp",
+                "object_id": CYNC_BRIDGE_OBJ_ID + "_submit_otp",
+                "command_topic": f"{self.client.topic}/set/bridge/otp/submit",
+                "state_topic": f"{self.client.topic}/status/bridge/otp/submit",
+                "name": "Submit OTP",
+            },
+        ]:
+            btn_entity_conf: dict[str, object] = restart_btn_entity_struct.copy()
+            btn_entity_conf.update(btn_config)
+            if not await self.client.publish_json_msg(
+                template_tpc.format(self.client.ha_topic, entity_type, btn_config["unique_id"]),
+                btn_entity_conf,
+            ):
+                logger.error("%s Failed to publish %s button entity config", lp, btn_config["name"])
+                ret = False
+
+        return ret
+
+    async def _create_bridge_binary_sensors(
+        self,
+        bridge_base_unique_id: str,
+        bridge_device_reg_struct: dict[str, object],
+        template_tpc: str,
+        pub_tasks: list[asyncio.Task[object]],
+        lp: str,
+    ) -> bool:
+        """Create binary sensor entities for bridge device."""
+        entity_type = "binary_sensor"
+        ret = True
+
+        entity_unique_id = f"{bridge_base_unique_id}_tcp_server_running"
+        tcp_server_entity_conf: dict[str, object] = {
+            "object_id": entity_unique_id,
+            "name": "nCync TCP Server Running",
+            "state_topic": f"{self.client.topic}/status/bridge/tcp_server/running",
+            "unique_id": entity_unique_id,
+            "device_class": "running",
+            "icon": "mdi:server-network",
+            "avty_t": f"{self.client.topic}/availability/bridge",
+            "schema": "json",
+            "origin": ORIGIN_STRUCT,
+            "device": bridge_device_reg_struct,
+        }
+        if not await self.client.publish_json_msg(
+            template_tpc.format(self.client.ha_topic, entity_type, entity_unique_id),
+            tcp_server_entity_conf,
+        ):
+            logger.error("%s Failed to publish TCP server running entity config", lp)
+            ret = False
+        server = g.ncync_server
+        status = "ON" if server is not None and server.running is True else "OFF"
+        pub_tasks.append(
+            asyncio.create_task(
+                self.client.publish(f"{self.client.topic}/status/bridge/tcp_server/running", status.encode()),
+            ),
+        )
+
+        for sensor_config in [
+            {
+                "object_id": f"{bridge_base_unique_id}_export_server_running",
+                "unique_id": f"{bridge_base_unique_id}_export_server_running",
+                "name": "Cync Export Server Running",
+                "state_topic": f"{self.client.topic}/status/bridge/export_server/running",
+                "icon": "mdi:export-variant",
+            },
+            {
+                "object_id": f"{bridge_base_unique_id}_mqtt_client_connected",
+                "unique_id": f"{bridge_base_unique_id}_mqtt_client_connected",
+                "name": "Cync MQTT Client Connected",
+                "state_topic": f"{self.client.topic}/status/bridge/mqtt_client/connected",
+                "icon": "mdi:connection",
+                "device_class": "connectivity",
+            },
+        ]:
+            sensor_entity_conf: dict[str, object] = tcp_server_entity_conf.copy()
+            sensor_entity_conf.update(sensor_config)
+            if not await self.client.publish_json_msg(
+                template_tpc.format(self.client.ha_topic, entity_type, sensor_config["unique_id"]),
+                sensor_entity_conf,
+            ):
+                logger.error("%s Failed to publish %s entity config", lp, sensor_config["name"])
+                ret = False
+
+        # Publish export server status (always publish, "OFF" if not available)
+        export_server = g.export_server
+        export_status = "ON" if export_server is not None and export_server.running is True else "OFF"
+        pub_tasks.append(
+            asyncio.create_task(
+                self.client.publish(
+                    f"{self.client.topic}/status/bridge/export_server/running",
+                    export_status.encode(),
+                ),
+            ),
+        )
+
+        # Publish MQTT client connected status
+        mqtt_status = "ON" if self.client.is_connected else "OFF"
+        pub_tasks.append(
+            asyncio.create_task(
+                self.client.publish(
+                    f"{self.client.topic}/status/bridge/mqtt_client/connected",
+                    mqtt_status.encode(),
+                ),
+            ),
+        )
+
+        return ret
+
+    async def _create_bridge_sensors(
+        self,
+        bridge_base_unique_id: str,
+        bridge_device_reg_struct: dict[str, object],
+        template_tpc: str,
+        pub_tasks: list[asyncio.Task[object]],
+        lp: str,
+    ) -> bool:
+        """Create sensor entities for bridge device."""
+        entity_type = "sensor"
+        ret = True
+
+        entity_unique_id = f"{bridge_base_unique_id}_connected_tcp_devices"
+        num_tcp_devices_entity_conf: dict[str, object] = {
+            "platform": "sensor",
+            "object_id": entity_unique_id,
+            "name": "TCP Devices Connected",
+            "state_topic": f"{self.client.topic}/status/bridge/tcp_devices/connected",
+            "unique_id": entity_unique_id,
+            "icon": "mdi:counter",
+            "avty_t": f"{self.client.topic}/availability/bridge",
+            "schema": "json",
+            "origin": ORIGIN_STRUCT,
+            "device": bridge_device_reg_struct,
+        }
+        if not await self.client.publish_json_msg(
+            template_tpc.format(self.client.ha_topic, entity_type, entity_unique_id),
+            num_tcp_devices_entity_conf,
+        ):
+            logger.warning("%s Failed to publish number of TCP devices connected entity config", lp)
+            ret = False
+        server = g.ncync_server
+        tcp_devices_count = len(server.tcp_devices) if server else 0
+        pub_tasks.append(
+            asyncio.create_task(
+                self.client.publish(
+                    f"{self.client.topic}/status/bridge/tcp_devices/connected",
+                    str(tcp_devices_count).encode(),
+                ),
+            ),
+        )
+
+        total_cync_devs = len(server.devices) if server else 0
+        entity_unique_id = f"{bridge_base_unique_id}_total_cync_devices"
+        total_cync_devs_entity_conf: dict[str, object] = num_tcp_devices_entity_conf.copy()
+        total_cync_devs_entity_conf.update(
+            {
+                "object_id": entity_unique_id,
+                "name": "Cync Devices Managed",
+                "state_topic": f"{self.client.topic}/status/bridge/cync_devices/total",
+                "unique_id": entity_unique_id,
+            },
+        )
+        if not await self.client.publish_json_msg(
+            template_tpc.format(self.client.ha_topic, entity_type, entity_unique_id),
+            total_cync_devs_entity_conf,
+        ):
+            logger.warning("%s Failed to publish total Cync devices managed entity config", lp)
+            ret = False
+        pub_tasks.append(
+            asyncio.create_task(
+                self.client.publish(
+                    f"{self.client.topic}/status/bridge/cync_devices/total",
+                    str(total_cync_devs).encode(),
+                ),
+            ),
+        )
+
+        return ret
+
+    async def _create_bridge_input_number(
+        self,
+        bridge_base_unique_id: str,
+        bridge_device_reg_struct: dict[str, object],
+        template_tpc: str,
+        lp: str,
+    ) -> bool:
+        """Create input number entity for bridge device."""
+        entity_type = "number"
+        entity_unique_id = f"{bridge_base_unique_id}_otp_input"
+        otp_num_entity_cfg: dict[str, object] = {
+            "platform": "number",
+            "object_id": entity_unique_id,
+            "icon": "mdi:lock",
+            "command_topic": f"{self.client.topic}/set/bridge/otp/input",
+            "state_topic": f"{self.client.topic}/status/bridge/otp/input",
+            "avty_t": f"{self.client.topic}/availability/bridge",
+            "schema": "json",
+            "origin": ORIGIN_STRUCT,
+            "device": bridge_device_reg_struct,
+            "min": OTP_MIN,
+            "max": OTP_MAX,
+            "mode": "box",
+            "name": "Cync emailed OTP",
+            "unique_id": entity_unique_id,
+        }
+        if not await self.client.publish_json_msg(
+            template_tpc.format(self.client.ha_topic, entity_type, entity_unique_id),
+            otp_num_entity_cfg,
+        ):
+            logger.error("%s Failed to publish OTP input number entity config", lp)
+            return False
+        return True
+
+    async def create_bridge_device(self) -> bool:
+        """Create the device / entity registry config for the Cync Controller bridge itself."""
+        lp = f"{self.client.lp}create_bridge_device:"
+        ret: bool = True
+
+        logger.debug("%s Creating Cync Controller bridge device...", lp)
+        bridge_base_unique_id = "cync_lan_bridge"
+        bridge_device_reg_struct: dict[str, object] = {
+            "identifiers": [str(g.uuid)],
+            "manufacturer": "Savant",
+            "name": "Cync Controller",
+            "sw_version": CYNC_VERSION,
+            "model": "Local Push Controller",
+        }
+        template_tpc = "{0}/{1}/{2}/config"
+        pub_tasks: list[asyncio.Task[object]] = [
+            asyncio.create_task(self.client.publish(f"{self.client.topic}/availability/bridge", b"online")),
+        ]
+
+        if not await self._create_bridge_button_entities(
+            bridge_base_unique_id,
+            bridge_device_reg_struct,
+            template_tpc,
+            lp,
+        ):
+            ret = False
+
+        if not await self._create_bridge_binary_sensors(
+            bridge_base_unique_id,
+            bridge_device_reg_struct,
+            template_tpc,
+            pub_tasks,
+            lp,
+        ):
+            ret = False
+
+        if not await self._create_bridge_input_number(
+            bridge_base_unique_id,
+            bridge_device_reg_struct,
+            template_tpc,
+            lp,
+        ):
+            ret = False
+
+        if not await self._create_bridge_sensors(
+            bridge_base_unique_id,
+            bridge_device_reg_struct,
+            template_tpc,
+            pub_tasks,
+            lp,
+        ):
+            ret = False
+
+        _ = await asyncio.gather(*pub_tasks, return_exceptions=True)
+        logger.debug("%s Bridge device config published and seeded", lp)
+        return ret

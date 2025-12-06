@@ -1,17 +1,11 @@
 {
   "version": "2.0.0",
-  // NOTE: Tasks with problem matchers will show "has errors" when issues are detected,
-  // even with exit code 0 and severity "warning". This is VS Code's intentional design.
-  // See: https://github.com/microsoft/vscode/issues/46439
-  //
-  // One-shot tasks run once on demand.
   "tasks": [
     {
       "label": "Lint: All",
       "dependsOn": [
         "Lint: Prettier",
-        "Lint: Ruff (cync-controller)",
-        "Lint: Ruff (python-rebuild-tcp-comm)",
+        "Lint: Ruff",
         "Lint: ShellCheck",
         "Lint: Pyright"
       ],
@@ -31,6 +25,7 @@
       "command": "npx prettier --ignore-path .prettierignore --check '**/*.{js,jsx,ts,tsx,json,yaml,yml,sh}' 2>&1 | sed 's/\\x1b\\[[0-9;]*m//g' | grep -vE '^(panic:|Checking formatting|\\[warn\\] Code style)' | sed -n '/^\\[warn\\] /s/^\\[warn\\] \\(.*\\)$/\\1:1:0: Code style issues found. Run npm run format to fix./p' || true",
       "problemMatcher": {
         "owner": "prettier-ci",
+        "source": "prettier-ci",
         "fileLocation": ["relative", "${workspaceFolder}"],
         "severity": "warning",
         "pattern": {
@@ -47,37 +42,13 @@
       }
     },
     {
-      "label": "Lint: Ruff (cync-controller)",
+      "label": "Lint: Ruff",
       "type": "shell",
-      "command": "cd cync-controller && ruff check . --output-format=concise 2>&1 | sed 's/\\x1b\\[[0-9;]*m//g' || true",
+      "command": "ruff check . --output-format=concise 2>&1 | sed 's/\\x1b\\[[0-9;]*m//g' || true",
       "problemMatcher": {
         "owner": "ruff-ci",
-        "fileLocation": ["relative", "${workspaceFolder}/cync-controller"],
-        "severity": "warning",
-        "pattern": {
-          "regexp": "^(.+):(\\d+):(\\d+):\\s+(\\w+)(?:\\s+\\[\\*\\])?\\s+(.+)$",
-          "file": 1,
-          "line": 2,
-          "column": 3,
-          "code": 4,
-          "message": 5
-        }
-      },
-      "presentation": {
-        "reveal": "never",
-        "panel": "shared"
-      }
-    },
-    {
-      "label": "Lint: Ruff (python-rebuild-tcp-comm)",
-      "type": "shell",
-      "command": "cd python-rebuild-tcp-comm && ruff check . --output-format=concise 2>&1 | sed 's/\\x1b\\[[0-9;]*m//g' || true",
-      "problemMatcher": {
-        "owner": "ruff-ci",
-        "fileLocation": [
-          "relative",
-          "${workspaceFolder}/python-rebuild-tcp-comm"
-        ],
+        "source": "ruff-ci",
+        "fileLocation": ["relative", "${workspaceFolder}"],
         "severity": "warning",
         "pattern": {
           "regexp": "^(.+):(\\d+):(\\d+):\\s+(\\w+)(?:\\s+\\[\\*\\])?\\s+(.+)$",
@@ -99,6 +70,7 @@
       "command": "${workspaceFolder}/.vscode/scripts/lint-pyright.py || true",
       "problemMatcher": {
         "owner": "pyright-ci",
+        "source": "pyright-ci",
         "fileLocation": ["relative", "${workspaceFolder}"],
         "severity": "warning",
         "pattern": {
@@ -122,6 +94,7 @@
       "command": "${workspaceFolder}/.vscode/scripts/lint-shellcheck.py",
       "problemMatcher": {
         "owner": "shellcheck-ci",
+        "source": "shellcheck-ci",
         "fileLocation": ["relative", "${workspaceFolder}"],
         "severity": "warning",
         "pattern": {
@@ -141,8 +114,7 @@
       "label": "Lint: All (Fix)",
       "dependsOn": [
         "Lint: Prettier (Fix)",
-        "Lint: Ruff (cync-controller) (Fix)",
-        "Lint: Ruff (python-rebuild-tcp-comm) (Fix)",
+        "Lint: Ruff (Fix)",
         "Lint: ShellCheck (Fix)"
       ],
       "problemMatcher": [],
@@ -162,19 +134,9 @@
       }
     },
     {
-      "label": "Lint: Ruff (cync-controller) (Fix)",
+      "label": "Lint: Ruff (Fix)",
       "type": "shell",
-      "command": "cd cync-controller && ruff check . --fix",
-      "problemMatcher": [],
-      "presentation": {
-        "reveal": "never",
-        "panel": "shared"
-      }
-    },
-    {
-      "label": "Lint: Ruff (python-rebuild-tcp-comm) (Fix)",
-      "type": "shell",
-      "command": "cd python-rebuild-tcp-comm && ruff check . --fix",
+      "command": "ruff check . --fix",
       "problemMatcher": [],
       "presentation": {
         "reveal": "never",

@@ -220,7 +220,7 @@ check_onboarding_status() {
 # Returns 0 on success, 1 on failure
 # Outputs the auth token if successful
 run_onboarding_automation() {
-  local onboarding_script="$REPO_ROOT/scripts/automate-onboarding.py"
+  local onboarding_script="$REPO_ROOT/scripts/automate_onboarding.py"
 
   if [ ! -f "$onboarding_script" ]; then
     log_error "Onboarding automation script not found: $onboarding_script"

@@ -46,34 +46,22 @@ class CyncLogger:
 
         """
 
-    def debug(
-        self, msg: str, *args: Any, extra: dict[str, Any] | None = None, **kwargs: Any
-    ) -> None:
+    def debug(self, msg: str, *args: Any, extra: dict[str, Any] | None = None, **kwargs: Any) -> None:
         """Log debug message with optional structured context."""
 
-    def info(
-        self, msg: str, *args: Any, extra: dict[str, Any] | None = None, **kwargs: Any
-    ) -> None:
+    def info(self, msg: str, *args: Any, extra: dict[str, Any] | None = None, **kwargs: Any) -> None:
         """Log info message with optional structured context."""
 
-    def warning(
-        self, msg: str, *args: Any, extra: dict[str, Any] | None = None, **kwargs: Any
-    ) -> None:
+    def warning(self, msg: str, *args: Any, extra: dict[str, Any] | None = None, **kwargs: Any) -> None:
         """Log warning message with optional structured context."""
 
-    def error(
-        self, msg: str, *args: Any, extra: dict[str, Any] | None = None, **kwargs: Any
-    ) -> None:
+    def error(self, msg: str, *args: Any, extra: dict[str, Any] | None = None, **kwargs: Any) -> None:
         """Log error message with optional structured context."""
 
-    def critical(
-        self, msg: str, *args: Any, extra: dict[str, Any] | None = None, **kwargs: Any
-    ) -> None:
+    def critical(self, msg: str, *args: Any, extra: dict[str, Any] | None = None, **kwargs: Any) -> None:
         """Log critical message with optional structured context."""
 
-    def exception(
-        self, msg: str, *args: Any, extra: dict[str, Any] | None = None, **kwargs: Any
-    ) -> None:
+    def exception(self, msg: str, *args: Any, extra: dict[str, Any] | None = None, **kwargs: Any) -> None:
         """Log exception with traceback and optional structured context."""
 
     def set_level(self, level: int) -> None:

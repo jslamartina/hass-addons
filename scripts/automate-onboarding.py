@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Home Assistant Onboarding Automation Script
 
 Based on reverse-engineered protocol analysis.
@@ -17,44 +16,10 @@ from pathlib import Path
 from typing import Any, cast
 from urllib.parse import urljoin
 
-try:
-    import requests
-except ImportError:
-    print(
-        "Error: requests library required. Install dependencies with: pip install -e ./scripts",
-    )
-    sys.exit(1)
+import requests
+from colorama import Fore, Style, init
 
-try:
-    from colorama import (  # pyright: ignore[reportMissingModuleSource, reportAssignmentType]
-        Fore as _ColoramaFore,
-    )
-    from colorama import (
-        Style as _ColoramaStyle,
-    )
-    from colorama import (
-        init,
-    )
-
-    init(autoreset=True)
-    _has_colorama: bool = True
-    Fore = _ColoramaFore  # type: ignore[assignment]
-    Style = _ColoramaStyle  # type: ignore[assignment]
-except ImportError:
-    # Fallback to no colors if colorama not installed
-    _has_colorama = False
-
-    class Fore:
-        GREEN = ""
-        YELLOW = ""
-        RED = ""
-
-    class Style:
-        RESET_ALL = ""
-
-
-HAS_COLORAMA: bool = _has_colorama
-
+init(autoreset=True)
 
 # Configuration defaults
 REPO_ROOT = Path(__file__).parent.parent
@@ -118,7 +83,7 @@ class OnboardingClient:
         self,
         require_auth: bool = False,
     ) -> list[dict[str, Any]] | None:
-        """Get current onboarding status
+        """Get current onboarding status.
 
         Args:
             require_auth: If False, try without auth first (for initial state)
@@ -191,9 +156,7 @@ class OnboardingClient:
             if not status:
                 return []
 
-            incomplete = [
-                step["step"] for step in status if not step.get("done", False)
-            ]
+            incomplete = [step["step"] for step in status if not step.get("done", False)]
             return incomplete
         except ValueError as e:
             # Handle 401 errors - propagate to caller for token refresh
@@ -292,9 +255,7 @@ class OnboardingClient:
                             self._log_success("Successfully created long-lived token")
                             # Update session with long-lived token
                             self.auth_token = long_lived_token
-                            self.session.headers["Authorization"] = (
-                                f"Bearer {long_lived_token}"
-                            )
+                            self.session.headers["Authorization"] = f"Bearer {long_lived_token}"
                         else:
                             self._log_warn(
                                 "Failed to create long-lived token, using onboarding token",
@@ -354,8 +315,7 @@ class OnboardingClient:
 
         self._log_info("Completing core_config step (location configuration)...")
         self._log_info(
-            f"Using location: lat={latitude}, lon={longitude}, "
-            f"elev={elevation}, units={unit_system}, tz={time_zone}",
+            f"Using location: lat={latitude}, lon={longitude}, elev={elevation}, units={unit_system}, tz={time_zone}",
         )
 
         payload = {
@@ -393,7 +353,7 @@ class OnboardingClient:
                 # Try refreshing token and retry
                 if refresh_token_fn:
                     self._log_info("Attempting to refresh token and retry...")
-                    fresh_token: str | None = refresh_token_fn(force_refresh=True)  # type: ignore[reportCallIssue, reportUnknownVariableType]
+                    fresh_token: str | None = refresh_token_fn(True)
                     if fresh_token:
                         self.auth_token = fresh_token  # type: ignore[reportUnknownMemberType]
                         self.session.headers["Authorization"] = f"Bearer {fresh_token}"
@@ -472,7 +432,7 @@ class OnboardingClient:
                 # Try refreshing token and retry
                 if refresh_token_fn:
                     self._log_info("Attempting to refresh token and retry...")
-                    fresh_token: str | None = refresh_token_fn(force_refresh=True)  # type: ignore[reportCallIssue, reportUnknownVariableType]
+                    fresh_token: str | None = refresh_token_fn(True)
                     if fresh_token:
                         self.auth_token = fresh_token  # type: ignore[reportUnknownMemberType]
                         self.session.headers["Authorization"] = f"Bearer {fresh_token}"
@@ -603,9 +563,7 @@ def create_long_lived_token_from_existing(existing_token: str) -> str | None:
             )
 
         if token_match:
-            token = (
-                token_match.group(1) if token_match.groups() else token_match.group(0)
-            )
+            token = token_match.group(1) if token_match.groups() else token_match.group(0)
             print("[onboarding] ✅ Successfully created long-lived token")
 
             # Update credentials file if it exists
@@ -698,11 +656,7 @@ def get_auth_token(force_refresh: bool = False) -> str | None:
                 )
 
             if token_match:
-                token = (
-                    token_match.group(1)
-                    if token_match.groups()
-                    else token_match.group(0)
-                )
+                token = token_match.group(1) if token_match.groups() else token_match.group(0)
                 print("[onboarding] ✅ Successfully created authentication token")
 
                 # Update credentials file if it exists
@@ -814,9 +768,7 @@ def main():
         print("[onboarding] ✅ User creation completed")
 
         # Check if we got a token from user creation
-        auth_token_check: str | None = cast(
-            "str | None", client_for_user_creation.auth_token
-        )  # type: ignore[reportUnknownMemberType]
+        auth_token_check: str | None = cast("str | None", client_for_user_creation.auth_token)  # type: ignore[reportUnknownMemberType]
         if auth_token_check:
             print("[onboarding] ✅ Token obtained from user creation")
             client = client_for_user_creation  # Use client with token

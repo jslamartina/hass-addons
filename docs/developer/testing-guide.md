@@ -694,10 +694,10 @@ For a deterministic test run, remove stale MQTT entities:
 
 ```bash
 ## Preview what will be deleted
-sudo python3 scripts/delete-mqtt-safe.py --dry-run
+sudo python3 scripts/delete_mqtt_safe.py --dry-run
 
 ## Delete and restart addon
-sudo python3 scripts/delete-mqtt-safe.py
+sudo python3 scripts/delete_mqtt_safe.py
 ha addons restart local_cync-controller
 
 ## OR use the Playwright cleanup script

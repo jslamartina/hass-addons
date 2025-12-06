@@ -10,16 +10,16 @@ class FastAPI:
     def get(self, path: str, **kwargs: Any) -> Callable[[Any], Any]: ...
     def post(self, path: str, **kwargs: Any) -> Callable[[Any], Any]: ...
     def add_middleware(self, middleware: Any, **kwargs: Any) -> None: ...
-    def mount(
-        self, path: str, app: Any, name: str | None = ..., **kwargs: Any
-    ) -> None: ...
+    def mount(self, path: str, app: Any, name: str | None = ..., **kwargs: Any) -> None: ...
 
-class HTTPException(Exception):
+class HTTPExceptionError(Exception):
     """HTTP exception."""
 
     status_code: int
     detail: Any
 
     def __init__(self, status_code: int, detail: Any = ..., **kwargs: Any) -> None: ...
+
+HTTPException = HTTPExceptionError
 
 __all__ = ["FastAPI", "HTTPException"]

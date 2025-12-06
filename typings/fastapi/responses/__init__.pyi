@@ -6,9 +6,7 @@ from typing import Any
 class FileResponse:
     """File response."""
 
-    def __init__(
-        self, path: str | Path, filename: str | None = ..., **kwargs: Any
-    ) -> None: ...
+    def __init__(self, path: str | Path, filename: str | None = ..., **kwargs: Any) -> None: ...
 
 class HTMLResponse:
     """HTML response."""

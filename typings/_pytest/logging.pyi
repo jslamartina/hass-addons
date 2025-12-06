@@ -15,9 +15,7 @@ class LogRecord:
 class LogCaptureFixture:
     """Log capture fixture."""
 
-    def at_level(
-        self, level: int | str, **kwargs: Any
-    ) -> AbstractContextManager[Any]: ...
+    def at_level(self, level: int | str, **kwargs: Any) -> AbstractContextManager[Any]: ...
     @property
     def records(self) -> list[LogRecord]: ...
     @property

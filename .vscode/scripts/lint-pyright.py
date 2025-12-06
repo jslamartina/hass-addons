@@ -12,9 +12,11 @@ from typing import TypedDict
 
 ANSI_PATTERN = re.compile(r"\x1b\[[0-9;]*m")
 PYRIGHT_PATTERN = re.compile(
-    r"^(?P<path>.+?):(?P<line>\d+):(?P<column>\d+)\s+-\s+"
-    r"(?P<severity>error|warning|information):\s+"
-    r"(?P<message>.+?)(?:\s+\((?P<code>[^)]+)\))?$"
+    (
+        r"^(?P<path>.+?):(?P<line>\d+):(?P<column>\d+)\s+-\s+"
+        r"(?P<severity>error|warning|information):\s+"
+        r"(?P<message>.+?)(?:\s+\((?P<code>[^)]+)\))?$"
+    )
 )
 LOGGER = logging.getLogger("lint_pyright")
 
@@ -104,10 +106,13 @@ def run_pyright(args: list[str]) -> subprocess.CompletedProcess[str]:
     """Execute basedpyright with the provided argument list."""
     if shutil.which("basedpyright"):
         cmd = ["basedpyright"]
-        LOGGER.info("→ Running basedpyright", extra={"pyright_args": args})
+        LOGGER.info("→ Running basedpyright: " + " ".join(args))
     else:
         LOGGER.error("basedpyright not found. Install via: pip install basedpyright")
         raise FileNotFoundError("basedpyright executable not found")
+
+
+    print(f"Running basedpyright: {cmd} {args}")
 
     result = subprocess.run(
         [*cmd, *args],
@@ -126,26 +131,17 @@ def main() -> int:
     configure_logger()
     workspace_root = Path(__file__).resolve().parents[2]
     LOGGER.info(
-        "→ lint-pyright start",
-        extra={"workspace_root": str(workspace_root)},
+        "→ lint-pyright start: " + str(workspace_root)
     )
 
-    # Define projects to lint
+    # Define single merged project to lint
     projects: list[ProjectConfig] = [
         {
-            "name": "cync-controller",
-            "config": workspace_root / "cync-controller" / "pyrightconfig.json",
+            "name": "repo",
+            "config": workspace_root / "pyrightconfig.json",
             "default_targets": [
-                "cync-controller/src",
-                "cync-controller/tests",
-            ],
-        },
-        {
-            "name": "python-rebuild-tcp-comm",
-            "config": workspace_root / "python-rebuild-tcp-comm" / "pyrightconfig.json",
-            "default_targets": [
-                "python-rebuild-tcp-comm/src",
-                "python-rebuild-tcp-comm/tests",
+                "src",
+                "tests",
             ],
         },
     ]
@@ -158,13 +154,10 @@ def main() -> int:
         default_targets = project["default_targets"]
 
         if project_config.exists():
-            LOGGER.info("→ Using project config", extra={"config": str(project_config)})
+            LOGGER.info("→ Using project config: " + str(project_config))
             pyright_args: list[str] = ["--project", str(project_config)]
         else:
-            LOGGER.warning(
-                "⚠️ Project config missing, falling back to direct targets",
-                extra={"config": str(project_config)},
-            )
+            LOGGER.warning("⚠️ Project config missing, falling back to direct targets: " + str(project_config))
             pyright_args = default_targets
 
         try:
@@ -175,12 +168,10 @@ def main() -> int:
         except (FileNotFoundError, PermissionError, OSError) as e:
             LOGGER.error(
                 "✗ basedpyright executable error",
-                extra={
-                    "error_type": type(e).__name__,
-                    "error": str(e),
-                    "hint": "Install basedpyright via: pip install basedpyright",
-                    "project": project["name"],
-                },
+                "error_type: " + type(e).__name__,
+                "error: " + str(e),
+                "hint: Install basedpyright via: pip install basedpyright",
+                "project: " + project["name"],
             )
             if overall_exit_code == 0:
                 overall_exit_code = 1

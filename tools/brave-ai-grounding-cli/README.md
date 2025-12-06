@@ -7,7 +7,7 @@ CLI tool for Brave AI Grounding API - get synthesized, cited answers from web so
 From the repository root:
 
 ```bash
-pip install -e tools/brave-ai-grounding-cli/
+pip install -e .
 ```
 
 ## Configuration

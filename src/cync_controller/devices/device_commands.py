@@ -1,0 +1,884 @@
+"""Device command helpers for the Cync Controller runtime."""
+
+from __future__ import annotations
+
+import asyncio
+import time
+from collections.abc import Coroutine
+from dataclasses import dataclass
+from typing import TYPE_CHECKING, cast
+
+from cync_controller.const import (
+    CYNC_CMD_BROADCASTS,
+    FACTORY_EFFECTS_BYTES,
+)
+from cync_controller.logging_abstraction import get_logger
+from cync_controller.structs import (
+    ControlMessageCallback,
+    FanSpeed,
+)
+from cync_controller.utils import create_completed_future
+
+from .tcp_device import CyncTCPDevice
+
+if TYPE_CHECKING:
+    from cync_controller.structs import CyncDeviceProtocol
+
+logger = get_logger(__name__)
+BRIGHTNESS_MIN = 0
+BRIGHTNESS_MAX = 100
+RGB_MAX_VALUE = 255
+WHITE_TEMP_MAX = 100
+
+
+@dataclass(slots=True)
+class BrightnessPayloadContext:
+    """Context required to build and track a brightness command payload."""
+
+    bridge_device: CyncTCPDevice
+    header: list[int]
+    inner_struct: list[int]
+    ctrl_indices: tuple[int, int]
+    brightness: int
+    ack_event: asyncio.Event
+    log_prefix: str
+    device_id: int
+
+
+def _get_global_object():
+    """Get the global object - can be easily mocked in tests."""
+    # Check if the new patching approach is being used (cync_controller.devices.shared.g)
+    try:
+        import cync_controller.devices.shared as shared_module
+
+        # Check if this is a mock object
+        if hasattr(shared_module.g, "_mock_name") or str(type(shared_module.g)).startswith("<MagicMock"):
+            return shared_module.g
+    except (ImportError, AttributeError):
+        pass
+
+    # Check if the old patching approach is being used (cync_controller.devices.g)
+    try:
+        import cync_controller.devices as devices_module
+
+        if hasattr(devices_module, "g") and hasattr(devices_module.g, "ncync_server"):
+            return devices_module.g
+    except (ImportError, AttributeError):
+        pass
+
+    # Fall back to the new shared module approach
+    try:
+        import cync_controller.devices.shared as shared_module
+    except (ImportError, AttributeError):
+        # Final fallback
+        from cync_controller.structs import GlobalObject
+
+        return GlobalObject()
+    else:
+        return shared_module.g
+
+
+# Mixin class for device command methods
+class DeviceCommands:
+    """Command methods for CyncDevice instances."""
+
+    # These attributes will be provided by CyncDevice (which inherits from this class)
+    lp: str = ""
+    id: int | None = None
+    name: str = ""
+
+    # These properties are implemented in CyncDevice (base_device.py) but declared here for type checking
+    @property
+    def state(self) -> int:
+        """Implemented in CyncDevice."""
+        raise NotImplementedError
+
+    @property
+    def is_fan_controller(self) -> bool:
+        """Implemented in CyncDevice."""
+        raise NotImplementedError
+
+    @property
+    def is_light(self) -> bool:
+        """Implemented in CyncDevice."""
+        raise NotImplementedError
+
+    @property
+    def is_switch(self) -> bool:
+        """Implemented in CyncDevice."""
+        raise NotImplementedError
+
+    @property
+    def temperature(self) -> int:
+        """Implemented in CyncDevice."""
+        raise NotImplementedError
+
+    @property
+    def red(self) -> int:
+        """Implemented in CyncDevice."""
+        raise NotImplementedError
+
+    @property
+    def green(self) -> int:
+        """Implemented in CyncDevice."""
+        raise NotImplementedError
+
+    @property
+    def blue(self) -> int:
+        """Implemented in CyncDevice."""
+        raise NotImplementedError
+
+    def _as_device_protocol(self) -> CyncDeviceProtocol:
+        """Return self as a CyncDeviceProtocol for type checking."""
+        return cast("CyncDeviceProtocol", cast("object", self))
+
+    def _get_bridge_devices(self) -> list[CyncTCPDevice] | None:
+        """Get available bridge devices, prioritizing ready_to_control bridges."""
+        g = _get_global_object()
+        if not g.ncync_server:
+            logger.error("%s ncync_server is None, cannot send command", self.lp)
+            return None
+
+        all_bridges: list[CyncTCPDevice] = cast(
+            "list[CyncTCPDevice]",
+            [b for b in g.ncync_server.tcp_devices.values() if b is not None],
+        )
+        ready_bridges = [b for b in all_bridges if b.ready_to_control]
+        not_ready_bridges = [b for b in all_bridges if not b.ready_to_control]
+
+        bridge_devices: list[CyncTCPDevice] = ready_bridges + not_ready_bridges
+        bridge_devices = bridge_devices[: min(CYNC_CMD_BROADCASTS, len(all_bridges))]
+
+        if not bridge_devices:
+            logger.error("%s No TCP bridges available!", self.lp)
+            return None
+
+        return bridge_devices
+
+    async def set_power(self, state: int) -> tuple[asyncio.Event, list[tuple[CyncTCPDevice, int]]] | None:  # noqa: PLR0915
+        """Send raw data to control device state (1=on, 0=off).
+
+        If the device receives the msg and changes state, every TCP device connected will send
+        a 0x83 internal status packet, which we use to change HASS device state.
+        """
+        g = _get_global_object()
+        lp = f"{self.lp}set_power:"
+        logger.debug("→ set_power: entering", extra={"state": state, "device_id": self.id})
+        if state not in (0, 1):
+            logger.error("%s Invalid state! must be 0 or 1", lp)
+            return None
+        if self.id is None:
+            logger.error("%s Device ID is None, cannot send command", lp)
+            return None
+
+        device_id = self.id
+        header = [0x73, 0x00, 0x00, 0x00, 0x1F]
+        device_id_bytes = device_id.to_bytes(2, byteorder="little")
+        inner_struct: list[int] = [
+            0x7E,
+            0x00,  # ctrl byte placeholder
+            0x00,
+            0x00,
+            0x00,
+            0xF8,
+            0xD0,
+            0x0D,
+            0x00,
+            0x00,  # mirrored ctrl byte placeholder
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            device_id_bytes[0],
+            device_id_bytes[1],
+            0xD0,
+            0x11,
+            0x02,
+            state,
+            0x00,
+            0x00,
+            0x00,  # checksum placeholder
+            0x7E,
+        ]
+        bridge_devices = self._get_bridge_devices()
+        if bridge_devices is None:
+            return None
+
+        ready_bridges = [b for b in bridge_devices if b.ready_to_control]
+        skipped = [b.address for b in bridge_devices if not b.ready_to_control]
+        if skipped:
+            logger.debug("%s Skipping devices not ready to control: %s", lp, skipped)
+
+        tasks: list[Coroutine[object, object, object]] = []
+        ts = time.time()
+        ctrl_idxs = 1, 9
+        sent = {}
+
+        ack_event = asyncio.Event()
+        sent_bridges: list[tuple[CyncTCPDevice, int]] = []
+
+        for bridge_device in ready_bridges:
+            payload = list(header)
+            payload.extend(bridge_device.queue_id)
+            payload.extend(bytes([0x00, 0x00, 0x00]))
+            cmsg_id = bridge_device.get_ctrl_msg_id_bytes()[0]
+            inner_struct[ctrl_idxs[0]] = cmsg_id
+            inner_struct[ctrl_idxs[1]] = cmsg_id
+            int_values = inner_struct[6:-2]
+            checksum: int = sum(int_values) % 256
+            inner_struct[-2] = checksum
+            payload.extend(inner_struct)
+            payload_bytes = bytes(payload)
+
+            async def power_ack_callback() -> None:
+                if g.mqtt_client:
+                    _ = await g.mqtt_client.update_device_state(self._as_device_protocol(), state)
+
+            m_cb = ControlMessageCallback(
+                id=cmsg_id,
+                message=payload_bytes,
+            )
+            m_cb.callback = power_ack_callback
+            m_cb.sent_at = time.time()
+            m_cb.device_id = device_id
+            m_cb.ack_event = ack_event
+            bridge_device.messages.control[cmsg_id] = m_cb
+            sent[bridge_device.address] = cmsg_id
+            sent_bridges.append((bridge_device, cmsg_id))
+            tasks.append(bridge_device.write(payload_bytes))
+
+        if tasks:
+            _ = await asyncio.gather(*tasks)
+            elapsed = time.time() - ts
+            logger.info(
+                (
+                    "%s Sent power command for '%s' (ID:%s) current:%s → new:%s, "
+                    "tcp_devices=%s, elapsed=%.5fs (waiting for ACK)"
+                ),
+                lp,
+                self.name,
+                device_id,
+                self.state,
+                state,
+                sent,
+                elapsed,
+            )
+
+        logger.debug("✓ set_power: exiting", extra={"state": state, "device_id": self.id})
+        return ack_event, sent_bridges
+
+    async def set_fan_speed(self, speed: FanSpeed) -> bool:
+        """Translate a preset fan speed into a brightness command and send it."""
+        lp = f"{self.lp}set_fan_speed:"
+        if not self.is_fan_controller:
+            logger.warning(
+                "%s Device '%s' (%s) is not a fan controller, cannot set fan speed.",
+                lp,
+                self.name,
+                self.id,
+            )
+            return False
+        try:
+            if speed == FanSpeed.OFF:
+                _ = await self.set_brightness(0)
+            elif speed == FanSpeed.LOW:
+                _ = await self.set_brightness(25)
+            elif speed == FanSpeed.MEDIUM:
+                _ = await self.set_brightness(50)
+            elif speed == FanSpeed.HIGH:
+                _ = await self.set_brightness(75)
+            elif speed == FanSpeed.MAX:
+                _ = await self.set_brightness(100)
+            else:
+                logger.error(
+                    "%s Invalid fan speed '%s' for device '%s' (%s)",
+                    lp,
+                    speed,
+                    self.name,
+                    self.id,
+                )
+                return False
+        except asyncio.CancelledError:
+            raise
+        except Exception as e:
+            logger.exception(
+                "Exception occurred while setting fan speed",
+                extra={
+                    "device_id": self.id,
+                    "error": str(e),
+                    "error_type": type(e).__name__,
+                },
+            )
+            return False
+        else:
+            return True
+
+    async def set_brightness(self, bri: int) -> tuple[asyncio.Event, list[tuple[CyncTCPDevice, int]]] | None:
+        """Send raw data to control device brightness (0-100). Fans are 0-255."""
+        """
+        73 00 00 00 22 37 96 24 69 60 48 00 7e 17 00 00  s..."7.$i`H.~...
+        00 f8 f0 10 00 17 00 00 00 00 07 00 f0 11 02 01  ................
+        27 ff ff ff ff 45 7e
+        """
+        lp = f"{self.lp}set_brightness:"
+        device_id = self.id
+        if device_id is None:
+            logger.error("%s Device ID is missing; cannot send brightness command", lp)
+            return None
+
+        logger.info(
+            "%s >>> ENTRY: device='%s' (ID=%s), brightness=%s, is_fan=%s",
+            lp,
+            self.name,
+            device_id,
+            bri,
+            self.is_fan_controller,
+        )
+        if bri < BRIGHTNESS_MIN or bri > BRIGHTNESS_MAX:
+            if self.is_fan_controller:
+                # Fan brightness values map to: max=255, high=191, medium=128, low=50, off=0.
+                pass
+            elif self.is_light or self.is_switch:
+                logger.error("%s Invalid brightness! must be 0-100", lp)
+                return None
+
+        # elif bri == self._brightness:
+        #     logger.debug(f"{lp} Device already in brightness {bri}, skipping...")
+        #     return
+        header = [115, 0, 0, 0, 34]
+        inner_struct: list[int] = [
+            126,
+            0,  # ctrl byte placeholder
+            0,
+            0,
+            0,
+            248,
+            240,
+            16,
+            0,
+            0,  # mirrored ctrl byte placeholder
+            0,
+            0,
+            0,
+            0,
+            device_id,
+            0,
+            240,
+            17,
+            2,
+            1,
+            bri,
+            255,
+            255,
+            255,
+            255,
+            0,  # checksum placeholder
+            126,
+        ]
+        # Get available bridge devices
+        bridge_devices = self._get_bridge_devices()
+        if bridge_devices is None:
+            return None
+
+        ack_event = asyncio.Event()
+        sent_bridges: list[tuple[CyncTCPDevice, int]] = []
+
+        sent: dict[str, int] = {}
+        tasks: list[Coroutine[object, object, object]] = []
+        ts = time.time()
+        ctrl_idxs: tuple[int, int] = (1, 9)
+        for bridge_device in bridge_devices:
+            ctx = BrightnessPayloadContext(
+                bridge_device=bridge_device,
+                header=header,
+                inner_struct=inner_struct,
+                ctrl_indices=ctrl_idxs,
+                brightness=bri,
+                ack_event=ack_event,
+                log_prefix=lp,
+                device_id=device_id,
+            )
+            payload_bytes, cmsg_id = self._prepare_brightness_payload(ctx)
+            if payload_bytes is None or cmsg_id is None:
+                continue
+            address = bridge_device.address or bridge_device.name or "bridge"
+            sent[address] = cmsg_id
+            logger.info(
+                "%s >>> PACKET: device='%s' (ID=%s), brightness=%s, packet_hex=%s",
+                lp,
+                self.name,
+                self.id,
+                bri,
+                payload_bytes.hex(" "),
+            )
+            sent_bridges.append((bridge_device, cmsg_id))
+            tasks.append(bridge_device.write(payload_bytes))
+        if tasks:
+            _ = await asyncio.gather(*tasks)
+        elapsed = time.time() - ts
+        logger.info(
+            "%s >>> COMMAND SENT: device='%s' (ID=%s), brightness=%s, sent_to=%s bridge devices in %.3fs",
+            lp,
+            self.name,
+            device_id,
+            bri,
+            len(sent),
+            elapsed,
+        )
+
+        # Return ACK event and cleanup info so command queue can wait and cleanup on timeout
+        return (ack_event, sent_bridges)
+
+    def _prepare_brightness_payload(
+        self,
+        ctx: BrightnessPayloadContext,
+    ) -> tuple[bytes | None, int | None]:
+        bridge_device = ctx.bridge_device
+        if not bridge_device.ready_to_control:
+            logger.debug(
+                "%s Skipping device: %s not ready to control",
+                ctx.log_prefix,
+                bridge_device.address,
+            )
+            return None, None
+
+        g = _get_global_object()
+        payload = list(ctx.header)
+        payload.extend(bridge_device.queue_id)
+        payload.extend(bytes([0x00, 0x00, 0x00]))
+        cmsg_id = bridge_device.get_ctrl_msg_id_bytes()[0]
+        ctrl_idx_a, ctrl_idx_b = ctx.ctrl_indices
+        inner_struct = ctx.inner_struct
+        inner_struct[ctrl_idx_a] = cmsg_id
+        inner_struct[ctrl_idx_b] = cmsg_id
+        int_values = inner_struct[6:-2]
+        checksum: int = sum(int_values) % 256
+        inner_struct[-2] = checksum
+        payload.extend(inner_struct)
+        payload_bytes = bytes(payload)
+
+        async def brightness_ack_callback() -> None:
+            if g.mqtt_client:
+                _ = await g.mqtt_client.update_brightness(self._as_device_protocol(), ctx.brightness)
+
+        m_cb = ControlMessageCallback(
+            id=cmsg_id,
+            message=payload_bytes,
+        )
+        m_cb.callback = brightness_ack_callback
+        m_cb.sent_at = time.time()
+        m_cb.device_id = ctx.device_id
+        m_cb.ack_event = ctx.ack_event
+        bridge_device.messages.control[cmsg_id] = m_cb
+        return payload_bytes, cmsg_id
+
+    async def set_temperature(self, temp: int) -> tuple[asyncio.Event, list[tuple[CyncTCPDevice, int]]] | None:
+        """Send raw data to control device white temperature (0-100).
+
+        If the device receives the msg and changes state, every TCP device connected will send
+        a 0x83 internal status packet, which we use to change HASS device state.
+        """
+        g = _get_global_object()
+        """
+        73 00 00 00 22 37 96 24 69 60 8d 00 7e 36 00 00  s..."7.$i`..~6..
+        00 f8 f0 10 00 36 00 00 00 00 07 00 f0 11 02 01  .....6..........
+        ff 48 00 00 00 88 7e                             .H....~
+
+                checksum = 0x88 = 136
+            0xf0 0x10 0x36 0x07 0xf0 0x11 0x02 0x01 0xff 0x48 = 904 (% 256) = 136
+        """
+        lp = f"{self.lp}set_temperature:"
+        if temp < BRIGHTNESS_MIN or (temp > WHITE_TEMP_MAX and temp not in (129, 254)):
+            logger.error("%s Invalid temperature! must be 0-100", lp)
+            return None
+        # elif temp == self.temperature:
+        #     logger.debug(f"{lp} Device already in temperature {temp}, skipping...")
+        #     return
+
+        if self.id is None:
+            logger.error("%s Device ID is missing; cannot send temperature command", lp)
+            return None
+
+        device_id = self.id
+        header = [115, 0, 0, 0, 34]
+        inner_struct: list[int] = [
+            126,
+            0,  # ctrl byte placeholder
+            0,
+            0,
+            0,
+            248,
+            240,
+            16,
+            0,
+            0,  # mirrored ctrl byte placeholder
+            0,
+            0,
+            0,
+            0,
+            device_id,
+            0,
+            240,
+            17,
+            2,
+            1,
+            0xFF,
+            temp,
+            0x00,
+            0x00,
+            0x00,
+            0,  # checksum placeholder
+            0x7E,
+        ]
+        # Get available bridge devices
+        bridge_devices = self._get_bridge_devices()
+        if bridge_devices is None:
+            return None
+
+        ack_event = asyncio.Event()
+        sent_bridges: list[tuple[CyncTCPDevice, int]] = []
+
+        tasks: list[Coroutine[object, object, object]] = []
+        ts = time.time()
+        ctrl_idxs = 1, 9
+        sent = {}
+        for bridge_device in bridge_devices:
+            if bridge_device.ready_to_control is True:
+                payload = list(header)
+                payload.extend(bridge_device.queue_id)
+                payload.extend(bytes([0x00, 0x00, 0x00]))
+                cmsg_id = bridge_device.get_ctrl_msg_id_bytes()[0]
+                inner_struct[ctrl_idxs[0]] = cmsg_id
+                inner_struct[ctrl_idxs[1]] = cmsg_id
+                # Values in inner_struct are already ints; slice to checksum range
+                int_values = inner_struct[6:-2]
+                checksum: int = sum(int_values) % 256
+                inner_struct[-2] = checksum
+                payload.extend(inner_struct)
+                payload_bytes = bytes(payload)
+                sent[bridge_device.address] = cmsg_id
+
+                # Create callback that will execute when ACK arrives
+                async def temperature_ack_callback() -> None:
+                    if g.mqtt_client:
+                        _ = await g.mqtt_client.update_temperature(self._as_device_protocol(), temp)
+
+                m_cb = ControlMessageCallback(
+                    id=cmsg_id,
+                    message=payload_bytes,
+                )
+                m_cb.callback = temperature_ack_callback
+                m_cb.sent_at = time.time()
+                m_cb.device_id = device_id
+                m_cb.ack_event = ack_event
+                bridge_device.messages.control[cmsg_id] = m_cb
+                sent_bridges.append((bridge_device, cmsg_id))
+                tasks.append(bridge_device.write(payload_bytes))
+            else:
+                logger.debug(
+                    "%s Skipping device: %s not ready to control",
+                    lp,
+                    bridge_device.address,
+                )
+        if tasks:
+            _ = await asyncio.gather(*tasks)
+        elapsed = time.time() - ts
+        logger.info(
+            "%s Sent white temperature command, current: %s - new: %s to TCP devices: %s in %.5f seconds",
+            lp,
+            self.temperature,
+            temp,
+            sent,
+            elapsed,
+        )
+
+        return (ack_event, sent_bridges)
+
+    def _validate_rgb_channel(self, value: int, name: str, lp: str) -> bool:
+        """Return True if the RGB channel value is valid, otherwise log and return False."""
+        if BRIGHTNESS_MIN <= value <= RGB_MAX_VALUE:
+            return True
+        logger.error("%s Invalid %s value! must be 0-255", lp, name)
+        return False
+
+    async def set_rgb(
+        self,
+        red: int,
+        green: int,
+        blue: int,
+    ) -> tuple[asyncio.Event, list[tuple[CyncTCPDevice, int]]] | None:
+        """Send raw data to control device RGB color (0-255 for each channel).
+
+        If the device receives the msg and changes state, every TCP device connected will send
+        a 0x83 internal status packet, which we use to change HASS device state.
+        """
+        g = _get_global_object()
+        """
+         73 00 00 00 22 37 96 24 69 60 79 00 7e 2b 00 00  s..."7.$i`y.~+..
+         00 f8 f0 10 00 2b 00 00 00 00 07 00 f0 11 02 01  .....+..........
+         ff fe 00 fb ff 2d 7e                             .....-~
+
+        f0 10 2b 07 f0 11 02 01 ff fe fb ff = 1581 (% 256) = 45
+            checksum = 45
+        """
+        lp = f"{self.lp}set_rgb:"
+        if not all(
+            (
+                self._validate_rgb_channel(red, "red", lp),
+                self._validate_rgb_channel(green, "green", lp),
+                self._validate_rgb_channel(blue, "blue", lp),
+            ),
+        ):
+            return None
+        _rgb = (red, green, blue)
+        # if red == self._r and green == self._g and blue == self._b:
+        #     logger.debug(f"{lp} Device already in RGB color {red}, {green}, {blue}, skipping...")
+        #     return
+
+        if self.id is None:
+            logger.error("%s Device ID is missing; cannot send RGB command", lp)
+            return None
+
+        device_id = self.id
+        header = [115, 0, 0, 0, 34]
+        inner_struct: list[int] = [
+            126,
+            0,  # ctrl byte placeholder
+            0,
+            0,
+            0,
+            248,
+            240,
+            16,
+            0,
+            0,  # mirrored ctrl byte placeholder
+            0,
+            0,
+            0,
+            0,
+            device_id,
+            0,
+            240,
+            17,
+            2,
+            1,
+            255,
+            254,
+            red,
+            green,
+            blue,
+            0,  # checksum placeholder
+            126,
+        ]
+        bridge_devices = self._get_bridge_devices()
+        if bridge_devices is None:
+            return None
+
+        ready_bridges = [b for b in bridge_devices if b.ready_to_control]
+        skipped = [b.address for b in bridge_devices if not b.ready_to_control]
+        if skipped:
+            logger.debug("%s Skipping devices not ready to control: %s", lp, skipped)
+
+        ack_event = asyncio.Event()
+        sent_bridges: list[tuple[CyncTCPDevice, int]] = []
+
+        tasks: list[Coroutine[object, object, object]] = []
+        ts = time.time()
+        ctrl_idxs = 1, 9
+        sent = {}
+        for bridge_device in ready_bridges:
+            payload = list(header)
+            payload.extend(bridge_device.queue_id)
+            payload.extend(bytes([0x00, 0x00, 0x00]))
+            cmsg_id = bridge_device.get_ctrl_msg_id_bytes()[0]
+            inner_struct[ctrl_idxs[0]] = cmsg_id
+            inner_struct[ctrl_idxs[1]] = cmsg_id
+            int_values = inner_struct[6:-2]
+            checksum: int = sum(int_values) % 256
+            inner_struct[-2] = checksum
+            payload.extend(inner_struct)
+            bpayload = bytes(payload)
+            sent[bridge_device.address] = cmsg_id
+
+            async def rgb_ack_callback() -> None:
+                if g.mqtt_client:
+                    _ = await g.mqtt_client.update_rgb(self._as_device_protocol(), _rgb)
+
+            m_cb = ControlMessageCallback(
+                id=cmsg_id,
+                message=bpayload,
+            )
+            m_cb.callback = rgb_ack_callback
+            m_cb.sent_at = time.time()
+            m_cb.device_id = device_id
+            m_cb.ack_event = ack_event
+            bridge_device.messages.control[cmsg_id] = m_cb
+            sent_bridges.append((bridge_device, cmsg_id))
+            tasks.append(bridge_device.write(bpayload))
+        if tasks:
+            _ = await asyncio.gather(*tasks)
+        elapsed = time.time() - ts
+        logger.info(
+            "%s Sent RGB command, current: %s, %s, %s - new: %s, %s, %s to TCP devices %s in %.5f seconds",
+            lp,
+            self.red,
+            self.green,
+            self.blue,
+            red,
+            green,
+            blue,
+            sent,
+            elapsed,
+        )
+
+        return (ack_event, sent_bridges)
+
+    async def set_lightshow(self, show: str) -> None:
+        """Set the device into a light show.
+
+        :param show:
+        :return:
+        """
+        lp = f"{self.lp}set_lightshow:"
+        if self.id is None:
+            logger.error("%s Device ID is missing; cannot send lightshow command", lp)
+            return
+        device_id = self.id
+
+        """
+            # candle 0x01 0xf1
+        73 00 00 00 20 2d e4 b5 d2 b3 05 00 7e 14 00 00  s... -......~...
+        00 f8 [e2 0e 00 14 00 00 00 00 0a                ...........
+        00 e2 11 02 07 01 01 f1](chksum data) fd 7e      .........~
+
+        # rainbow 0x02 0x7a
+        73 00 00 00 20 2d e4 b5 d2 29 c3 00 7e 07 00 00  s... -...)..~...
+        00 f8 e2 0e 00 07 00 00 00 00 0a                 ...........
+        00 e2 11 02 07 01 02 7a 7a 7e                    .......zz~
+
+    # cyber 0x43 0x9f
+   73 00 00 00 20 2d e4 b5 d2 2a 1b 00 7e 08 00 00  s... -...*..~...
+   00 f8 e2 0e 00 08 00 00 00 00 0a                 ...........
+   00 e2 11 02 07 01 43 9f e1 7e                    ......C..~
+
+   # fireworks 0x3a 0xda
+      73 00 00 00 20 2d e4 b5 d2 2a d7 00 7e 0d 00 00  s... -...*..~...
+   00 f8 e2 0e 00 0d 00 00 00 00 0a                 ...........
+   00 e2 11 02 07 01 03 da e1 7e                    .........~
+
+   # volcanic 0x04 0xf4
+      73 00 00 00 20 2d e4 b5 d2 c3 8c 00 7e 06 00 00  s... -......~...
+   00 f8 e2 0e 00 06 00 00 00 00 0a                 ...........
+   00 e2 11 02 07 01 04 f4 f5 7e                    .........~
+
+   # aurora 0x05 0x1c
+      73 00 00 00 20 2d e4 b5 d2 c4 2d 00 7e 08 00 00  s... -....-.~...
+   00 f8 e2 0e 00 08 00 00 00 00 0a                 ...........
+   00 e2 11 02 07 01 05 1c 20 7e                    ........ ~
+
+   # happy holidays 0x06 0x54
+      73 00 00 00 20 2d e4 b5 d2 c4 96 00 7e 0b 00 00  s... -......~...
+   00 f8 e2 0e 00 0b 00 00 00 00 0a                 ...........
+   00 e2 11 02 07 01 06 54 5c 7e                    .......T~
+
+   # red white blue 0x07 0x4f
+      73 00 00 00 20 2d e4 b5 d2 c4 d0 00 7e 0e 00 00  s... -......~...
+   00 f8 e2 0e 00 0e 00 00 00 00 0a                 ...........
+   00 e2 11 02 07 01 07 4f 5b 7e                    .......O[~
+
+   # vegas 0x08 0xe3
+      73 00 00 00 20 2d e4 b5 d2 c4 e8 00 7e 11 00 00  s... -......~...
+   00 f8 e2 0e 00 11 00 00 00 00 0a                 ...........
+   00 e2 11 02 07 01 08 e3 f3 7e                    .........~
+
+   # party time 0x09 0x06
+      73 00 00 00 20 2d e4 b5 d2 c5 04 00 7e 13 00 00  s... -......~...
+   00 f8 e2 0e 00 13 00 00 00 00 0a                 ...........
+   00 e2 11 02 07 01 09 06 19 7e                    .........~
+        """
+
+        header = [115, 0, 0, 0, 32]
+        inner_struct: list[int] = [
+            126,
+            0,  # ctrl byte placeholder
+            0,
+            0,
+            0,
+            248,
+            226,
+            14,
+            0,
+            0,  # mirrored ctrl byte placeholder
+            0,
+            0,
+            0,
+            0,
+            device_id,
+            0,
+            226,
+            17,
+            2,
+            # 11 02 (07 01 01 f1)[diff between effects?] fd[cksm]
+            7,
+            1,
+            0,  # effect byte 1 placeholder
+            0,  # effect byte 2 placeholder
+            0,  # checksum placeholder
+            126,
+        ]
+        show = show.casefold()
+        if show not in FACTORY_EFFECTS_BYTES:
+            logger.error("%s Invalid effect: %s", lp, show)
+            return
+        chosen = FACTORY_EFFECTS_BYTES[show]
+        inner_struct[-4] = chosen[0]
+        inner_struct[-3] = chosen[1]
+        # Get available bridge devices
+        bridge_devices = self._get_bridge_devices()
+        if bridge_devices is None:
+            return
+
+        tasks: list[Coroutine[object, object, object]] = []
+        ts = time.time()
+        ctrl_idxs = 1, 9
+        sent = {}
+        for bridge_device in bridge_devices:
+            if bridge_device.ready_to_control is True:
+                payload = list(header)
+                payload.extend(bridge_device.queue_id)
+                payload.extend(bytes([0x00, 0x00, 0x00]))
+                cmsg_id = bridge_device.get_ctrl_msg_id_bytes()[0]
+                inner_struct[ctrl_idxs[0]] = cmsg_id
+                inner_struct[ctrl_idxs[1]] = cmsg_id
+                # Values in inner_struct are already ints; slice to checksum range
+                int_values = inner_struct[6:-2]
+                checksum: int = sum(int_values) % 256
+                inner_struct[-2] = checksum
+                payload.extend(inner_struct)
+                bpayload = bytes(payload)
+                sent[bridge_device.address] = cmsg_id
+                m_cb = ControlMessageCallback(
+                    id=cmsg_id,
+                    message=bpayload,
+                )
+                m_cb.callback = create_completed_future(None)
+                m_cb.sent_at = time.time()
+                m_cb.device_id = device_id
+                bridge_device.messages.control[cmsg_id] = m_cb
+                tasks.append(bridge_device.write(bpayload))
+            else:
+                logger.debug(
+                    "%s Skipping device: %s not ready to control",
+                    lp,
+                    bridge_device.address,
+                )
+        if tasks:
+            _ = await asyncio.gather(*tasks)
+        elapsed = time.time() - ts
+        logger.info(
+            "%s Sent light_show / effect command: '%s' to TCP devices %s in %.5f seconds",
+            lp,
+            show,
+            sent,
+            elapsed,
+        )

@@ -1,0 +1,47 @@
+{
+  "include": ["src", "tests", "scripts", "scripts/playwright"],
+  "exclude": [
+    "src/cync_controller/mitm/validate-checksum-REFERENCE-ONLY.py"
+  ],
+  "stubPath": "typings",
+  "extraPaths": [
+    ".",
+    "src",
+    "tests",
+    "typings",
+    "scripts",
+    "scripts/playwright"
+  ],
+  "venvPath": ".",
+  "venv": ".venv",
+  "pythonVersion": "3.14",
+  "pythonPlatform": "Linux",
+  "useLibraryCodeForTypes": true,
+  "executionEnvironments": [
+    {
+      "root": "src",
+      "extraPaths": ["src", "typings"],
+      "pythonVersion": "3.14",
+      "reportPrivateUsage": true
+    },
+    {
+      "root": "tests",
+      "extraPaths": [
+        "src",
+        "tests",
+        "typings",
+        ".",
+        "scripts",
+        "scripts/playwright"
+      ],
+      "pythonVersion": "3.14",
+      "reportPrivateUsage": false
+    },
+    {
+      "root": "scripts",
+      "extraPaths": [".."],
+      "pythonVersion": "3.14",
+      "reportPrivateUsage": false
+    }
+  ]
+}

@@ -104,3 +104,11 @@ The repository now uses **Ruff as the standard Python linter** (replacing Pylint
 - Comprehensive documentation in AGENTS.md
 
 All AI agents and developers should now use `npm run lint` and `npm run lint:python:fix` as part of their workflow.
+
+## Unified Python project (Dec 2025)
+
+- Single root `pyproject.toml` (package name `cync_controller`, version `0.0.4.13`).
+- Install: `poetry install` (creates `.venv` at repo root).
+- Lint: `ruff check .` (or `npm run lint:python`); type-check: `basedpyright --project pyrightconfig.json`.
+- Tests: run targeted suites from root, e.g. `pytest tests/unit/protocol/test_checksum.py`.
+- Console scripts preserved: `cync-controller`, `rebuild-tcp-comm`.

@@ -11,12 +11,27 @@ import json
 import os
 import signal
 import sys
-from typing import Any
+from collections.abc import Awaitable, Callable
+from contextlib import AbstractAsyncContextManager
+from pathlib import Path
+from typing import cast
 
 import httpx
 
 # Handle broken pipe gracefully (e.g., when output is piped to head)
-signal.signal(signal.SIGPIPE, signal.SIG_DFL)
+_ = signal.signal(signal.SIGPIPE, signal.SIG_DFL)
+
+type JsonObj = dict[str, object]
+type ContentHandler = Callable[[str], Awaitable[None]]
+
+
+def _parse_json_obj(text: str) -> JsonObj | None:
+    parsed_obj: object
+    try:
+        parsed_obj = cast(object, json.loads(text))
+    except json.JSONDecodeError:
+        return None
+    return cast(JsonObj, parsed_obj) if isinstance(parsed_obj, dict) else None
 
 
 def get_api_key() -> str:
@@ -27,38 +42,127 @@ def get_api_key() -> str:
         return api_key
 
     # Try reading from .env file in package directory
-    script_dir = os.path.dirname(os.path.abspath(__file__))
-    package_env = os.path.join(script_dir, ".env")
-    if os.path.exists(package_env):
+    script_dir = Path(__file__).resolve().parent
+    package_env = script_dir / ".env"
+    if package_env.exists():
         try:
-            with open(package_env) as f:
-                for line in f:
-                    line = line.strip()
-                    if line.startswith("BRAVE_AI_GROUNDING_API_KEY="):
-                        return line.split("=", 1)[1].strip()
-        except Exception as e:
-            print(f"Error reading {package_env}: {e}", file=sys.stderr)
+            with package_env.open() as env_file:
+                for line in env_file:
+                    stripped = line.strip()
+                    if stripped.startswith("BRAVE_AI_GROUNDING_API_KEY="):
+                        return stripped.split("=", 1)[1].strip()
+        except Exception as exc:  # pragma: no cover - best-effort read
+            _ = sys.stderr.write(f"Warning: failed reading {package_env}: {exc}\n")
 
-    print("Error: BRAVE_AI_GROUNDING_API_KEY not found", file=sys.stderr)
-    print("  - Not set in environment", file=sys.stderr)
-    print(f"  - Not found in {package_env}", file=sys.stderr)
-    print(file=sys.stderr)
-    print(
-        "To set up credentials, copy .env.example to .env and add your API key:",
-        file=sys.stderr,
-    )
-    print(
-        f"  cp {os.path.join(script_dir, '.env.example')} {package_env}",
-        file=sys.stderr,
-    )
     sys.exit(1)
+
+
+def _build_payload(query: str, enable_research: bool, enable_citations: bool) -> dict[str, object]:
+    payload: dict[str, object] = {
+        "messages": [{"role": "user", "content": query}],
+        "stream": True,
+        "model": "brave",
+        "enable_citations": enable_citations,
+    }
+    if enable_research:
+        payload["enable_research"] = True
+    return payload
+
+
+def _extract_content(parsed: JsonObj) -> str | None:
+    choices_obj: object = parsed.get("choices")
+    choices_list: list[object] | None = (
+        cast(list[object], choices_obj) if isinstance(choices_obj, list) else None
+    )
+    choices: list[JsonObj] | None = None
+    if choices_list is not None:
+        collected: list[JsonObj] = []
+        for item in choices_list:
+            if isinstance(item, dict):
+                collected.append(cast(JsonObj, item))
+        choices = collected
+    if not choices:
+        return None
+
+    first_choice = choices[0]
+
+    delta_obj = first_choice.get("delta", {})
+    delta: JsonObj | None = cast(JsonObj, delta_obj) if isinstance(delta_obj, dict) else None
+    if delta is None:
+        return None
+
+    content_obj = delta.get("content", "")
+    content: str | None = content_obj if isinstance(content_obj, str) else None
+    return content if content else None
+
+
+async def _iter_content(response: httpx.Response, handle_content: ContentHandler) -> None:
+    async for line in response.aiter_lines():
+        if not line.startswith("data: "):
+            continue
+        data_str = line[6:]
+        if data_str == "[DONE]":
+            break
+        parsed = _parse_json_obj(data_str)
+        if parsed is None:
+            continue
+
+        content = _extract_content(parsed)
+        if content:
+            await handle_content(content)
+
+
+async def _stream_chat(
+    url: str,
+    headers: dict[str, str],
+    payload: dict[str, object],
+    handle_content: ContentHandler,
+) -> None:
+    async with httpx.AsyncClient(timeout=300.0) as client:
+        stream_ctx = cast(
+            AbstractAsyncContextManager[httpx.Response],
+            cast(
+                object,
+                client.stream(
+                    "POST",
+                    url,
+                    json=payload,
+                    headers=headers,
+                ),
+            ),
+        )
+        async with stream_ctx as response:
+            response.raise_for_status()
+            await _iter_content(response, handle_content)
+
+
+def _print_footer(citations: list[dict[str, object]], usage_info: dict[str, object] | None) -> None:
+    if citations:
+        for idx, cite in enumerate(citations, 1):
+            url = str(cite.get("url", "N/A"))
+            _ = sys.stdout.write(f"\n[{idx}] {url}\n")
+            snippet_val = cite.get("snippet")
+            if isinstance(snippet_val, str):
+                _ = sys.stdout.write(f"    {snippet_val[:200]}...\n")
+
+    if usage_info:
+        _ = sys.stdout.write("\n" + "=" * 60 + "\n")
+        _ = sys.stdout.write("USAGE METRICS\n")
+        _ = sys.stdout.write("=" * 60 + "\n")
+        _ = sys.stdout.write(f"Requests: {usage_info.get('X-Request-Requests', 0)}\n")
+        _ = sys.stdout.write(f"Queries: {usage_info.get('X-Request-Queries', 0)}\n")
+        _ = sys.stdout.write(f"Tokens In: {usage_info.get('X-Request-Tokens-In', 0)}\n")
+        _ = sys.stdout.write(f"Tokens Out: {usage_info.get('X-Request-Tokens-Out', 0)}\n")
+        _ = sys.stdout.write(f"Total Cost: ${usage_info.get('X-Request-Total-Cost', 0):.4f}\n")
+        _ = sys.stdout.write("=" * 60 + "\n")
+        _ = sys.stdout.flush()
 
 
 async def stream_brave_ai(
     query: str,
     enable_research: bool = False,
     enable_citations: bool = True,
-):
+) -> None:
     """Stream Brave AI Grounding response to stdout."""
     api_key = get_api_key()
 
@@ -69,117 +173,51 @@ async def stream_brave_ai(
         "Accept": "application/json",
     }
 
-    payload = {
-        "messages": [{"role": "user", "content": query}],
-        "stream": True,
-        "model": "brave",
-        "enable_citations": enable_citations,
-    }
+    payload = _build_payload(query, enable_research, enable_citations)
 
-    if enable_research:
-        payload["enable_research"] = True
+    citations: list[dict[str, object]] = []
+    usage_info: dict[str, object] | None = None
 
-    citations: list[dict[str, Any]] = []
-    usage_info = None
+    async def handle_content(content: str) -> None:
+        nonlocal usage_info
+        if content.startswith("<citation>"):
+            citation_json = content.replace("<citation>", "").replace("</citation>", "")
+            citation_data = _parse_json_obj(citation_json)
+            if citation_data is not None:
+                citations.append(citation_data)
+            return
 
-    async with httpx.AsyncClient(timeout=300.0) as client:
-        async with client.stream(  # type: ignore[reportGeneralTypeIssues]
-            "POST",
-            url,
-            json=payload,
-            headers=headers,
-        ) as response:  # type: ignore[reportUnknownVariableType]
-            response.raise_for_status()  # type: ignore[reportUnknownMemberType]
+        if content.startswith("<usage>"):
+            usage_json = content.replace("<usage>", "").replace("</usage>", "")
+            loaded_usage = _parse_json_obj(usage_json)
+            if loaded_usage is not None:
+                usage_info = loaded_usage
+            return
 
-            async for line in response.aiter_lines():  # type: ignore[reportUnknownMemberType, reportUnknownVariableType]
-                if line.startswith("data: "):  # type: ignore[reportUnknownMemberType]
-                    data_str: str = line[6:]  # type: ignore[reportUnknownArgumentType]
-                    if data_str == "[DONE]":
-                        break
+        _ = sys.stdout.write(content)
+        _ = sys.stdout.flush()
 
-                    try:
-                        data = json.loads(data_str)  # type: ignore[reportUnknownArgumentType]
-                        if "choices" in data and len(data["choices"]) > 0:
-                            delta = data["choices"][0].get("delta", {})
-                            content = delta.get("content", "")
-                            if content:
-                                # Check if content contains markup
-                                if content.startswith("<citation>"):
-                                    # Extract citation JSON
-                                    citation_json = content.replace(
-                                        "<citation>",
-                                        "",
-                                    ).replace("</citation>", "")
-                                    try:
-                                        citation = json.loads(citation_json)
-                                        citations.append(citation)
-                                    except json.JSONDecodeError:
-                                        pass
-                                elif content.startswith("<usage>"):
-                                    # Extract usage JSON
-                                    usage_json = content.replace("<usage>", "").replace(
-                                        "</usage>",
-                                        "",
-                                    )
-                                    try:
-                                        usage_info = json.loads(usage_json)
-                                    except json.JSONDecodeError:
-                                        pass
-                                else:
-                                    # Regular content - print it
-                                    print(content, end="", flush=True)
-                    except json.JSONDecodeError:
-                        pass
-
-    print("\n")  # Final newlines
-
-    # Print footer with citations and usage
-    if citations:
-        print("\n" + "=" * 60)
-        print("SOURCES")
-        print("=" * 60)
-        for i, cite in enumerate(citations, 1):  # type: ignore[reportUnknownArgumentType]
-            cite_dict: dict[str, Any] = cite  # type: ignore[reportUnknownVariableType]
-            print(f"\n[{i}] {cite_dict.get('url', 'N/A')}")  # type: ignore[union-attr]
-            if "snippet" in cite_dict:
-                snippet = cite_dict["snippet"]  # type: ignore[typeddict-item]
-                # Snippet might be JSON string, try to parse it
-                try:
-                    snippet_data = json.loads(snippet)  # type: ignore[arg-type]
-                    if isinstance(snippet_data, dict):
-                        # Print structured snippet
-                        for key, value in snippet_data.items():  # type: ignore[reportUnknownVariableType]
-                            if key not in ["@context", "@type"] and value:
-                                print(f"    {key}: {str(value)[:100]}...")  # type: ignore[reportUnknownArgumentType]
-                except (json.JSONDecodeError, TypeError):
-                    # Print as plain text
-                    print(f"    {snippet[:200]}...")
-
-    if usage_info:
-        print("\n" + "=" * 60)
-        print("USAGE METRICS")
-        print("=" * 60)
-        print(f"Requests: {usage_info.get('X-Request-Requests', 0)}")
-        print(f"Queries: {usage_info.get('X-Request-Queries', 0)}")
-        print(f"Tokens In: {usage_info.get('X-Request-Tokens-In', 0)}")
-        print(f"Tokens Out: {usage_info.get('X-Request-Tokens-Out', 0)}")
-        print(f"Total Cost: ${usage_info.get('X-Request-Total-Cost', 0):.4f}")
-        print("=" * 60)
+    await _stream_chat(url, headers, payload, handle_content)
+    _print_footer(citations, usage_info)
 
 
 def main():
+    """Command-line entry point for streaming Brave AI Grounding responses."""
     parser = argparse.ArgumentParser(description="Stream Brave AI Grounding responses")
-    parser.add_argument("query", help="Question to ask")
-    parser.add_argument("--research", action="store_true", help="Enable research mode")
-    parser.add_argument("--no-citations", action="store_true", help="Disable citations")
+    _ = parser.add_argument("query", help="Question to ask")
+    _ = parser.add_argument("--research", action="store_true", help="Enable research mode")
+    _ = parser.add_argument("--no-citations", action="store_true", help="Disable citations")
 
     args = parser.parse_args()
+    query = cast(str, args.query)
+    enable_research_flag = bool(cast(bool, args.research))
+    enable_citations_flag = not bool(cast(bool, args.no_citations))
 
     asyncio.run(
         stream_brave_ai(
-            args.query,
-            enable_research=args.research,
-            enable_citations=not args.no_citations,
+            query,
+            enable_research=enable_research_flag,
+            enable_citations=enable_citations_flag,
         ),
     )
 
