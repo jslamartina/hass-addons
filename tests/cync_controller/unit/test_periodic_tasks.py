@@ -224,9 +224,7 @@ class TestPeriodicStatusRefresh:
     ) -> None:
         """Test refresh handles exceptions from bridge devices gracefully."""
         # Arrange
-        mock_bridge_device.ask_for_mesh_info = AsyncMock(
-            spec=MeshInfoCallable, side_effect=Exception("Bridge error")
-        )
+        mock_bridge_device.ask_for_mesh_info = AsyncMock(spec=MeshInfoCallable, side_effect=Exception("Bridge error"))
         mock_server.tcp_devices = {"dev1": mock_bridge_device}
 
         async def mock_sleep(_seconds: float) -> None:

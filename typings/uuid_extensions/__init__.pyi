@@ -1,3 +1,0 @@
-"""Type stub for uuid_extensions package."""
-
-def uuid7() -> str: ...

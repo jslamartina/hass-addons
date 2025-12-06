@@ -71,9 +71,7 @@ def _build_payload(query: str, enable_research: bool, enable_citations: bool) ->
 
 def _extract_content(parsed: JsonObj) -> str | None:
     choices_obj: object = parsed.get("choices")
-    choices_list: list[object] | None = (
-        cast(list[object], choices_obj) if isinstance(choices_obj, list) else None
-    )
+    choices_list: list[object] | None = cast(list[object], choices_obj) if isinstance(choices_obj, list) else None
     choices: list[JsonObj] | None = None
     if choices_list is not None:
         collected: list[JsonObj] = []

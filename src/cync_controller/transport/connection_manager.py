@@ -244,7 +244,7 @@ class ConnectionManager:
                 extra={"attempt": attempt + 1, "max_retries": max_retries},
             )
             if self.pending_requests:
-            _ = self.pending_requests.popleft()  # Remove pending if send failed (FIFO)
+                _ = self.pending_requests.popleft()  # Remove pending if send failed (FIFO)
             return False
 
         # 4. Wait for 0x28 ACK with timeout

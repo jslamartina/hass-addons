@@ -1,17 +1,7 @@
 {
   "include": ["src", "tests", "scripts", "scripts/playwright"],
-  "exclude": [
-    "src/cync_controller/mitm/validate-checksum-REFERENCE-ONLY.py"
-  ],
-  "stubPath": "typings",
-  "extraPaths": [
-    ".",
-    "src",
-    "tests",
-    "typings",
-    "scripts",
-    "scripts/playwright"
-  ],
+  "exclude": ["src/cync_controller/mitm/validate-checksum-REFERENCE-ONLY.py"],
+  "extraPaths": [".", "src", "tests", "scripts", "scripts/playwright"],
   "venvPath": ".",
   "venv": ".venv",
   "pythonVersion": "3.14",
@@ -20,26 +10,19 @@
   "executionEnvironments": [
     {
       "root": "src",
-      "extraPaths": ["src", "typings"],
+      "extraPaths": ["src"],
       "pythonVersion": "3.14",
       "reportPrivateUsage": true
     },
     {
       "root": "tests",
-      "extraPaths": [
-        "src",
-        "tests",
-        "typings",
-        ".",
-        "scripts",
-        "scripts/playwright"
-      ],
+      "extraPaths": ["src", "tests", ".", "scripts", "scripts/playwright"],
       "pythonVersion": "3.14",
       "reportPrivateUsage": false
     },
     {
       "root": "scripts",
-      "extraPaths": [".."],
+      "extraPaths": [".", "src", "tests", "scripts", "scripts/playwright"],
       "pythonVersion": "3.14",
       "reportPrivateUsage": false
     }

@@ -1,4 +1,5 @@
 """Tests for toggle harness."""
+
 import asyncio
 from unittest.mock import AsyncMock, MagicMock, patch
 

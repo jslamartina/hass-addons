@@ -122,11 +122,7 @@ def _fix_regular_call(line: str, line_num: int, lines: list[str]) -> bool:
     }
     not_assignment = "=" not in first_token
 
-    if (
-        not skip_control_flow
-        and not_assignment
-        and re.search(r"\w+\([^)]*\)", stripped_line)
-    ):
+    if not skip_control_flow and not_assignment and re.search(r"\w+\([^)]*\)", stripped_line):
         indent = len(line) - len(line.lstrip())
         lines[line_num - 1] = " " * indent + "_ = " + stripped_line + "\n"
         return True

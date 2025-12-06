@@ -1,6 +1,0 @@
-"""Typed stubs for _pytest.outcomes."""
-
-from typing import NoReturn
-
-def fail(msg: str = ..., *args: object) -> NoReturn: ...
-def skip(msg: str = ..., *args: object) -> NoReturn: ...
