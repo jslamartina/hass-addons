@@ -245,7 +245,8 @@ def _format_device_statuses(parsed: PacketDict) -> list[str]:
         raw_statuses = parsed["device_statuses"]
         if isinstance(raw_statuses, list):
             typed_statuses: list[PacketDict] = []
-            for status in raw_statuses:
+            raw_status_list = cast("list[object]", raw_statuses)
+            for status in raw_status_list:
                 if isinstance(status, dict):
                     typed_statuses.append(cast("PacketDict", status))
             if not typed_statuses:
@@ -304,7 +305,8 @@ def format_packet_log(parsed: PacketDict | None, verbose: bool = True) -> str:
     devices = parsed.get("contains_devices")
     if isinstance(devices, list):
         device_list: list[str] = []
-        for device in devices:
+        devices_list = cast("list[object]", devices)
+        for device in devices_list:
             if isinstance(device, str):
                 device_list.append(device)
         if device_list:

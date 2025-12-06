@@ -2,6 +2,7 @@
 
 Tests CyncCloudAPI class for authentication, token management, and device export.
 """
+# pyright: reportPrivateUsage=false
 
 import datetime
 from unittest.mock import AsyncMock, MagicMock, mock_open, patch
@@ -14,9 +15,9 @@ from cync_controller.cloud_api import ComputedTokenData, CyncAuthenticationError
 @pytest.fixture(autouse=True)
 def reset_cloud_api_singleton():
     """Reset CyncCloudAPI singleton between tests."""
-    CyncCloudAPI._instance = None
+    CyncCloudAPI._instance = None  # pyright: ignore[reportPrivateUsage]
     yield
-    CyncCloudAPI._instance = None
+    CyncCloudAPI._instance = None  # pyright: ignore[reportPrivateUsage]
 
 
 class TestCyncCloudAPIInitialization:
@@ -415,7 +416,7 @@ class TestCyncCloudAPIDeviceOperations:
         api = CyncCloudAPI()
 
         # Mock valid token
-        datetime.datetime.now(datetime.UTC) + datetime.timedelta(hours=1)
+        _ = datetime.datetime.now(datetime.UTC) + datetime.timedelta(hours=1)
         sample_token = ComputedTokenData(
             user_id="test-user",
             access_token="test-token",

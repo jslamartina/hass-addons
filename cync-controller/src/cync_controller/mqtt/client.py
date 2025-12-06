@@ -46,6 +46,7 @@ if TYPE_CHECKING:
     )
 
 logger = get_logger(__name__)
+WHITE_TEMP_PERCENT_MAX = 100
 
 
 def _get_global_object() -> GlobalObject:
@@ -92,6 +93,7 @@ class MQTTClient:
     _initialized: bool = False
 
     def __new__(cls, *_args: object, **_kwargs: object) -> MQTTClient:
+        """Return the singleton MQTTClient instance."""
         if cls._instance is None:
             cls._instance = super().__new__(cls)
         return cls._instance
@@ -120,21 +122,12 @@ class MQTTClient:
             ha_topic = CYNC_HASS_TOPIC
 
         self.broker_client_id = f"cync_lan_{self._g.uuid}"
-        lwt = aiomqtt.Will(topic=f"{topic}/connected", payload=DEVICE_LWT_MSG)
         self.broker_host = CYNC_MQTT_HOST
         setattr(self, "broker_port", CYNC_MQTT_PORT)  # noqa: B010
         self.broker_username = CYNC_MQTT_USER
         self.broker_password = CYNC_MQTT_PASS
-        port = int(self.broker_port) if self.broker_port else 1883
-        self.client = aiomqtt.Client(
-            hostname=self.broker_host,
-            port=port,
-            username=self.broker_username,
-            password=self.broker_password,
-            identifier=self.broker_client_id,
-            will=lwt,
-            # logger=logger,
-        )
+        # Client is created lazily in connect() to avoid requiring a running loop during __init__
+        self.client = None
 
         self.topic = topic
         self.ha_topic = ha_topic
@@ -152,6 +145,21 @@ class MQTTClient:
     def set_connected(self, connected: bool) -> None:
         """Set the connection state. Used by helper classes when connection errors occur."""
         self._connected = connected
+
+    def _ensure_client(self) -> None:
+        """Lazy-create the MQTT client when invoked outside connect()."""
+        if self.client is not None:
+            return
+        lwt = aiomqtt.Will(topic=f"{self.topic}/connected", payload=DEVICE_LWT_MSG)
+        self.client = aiomqtt.Client(
+            hostname=self.broker_host,
+            port=int(self.broker_port) if self.broker_port else 1883,
+            username=self.broker_username,
+            password=self.broker_password,
+            identifier=self.broker_client_id,
+            will=lwt,
+            # logger=logger,
+        )
 
     def _brightness_to_percentage(self, brightness: int) -> int:
         """Convert Cync brightness (0-255) to Home Assistant percentage (0-100)."""
@@ -284,6 +292,7 @@ class MQTTClient:
         return delay
 
     async def start(self) -> None:
+        """Connect to MQTT broker and start handling messages."""
         itr = 0
         lp = f"{self.lp}start:"
         try:
@@ -323,6 +332,7 @@ class MQTTClient:
             logger.exception("%s MQTT start() EXCEPTION", lp)
 
     async def connect(self) -> bool:
+        """Establish MQTT connection and trigger discovery/birth messages."""
         lp = f"{self.lp}connect:"
         self._connected = False
         logger.debug("%s Connecting to MQTT broker...", lp)
@@ -373,6 +383,7 @@ class MQTTClient:
         return False
 
     async def stop(self) -> None:
+        """Gracefully disconnect from MQTT and publish offline status."""
         lp = f"{self.lp}stop:"
         # set all devices offline
         if self._connected and self._g.ncync_server:
@@ -411,8 +422,10 @@ class MQTTClient:
                 _ = self.start_task.cancel()
 
     async def send_birth_msg(self) -> bool:
+        """Publish Home Assistant birth message if connected."""
         lp = f"{self.lp}send_birth_msg:"
         if self._connected:
+            self._ensure_client()
             assert self.client is not None, "client must be initialized"
             logger.debug(
                 "%s Sending birth message (%s) to %s/status",
@@ -436,6 +449,7 @@ class MQTTClient:
         return False
 
     async def send_will_msg(self) -> bool:
+        """Publish Home Assistant will message if connected."""
         lp = f"{self.lp}send_will_msg:"
         if self._connected:
             assert self.client is not None, "client must be initialized"
@@ -484,6 +498,7 @@ class MQTTClient:
         return False
 
     async def publish_json_msg(self, topic: str, msg_data: Mapping[str, object]) -> bool:
+        """Publish a JSON payload to the MQTT broker."""
         lp = f"{self.lp}publish_msg:"
         assert self.client is not None, "client must be initialized"
         try:
@@ -510,7 +525,6 @@ class MQTTClient:
             return 100
         scale = 100 / (max_k - min_k)
         return int(scale * (k - min_k))
-        # logger.debug("%s Converting Kelvin: %s using scale: %s (max_k=%s, min_k=%s) -> return value: %s", self.lp, k, scale, max_k, min_k, ret)
 
     def cync2kelvin(self, ct: int) -> int:
         """Convert Cync white temp (0-100) to Kelvin value."""
@@ -518,11 +532,10 @@ class MQTTClient:
         min_k = CYNC_MINK
         if ct <= 0:
             return min_k
-        if ct >= 100:
+        if ct >= WHITE_TEMP_PERCENT_MAX:
             return max_k
-        scale = (max_k - min_k) / 100
+        scale = (max_k - min_k) / WHITE_TEMP_PERCENT_MAX
         return min_k + int(scale * ct)
-        # logger.debug("%s Converting Cync temp: %s using scale: %s (max_k=%s, min_k=%s) -> return value: %s", self.lp, ct, scale, max_k, min_k, ret)
 
     async def trigger_status_refresh(self) -> None:
         """Trigger an immediate status refresh from all bridge devices."""

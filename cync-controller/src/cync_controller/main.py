@@ -1,3 +1,5 @@
+"""Main entrypoint and lifecycle management for the Cync Controller service."""
+
 from __future__ import annotations
 
 import argparse
@@ -286,17 +288,21 @@ async def parse_config(config_file: Path) -> tuple[dict[int, CyncDevice], dict[i
 
 
 class CyncController:
+    """Singleton controller orchestrating server, MQTT, and export services."""
+
     lp: str = "CyncController:"
     config_file: Path | None = None
     _instance: CyncController | None = None
     _initialized: bool = False
 
     def __new__(cls, *_args: object, **_kwargs: object) -> CyncController:
+        """Ensure a single instance exists for the controller."""
         if cls._instance is None:
             cls._instance = super().__new__(cls)
         return cls._instance
 
     def __init__(self, *_args: object, **_kwargs: object) -> None:
+        """Initialize event loop, signals, and global context."""
         if getattr(self, "_initialized", False):
             return
         self._initialized = True
@@ -327,7 +333,7 @@ class CyncController:
         _ = ensure_correlation_id()
 
         self.config_file = cfg_file = Path(CYNC_CONFIG_FILE_PATH).expanduser().resolve()
-        tasks: list[asyncio.Task[object]] = []
+        tasks: list[asyncio.Task[None]] = []
 
         if cfg_file.exists():
             logger.info(
@@ -352,8 +358,8 @@ class CyncController:
             g.mqtt_client = cast("MQTTClientProtocol", cast("object", mqtt_client))
 
             # Create async tasks for services
-            n_start = asyncio.Task(ncync_server.start(), name=NCYNC_START_TASK_NAME)
-            m_start = asyncio.Task(mqtt_client.start(), name=MQTT_CLIENT_START_TASK_NAME)
+            n_start: asyncio.Task[None] = asyncio.Task(ncync_server.start(), name=NCYNC_START_TASK_NAME)  # type: ignore[assignment]
+            m_start: asyncio.Task[None] = asyncio.Task(mqtt_client.start(), name=MQTT_CLIENT_START_TASK_NAME)  # type: ignore[assignment]
             ncync_server.start_task = n_start
             mqtt_client.start_task = m_start
             tasks.extend([n_start, m_start])
@@ -375,10 +381,10 @@ class CyncController:
             g.cloud_api = CyncCloudAPI()
             export_server = ExportServer()
             g.export_server = export_server
-            x_start = asyncio.Task(
+            x_start: asyncio.Task[None] = asyncio.Task(
                 export_server.start(),
                 name=EXPORT_SRV_START_TASK_NAME,
-            )
+            )  # type: ignore[assignment]
             export_server.start_task = x_start
             tasks.append(x_start)
 
@@ -399,6 +405,7 @@ class CyncController:
 
 
 def parse_cli():
+    """Parse CLI arguments for the controller process."""
     parser = argparse.ArgumentParser(description="Cync Controller Server")
 
     _ = parser.add_argument(
@@ -461,7 +468,7 @@ def parse_cli():
 
 
 def main():
-    """Main entry point for Cync Controller."""
+    """Run the Cync Controller entry point."""
     with correlation_context():  # Auto-generate correlation ID for app lifecycle
         logger.info(
             "",

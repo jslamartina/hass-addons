@@ -4,6 +4,7 @@ Tests current status, state conversion, status objects, and version handling.
 """
 
 import pytest
+from _pytest.logging import LogCaptureFixture
 
 from cync_controller.devices.base_device import CyncDevice
 
@@ -42,12 +43,12 @@ class TestCyncDeviceStateConversion:
 
         # Test string "on" variations
         for value in ["on", "On", "ON", "true", "True", "TRUE", "yes", "Yes", "YES", "y", "Y", "t", "T"]:
-            device.state = value
+            device.state = value  # type: ignore[assignment]
             assert device.state == 1
 
         # Test string "off" variations
         for value in ["off", "Off", "OFF", "false", "False", "FALSE", "no", "No", "NO", "n", "N", "f", "F"]:
-            device.state = value
+            device.state = value  # type: ignore[assignment]
             assert device.state == 0
 
     def test_state_setter_with_integers(self):
@@ -137,7 +138,7 @@ class TestCyncDeviceVersionProperty:
         # Should return early and not crash
         assert True  # Just verify no exception
 
-    def test_version_setter_with_invalid_string(self, caplog):
+    def test_version_setter_with_invalid_string(self, caplog: LogCaptureFixture):
         """Test version setter with invalid string."""
         device = CyncDevice(cync_id=0x1234)
 

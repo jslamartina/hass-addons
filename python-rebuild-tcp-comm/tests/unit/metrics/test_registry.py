@@ -16,10 +16,7 @@ class TestACKMetrics:
         registry.record_ack_received("device1", "0x7B", "matched")
         # Verify metric was incremented (check sample count)
         samples = list(registry.tcp_comm_ack_received_total.collect()[0].samples)
-        assert any(
-            s.labels == {"device_id": "device1", "ack_type": "0x7B", "outcome": "matched"}
-            for s in samples
-        )
+        assert any(s.labels == {"device_id": "device1", "ack_type": "0x7B", "outcome": "matched"} for s in samples)
 
     def test_record_ack_timeout(self) -> None:
         """Test record_ack_timeout helper."""
@@ -78,9 +75,7 @@ class TestConnectionMetrics:
         """Test record_reconnection helper."""
         registry.record_reconnection("device1", "heartbeat_timeout")
         samples = list(registry.tcp_comm_reconnection_total.collect()[0].samples)
-        assert any(
-            s.labels == {"device_id": "device1", "reason": "heartbeat_timeout"} for s in samples
-        )
+        assert any(s.labels == {"device_id": "device1", "reason": "heartbeat_timeout"} for s in samples)
 
     def test_record_heartbeat(self) -> None:
         """Test record_heartbeat helper."""

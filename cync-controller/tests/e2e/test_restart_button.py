@@ -1,6 +1,7 @@
 """E2E tests for restart button behavior - Bugs 2 & 3."""
 
-import pytest
+from _pytest.outcomes import fail as pytest_fail
+from _pytest.outcomes import skip as pytest_skip
 from playwright.sync_api import Page, expect
 
 
@@ -22,7 +23,7 @@ def test_restart_button_error_despite_success(ingress_page: Page):
 
     # Check if restart button is visible (config must be exported)
     if not restart_button.is_visible(timeout=5000):
-        pytest.skip("Restart button not visible - config may not be exported")
+        pytest_skip("Restart button not visible - config may not be exported")
 
     # Click restart button
     restart_button.click()
@@ -50,7 +51,7 @@ def test_restart_button_visibility_after_navigation(ingress_page: Page, ha_base_
 
     # If no config exported, skip test
     if not restart_button.is_visible(timeout=5000):
-        pytest.skip("No config exported - restart button not expected to be visible")
+        pytest_skip("No config exported - restart button not expected to be visible")
 
     # Navigate away from ingress page
     _ = page.goto(f"{ha_base_url}/config/dashboard")
@@ -90,8 +91,7 @@ def test_config_persistence_check(ingress_page: Page):
     inner_iframe = outer_iframe.frame_locator("iframe[title='Cync Controller']")
 
     # Debug: Check what buttons are available
-    all_buttons = inner_iframe.get_by_role("button").all()
-    len(all_buttons)
+    _buttons = inner_iframe.get_by_role("button").all()  # pyright: ignore[reportUnknownVariableType, reportUnknownMemberType, reportCallIssue]
 
     # Check if restart button is visible
     restart_button = inner_iframe.get_by_role("button", name="Restart Server")
@@ -102,9 +102,7 @@ def test_config_persistence_check(ingress_page: Page):
 
     # If config exists, both should be visible
     if restart_button.is_visible(timeout=5000):
-        if success_section.is_visible(timeout=2000):
-            pass
-        else:
-            pass
+        if not success_section.is_visible(timeout=2000):
+            pytest_fail("Config should be visible when restart button is present")
     else:
-        pass
+        pytest_skip("Restart button not visible; config likely not exported")

@@ -243,13 +243,13 @@ class DeviceCommands:
                             _ = await g.mqtt_client.update_device_state(self._as_device_protocol(), state)
 
                     m_cb = ControlMessageCallback(
-                        msg_id=cmsg_id,
+                        id=cmsg_id,
                         message=payload_bytes,
-                        sent_at=time.time(),
-                        callback=power_ack_callback,
-                        device_id=device_id,
-                        ack_event=ack_event,  # Share same event across all bridges
                     )
+                    m_cb.callback = power_ack_callback
+                    m_cb.sent_at = time.time()
+                    m_cb.device_id = device_id
+                    m_cb.ack_event = ack_event  # Share same event across all bridges
                     bridge_device.messages.control[cmsg_id] = m_cb
                     sent[bridge_device.address] = cmsg_id
                     sent_bridges.append((bridge_device, cmsg_id))
@@ -484,13 +484,13 @@ class DeviceCommands:
                 _ = await g.mqtt_client.update_brightness(self._as_device_protocol(), ctx.brightness)
 
         m_cb = ControlMessageCallback(
-            msg_id=cmsg_id,
+            id=cmsg_id,
             message=payload_bytes,
-            sent_at=time.time(),
-            callback=brightness_ack_callback,
-            device_id=ctx.device_id,
-            ack_event=ctx.ack_event,
         )
+        m_cb.callback = brightness_ack_callback
+        m_cb.sent_at = time.time()
+        m_cb.device_id = ctx.device_id
+        m_cb.ack_event = ctx.ack_event
         bridge_device.messages.control[cmsg_id] = m_cb
         return payload_bytes, cmsg_id
 
@@ -586,13 +586,13 @@ class DeviceCommands:
                         _ = await g.mqtt_client.update_temperature(self._as_device_protocol(), temp)
 
                 m_cb = ControlMessageCallback(
-                    msg_id=cmsg_id,
+                    id=cmsg_id,
                     message=payload_bytes,
-                    sent_at=time.time(),
-                    callback=temperature_ack_callback,
-                    device_id=device_id,
-                    ack_event=ack_event,
                 )
+                m_cb.callback = temperature_ack_callback
+                m_cb.sent_at = time.time()
+                m_cb.device_id = device_id
+                m_cb.ack_event = ack_event
                 bridge_device.messages.control[cmsg_id] = m_cb
                 sent_bridges.append((bridge_device, cmsg_id))
                 tasks.append(bridge_device.write(payload_bytes))
@@ -720,13 +720,13 @@ class DeviceCommands:
                         _ = await g.mqtt_client.update_rgb(self._as_device_protocol(), _rgb)
 
                 m_cb = ControlMessageCallback(
-                    msg_id=cmsg_id,
+                    id=cmsg_id,
                     message=bpayload,
-                    sent_at=time.time(),
-                    callback=rgb_ack_callback,
-                    device_id=device_id,
-                    ack_event=ack_event,
                 )
+                m_cb.callback = rgb_ack_callback
+                m_cb.sent_at = time.time()
+                m_cb.device_id = device_id
+                m_cb.ack_event = ack_event
                 bridge_device.messages.control[cmsg_id] = m_cb
                 sent_bridges.append((bridge_device, cmsg_id))
                 tasks.append(bridge_device.write(bpayload))
@@ -879,12 +879,12 @@ class DeviceCommands:
                 bpayload = bytes(payload)
                 sent[bridge_device.address] = cmsg_id
                 m_cb = ControlMessageCallback(
-                    msg_id=cmsg_id,
+                    id=cmsg_id,
                     message=bpayload,
-                    sent_at=time.time(),
-                    callback=create_completed_future(None),
-                    device_id=device_id,
                 )
+                m_cb.callback = create_completed_future(None)
+                m_cb.sent_at = time.time()
+                m_cb.device_id = device_id
                 bridge_device.messages.control[cmsg_id] = m_cb
                 tasks.append(bridge_device.write(bpayload))
             else:

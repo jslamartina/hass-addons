@@ -18,6 +18,7 @@ Importing legacy code in Phase 1a violates architecture principles and will be r
 
 import sys
 from pathlib import Path
+from typing import Any
 
 # Add legacy codebase to path for validation purposes ONLY
 legacy_path = Path(__file__).parent.parent.parent / "cync-controller" / "src"
@@ -113,9 +114,9 @@ def extract_checksum_from_packet(packet: bytes) -> int:
     return packet[end_marker_pos - 1]
 
 
-def validate_fixtures(fixtures: dict, fixture_type: str) -> list:
+def validate_fixtures(fixtures: dict[str, bytes], fixture_type: str) -> list[dict[str, Any]]:
     """Validate checksum algorithm matches legacy code against all fixtures."""
-    results = []
+    results: list[dict[str, Any]] = []
     print(f"\n{'=' * 60}")
     print(f"Validating {fixture_type} Fixtures")
     print(f"{'=' * 60}\n")
@@ -151,15 +152,15 @@ def main() -> None:
     print("This script validates the legacy checksum algorithm against test fixtures.")
     print("⚠️  FOR VALIDATION ONLY - Phase 1a must copy algorithm, not import legacy code")
 
-    all_results = []
+    all_results: list[dict[str, Any]] = []
 
     # Validate against legacy test fixtures
-    legacy_results = validate_fixtures(LEGACY_FIXTURES, "Legacy Test")
+    legacy_results: list[dict[str, Any]] = validate_fixtures(LEGACY_FIXTURES, "Legacy Test")
     all_results.extend(legacy_results)
 
     # Validate against real captured packets (if any)
     if REAL_FIXTURES:
-        real_results = validate_fixtures(REAL_FIXTURES, "Real Captured")
+        real_results: list[dict[str, Any]] = validate_fixtures(REAL_FIXTURES, "Real Captured")
         all_results.extend(real_results)
     else:
         print("\n" + "=" * 60)
@@ -171,7 +172,7 @@ def main() -> None:
     print("\n" + "=" * 60)
     print("Validation Summary")
     print("=" * 60)
-    mismatches = [r for r in all_results if not r["match"]]
+    mismatches: list[dict[str, Any]] = [r for r in all_results if not r["match"]]
 
     if mismatches:
         print(f"\n❌ VALIDATION FAILED: {len(mismatches)} checksum mismatches found!")

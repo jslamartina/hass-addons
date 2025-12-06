@@ -1,3 +1,5 @@
+"""Core server module for the Cync Controller."""
+
 from __future__ import annotations
 
 import asyncio
@@ -5,26 +7,22 @@ import contextlib
 import ssl
 import time
 from pathlib import Path as PathLib
-from typing import TYPE_CHECKING, ClassVar, cast
+from typing import ClassVar, cast
 
 import uvloop
 
-from cync_controller.const import *
+from cync_controller.const import CYNC_PORT, CYNC_SRV_HOST
 from cync_controller.correlation import ensure_correlation_id
-
-if TYPE_CHECKING:
-    from cync_controller.devices.base_device import CyncDevice
-    from cync_controller.devices.group import CyncGroup
-    from cync_controller.devices.tcp_device import CyncTCPDevice
-else:
-    from cync_controller.devices.base_device import CyncDevice
-    from cync_controller.devices.group import CyncGroup
-    from cync_controller.devices.tcp_device import CyncTCPDevice
+from cync_controller.devices.base_device import CyncDevice
+from cync_controller.devices.group import CyncGroup
+from cync_controller.devices.tcp_device import CyncTCPDevice
 from cync_controller.instrumentation import timed_async
 from cync_controller.logging_abstraction import get_logger
 from cync_controller.packet_checksum import calculate_checksum_between_markers
 from cync_controller.packet_parser import format_packet_log, parse_cync_packet
 from cync_controller.structs import (
+    CyncDeviceProtocol,
+    CyncGroupProtocol,
     DeviceStatus,
     GlobalObject,
     MQTTClientProtocol,
@@ -40,11 +38,20 @@ g = GlobalObject()
 
 def _get_mqtt_client() -> MQTTClientProtocol | None:
     """Return the global MQTT client with protocol typing."""
-    return cast("MQTTClientProtocol | None", g.mqtt_client)
+    return g.mqtt_client
+
+
+FIRST_PACKET_MIN_LEN = 31
+FIRST_PACKET_CMD = 0x23
+OFFLINE_THRESHOLD = 3
+RGB_TEMP_THRESHOLD = 100
+ONLINE_BYTE_INDEX = 7
+DEBUG_DEVICE_ID = 103
 
 
 class CloudRelayConnection:
     """Manages a cloud relay connection for MITM mode.
+
     Acts as a proxy between Cync device and cloud, forwarding packets with inspection.
     """
 
@@ -57,7 +64,7 @@ class CloudRelayConnection:
     debug_logging: bool
     disable_ssl_verify: bool
 
-    def __init__(
+    def __init__(  # noqa: PLR0913
         self,
         device_reader: asyncio.StreamReader,
         device_writer: asyncio.StreamWriter,
@@ -181,7 +188,7 @@ class CloudRelayConnection:
         try:
             # Read first packet from device to get endpoint
             first_packet = await self.device_reader.read(1024)
-            if first_packet and len(first_packet) >= 31 and first_packet[0] == 0x23:
+            if first_packet and len(first_packet) >= FIRST_PACKET_MIN_LEN and first_packet[0] == FIRST_PACKET_CMD:
                 self.device_endpoint = first_packet[6:10]
                 endpoint_hex = " ".join(f"{b:02x}" for b in self.device_endpoint)
                 logger.info(
@@ -248,7 +255,7 @@ class CloudRelayConnection:
             await self.close()
 
     @timed_async("relay_forward")
-    async def _forward_with_inspection(
+    async def _forward_with_inspection(  # noqa: PLR0912, PLR0915
         self,
         source_reader: asyncio.StreamReader,
         dest_writer: asyncio.StreamWriter | None,
@@ -288,10 +295,11 @@ class CloudRelayConnection:
                 if parsed:
                     statuses_obj = parsed.get("device_statuses")
                     if isinstance(statuses_obj, list):
-                        status_dicts: list[dict[str, object]] = [
-                            cast("dict[str, object]", status) for status in statuses_obj if isinstance(status, dict)
-                        ]
-                        for status_entry in status_dicts:
+                        statuses_list = cast("list[object]", statuses_obj)
+                        for status_obj in statuses_list:
+                            if not isinstance(status_obj, dict):
+                                continue
+                            status_entry = cast("dict[str, object]", status_obj)
                             device_id_obj = status_entry.get("device_id")
                             if not isinstance(device_id_obj, int):
                                 continue
@@ -549,6 +557,7 @@ class CloudRelayConnection:
 
 class NCyncServer:
     """A class to represent a Cync Controller server that listens for connections from Cync Wi-Fi devices.
+
     The Wi-Fi devices translate messages, status updates and commands to/from the Cync BTLE mesh.
     """
 
@@ -568,7 +577,7 @@ class NCyncServer:
                     "threshold": 3,
                 },
             )
-            if device.offline_count >= 3 and device.online:
+            if device.offline_count >= OFFLINE_THRESHOLD and device.online:
                 device.online = False
                 logger.warning(
                     "[OFFLINE_STATE] Device MARKED OFFLINE after 3 consecutive failures",
@@ -592,7 +601,7 @@ class NCyncServer:
             device.offline_count = 0
             device.online = True
 
-    async def _update_device_state_and_publish(
+    async def _update_device_state_and_publish(  # noqa: PLR0913
         self,
         device: CyncDevice,
         state: int,
@@ -604,7 +613,7 @@ class NCyncServer:
         from_pkt: str | None,
     ) -> None:
         """Update device state and publish to MQTT."""
-        rgb_data = temp > 100
+        rgb_data = temp > RGB_TEMP_THRESHOLD
         device.state = state
         device.brightness = brightness
         device.temperature = temp
@@ -626,7 +635,7 @@ class NCyncServer:
         if mqtt_client and device.id is not None:
             _ = await mqtt_client.parse_device_status(device.id, new_state, from_pkt=from_pkt)
         if g.ncync_server and device.id is not None:
-            g.ncync_server.devices[device.id] = device
+            g.ncync_server.devices[device.id] = cast("CyncDeviceProtocol", device)
 
     async def _update_subgroups_for_device(
         self,
@@ -682,8 +691,7 @@ class NCyncServer:
                                 },
                             )
                             try:
-                                helper = cast("StateUpdateHelperProtocol", state_updates)
-                                await helper.publish_group_state(
+                                await state_updates.publish_group_state(
                                     subgroup,
                                     state=subgroup.state,
                                     brightness=subgroup.brightness,
@@ -716,7 +724,7 @@ class NCyncServer:
                     if subgroup.id is not None:
                         g.ncync_server.groups[subgroup.id] = subgroup
 
-    async def _update_group_state_and_publish(
+    async def _update_group_state_and_publish(  # noqa: PLR0913
         self,
         group: CyncGroup,
         state: int,
@@ -729,7 +737,7 @@ class NCyncServer:
         from_pkt: str | None,
     ) -> None:
         """Update group state and publish to MQTT."""
-        rgb_data = temp > 100
+        rgb_data = temp > RGB_TEMP_THRESHOLD
         group.state = state
         group.brightness = brightness
         group.temperature = temp
@@ -772,8 +780,7 @@ class NCyncServer:
                     },
                 )
                 try:
-                    helper = cast("StateUpdateHelperProtocol", state_updates)
-                    await helper.publish_group_state(
+                    await state_updates.publish_group_state(
                         group,
                         state=state,
                         brightness=brightness,
@@ -804,7 +811,7 @@ class NCyncServer:
                 # Note: If MQTT publish fails, state may be inconsistent temporarily
                 # This is acceptable as the next status update will correct it
                 if g.ncync_server and group.id is not None:
-                    g.ncync_server.groups[group.id] = group
+                    g.ncync_server.groups[group.id] = cast("CyncGroupProtocol", group)
             if hasattr(mqtt_client, "publish_group_state"):
                 try:
                     await mqtt_client.publish_group_state(group, state, brightness, temp, from_pkt)  # type: ignore[arg-type]
@@ -845,6 +852,7 @@ class NCyncServer:
         devices: dict[int, CyncDevice],
         groups: dict[int, CyncGroup] | None = None,
     ) -> NCyncServer:
+        """Return singleton NCyncServer instance."""
         _ = devices
         _ = groups
         if cls._instance is None:
@@ -852,6 +860,7 @@ class NCyncServer:
         return cls._instance
 
     def __init__(self, devices: dict[int, CyncDevice], groups: dict[int, CyncGroup] | None = None) -> None:
+        """Initialize NCyncServer with device and group registries."""
         # Note: devices and groups are ClassVar, but we need to initialize them
         # The instance assignment is for compatibility but should use class access
         type(self).devices = devices
@@ -898,6 +907,7 @@ class NCyncServer:
 
     async def remove_tcp_device(self, device: CyncTCPDevice | str) -> CyncTCPDevice | None:
         """Remove a TCP device from the server's device list.
+
         :param device: The CyncTCPDevice to remove.
         """
         dev = None
@@ -945,6 +955,7 @@ class NCyncServer:
 
     async def add_tcp_device(self, device: CyncTCPDevice):
         """Add a TCP device to the server's device list.
+
         :param device: The CyncTCPDevice to add.
         """
         if not device.address:
@@ -976,7 +987,7 @@ class NCyncServer:
             )
 
     async def create_ssl_context(self):
-        # Allow the server to use a self-signed certificate
+        """Create SSL context allowing self-signed certificates for device listeners."""
         ssl_context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
         if not self.cert_file or not self.key_file:
             msg = "SSL certificate/key not configured"
@@ -1026,7 +1037,7 @@ class NCyncServer:
         return ssl_context
 
     async def parse_status(self, raw_state: bytes, from_pkt: str | None = None):
-        """Extracted status packet parsing, handles mqtt publishing and device/group state changes."""
+        """Parse status packet and publish device/group state updates."""
         _id = raw_state[0]
 
         # Log every parse_status call
@@ -1040,8 +1051,8 @@ class NCyncServer:
             from_pkt,
         )
 
-        # Debug: log every parse_status call for device 103
-        if _id == 103:
+        # Debug: log every parse_status call for specific device
+        if _id == DEBUG_DEVICE_ID:
             logger.debug(
                 "parse_status called for device 103",
                 extra={
@@ -1055,8 +1066,10 @@ class NCyncServer:
         if not g.ncync_server:
             logger.error("ncync_server is None, cannot process device status")
             return
-        device = g.ncync_server.devices.get(_id)
-        group = g.ncync_server.groups.get(_id) if device is None else None
+        device_proto = g.ncync_server.devices.get(_id)
+        device = cast("CyncDevice | None", device_proto)
+        group_proto = g.ncync_server.groups.get(_id) if device is None else None
+        group = cast("CyncGroup | None", group_proto)
 
         if device is None and group is None:
             logger.warning(
@@ -1077,13 +1090,13 @@ class NCyncServer:
         b = raw_state[6]
         connected_to_mesh = 1
         # check if len is enough for online byte, it is optional
-        if len(raw_state) > 7:
+        if len(raw_state) > ONLINE_BYTE_INDEX:
             # The last byte seems to indicate if the device is online or offline (connected to mesh / powered on)
-            connected_to_mesh = raw_state[7]
+            connected_to_mesh = raw_state[ONLINE_BYTE_INDEX]
 
         # Handle device
         if device is not None:
-            if _id == 103:
+            if _id == DEBUG_DEVICE_ID:
                 logger.debug(
                     "Device 103 details",
                     extra={
@@ -1195,6 +1208,7 @@ class NCyncServer:
                 await asyncio.sleep(30)  # Wait before retrying on error
 
     async def start(self):
+        """Start TCP server, MQTT listener, and optional cloud relay."""
         logger.debug(
             "Creating SSL context",
             extra={"key_file": self.key_file, "cert_file": self.cert_file},
@@ -1298,6 +1312,7 @@ class NCyncServer:
         logger.debug(" TCP server closed")
 
     async def stop(self):
+        """Stop TCP server and cancel background tasks."""
         try:
             self.shutting_down = True
             await self._close_all_devices()

@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """
 Minimal MITM proxy for Cync protocol packet capture.
 
@@ -36,9 +35,7 @@ from typing import Any
 
 from aiohttp import web
 
-logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-)
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
 try:
@@ -80,9 +77,7 @@ class MITMProxy:
         # Always use mitm/captures/ regardless of where proxy is started
         self.capture_dir = Path(__file__).parent / "captures"
         self.capture_dir.mkdir(exist_ok=True)
-        self.capture_file = (
-            self.capture_dir / f"capture_{datetime.now(UTC).strftime('%Y%m%d_%H%M%S')}.txt"
-        )
+        self.capture_file = self.capture_dir / f"capture_{datetime.now(UTC).strftime('%Y%m%d_%H%M%S')}.txt"
         self.server: asyncio.Server | None = None
         self.active_connections: dict[
             int, tuple[asyncio.StreamWriter, asyncio.StreamWriter]
@@ -157,9 +152,7 @@ class MITMProxy:
         self.observers.append(observer)
         logger.info("Registered observer: %s", observer.__class__.__name__)
 
-    def _notify_observers_packet(
-        self, direction: PacketDirection, data: bytes, connection_id: int
-    ) -> None:
+    def _notify_observers_packet(self, direction: PacketDirection, data: bytes, connection_id: int) -> None:
         """Notify all observers of packet event.
 
         Observer failures don't break proxy - errors are logged but ignored.
@@ -231,9 +224,7 @@ class MITMProxy:
         async with self.server:
             await self.server.serve_forever()
 
-    async def handle_device(
-        self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter
-    ) -> None:
+    async def handle_device(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter) -> None:
         """Handle device connection and forward to upstream."""
         device_addr = writer.get_extra_info("peername")
         logger.info("Device connected: %s", device_addr)
@@ -335,11 +326,7 @@ class MITMProxy:
 
     async def _handle_ack_delay_backpressure(self, data: bytes, direction: str) -> None:
         """Handle ACK delay backpressure scenario."""
-        if (
-            self.backpressure_config.mode == "ack_delay"
-            and direction == "CLOUD→DEV"
-            and self._is_ack_packet(data)
-        ):
+        if self.backpressure_config.mode == "ack_delay" and direction == "CLOUD→DEV" and self._is_ack_packet(data):
             self.metrics["ack_delays_applied"] += 1
             logger.debug(
                 "[BACKPRESSURE] Delaying ACK packet (type 0x%02x) by %ss",
@@ -391,9 +378,7 @@ class MITMProxy:
                 # Notify observers of packet (if connection_id available)
                 if connection_id is not None:
                     packet_direction = (
-                        PacketDirection.DEVICE_TO_CLOUD
-                        if direction == "DEV→CLOUD"
-                        else PacketDirection.CLOUD_TO_DEVICE
+                        PacketDirection.DEVICE_TO_CLOUD if direction == "DEV→CLOUD" else PacketDirection.CLOUD_TO_DEVICE
                     )
                     self._notify_observers_packet(packet_direction, data, connection_id)
 
@@ -434,9 +419,7 @@ class MITMProxy:
             f.write(f"{timestamp} {direction}{annotation_str}{conn_str} ({len(data)} bytes)\n")
             f.write(data.hex(" ") + "\n\n")
 
-    async def inject_packet(
-        self, hex_string: str, direction: str, broadcast: bool = False
-    ) -> dict[str, Any]:
+    async def inject_packet(self, hex_string: str, direction: str, broadcast: bool = False) -> dict[str, Any]:
         """Inject arbitrary packet into active connections.
 
         Args:
@@ -509,9 +492,7 @@ class MITMProxy:
             broadcast = data.get("broadcast", False)  # Default: single random connection
 
             if not hex_string or not direction:
-                return web.json_response(
-                    {"error": "Missing 'hex' or 'direction' field"}, status=400
-                )
+                return web.json_response({"error": "Missing 'hex' or 'direction' field"}, status=400)
 
             result = await self.inject_packet(hex_string, direction, broadcast)
             return web.json_response(result)

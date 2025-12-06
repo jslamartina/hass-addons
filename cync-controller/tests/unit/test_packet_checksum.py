@@ -156,7 +156,8 @@ class TestCalculateChecksumBetweenMarkers:
         )
 
         # With offset=3, sums from index 4 to 6: [0x01, 0x02, 0x03]
-        # But algorithm also includes bytes between, actual sum: 0xAA + 0xBB + 0xCC + 0x01 + 0x02 + 0x03 = 555 % 256 = 43
+        # But algorithm also includes bytes between.
+        # Actual sum: 0xAA + 0xBB + 0xCC + 0x01 + 0x02 + 0x03 = 555 % 256 = 43
         # Actually it sums packet[start + 3 : end - 1] = packet[4:7] = [0x01, 0x02, 0x03]
         # Wait, that should be 6... Let me check the actual result
         result = calculate_checksum_between_markers(packet, offset_after_start=3)

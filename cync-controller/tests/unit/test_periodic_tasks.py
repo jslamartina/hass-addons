@@ -37,12 +37,12 @@ class ServerStub:
 
 
 def create_server_stub() -> ServerStub:
-    """Factory to create a typed server stub."""
+    """Create a typed server stub."""
     return ServerStub()
 
 
 def create_bridge_device_stub(**overrides: Any) -> BridgeDeviceStub:
-    """Factory to create a typed bridge device stub."""
+    """Create a typed bridge device stub."""
     return BridgeDeviceStub(**overrides)
 
 

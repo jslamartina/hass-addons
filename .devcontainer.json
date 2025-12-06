@@ -11,7 +11,6 @@
       "installDirectlyFromGitHubRelease": true,
       "version": "latest"
     },
-    "ghcr.io/devcontainers-community/features/deno": {},
     "ghcr.io/devcontainers/features/common-utils:2": {
       "installZsh": false,
       "installOhMyZsh": false,
@@ -61,42 +60,8 @@
         "vale.valeCLI"
       ],
       "settings": {
-        "terminal.integrated.scrollback": 10000,
-        "terminal.integrated.profiles.linux": {
-          "zsh": {
-            "path": "/usr/bin/zsh"
-          }
-        },
-        "terminal.integrated.defaultProfile.linux": "zsh",
         "remote.autoForwardPorts": true,
-        "remote.autoForwardPortsSource": "hybrid",
-        "editor.formatOnPaste": false,
-        "editor.formatOnSave": true,
-        "editor.formatOnType": true,
-        "files.trimTrailingWhitespace": true,
-        "editor.defaultFormatter": "esbenp.prettier-vscode",
-        "[shellscript]": {
-          "editor.defaultFormatter": "esbenp.prettier-vscode"
-        },
-        "[python]": {
-          "editor.defaultFormatter": "charliermarsh.ruff",
-          "editor.codeActionsOnSave": {
-            "source.fixAll": "explicit",
-            "source.organizeImports": "explicit"
-          }
-        },
-        "prettier.prettierPath": "${containerWorkspaceFolder}/node_modules/prettier",
-        "prettier.requireConfig": false,
-        "prettier.documentSelectors": ["**/*.sh"],
-        "prettier.enable": true,
-        "python.defaultInterpreterPath": "/root/.pyenv/shims/python",
-        "python.linting.enabled": true,
-        "python.linting.pylintEnabled": false,
-        "cursorpyright.analysis.typeCheckingMode": "strict",
-        "cursorpyright.analysis.useLibraryCodeForTypes": true,
-        "cursorpyright.analysis.autoImportCompletions": true,
-        "vale.valeCLI.config": "/workspaces/hass-addons/.vale.ini",
-        "vale.valeCLI.path": "/usr/local/bin/vale"
+        "remote.autoForwardPortsSource": "hybrid"
       }
     }
   }

@@ -37,6 +37,8 @@ if TYPE_CHECKING:
     )
 
     class MQTTMessageProtocol(Protocol):
+        """Protocol describing MQTT messages passed to router."""
+
         topic: object
         payload: bytes | bytearray | memoryview | None
 
@@ -46,6 +48,10 @@ else:
 
 TargetType = Literal["DEVICE", "GROUP", "UNKNOWN"]
 type CommandTasks = list[Coroutine[object, object, object]]
+FAN_STEP_25 = 25
+FAN_STEP_50 = 50
+FAN_STEP_75 = 75
+EXTRA_DATA_MIN_LEN = 3
 
 logger = get_logger(__name__)
 
@@ -127,7 +133,7 @@ class CommandRouter:
             device_id_int = int(topic_parts[2].split("-")[1])
             if device_id_int not in ncync_server.devices:
                 logger.warning(
-                    "%s Device ID %s not found, device is disabled in config file or have you deleted / added any devices recently?",
+                    "%s Device ID %s not found; device disabled in config or recently changed?",
                     lp,
                     device_id_int,
                 )
@@ -162,12 +168,12 @@ class CommandRouter:
         )
         if percentage == 0:
             brightness = 0
-        elif percentage <= 25:
-            brightness = 25
-        elif percentage <= 50:
-            brightness = 50
-        elif percentage <= 75:
-            brightness = 75
+        elif percentage <= FAN_STEP_25:
+            brightness = FAN_STEP_25
+        elif percentage <= FAN_STEP_50:
+            brightness = FAN_STEP_50
+        elif percentage <= FAN_STEP_75:
+            brightness = FAN_STEP_75
         else:
             brightness = 100
         logger.info("%s Fan percentage %s%% mapped to brightness %s", lp, percentage, brightness)
@@ -262,7 +268,10 @@ class CommandRouter:
             await self._handle_fan_commands(extra_data, norm_pl, device, lp, tasks)
         elif device and (extra_data[0] == "percentage" or extra_data[0] == "preset"):
             logger.warning(
-                "%s Received fan speed command for non-fan device: name='%s', id=%s, is_fan_controller=%s, extra_data=%s",
+                (
+                    "%s Received fan speed command for non-fan device: name='%s', id=%s, "
+                    "is_fan_controller=%s, extra_data=%s"
+                ),
                 lp,
                 device.name,
                 device.id,
@@ -272,7 +281,7 @@ class CommandRouter:
         else:
             await self._handle_bridge_commands(extra_data, norm_pl, lp)
 
-    async def _handle_json_state(
+    async def _handle_json_state(  # noqa: PLR0913
         self,
         json_data: Mapping[str, object],
         target: CommandTarget,
@@ -307,7 +316,7 @@ class CommandRouter:
         else:
             logger.warning("%s No valid target available for state payload", lp)
 
-    async def _handle_json_color(
+    async def _handle_json_color(  # noqa: PLR0913
         self,
         json_data: Mapping[str, object],
         target: CommandTarget,
@@ -361,7 +370,7 @@ class CommandRouter:
                         target_type,
                     )
 
-    async def _handle_json_payload(
+    async def _handle_json_payload(  # noqa: PLR0913
         self,
         json_data: Mapping[str, object],
         _payload: bytes,
@@ -418,7 +427,7 @@ class CommandRouter:
         """Handle HASS birth message - re-announce discovery and status."""
         birth_delay = random.randint(5, 15)
         logger.info(
-            "%s HASS has sent MQTT BIRTH message, re-announcing device discovery, availability and status after a random delay of %s seconds...",
+            ("%s HASS MQTT birth received; re-announcing discovery, availability, and status after %s seconds..."),
             lp,
             birth_delay,
         )
@@ -472,7 +481,7 @@ class CommandRouter:
             return False
 
         device, group, target_type = self._parse_topic_and_get_target(topic_parts, lp)
-        extra_data = topic_parts[3:] if len(topic_parts) > 3 else None
+        extra_data = topic_parts[EXTRA_DATA_MIN_LEN:] if len(topic_parts) > EXTRA_DATA_MIN_LEN else None
 
         # Only return early if there's no target AND no extra_data to process
         # Bridge commands have extra_data (e.g., "refresh_status") that need processing

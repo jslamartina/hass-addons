@@ -22,7 +22,7 @@ from cync_controller.mqtt_client import (
 )
 
 # Filter deprecation warning from aiomqtt.client module
-pytestmark = pytest.mark.filterwarnings("ignore:There is no current event loop:DeprecationWarning:aiomqtt.client")
+pytestmark = pytest.mark.filterwarnings("ignore:There is no current event loop:DeprecationWarning:aiomqtt.client")  # type: ignore[arg-type]
 
 
 # Factory functions for typed mocks
@@ -1419,7 +1419,7 @@ class TestCommandProcessorExecution:
             return None
 
         async def execute() -> None:
-            raise Exception("Test error")
+            raise RuntimeError
 
         mock_command.publish_optimistic = publish_optimistic
         mock_command.execute = execute

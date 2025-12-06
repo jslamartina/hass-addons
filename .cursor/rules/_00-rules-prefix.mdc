@@ -1,6 +1,6 @@
 ---
 alwaysApply: true
-description: Optimized rules prefix with 4-tier hierarchy
+description: Use for global guardrails and high-level rules that are always applied.
 ---
 
 # CRITICAL RULES
@@ -14,7 +14,7 @@ description: Optimized rules prefix with 4-tier hierarchy
 **Top Anti-Patterns - Quick Check**:
 
 - ❌ **TOUCHING ANY IGNORE FILES OR SETTINGS?** → **ABSOLUTELY FORBIDDEN** (Rule 1: NEVER modify ignore files OR settings)
-- ❌ Using built-in web_search? → Wrong (Rule 12: use Brave Search MCP)
+- ❌ Running python tools without activating the venv first. Run `source /workspaces/hass-addons/cync-controller/.venv/bin/activate` or `source /workspaces/hass-addons/python-rebuild-tcp-comm/.venv/bin/activate` depending on which project you are working in.
 - ❌ Tool returns error/500/timeout? → STOP (Rule 2: report to user, don't continue)
 - ❌ Creating/editing code without entry/exit logs? → Wrong (Rule 5: Logging-First)
 - ❌ Creating 2nd findings file? → STOP (Rule 9: max 1 per investigation)
@@ -25,10 +25,9 @@ description: Optimized rules prefix with 4-tier hierarchy
 - ❌ Using /tmp for artifacts? → Wrong (Use working-files/ with timestamps)
 - ❌ Response >30 lines or verbose? → Too long (Rule 9: concise communication)
 - ❌ Creating todos for <3 step task? → Overkill (Rule 3: multi-step only)
-- ❌ Brave Search for "explain X"? → Wrong (Rule 13: use AI Grounding for answers)
-- ❌ AI Grounding to find docs? → Wrong (Rule 13: use Brave Search for pages)
-- ❌ Using built-in tools to check for lint errors? → Wrong (Rule 4: use `npm run lint`)
-- ❌ Suppressing lint/format/error rules without approval? → STOP (Rule 15: requires explicit user approval)
+- ❌ Brave Search for "explain X"? → Wrong (Rule 12: use AI Grounding for answers)
+- ❌ AI Grounding to find docs? → Wrong (Rule 12: use Brave Search for pages)
+- ❌ Suppressing lint/format/error rules without approval? → STOP (Rule415: requires explicit user approval)
 
 ---
 
@@ -60,13 +59,11 @@ description: Optimized rules prefix with 4-tier hierarchy
 
 11. **Completion Approval**: NEVER mark as "FINAL," "COMPLETE," "production-ready," "CI-ready," or similar without explicit user approval. NEVER create files with "FINAL," "COMPLETE," "SUMMARY," "RESOLUTION," "CONCLUSION" in the name without asking first. If CI is failing (exit code != 0), the system isn't ready. User confirms = done.
 
-12. **Web Search Only via Brave MCP**: NEVER use built-in `web_search` tool (broken). ALWAYS use `mcp_brave-search_brave_web_search` or specialized tools (`brave_news_search`, `brave_video_search`, `brave_image_search`). Autosearch when uncertain (per memory [[memory:9966253]]). See web-search-brave.mdc.
+12. **AI Grounding for Reliable Answers**: WHEN need synthesized, factual answers (not raw search results) → use Brave AI Grounding CLI tool via `run_terminal_cmd`. Responses are anchored in verifiable web sources, reducing hallucinations. Use `--research` flag for complex queries requiring multiple searches. Citations included by default with formatted footer. Prefer over raw search when need: authoritative answers, fact-checking, research with citations, or context about topics. Use regular Brave Search for: finding specific pages, current events, or raw result lists.
 
-13. **AI Grounding for Reliable Answers**: WHEN need synthesized, factual answers (not raw search results) → use Brave AI Grounding CLI tool via `run_terminal_cmd`. Responses are anchored in verifiable web sources, reducing hallucinations. Use `--research` flag for complex queries requiring multiple searches. Citations included by default with formatted footer. Prefer over raw search when need: authoritative answers, fact-checking, research with citations, or context about topics. Use regular Brave Search for: finding specific pages, current events, or raw result lists.
+13. **Visual Diagrams**: WHEN explaining architecture, flows, processes, or relationships → create Mermaid.js diagrams. Save as `.mermaid` files in appropriate docs directory. Use flowchart (processes), sequence (interactions), class (structure), state (FSM), gantt (timelines), or ER diagrams (data models). See mermaid-diagrams.mdc for templates.
 
-14. **Visual Diagrams**: WHEN explaining architecture, flows, processes, or relationships → create Mermaid.js diagrams. Save as `.mermaid` files in appropriate docs directory. Use flowchart (processes), sequence (interactions), class (structure), state (FSM), gantt (timelines), or ER diagrams (data models). See mermaid-diagrams.mdc for templates.
-
-15. **NEVER Suppress Linting/Formatting/Error Rules Without Approval**: **ABSOLUTELY FORBIDDEN** to suppress, disable, or reduce severity of any linting, formatting, or error detection rules without explicit user approval. This includes:
+14. **NEVER Suppress Linting/Formatting/Error Rules Without Approval**: **ABSOLUTELY FORBIDDEN** to suppress, disable, or reduce severity of any linting, formatting, or error detection rules without explicit user approval. This includes:
 
 - Disabling rules in configuration files (`eslint.config.js`, `.markdownlint.json`, `pyproject.toml`, `.ruff.toml`, etc.)
 - Adding inline suppressions (`# noqa`, `eslint-disable`, `markdownlint-disable`, `ruff: noqa`, etc.)
@@ -109,6 +106,13 @@ description: Optimized rules prefix with 4-tier hierarchy
 **Code Changes**: [ ] Linted [ ] Tested [ ] Logging [ ] Rebuilt/Restarted [ ] Verified in logs
 **Documentation**: [ ] <200 lines [ ] User approved [ ] No redundancy [ ] Single findings file [ ] No /tmp artifacts
 **Completion**: [ ] CI passes [ ] User confirmed [ ] Artifacts cleaned [ ] Todos closed [ ] No premature "ready" claims [ ] No "FINAL/COMPLETE" file names without approval
+
+## Context Discipline (Tool Output)
+
+- Prefer narrow tool scopes (single file/dir, filtered queries) and small limits (`count`, `perPage`, `head_limit`), widening only when needed.
+- For large outputs (logs, tests, searches), bound shell output (for example, `| head -n 200`) and summarize instead of pasting raw text.
+- For big files/diffs, locate via `grep`/`codebase_search` then `read_file` only nearby lines using `offset`/`limit`.
+- Use index/docs (like `docs/developer/rules-index.md`) to pick one detailed rule file instead of loading many at once.
 
 ---
 
@@ -157,7 +161,7 @@ description: Optimized rules prefix with 4-tier hierarchy
 - logging-patterns.mdc: Configuration patterns, anti-patterns
 - logging-examples.mdc: Code examples and templates
 
-**Documentation & Standards**:
+**Documentation & Standards** (see also `docs/developer/rules-index.md` for a categorized index):
 
 - inheritance-model.mdc: Parent-child rule precedence and context detection
 - documentation-standards.mdc: Concise docs, anti-verbosity rules, approval workflow

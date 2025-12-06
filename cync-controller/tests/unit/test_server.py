@@ -73,6 +73,8 @@ class MQTTClientStub:
         self.publish: AsyncMock = AsyncMock()
         self.parse_device_status: AsyncMock = AsyncMock()
         self.publish_group_state: AsyncMock = AsyncMock()
+        # mimic real helper attributes used by server during state updates
+        self.state_updates = MagicMock()
 
 
 class RelayConnectionStub:

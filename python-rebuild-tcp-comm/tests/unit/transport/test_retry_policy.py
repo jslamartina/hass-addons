@@ -6,13 +6,13 @@ from __future__ import annotations
 
 import math
 
+from transport.retry_policy import RetryPolicy, TimeoutConfig
+
 
 def assert_close(actual: float, expected: float, rel_tol: float = 1e-6) -> None:
     """Assert that two floats are approximately equal."""
     assert math.isclose(actual, expected, rel_tol=rel_tol)
 
-
-from transport.retry_policy import RetryPolicy, TimeoutConfig
 
 # Test constants
 LARGE_TIMEOUT_MS = 100.0
@@ -118,9 +118,7 @@ class TestRetryPolicy:
 
     def test_get_delay_with_jitter(self):
         """Test delay calculation includes jitter."""
-        policy = RetryPolicy(
-            base_delay_seconds=0.1, max_delay_seconds=5.0, jitter_factor=BASE_DELAY
-        )
+        policy = RetryPolicy(base_delay_seconds=0.1, max_delay_seconds=5.0, jitter_factor=BASE_DELAY)
         delay = policy.get_delay(0)
         # Delay should be between base_delay and base_delay * (1 + jitter_factor)
         assert delay >= BASE_DELAY

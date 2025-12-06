@@ -431,12 +431,13 @@ class CyncCloudAPI:
             logger.error("HTTP session is None, cannot request OTP", extra={"lp": lp})
             return False
         try:
-            otp_r = await sesh.post(
+            async with sesh.post(
                 req_otp_url,
                 json=auth_data,
                 timeout=aiohttp.ClientTimeout(total=self.api_timeout),
-            )
-            otp_r.raise_for_status()
+            ) as otp_r:
+                otp_r.raise_for_status()
+                return True
         except aiohttp.ClientResponseError:
             logger.exception("Failed to request OTP code", extra={"lp": lp})
             return False
@@ -548,18 +549,18 @@ class CyncCloudAPI:
             return None
 
         try:
-            r = await sesh.post(
+            async with sesh.post(
                 api_auth_url,
                 json=auth_data,
                 timeout=aiohttp.ClientTimeout(total=self.api_timeout),
-            )
-            r.raise_for_status()
-            json_result: object = cast("object", await r.json())
-            if not isinstance(json_result, dict):
-                msg = "Invalid token response format"
-                raise TypeError(msg)
-            logger.debug("✓ Authentication successful", extra={"lp": lp})
-            return cast("dict[str, object]", json_result)
+            ) as r:
+                r.raise_for_status()
+                json_result: object = cast("object", await r.json())
+                if not isinstance(json_result, dict):
+                    msg = "Invalid token response format"
+                    raise TypeError(msg)
+                logger.debug("✓ Authentication successful", extra={"lp": lp})
+                return cast("dict[str, object]", json_result)
         except aiohttp.ClientResponseError as e:
             logger.exception(
                 "HTTP error during authentication",
@@ -780,12 +781,14 @@ class CyncCloudAPI:
         headers = {"Access-Token": access_token}
 
         try:
-            r = await sesh.get(
+            async with sesh.get(
                 api_devices_url,
                 headers=headers,
                 timeout=aiohttp.ClientTimeout(total=self.api_timeout),
-            )
-            r.raise_for_status()
+            ) as r:
+                r.raise_for_status()
+                json_result: object = cast("object", await r.json())
+                return self._process_devices_response(json_result, lp)
         except aiohttp.ClientResponseError:
             logger.exception("Failed to get devices", extra={"lp": lp})
             raise
@@ -795,9 +798,6 @@ class CyncCloudAPI:
         except KeyError:
             logger.exception("Failed to get key from JSON", extra={"lp": lp})
             raise
-
-        json_result: object = cast("object", await r.json())
-        return self._process_devices_response(json_result, lp)
 
     async def get_properties(self, product_id: str, device_id: str) -> dict[str, object]:
         """Get properties for a single device.
@@ -827,16 +827,18 @@ class CyncCloudAPI:
             msg = "HTTP session is None, cannot get properties"
             raise RuntimeError(msg)
         try:
-            r = await sesh.get(
+            async with sesh.get(
                 api_device_prop_url,
                 headers=headers,
                 timeout=aiohttp.ClientTimeout(total=self.api_timeout),
-            )
-            json_result: object = cast("object", await r.json())
-            if not isinstance(json_result, dict):
-                msg = "Invalid response format: expected dict"
-                raise TypeError(msg)
-            ret: dict[str, object] = cast("dict[str, object]", json_result)
+            ) as r:
+                json_result: object = cast("object", await r.json())
+                if not isinstance(json_result, dict):
+                    msg = "Invalid response format: expected dict"
+                    raise TypeError(msg)
+                ret: dict[str, object] = cast("dict[str, object]", json_result)
+                self._handle_properties_error(ret, lp)
+                return ret
         except aiohttp.ClientResponseError:
             logger.exception("Failed to get device properties", extra={"lp": lp})
             raise
@@ -846,9 +848,6 @@ class CyncCloudAPI:
         except KeyError:
             logger.exception("Failed to get key from JSON", extra={"lp": lp})
             raise
-
-        self._handle_properties_error(ret, lp)
-        return ret
 
     def _handle_properties_error(self, ret: dict[str, object], lp: str) -> None:
         """Handle error responses from get_properties."""

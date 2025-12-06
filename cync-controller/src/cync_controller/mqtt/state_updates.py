@@ -27,6 +27,11 @@ if TYPE_CHECKING:
 
 logger = get_logger(__name__)
 
+BRIGHTNESS_LOW = 25
+BRIGHTNESS_MEDIUM = 50
+BRIGHTNESS_HIGH = 75
+BRIGHTNESS_MAX = 100
+
 
 def _get_g() -> GlobalObject:
     """Get the shared GlobalObject honoring legacy/mock patch points."""
@@ -47,7 +52,10 @@ def _get_g() -> GlobalObject:
 
 
 class GProxy:
+    """Proxy that forwards attribute access to the shared GlobalObject."""
+
     def __getattr__(self, name: str) -> object:
+        """Delegate attribute access to global object."""
         return cast("object", getattr(_get_g(), name))
 
 
@@ -88,7 +96,10 @@ class StateUpdateHelper:
                 return False
             if device_id not in ncync_server.devices:
                 logger.error(
-                    "%s Device ID %s not found?! Have you deleted or added any devices recently? You may need to re-export devices from your Cync account!",
+                    (
+                        "%s Device ID %s not found?! Have you deleted or added any devices recently? "
+                        "You may need to re-export devices from your Cync account!"
+                    ),
                     lp,
                     device_id,
                 )
@@ -339,13 +350,13 @@ class StateUpdateHelper:
         """Map brightness value to fan preset mode."""
         if bri == 0:
             return "off"
-        if bri == 100:
+        if bri == BRIGHTNESS_MAX:
             return "max"
-        if bri <= 25:
+        if bri <= BRIGHTNESS_LOW:
             return "low"
-        if bri <= 50:
+        if bri <= BRIGHTNESS_MEDIUM:
             return "medium"
-        if bri <= 75:
+        if bri <= BRIGHTNESS_HIGH:
             return "high"
         return "max"
 
@@ -550,7 +561,7 @@ class StateUpdateHelper:
         temperature: int | None = None,
         origin: str | None = None,
     ) -> None:
-        """Publish group state. For subgroups, use only mesh_info or validated aggregation (no optimistic ACK publishes)."""
+        """Publish group state; subgroups rely on mesh_info/validated aggregation (no optimistic ACK publishes)."""
         if not self.client.is_connected:
             return
 
@@ -586,7 +597,7 @@ class StateUpdateHelper:
                     device_status.blue is not None,
                 ],
             )
-            if device.supports_rgb and has_rgb and device_status.temperature > 100:
+            if device.supports_rgb and has_rgb and device_status.temperature > BRIGHTNESS_MAX:
                 return (
                     "rgb",
                     {
@@ -595,7 +606,7 @@ class StateUpdateHelper:
                         "b": device_status.blue,
                     },
                 )
-            if device.supports_temperature and (0 <= device_status.temperature <= 100):
+            if device.supports_temperature and (0 <= device_status.temperature <= BRIGHTNESS_MAX):
                 return "color_temp", None
 
         if device.supports_temperature:
@@ -642,7 +653,7 @@ class StateUpdateHelper:
         *_args: object,
         **kwargs: object,
     ) -> bool:
-        """Parse device status and publish to MQTT for HASS devices to update. Useful for device status packets that report the complete device state."""
+        """Parse device status and publish for HA updates; handles full device state packets."""
         lp = f"{self.client.lp}parse status:"
         from_pkt = kwargs.get("from_pkt")
         ts_ms = int(time.time() * 1000)
@@ -661,7 +672,10 @@ class StateUpdateHelper:
             return False
         if device_id not in ncync_server.devices:
             logger.error(
-                "%s Device ID %s not found! Device may be disabled in config file or you may need to re-export devices from your Cync account",
+                (
+                    "%s Device ID %s not found! Device may be disabled in config file or "
+                    "you may need to re-export devices from your Cync account"
+                ),
                 lp,
                 device_id,
             )

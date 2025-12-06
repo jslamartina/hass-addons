@@ -3,9 +3,24 @@
 Tests packet parsing functionality for Cync protocol packets.
 """
 
-import pytest
+from __future__ import annotations
 
-from cync_controller.packet_parser import format_packet_log, parse_cync_packet
+from typing import cast
+
+from cync_controller.packet_parser import PacketDict, format_packet_log, parse_cync_packet
+
+
+def _require_packet(packet: PacketDict | None) -> PacketDict:
+    """Assert that a parsed packet is present and return it."""
+    assert packet is not None
+    return packet
+
+
+def _get_device_statuses(result: PacketDict) -> list[PacketDict]:
+    """Return typed device status list from a parsed packet."""
+    statuses = result.get("device_statuses")
+    assert isinstance(statuses, list)
+    return cast(list[PacketDict], statuses)
 
 
 class TestParseCyncPacket:
@@ -23,16 +38,14 @@ class TestParseCyncPacket:
 
     def test_parse_returns_none_for_none_input(self):
         """Test that None input returns None."""
-        result = parse_cync_packet(None)
+        result = parse_cync_packet(None)  # pyright: ignore[reportArgumentType]
         assert result is None
 
     def test_parse_minimal_valid_packet(self):
         """Test parsing minimal valid packet (5 bytes)."""
         # Minimal packet: type + 4 padding bytes
         packet = bytes([0x73, 0x00, 0x00, 0x00, 0x00])
-        result = parse_cync_packet(packet)
-
-        assert result is not None
+        result = _require_packet(parse_cync_packet(packet))
         assert result["packet_type"] == "0x73"
         assert result["packet_type_name"] == "DATA_CHANNEL"
         assert result["raw_len"] == 5
@@ -41,7 +54,7 @@ class TestParseCyncPacket:
     def test_parse_handshake_packet(self):
         """Test parsing 0x23 HANDSHAKE packet."""
         packet = bytes([0x23, 0x00, 0x00, 0x00, 0x10] + [0x00] * 16)
-        result = parse_cync_packet(packet)
+        result = _require_packet(parse_cync_packet(packet))
 
         assert result["packet_type"] == "0x23"
         assert result["packet_type_name"] == "HANDSHAKE"
@@ -67,7 +80,7 @@ class TestParseCyncPacket:
             ]
             + [0x00] * 20  # Rest of packet
         )
-        result = parse_cync_packet(packet)
+        result = _require_packet(parse_cync_packet(packet))
 
         assert result["packet_type"] == "0x73"
         assert result["packet_type_name"] == "DATA_CHANNEL"
@@ -95,7 +108,7 @@ class TestParseCyncPacket:
             ]
             + [0xFF] * 12  # Data payload
         )
-        result = parse_cync_packet(packet)
+        result = _require_packet(parse_cync_packet(packet))
 
         assert result["packet_type"] == "0x83"
         assert result["packet_type_name"] == "STATUS_BROADCAST"
@@ -143,14 +156,14 @@ class TestParseCyncPacket:
                 0x00,  # padding (8 bytes)
             ]
         )
-        result = parse_cync_packet(packet)
+        result = _require_packet(parse_cync_packet(packet))
 
         assert result["packet_type"] == "0x43"
         assert result["packet_type_name"] == "DEVICE_INFO"
-        assert "device_statuses" in result
-        assert len(result["device_statuses"]) == 1
+        statuses = _get_device_statuses(result)
+        assert len(statuses) == 1
 
-        status = result["device_statuses"][0]
+        status = statuses[0]
         assert status["device_id"] == 21
         assert status["state"] == "ON"
         assert status["brightness"] == 100
@@ -197,9 +210,9 @@ class TestParseCyncPacket:
                 0x00,
             ]
         )
-        result = parse_cync_packet(packet)
+        result = _require_packet(parse_cync_packet(packet))
 
-        status = result["device_statuses"][0]
+        status = _get_device_statuses(result)[0]
         assert status["mode"] == "RGB"
         assert status["color"] == "#ff8000"
         assert "temp" not in status
@@ -208,7 +221,7 @@ class TestParseCyncPacket:
         """Test parsing packet with length multiplier."""
         # Length = (2 * 256) + 50 = 562 bytes
         packet = bytes([0x73, 0x00, 0x00, 0x02, 0x32]) + bytes(557)
-        result = parse_cync_packet(packet)
+        result = _require_packet(parse_cync_packet(packet))
 
         assert result["declared_length"] == 562
         assert "length_calc" in result
@@ -217,7 +230,7 @@ class TestParseCyncPacket:
     def test_parse_keepalive_packet(self):
         """Test parsing 0x78 KEEPALIVE packet."""
         packet = bytes([0x78, 0x00, 0x00, 0x00, 0x08] + [0x00] * 3)
-        result = parse_cync_packet(packet)
+        result = _require_packet(parse_cync_packet(packet))
 
         assert result["packet_type"] == "0x78"
         assert result["packet_type_name"] == "KEEPALIVE"
@@ -225,7 +238,7 @@ class TestParseCyncPacket:
     def test_parse_heartbeat_dev_packet(self):
         """Test parsing 0xD3 HEARTBEAT_DEV packet."""
         packet = bytes([0xD3, 0x00, 0x00, 0x00, 0x08] + [0x00] * 3)
-        result = parse_cync_packet(packet)
+        result = _require_packet(parse_cync_packet(packet))
 
         assert result["packet_type"] == "0xd3"
         assert result["packet_type_name"] == "HEARTBEAT_DEV"
@@ -233,7 +246,7 @@ class TestParseCyncPacket:
     def test_parse_heartbeat_cloud_packet(self):
         """Test parsing 0xD8 HEARTBEAT_CLOUD packet."""
         packet = bytes([0xD8, 0x00, 0x00, 0x00, 0x08] + [0x00] * 3)
-        result = parse_cync_packet(packet)
+        result = _require_packet(parse_cync_packet(packet))
 
         assert result["packet_type"] == "0xd8"
         assert result["packet_type_name"] == "HEARTBEAT_CLOUD"
@@ -241,7 +254,7 @@ class TestParseCyncPacket:
     def test_parse_unknown_packet_type(self):
         """Test parsing packet with unknown type."""
         packet = bytes([0xFF, 0x00, 0x00, 0x00, 0x08] + [0x00] * 3)
-        result = parse_cync_packet(packet)
+        result = _require_packet(parse_cync_packet(packet))
 
         assert result["packet_type"] == "0xff"
         assert result["packet_type_name"] == "UNKNOWN"
@@ -250,10 +263,10 @@ class TestParseCyncPacket:
         """Test that direction parameter is included in result."""
         packet = bytes([0x73, 0x00, 0x00, 0x00, 0x08])
 
-        result_dev = parse_cync_packet(packet, direction="DEV->CLOUD")
+        result_dev = _require_packet(parse_cync_packet(packet, direction="DEV->CLOUD"))
         assert result_dev["direction"] == "DEV->CLOUD"
 
-        result_cloud = parse_cync_packet(packet, direction="CLOUD->DEV")
+        result_cloud = _require_packet(parse_cync_packet(packet, direction="CLOUD->DEV"))
         assert result_cloud["direction"] == "CLOUD->DEV"
 
     def test_parse_data_channel_with_7e_markers(self):
@@ -286,7 +299,7 @@ class TestParseCyncPacket:
             ]
             + [0x00] * 8
         )
-        result = parse_cync_packet(packet)
+        result = _require_packet(parse_cync_packet(packet))
 
         assert "data_payload" in result
         assert result["data_length"] == 11  # From 0x7E to 0x7E inclusive
@@ -320,7 +333,7 @@ class TestParseCyncPacket:
             + [0x7E]
             + [0x00] * 7  # End marker
         )
-        result = parse_cync_packet(packet)
+        result = _require_packet(parse_cync_packet(packet))
 
         assert "command" in result
         assert result["command"] == "QUERY_STATUS"
@@ -333,16 +346,16 @@ class TestParseCyncPacket:
 
         packet = bytes([0x43, 0x00, 0x00, 0x00, 0x32, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]) + status1 + status2
 
-        result = parse_cync_packet(packet)
+        result = _require_packet(parse_cync_packet(packet))
 
-        assert "device_statuses" in result
-        assert len(result["device_statuses"]) == 2
-        assert result["device_statuses"][0]["device_id"] == 16
-        assert result["device_statuses"][1]["device_id"] == 32
+        statuses = _get_device_statuses(result)
+        assert len(statuses) == 2
+        assert statuses[0]["device_id"] == 16
+        assert statuses[1]["device_id"] == 32
 
-    @pytest.mark.parametrize(
-        "packet_type,expected_name",
-        [
+    def test_parse_all_known_packet_types(self) -> None:
+        """Test parsing all known packet types."""
+        cases = [
             (0x23, "HANDSHAKE"),
             (0x28, "HELLO_ACK"),
             (0x43, "DEVICE_INFO"),
@@ -354,14 +367,11 @@ class TestParseCyncPacket:
             (0x88, "STATUS_ACK"),
             (0xD3, "HEARTBEAT_DEV"),
             (0xD8, "HEARTBEAT_CLOUD"),
-        ],
-    )
-    def test_parse_all_known_packet_types(self, packet_type, expected_name):
-        """Test parsing all known packet types."""
-        packet = bytes([packet_type, 0x00, 0x00, 0x00, 0x08] + [0x00] * 3)
-        result = parse_cync_packet(packet)
-
-        assert result["packet_type_name"] == expected_name
+        ]
+        for packet_type, expected_name in cases:
+            packet = bytes([packet_type, 0x00, 0x00, 0x00, 0x08] + [0x00] * 3)
+            result = _require_packet(parse_cync_packet(packet))
+            assert result["packet_type_name"] == expected_name
 
 
 class TestFormatPacketLog:
@@ -380,7 +390,7 @@ class TestFormatPacketLog:
 
     def test_format_minimal_packet(self):
         """Test formatting minimal valid parsed packet."""
-        parsed = {
+        parsed: PacketDict = {
             "direction": "DEV->CLOUD",
             "packet_type": "0x73",
             "packet_type_name": "DATA_CHANNEL",
@@ -395,7 +405,7 @@ class TestFormatPacketLog:
 
     def test_format_with_endpoint_and_counter(self):
         """Test formatting packet with endpoint and counter."""
-        parsed = {
+        parsed: PacketDict = {
             "direction": "CLOUD->DEV",
             "packet_type": "0x83",
             "packet_type_name": "STATUS_BROADCAST",
@@ -413,7 +423,7 @@ class TestFormatPacketLog:
 
     def test_format_with_command(self):
         """Test formatting packet with command."""
-        parsed = {
+        parsed: PacketDict = {
             "direction": "DEV->CLOUD",
             "packet_type": "0x73",
             "packet_type_name": "DATA_CHANNEL",
@@ -427,7 +437,7 @@ class TestFormatPacketLog:
 
     def test_format_with_devices(self):
         """Test formatting packet with device IDs."""
-        parsed = {
+        parsed: PacketDict = {
             "direction": "DEV->CLOUD",
             "packet_type": "0x43",
             "packet_type_name": "DEVICE_INFO",
@@ -441,7 +451,7 @@ class TestFormatPacketLog:
 
     def test_format_with_device_statuses_verbose(self):
         """Test formatting packet with device statuses in verbose mode."""
-        parsed = {
+        parsed: PacketDict = {
             "direction": "DEV->CLOUD",
             "packet_type": "0x43",
             "packet_type_name": "DEVICE_INFO",
@@ -464,7 +474,7 @@ class TestFormatPacketLog:
 
     def test_format_with_device_statuses_non_verbose(self):
         """Test formatting packet with device statuses in non-verbose mode."""
-        parsed = {
+        parsed: PacketDict = {
             "direction": "DEV->CLOUD",
             "packet_type": "0x43",
             "packet_type_name": "DEVICE_INFO",
@@ -481,7 +491,7 @@ class TestFormatPacketLog:
 
     def test_format_with_short_data_payload(self):
         """Test formatting packet with short data payload."""
-        parsed = {
+        parsed: PacketDict = {
             "direction": "DEV->CLOUD",
             "packet_type": "0x73",
             "packet_type_name": "DATA_CHANNEL",
@@ -496,7 +506,7 @@ class TestFormatPacketLog:
     def test_format_with_long_data_payload(self):
         """Test formatting packet with long data payload (>100 chars)."""
         long_payload = " ".join(["aa"] * 60)  # Creates 179 char string
-        parsed = {
+        parsed: PacketDict = {
             "direction": "DEV->CLOUD",
             "packet_type": "0x73",
             "packet_type_name": "DATA_CHANNEL",
@@ -513,7 +523,7 @@ class TestFormatPacketLog:
     def test_format_with_very_long_raw_hex(self):
         """Test formatting packet with very long raw hex."""
         long_hex = " ".join(["ff"] * 150)  # Creates 449 char string
-        parsed = {
+        parsed: PacketDict = {
             "direction": "DEV->CLOUD",
             "packet_type": "0x83",
             "packet_type_name": "STATUS_BROADCAST",
@@ -528,7 +538,7 @@ class TestFormatPacketLog:
 
     def test_format_non_verbose_mode(self):
         """Test formatting in non-verbose mode excludes details."""
-        parsed = {
+        parsed: PacketDict = {
             "direction": "DEV->CLOUD",
             "packet_type": "0x73",
             "packet_type_name": "DATA_CHANNEL",

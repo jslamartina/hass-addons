@@ -2,9 +2,11 @@
 
 Tests CyncController singleton, signal handling, and startup/shutdown flows.
 """
+# pyright: reportUnknownMemberType=false, reportAttributeAccessIssue=false
 
 import asyncio
 import contextlib
+from collections.abc import Generator
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -17,15 +19,15 @@ with patch("starlette.staticfiles.StaticFiles"), patch("cync_controller.utils.ch
 
 
 @pytest.fixture(autouse=True)
-def reset_controller_singleton():
+def reset_controller_singleton() -> Generator[None]:
     """Reset CyncController singleton between tests."""
-    CyncController._instance = None
+    CyncController._instance = None  # pyright: ignore[reportPrivateUsage]
     yield
-    CyncController._instance = None
+    CyncController._instance = None  # pyright: ignore[reportPrivateUsage]
 
 
 @pytest.fixture
-def mock_global_object():
+def mock_global_object() -> Generator[MagicMock]:
     """Mock the global object to avoid dependencies."""
     with patch("cync_controller.main.g") as mock_g:
         mock_g.loop = AsyncMock()
@@ -41,7 +43,7 @@ def mock_global_object():
 
 
 @pytest.fixture
-def mock_path_exists():
+def mock_path_exists() -> Generator[MagicMock]:
     """Mock config file existence."""
     with patch("pathlib.Path.exists") as mock_exists:
         yield mock_exists
@@ -70,7 +72,11 @@ class TestCyncControllerStartup:
     """Tests for CyncController startup sequence."""
 
     @pytest.mark.asyncio
-    async def test_start_with_missing_config_file(self, mock_global_object, mock_path_exists):
+    async def test_start_with_missing_config_file(
+        self,
+        mock_global_object: MagicMock,
+        mock_path_exists: MagicMock,
+    ):
         """Test startup when config file doesn't exist."""
         mock_path_exists.return_value = False
         with patch("cync_controller.main.check_for_uuid"):
@@ -83,7 +89,11 @@ class TestCyncControllerStartup:
         assert mock_global_object.mqtt_client is None
 
     @pytest.mark.asyncio
-    async def test_start_loads_config_and_creates_services(self, mock_global_object, mock_path_exists):
+    async def test_start_loads_config_and_creates_services(
+        self,
+        mock_global_object: MagicMock,
+        mock_path_exists: MagicMock,
+    ):
         """Test startup loads config and creates NCyncServer and MQTTClient."""
         mock_path_exists.return_value = True
 
@@ -107,7 +117,7 @@ class TestCyncControllerStartup:
             mock_mqtt_class.return_value = mock_mqtt
 
             controller = CyncController()
-            controller.start_task = asyncio.create_task(controller.start())
+            controller.start_task = asyncio.create_task(controller.start())  # type: ignore[attr-defined]
 
             # Wait for start to begin
             await asyncio.sleep(0.1)
@@ -122,7 +132,11 @@ class TestCyncControllerStartup:
                 await controller.start_task
 
     @pytest.mark.asyncio
-    async def test_start_with_export_server_enabled(self, mock_global_object, mock_path_exists):
+    async def test_start_with_export_server_enabled(
+        self,
+        mock_global_object: MagicMock,
+        mock_path_exists: MagicMock,
+    ):
         """Test startup when export server is enabled."""
         mock_global_object.cli_args.export_server = True
         mock_path_exists.return_value = True
@@ -163,7 +177,7 @@ class TestCyncControllerStartup:
             mock_export_class.side_effect = set_export_server
 
             controller = CyncController()
-            controller.start_task = asyncio.create_task(controller.start())
+            controller.start_task = asyncio.create_task(controller.start())  # type: ignore[attr-defined]
 
             await asyncio.sleep(0.1)
 
@@ -177,7 +191,11 @@ class TestCyncControllerStartup:
                 await controller.start_task
 
     @pytest.mark.asyncio
-    async def test_start_failure_calls_stop(self, mock_global_object, mock_path_exists):
+    async def test_start_failure_calls_stop(
+        self,
+        mock_global_object: MagicMock,
+        mock_path_exists: MagicMock,
+    ):
         """Test that startup failure triggers stop method."""
         mock_path_exists.return_value = True
         mock_devices = {1: MagicMock()}
@@ -194,7 +212,7 @@ class TestCyncControllerStartup:
             # Mock NCyncServer and MQTTClient with plain async functions to avoid
             # un-awaited AsyncMock coroutines while still exercising error paths.
             async def failing_start() -> None:
-                raise Exception("Server start failed")
+                raise RuntimeError
 
             async def mqtt_start() -> None:
                 return None
@@ -224,7 +242,7 @@ class TestCyncControllerShutdown:
     """Tests for CyncController shutdown sequence."""
 
     @pytest.mark.asyncio
-    async def test_stop_sends_sigterm(self, mock_global_object):
+    async def test_stop_sends_sigterm(self, mock_global_object: MagicMock):
         """Test that stop calls send_sigterm."""
         with (
             patch("cync_controller.main.check_for_uuid"),

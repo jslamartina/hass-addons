@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import os
 import uuid
+from http import HTTPStatus
 from pathlib import Path
 from typing import ClassVar, TypedDict
 
@@ -30,6 +31,8 @@ logger = get_logger(__name__)
 
 
 class APIResponse(TypedDict):
+    """Standard API response schema returned by exporter endpoints."""
+
     success: bool
     message: str
 
@@ -147,7 +150,7 @@ async def restart() -> APIResponse:
 
     try:
         async with aiohttp.ClientSession() as session, session.post(url, headers=headers) as response:
-            if response.status == 200:
+            if response.status == HTTPStatus.OK:
                 logger.info("%s Successfully called the restart API. The add-on will now restart.", lp)
                 return {"success": True, "message": "Add-on is restarting."}
 
@@ -243,11 +246,13 @@ class ExportServer:
     _instance: ClassVar[ExportServer | None] = None
 
     def __new__(cls, *_args: object, **_kwargs: object) -> ExportServer:
+        """Return singleton ExportServer instance."""
         if cls._instance is None:
             cls._instance = super().__new__(cls)
         return cls._instance
 
     def __init__(self, *_args: object, **_kwargs: object) -> None:
+        """Initialize ExportServer with FastAPI app and uvicorn server config."""
         self.app: FastAPI = app
         self.uvi_server: uvicorn.Server = uvicorn.Server(
             config=uvicorn.Config(
@@ -307,6 +312,6 @@ class ExportServer:
                     f"{g.env.mqtt_topic}/status/bridge/export_server/running",
                     b"OFF",
                 )
-                if self.start_task and not self.start_task.done():
+                if self.start_task is not None and not self.start_task.done():
                     logger.debug("%s FINISHING: Cancelling start task", lp)
                     _ = self.start_task.cancel()

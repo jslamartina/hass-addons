@@ -1,5 +1,5 @@
 ---
-description: MQTT entity cleanup workflows and best practices
+description: Use when cleaning up MQTT entities or adjusting discovery fields safely.
 ---
 
 # MQTT Entity Cleanup

@@ -8,13 +8,14 @@ Tests cover:
 - SSL verification disabled warning (lines 108-112)
 - Packet injection checking (lines 282-362)
 """
+# pyright: reportPrivateUsage=false
 
 import ssl
 from pathlib import Path
-from typing import cast
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+from _pytest.logging import LogCaptureFixture
 
 from cync_controller.server import CloudRelayConnection
 
@@ -112,7 +113,7 @@ class TestCloudConnection:
             mock_open.return_value = (mock_cloud_reader, mock_cloud_writer)
 
             # Act
-            result: bool = cast("bool", await cloud_relay_connection.connect_to_cloud())
+            result = await cloud_relay_connection.connect_to_cloud()
 
             # Assert
             assert result is True
@@ -128,7 +129,7 @@ class TestCloudConnection:
             mock_open.side_effect = Exception("Connection refused")
 
             # Act
-            result: bool = cast("bool", await cloud_relay_connection.connect_to_cloud())
+            result = await cloud_relay_connection.connect_to_cloud()
 
             # Assert
             assert result is False
@@ -142,7 +143,7 @@ class TestCloudConnection:
             mock_open.side_effect = TimeoutError()
 
             # Act
-            result: bool = cast("bool", await cloud_relay_connection.connect_to_cloud())
+            result = await cloud_relay_connection.connect_to_cloud()
 
             # Assert
             assert result is False
@@ -168,7 +169,7 @@ class TestCloudConnection:
             mock_open.return_value = (AsyncMock(), MagicMock())
 
             # Act
-            result: bool = cast("bool", await relay.connect_to_cloud())
+            result = await relay.connect_to_cloud()
 
             # Assert
             assert result is True
@@ -244,7 +245,7 @@ class TestSSLWarnings:
     """Tests for SSL verification disabled warnings (lines 108-112)."""
 
     @pytest.mark.asyncio
-    async def test_ssl_verification_disabled_warning(self, caplog):
+    async def test_ssl_verification_disabled_warning(self, caplog: LogCaptureFixture):
         """Test warning logged when SSL verification is disabled."""
         # Arrange
         mock_reader = AsyncMock()
@@ -285,7 +286,7 @@ class TestPacketInjection:
         cloud_relay_connection.device_writer = mock_writer
 
         # Create injection file path
-        inject_file: Path = cast("Path", tmp_path / "cync_inject_raw_bytes.txt")
+        inject_file: Path = tmp_path / "cync_inject_raw_bytes.txt"
         raw_hex = "ff fe fd fc fb fa"
         _ = inject_file.write_text(raw_hex)
 
@@ -310,7 +311,7 @@ class TestPacketInjection:
     ):
         """Test mode injection for smart mode."""
         # Arrange
-        inject_file: Path = cast("Path", tmp_path / "cync_inject_command.txt")
+        inject_file: Path = tmp_path / "cync_inject_command.txt"
         _ = inject_file.write_text("smart")
 
         cloud_relay_connection.device_endpoint = bytes([0x12, 0x34, 0x56, 0x78])
@@ -334,7 +335,7 @@ class TestPacketInjection:
     ):
         """Test mode injection for traditional mode."""
         # Arrange
-        inject_file: Path = cast("Path", tmp_path / "cync_inject_command.txt")
+        inject_file: Path = tmp_path / "cync_inject_command.txt"
         _ = inject_file.write_text("traditional")
 
         cloud_relay_connection.device_endpoint = bytes([0x12, 0x34, 0x56, 0x78])
@@ -354,7 +355,7 @@ class TestPacketInjection:
     async def test_injection_checker_invalid_mode(self, cloud_relay_connection: CloudRelayConnection, tmp_path: Path):
         """Test invalid mode injection is ignored."""
         # Arrange
-        inject_file: Path = cast("Path", tmp_path / "cync_inject_command.txt")
+        inject_file: Path = tmp_path / "cync_inject_command.txt"
         _ = inject_file.write_text("invalid_mode")
 
         # Act - Simulate injection checking
@@ -374,7 +375,7 @@ class TestPacketInjection:
     async def test_injection_checker_file_cleanup(self, tmp_path: Path):
         """Test injection files are cleaned up after use."""
         # Arrange
-        inject_file: Path = cast("Path", tmp_path / "cync_inject_command.txt")
+        inject_file: Path = tmp_path / "cync_inject_command.txt"
         _ = inject_file.write_text("smart")
         assert inject_file.exists()
 
@@ -420,7 +421,7 @@ class TestRelayErrorHandling:
             mock_open.side_effect = OSError("Network unreachable")
 
             # Act
-            result: bool = cast("bool", await cloud_relay_connection.connect_to_cloud())
+            result = await cloud_relay_connection.connect_to_cloud()
 
             # Assert
             assert result is False
@@ -433,7 +434,7 @@ class TestRelayErrorHandling:
             mock_open.side_effect = ssl.SSLError("Certificate verification failed")
 
             # Act
-            result: bool = cast("bool", await cloud_relay_connection.connect_to_cloud())
+            result = await cloud_relay_connection.connect_to_cloud()
 
             # Assert
             assert result is False

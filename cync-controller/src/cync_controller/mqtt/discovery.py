@@ -26,7 +26,7 @@ from cync_controller.const import (
     ORIGIN_STRUCT,
 )
 from cync_controller.logging_abstraction import get_logger
-from cync_controller.metadata.model_info import DeviceClassification, DeviceTypeInfo, device_type_map
+from cync_controller.metadata.model_info import DeviceClassification, device_type_map
 
 # Import g directly from structs to avoid circular dependency with mqtt_client.py
 from cync_controller.structs import GlobalObject
@@ -61,7 +61,10 @@ def _get_g() -> GlobalObject:
 
 
 class GProxy:
+    """Proxy that forwards attribute access to the global object helper."""
+
     def __getattr__(self, name: str) -> object:
+        """Delegate attribute access to the shared GlobalObject instance."""
         return cast("object", getattr(_get_g(), name))
 
 
@@ -160,10 +163,10 @@ class DiscoveryHelper:
                 )
         return suggested_area
 
-    def _build_device_registry_struct(
+    def _build_device_registry_struct(  # noqa: PLR0913
         self,
-        device: CyncDeviceProtocol,
         unique_id: str,
+        device: CyncDeviceProtocol,
         dev_connections: list[tuple[str, str]],
         ver_str: str,
         model_str: str,
@@ -186,7 +189,7 @@ class DiscoveryHelper:
     def _determine_device_type(self, device: CyncDeviceProtocol, lp: str) -> str:
         """Determine device type (light, switch, or fan)."""
         dev_type = "light"  # Default fallback
-        metadata = cast("DeviceTypeInfo | None", device.metadata)
+        metadata = device.metadata
         if device.is_switch:
             logger.debug(
                 "%s Device '%s' classified as switch (type: %s)",
@@ -239,7 +242,7 @@ class DiscoveryHelper:
             )
         return dev_type
 
-    def _build_entity_registry_struct(
+    def _build_entity_registry_struct(  # noqa: PLR0913
         self,
         device: CyncDeviceProtocol,
         device_uuid: str,
@@ -417,8 +420,8 @@ class DiscoveryHelper:
 
             suggested_area = self._extract_suggested_area(device, lp)
             device_registry_struct = self._build_device_registry_struct(
-                device,
                 unique_id,
+                device,
                 dev_connections,
                 ver_str,
                 model_str,
@@ -501,8 +504,8 @@ class DiscoveryHelper:
 
         suggested_area = self._extract_suggested_area(device, lp)
         device_registry_struct_ha = self._build_device_registry_struct(
-            device,
             unique_id,
+            device,
             dev_connections,
             ver_str,
             model_str,

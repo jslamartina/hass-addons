@@ -74,9 +74,7 @@ class DeviceInfo:
 
         # Validate raw_bytes length
         if len(self.raw_bytes) != DEVICE_TYPE_LENGTH_BYTES:
-            error_msg = (
-                f"raw_bytes must be DEVICE_TYPE_LENGTH_BYTES bytes, got {len(self.raw_bytes)}"
-            )
+            error_msg = f"raw_bytes must be DEVICE_TYPE_LENGTH_BYTES bytes, got {len(self.raw_bytes)}"
             raise ValueError(error_msg)
 
         # Validate correlation_id format (UUID v7 string)

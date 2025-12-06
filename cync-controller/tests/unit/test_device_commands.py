@@ -163,9 +163,8 @@ class TestCyncDeviceErrorPathsCommands:
             device = CyncDevice(cync_id=0x12)  # type: ignore[call-arg, reportCallIssue]
 
             # Should return without error for invalid value
-            _ = await device.set_temperature(
-                200
-            )  # Too high  # type: ignore[reportAny, reportUnknownVariableType, reportUnknownMemberType, reportAttributeAccessIssue]
+            _ = await device.set_temperature(200)  # type: ignore[reportAny,reportUnknownMemberType,reportAttributeAccessIssue]
+            # Too high
 
             # Device state should not have changed
             assert (
@@ -202,9 +201,8 @@ class TestCyncDeviceErrorPathsCommands:
             device = CyncDevice(cync_id=0x12)  # type: ignore[call-arg, reportCallIssue]
 
             # Should return without error for invalid values
-            _ = await device.set_rgb(
-                -1, 128, 0
-            )  # Red invalid  # type: ignore[reportAny, reportUnknownVariableType, reportUnknownMemberType, reportAttributeAccessIssue]
+            _ = await device.set_rgb(-1, 128, 0)  # type: ignore[reportAny,reportUnknownMemberType,reportAttributeAccessIssue]
+            # Red invalid
 
             # Device RGB should not have changed
             assert (

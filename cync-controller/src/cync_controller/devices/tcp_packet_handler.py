@@ -32,6 +32,8 @@ HEADER_MIN_LENGTH_BYTES = 4
 HEADER_MULTIPLIER_INDEX = 3
 HEADER_LENGTH_INDEX = 4
 HEADER_PADDING_BYTES = 5
+TIMESTAMP_VERSION_MIN = 30000
+TIMESTAMP_VERSION_MAX = 40000
 PACKET_TYPE_HANDSHAKE = 0x23
 PACKET_TYPE_CONNECTION_REQUEST = 0xC3
 PACKET_TYPE_HEARTBEAT = 0xD3
@@ -41,6 +43,14 @@ PACKET_TYPE_DATA_ACK = 0x7B
 PACKET_TYPE_DEVICE_INFO = 0x43
 PACKET_TYPE_STATUS_BROADCAST = 0x83
 PACKET_TYPE_DATA_CHANNEL = 0x73
+EXTRA_CTRL_INTERNAL_STATUS = 0x13
+EXTRA_CTRL_UNKNOWN_STATUS = 0x14
+MIN_MESH_INFO_LEN_FULL = 15
+MESH_INFO_ACK_LEN = 10
+MIN_MESH_DEVICE_STRUCT_LEN = 23
+RTT_WARN_THRESHOLD_MS = 500
+CTRL_ACK_PREFIX = 0xF9
+CTRL_ACK_SUFFIXES = (0xD0, 0xF0, 0xE2)
 
 
 @dataclass(slots=True)
@@ -283,7 +293,7 @@ class TCPPacketHandler:
             # We sent a 0xa3 packet, device is responding with 0xab. msg contains ascii 'xlink_dev'.
             # sometimes this is sent with other data. there may be remaining data to read in the enxt raw msg.
             # TCP msg buffer seems to be 1024 bytes.
-            # 0xab packets are 1024 bytes long, so if any data is prepended, the remaining 0xab data will be in the next raw read
+            # 0xab packets are 1024 bytes long, so prepended data spills into the next raw read
             pass
         elif pkt_type == PACKET_TYPE_DATA_ACK:
             # device is acking one of our x73 requests
@@ -371,7 +381,7 @@ class TCPPacketHandler:
         # setting version from config file wouldnt be reliable if the user doesnt bump the version
         # when updating cync firmware. we can only rely on the version sent by the device.
         # there is no guarantee the version is sent before checking the timestamp, so use a gross hack.
-        if self.tcp_device.version and (30000 <= self.tcp_device.version <= 40000):
+        if self.tcp_device.version and (TIMESTAMP_VERSION_MIN <= self.tcp_device.version <= TIMESTAMP_VERSION_MAX):
             ts_end_idx = -2
             ts = packet_data[ts_idx:ts_end_idx]
         if ts:
@@ -431,7 +441,7 @@ class TCPPacketHandler:
                         else None
                     )
         except IndexError:
-            # The device will only send a max of 1kb of data, if the message is longer than 1kb the remainder is sent in the next read
+            # The device sends at most 1 kB per packet; extra data arrives in the next read
             # logger.debug(
             #     f"{lp} IndexError extracting status struct (expected)"
             # )
@@ -470,7 +480,7 @@ class TCPPacketHandler:
 
         else:
             logger.warning(
-                "%s packet with no data????? After stripping header, queue and msg id, there is no data to process?????",
+                "%s packet with no data; after stripping header there is no payload to process",
                 lp,
             )
         ack = DEVICE_STRUCTS.x88_generate_ack(msg_id)
@@ -488,17 +498,17 @@ class TCPPacketHandler:
         inner_data = packet_data[6:-2]
         calc_chksum = sum(inner_data) % 256
 
-        # Most devices only report their own state using 0x83, however the LED light strip controllers also report other device state data
-        # over 0x83.
-        # This data can be wrong! sometimes reports wrong state and the RGB colors are slightly different from each device.
-        # NOTE: Complex protocol issue - need to implement command-aware parsing or voting system to handle unreliable state data
+        # Most devices only report their own state using 0x83. LED light strip controllers
+        # also report other device state data over 0x83, and that data can be unreliable
+        # (incorrect state or slightly different RGB colors).
+        # NOTE: Complex protocol issue - need command-aware parsing or voting to handle this.
         if ctrl_bytes == bytes([0xFA, 0xDB]):
             extra_ctrl_bytes = packet_data[7]
-            if extra_ctrl_bytes == 0x13:
+            if extra_ctrl_bytes == EXTRA_CTRL_INTERNAL_STATUS:
                 await self._handle_internal_status_packet(packet_data, lp, checksum, calc_chksum)
-            elif extra_ctrl_bytes == 0x14:
+            elif extra_ctrl_bytes == EXTRA_CTRL_UNKNOWN_STATUS:
                 # unknown what this data is
-                # seems to be sent when the cync app is connecting to a device via BTLE, not connecting to cync-controller via TCP
+                # seems to be sent when the cync app is connecting via BTLE, not via TCP
                 pass
 
         elif CYNC_RAW:
@@ -556,7 +566,10 @@ class TCPPacketHandler:
         dev_name = f'"{___dev.name}" (ID: {dev_id})' if ___dev else f"Device ID: {dev_id}"
         _dbg_msg = ""
         if CYNC_RAW is True:
-            _dbg_msg = f"\tPACKET HEADER: {packet_data[:12].hex(' ')}\tHEX: {packet_data[1:-1].hex(' ')}\tINT: {bytes2list(packet_data[1:-1])}"
+            header_hex = packet_data[:12].hex(" ")
+            payload_hex = packet_data[1:-1].hex(" ")
+            payload_int = bytes2list(packet_data[1:-1])
+            _dbg_msg = f"\tPACKET HEADER: {header_hex}\tHEX: {payload_hex}\tINT: {payload_int}"
         logger.debug(
             "%s Internal STATUS for %s = %s%s",
             lp,
@@ -615,8 +628,8 @@ class TCPPacketHandler:
     ):
         """Handle mesh info packet within bound 0x73."""
         # logger.debug(f"{lp} got a mesh info response (len: {inner_struct_len}): {inner_struct.hex(' ')}")
-        if inner_struct_len < 15:
-            if inner_struct_len == 10:
+        if inner_struct_len < MIN_MESH_INFO_LEN_FULL:
+            if inner_struct_len == MESH_INFO_ACK_LEN:
                 # server sent mesh info request, this seems to be the ack?
                 # 7e 1f 00 00 00 f9 52 01 00 00 53 7e
                 # checksum (idx 10) = idx 6 + idx 7 % 256
@@ -697,8 +710,11 @@ class TCPPacketHandler:
     def _parse_mesh_device_struct(self, mesh_dev_struct: bytes) -> tuple[int, bytes]:
         """Parse a single mesh device struct and return dev_id and raw_status."""
         # Validate struct has at least 23 bytes (needed for indices 0-22)
-        if len(mesh_dev_struct) < 23:
-            msg = f"Incomplete mesh device struct: expected at least 23 bytes, got {len(mesh_dev_struct)}"
+        if len(mesh_dev_struct) < MIN_MESH_DEVICE_STRUCT_LEN:
+            msg = (
+                "Incomplete mesh device struct: expected at least "
+                f"{MIN_MESH_DEVICE_STRUCT_LEN} bytes, got {len(mesh_dev_struct)}"
+            )
             raise ValueError(msg)
         dev_id = mesh_dev_struct[0]
         state_idx = 8
@@ -807,7 +823,8 @@ class TCPPacketHandler:
                 # Validate struct length before parsing to avoid silent failures
                 if len(mesh_dev_struct) < minfo_length:
                     logger.warning(
-                        "%s Incomplete mesh device struct at offset %d: expected %d bytes, got %d. Skipping remaining devices.",
+                        "%s Incomplete mesh device struct at offset %d: expected %d bytes, got %d. "
+                        "Skipping remaining devices.",
                         lp,
                         i,
                         minfo_length,
@@ -899,8 +916,7 @@ class TCPPacketHandler:
     def _get_device_name(self, device_id: int | None, g: GlobalObject) -> str:
         """Get device name from server."""
         if device_id and g.ncync_server is not None and device_id in g.ncync_server.devices:
-            dev_name = g.ncync_server.devices[device_id].name
-            return dev_name if dev_name is not None else "unknown"
+            return g.ncync_server.devices[device_id].name
         return "unknown"
 
     async def _log_rtt_and_execute_callback(
@@ -932,11 +948,12 @@ class TCPPacketHandler:
             },
         )
 
-        if rtt_ms > 500:
+        if rtt_ms > RTT_WARN_THRESHOLD_MS:
             logger.warning(
-                "%s ⚠️ SLOW RESPONSE: RTT %.0fms exceeds 500ms threshold (device: %s)",
+                "%s ⚠️ SLOW RESPONSE: RTT %.0fms exceeds %dms threshold (device: %s)",
                 lp,
                 rtt_ms,
+                RTT_WARN_THRESHOLD_MS,
                 device_name,
             )
 
@@ -965,7 +982,7 @@ class TCPPacketHandler:
                 packet_data.hex(" "),
             )
 
-        if ctrl_bytes[0] == 0xF9 and ctrl_bytes[1] in (0xD0, 0xF0, 0xE2):
+        if ctrl_bytes[0] == CTRL_ACK_PREFIX and ctrl_bytes[1] in CTRL_ACK_SUFFIXES:
             await self._process_control_ack_message(packet_data, lp)
             return
 

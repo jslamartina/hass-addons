@@ -91,17 +91,11 @@ class PerformanceTracker:
 
         # Check p95 threshold (primary target)
         if metrics.p95_ms > self.thresholds.p95_ms:
-            warnings.append(
-                f"p95 latency ({metrics.p95_ms:.1f}ms) exceeds "
-                f"threshold ({self.thresholds.p95_ms:.1f}ms)"
-            )
+            warnings.append(f"p95 latency ({metrics.p95_ms:.1f}ms) exceeds threshold ({self.thresholds.p95_ms:.1f}ms)")
 
         # Check p99 threshold (stretch goal)
         if metrics.p99_ms > self.thresholds.p99_ms:
-            warnings.append(
-                f"p99 latency ({metrics.p99_ms:.1f}ms) exceeds "
-                f"threshold ({self.thresholds.p99_ms:.1f}ms)"
-            )
+            warnings.append(f"p99 latency ({metrics.p99_ms:.1f}ms) exceeds threshold ({self.thresholds.p99_ms:.1f}ms)")
 
         return PerformanceReport(
             timestamp=datetime.now(UTC).isoformat(),

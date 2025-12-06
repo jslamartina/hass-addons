@@ -14,13 +14,13 @@ npm init -y
 
 # Install Prettier and shell plugin
 echo "🎨 Installing Prettier and shell plugin..."
-npm install --save-dev prettier prettier-plugin-sh
+npm install --save-dev prettier prettier-plugin-sh prettier-plugin-toml
 
 # Create Prettier configuration
 echo "⚙️ Creating Prettier configuration..."
 cat > .prettierrc.json << 'EOF'
 {
-  "plugins": ["prettier-plugin-sh"]
+  "plugins": ["prettier-plugin-sh", "prettier-plugin-toml"]
 }
 EOF
 

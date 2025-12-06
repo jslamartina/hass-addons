@@ -17,9 +17,9 @@ class TestMQTTDeviceDiscovery:
     @pytest.fixture(autouse=True)
     def reset_mqtt_singleton(self):
         """Reset MQTTClient singleton between tests."""
-        MQTTClient._instance = None
+        MQTTClient._instance = None  # pyright: ignore[reportPrivateUsage]
         yield
-        MQTTClient._instance = None
+        MQTTClient._instance = None  # pyright: ignore[reportPrivateUsage]
 
     @pytest.mark.asyncio
     async def test_homeassistant_discovery_light_with_rgb(self):

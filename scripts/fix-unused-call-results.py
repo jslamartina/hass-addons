@@ -29,6 +29,7 @@ def get_pyright_output(repo_root: Path) -> str:
 
     result = subprocess.run(
         ["basedpyright", "--project", "pyrightconfig.json"],
+        check=False,
         cwd=cync_controller,
         capture_output=True,
         text=True,
@@ -38,10 +39,10 @@ def get_pyright_output(repo_root: Path) -> str:
 
 def parse_unused_call_results(output: str, repo_root: Path) -> list[UnusedCallResult]:
     """Parse Pyright output for unused call result warnings."""
-    results = []
+    results: list[UnusedCallResult] = []
     # Pattern matches: /workspaces/hass-addons/cync-controller/src/...:line:col - warning: ... (reportUnusedCallResult)
     pattern = re.compile(
-        r"^\s+([^:]+):(\d+):(\d+)\s+-\s+warning:.*\(reportUnusedCallResult\)"
+        r"^\s+([^:]+):(\d+):(\d+)\s+-\s+warning:.*\(reportUnusedCallResult\)",
     )
 
     for line in output.splitlines():

@@ -18,7 +18,8 @@ activate_venv() {
     return
   fi
 
-  local venv_path="$REPO_ROOT/.venv"
+  local venv_path
+  venv_path=$(poetry env info --path)
   if [ -f "$venv_path/bin/activate" ]; then
     log_info "Activating repository virtualenv at $venv_path"
     # shellcheck disable=SC1090,SC1091  # Source path is dynamic via $venv_path

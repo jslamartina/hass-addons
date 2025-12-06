@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-"""
-SAFE MQTT entity deletion - deletes from registries AND restore_state
+"""SAFE MQTT entity deletion - deletes from registries AND restore_state
 
 This version correctly handles the registry format to avoid breaking HA.
 
@@ -11,7 +10,7 @@ Usage:
 import json
 import sys
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, cast
 
 # Home Assistant config directory (host container path)
 HA_CONFIG_DIR = Path("/tmp/supervisor_data/homeassistant")
@@ -22,7 +21,7 @@ RESTORE_STATE_FILE = HA_CONFIG_DIR / ".storage" / "core.restore_state"
 BRIDGE_PATTERN = "cync_lan_bridge"
 
 
-def load_json_file(filepath: Path) -> Dict[str, Any]:
+def load_json_file(filepath: Path) -> dict[str, Any]:
     """Load a JSON file."""
     if not filepath.exists():
         print(f"❌ File not found: {filepath}")
@@ -32,7 +31,7 @@ def load_json_file(filepath: Path) -> Dict[str, Any]:
         return json.load(f)
 
 
-def save_json_file(filepath: Path, data: Dict[str, Any], backup: bool = True):
+def save_json_file(filepath: Path, data: dict[str, Any], backup: bool = True):
     """Save a JSON file with optional backup."""
     if backup:
         backup_file = filepath.with_suffix(filepath.suffix + ".safe_backup")
@@ -51,11 +50,11 @@ def main():
     print("╔═══════════════════════════════════════════════════════════════════════╗")
     print("║          SAFE MQTT Deletion (Registry + Restore State)              ║")
     print("╚═══════════════════════════════════════════════════════════════════════╝")
-    print("")
+    print()
 
     if dry_run:
         print("⚠️  DRY RUN MODE - No changes will be saved")
-        print("")
+        print()
 
     # ============================================================================
     # STEP 1: Load registries
@@ -72,14 +71,14 @@ def main():
     print(f"   Entities: {len(entities)}")
     print(f"   Devices: {len(devices)}")
     print(f"   Restore states: {len(states)}")
-    print("")
+    print()
 
     # ============================================================================
     # STEP 2: Find MQTT entities
     # ============================================================================
     print("🔍 Finding MQTT entities...")
-    mqtt_entities_to_delete: List[Dict[str, Any]] = []
-    mqtt_entities_to_preserve: List[Dict[str, Any]] = []
+    mqtt_entities_to_delete: list[dict[str, Any]] = []
+    mqtt_entities_to_preserve: list[dict[str, Any]] = []
 
     for entity in entities:
         platform = entity.get("platform", "")
@@ -97,7 +96,7 @@ def main():
                 mqtt_entities_to_delete.append(entity)
                 print(f"❌ DELETE: {name or entity_id}")
 
-    print("")
+    print()
 
     # ============================================================================
     # STEP 3: Find MQTT devices
@@ -108,43 +107,53 @@ def main():
         e.get("device_id") for e in mqtt_entities_to_delete if e.get("device_id")
     }
 
-    mqtt_devices_to_delete: List[Dict[str, Any]] = []
-    mqtt_devices_to_preserve: List[Dict[str, Any]] = []
+    mqtt_devices_to_delete: list[dict[str, Any]] = []
+    mqtt_devices_to_preserve: list[dict[str, Any]] = []
 
     for device in devices:
         if not isinstance(device, dict):
             continue
 
-        device_id = device.get("id", "")  # type: ignore[assignment]
-        identifiers = device.get("identifiers", [])  # type: ignore[assignment]
-        name = device.get("name_by_user") or device.get("name", "")  # type: ignore[assignment]
+        device_id: str = device.get("id", "")  # type: ignore[assignment]
+        identifiers_raw: Any = device.get("identifiers", [])  # type: ignore[assignment]
+        name: str = device.get("name_by_user") or device.get("name", "")  # type: ignore[assignment]
 
-        is_mqtt = any(
-            isinstance(id_pair, list) and len(id_pair) == 2 and id_pair[0] == "mqtt"
-            for id_pair in identifiers
-        )
+        # Type guard: ensure identifiers is a list
+        if not isinstance(identifiers_raw, list):
+            continue
+        identifiers: list[Any] = cast("list[Any]", identifiers_raw)
+
+        # Check if device is MQTT by examining identifiers
+        is_mqtt = False
+        for id_pair_raw in identifiers:
+            if isinstance(id_pair_raw, list):
+                id_pair: list[Any] = id_pair_raw  # pyright: ignore[reportUnknownVariableType]
+                if len(id_pair) == 2 and id_pair[0] == "mqtt":
+                    is_mqtt = True
+                    break
 
         if is_mqtt:
-            name_lower = (name or "").lower()
+            name_str: str = cast("str", name) if name else ""  # type: ignore[arg-type]
+            name_lower: str = name_str.lower()
 
             if BRIDGE_PATTERN in name_lower:
-                mqtt_devices_to_preserve.append(device)
+                mqtt_devices_to_preserve.append(device)  # type: ignore[arg-type]
                 print(f"✅ PRESERVE: {name}")
             elif device_id in device_ids_from_deleted_entities:
-                mqtt_devices_to_delete.append(device)
+                mqtt_devices_to_delete.append(device)  # type: ignore[arg-type]
                 print(f"❌ DELETE: {name}")
 
-    print("")
+    print()
 
     # ============================================================================
     # STEP 4: Find restore states
     # ============================================================================
     print("🔍 Finding restore states...")
 
-    entity_ids_to_delete = {e["entity_id"] for e in mqtt_entities_to_delete}
+    entity_ids_to_delete: set[str] = {e["entity_id"] for e in mqtt_entities_to_delete}
 
-    states_to_delete = []
-    states_to_keep = []
+    states_to_delete: list[str] = []
+    states_to_keep: list[str] = []
 
     for state in states:
         entity_id = state.get("state", {}).get("entity_id", "")
@@ -157,7 +166,7 @@ def main():
         else:
             states_to_keep.append(entity_id)
 
-    print("")
+    print()
 
     # ============================================================================
     # STEP 5: Summary
@@ -165,22 +174,22 @@ def main():
     print("═════════════════ SUMMARY ═════════════════")
     print("📊 ENTITIES:")
     print(
-        f"   Total MQTT: {len(mqtt_entities_to_delete) + len(mqtt_entities_to_preserve)}"
+        f"   Total MQTT: {len(mqtt_entities_to_delete) + len(mqtt_entities_to_preserve)}",
     )
     print(f"   ✅ Preserve: {len(mqtt_entities_to_preserve)}")
     print(f"   ❌ Delete: {len(mqtt_entities_to_delete)}")
-    print("")
+    print()
     print("📊 DEVICES:")
     print(
-        f"   Total MQTT: {len(mqtt_devices_to_delete) + len(mqtt_devices_to_preserve)}"
+        f"   Total MQTT: {len(mqtt_devices_to_delete) + len(mqtt_devices_to_preserve)}",
     )
     print(f"   ✅ Preserve: {len(mqtt_devices_to_preserve)}")
     print(f"   ❌ Delete: {len(mqtt_devices_to_delete)}")
-    print("")
+    print()
     print("📊 RESTORE STATES:")
     print(f"   ❌ Delete: {len(states_to_delete)}")
     print("═════════════════════════════════════════════")
-    print("")
+    print()
 
     if not mqtt_entities_to_delete:
         print("⚠️  Nothing to delete")
@@ -192,13 +201,13 @@ def main():
 
     # Confirm
     response = input(
-        f"⚠️  Delete {len(mqtt_entities_to_delete)} entities, {len(mqtt_devices_to_delete)} devices, {len(states_to_delete)} states? (y/N): "
+        f"⚠️  Delete {len(mqtt_entities_to_delete)} entities, {len(mqtt_devices_to_delete)} devices, {len(states_to_delete)} states? (y/N): ",
     )
     if response.lower() != "y":
         print("❌ Aborted")
         return
 
-    print("")
+    print()
 
     # ============================================================================
     # STEP 6: Delete entities from entity registry
@@ -242,7 +251,7 @@ def main():
     ]
 
     print(f"   ✅ Removed {len(states_to_delete)} states")
-    print("")
+    print()
 
     # ============================================================================
     # STEP 9: Save all files
@@ -251,7 +260,7 @@ def main():
     save_json_file(ENTITY_REGISTRY_FILE, entity_registry)
     save_json_file(DEVICE_REGISTRY_FILE, device_registry)
     save_json_file(RESTORE_STATE_FILE, restore_state)
-    print("")
+    print()
 
     print("═════════════════════════════════════════════")
     print("✅ Successfully deleted:")
@@ -259,17 +268,17 @@ def main():
     print(f"   {len(mqtt_devices_to_delete)} devices")
     print(f"   {len(states_to_delete)} restore states")
     print("═════════════════════════════════════════════")
-    print("")
+    print()
     print("⚠️  NEXT STEPS:")
-    print("")
+    print()
     print("1. Restart Home Assistant:")
     print("   ha core restart")
-    print("")
+    print()
     print("2. Wait ~20 seconds, then start addon:")
     print("   ha addons start local_cync-controller")
-    print("")
+    print()
     print("3. Entities will be FRESH with correct 'Living Room' area!")
-    print("")
+    print()
 
 
 if __name__ == "__main__":

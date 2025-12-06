@@ -38,9 +38,7 @@ class CodecValidatorPlugin:
         self.framers: dict[int, PacketFramer] = {}
         logger.info("CodecValidatorPlugin initialized")
 
-    def on_packet_received(
-        self, direction: PacketDirection, data: bytes, connection_id: int
-    ) -> None:
+    def on_packet_received(self, direction: PacketDirection, data: bytes, connection_id: int) -> None:
         """Validate packet with Phase 1a codec.
 
         Args:

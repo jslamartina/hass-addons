@@ -7,6 +7,24 @@ import pytest
 from harness.toggler import send_toggle_packet, toggle_device_with_retry
 from transport import TCPConnection
 
+
+class TCPConnectionTestHarness(TCPConnection):
+    """Expose connection state controls for testing."""
+
+    def set_connected_state(
+        self,
+        connected: bool,
+        *,
+        reader: AsyncMock | None = None,
+        writer: MagicMock | None = None,
+    ) -> None:
+        self._connected = connected
+        if reader is not None:
+            self.reader = reader
+        if writer is not None:
+            self.writer = writer
+
+
 # Test constants
 EXPECTED_MAX_ATTEMPTS = 2
 
@@ -47,12 +65,10 @@ async def test_tcp_connection_timeout() -> None:
 @pytest.mark.asyncio
 async def test_send_toggle_packet_success() -> None:
     """Test successful toggle packet send and receive."""
-    conn = TCPConnection("127.0.0.1", 9999)
+    conn = TCPConnectionTestHarness("127.0.0.1", 9999)
 
     # Mock connection state
-    conn._connected = True
-    conn.reader = AsyncMock()
-    conn.writer = MagicMock()
+    conn.set_connected_state(True, reader=AsyncMock(), writer=MagicMock())
 
     # Mock successful send/recv
     with (
@@ -74,8 +90,8 @@ async def test_send_toggle_packet_success() -> None:
 @pytest.mark.asyncio
 async def test_send_toggle_packet_send_failure() -> None:
     """Test toggle packet send failure."""
-    conn = TCPConnection("127.0.0.1", 9999)
-    conn._connected = True
+    conn = TCPConnectionTestHarness("127.0.0.1", 9999)
+    conn.set_connected_state(True)
 
     # Mock send failure
     with patch.object(conn, "send", return_value=False):
@@ -92,8 +108,8 @@ async def test_send_toggle_packet_send_failure() -> None:
 @pytest.mark.asyncio
 async def test_send_toggle_packet_recv_timeout() -> None:
     """Test toggle packet receive timeout."""
-    conn = TCPConnection("127.0.0.1", 9999)
-    conn._connected = True
+    conn = TCPConnectionTestHarness("127.0.0.1", 9999)
+    conn.set_connected_state(True)
 
     # Mock send success, recv timeout
     with (
@@ -184,10 +200,10 @@ async def test_toggle_device_with_retry_all_attempts_fail() -> None:
 @pytest.mark.asyncio
 async def test_tcp_send_success() -> None:
     """Test successful TCP send operation."""
-    conn = TCPConnection("127.0.0.1", 9999, io_timeout=0.5)
+    conn = TCPConnectionTestHarness("127.0.0.1", 9999, io_timeout=0.5)
 
     # Mock connected state
-    conn._connected = True
+    conn.set_connected_state(True)
     mock_writer = MagicMock()
     mock_drain = AsyncMock()
     mock_writer.drain = mock_drain
@@ -203,10 +219,14 @@ async def test_tcp_send_success() -> None:
 @pytest.mark.asyncio
 async def test_tcp_recv_success() -> None:
     """Test successful TCP receive operation."""
-    conn = TCPConnection("127.0.0.1", 9999, io_timeout=0.5)
+    conn = TCPConnectionTestHarness("127.0.0.1", 9999, io_timeout=0.5)
 
     # Mock connected state
-    conn._connected = True
+    conn.set_connected_state(True)
+    conn = TCPConnectionTestHarness("127.0.0.1", 9999, io_timeout=0.5)
+
+    # Mock connected state
+    conn.set_connected_state(True)
     mock_reader = AsyncMock()
     mock_reader.read.return_value = b"response data"
     conn.reader = mock_reader
@@ -220,10 +240,10 @@ async def test_tcp_recv_success() -> None:
 @pytest.mark.asyncio
 async def test_tcp_recv_connection_closed() -> None:
     """Test TCP receive when connection is closed by peer."""
-    conn = TCPConnection("127.0.0.1", 9999, io_timeout=0.5)
+    conn = TCPConnectionTestHarness("127.0.0.1", 9999, io_timeout=0.5)
 
     # Mock connected state
-    conn._connected = True
+    conn.set_connected_state(True)
     mock_reader = AsyncMock()
     mock_reader.read.return_value = b""  # Empty bytes = connection closed
     conn.reader = mock_reader
@@ -240,10 +260,10 @@ class TestSocketAbstractionErrorPaths:
     @pytest.mark.asyncio
     async def test_send_timeout_returns_false(self):
         """Test that send() returns False on TimeoutError."""
-        conn = TCPConnection("127.0.0.1", 9999, io_timeout=0.1)
+        conn = TCPConnectionTestHarness("127.0.0.1", 9999, io_timeout=0.1)
 
         # Mock connected state
-        conn._connected = True
+        conn.set_connected_state(True)
         mock_writer = MagicMock()
         mock_drain = AsyncMock()
         mock_drain.side_effect = TimeoutError("Send timeout")
@@ -258,8 +278,8 @@ class TestSocketAbstractionErrorPaths:
     @pytest.mark.asyncio
     async def test_send_not_connected_returns_false(self):
         """Test that send() returns False when not connected."""
-        conn = TCPConnection("127.0.0.1", 9999)
-        conn._connected = False
+        conn = TCPConnectionTestHarness("127.0.0.1", 9999)
+        conn.set_connected_state(False)
 
         result = await conn.send(b"test data")
 
@@ -268,8 +288,8 @@ class TestSocketAbstractionErrorPaths:
     @pytest.mark.asyncio
     async def test_recv_not_connected_returns_none(self):
         """Test that recv() returns None when not connected."""
-        conn = TCPConnection("127.0.0.1", 9999)
-        conn._connected = False
+        conn = TCPConnectionTestHarness("127.0.0.1", 9999)
+        conn.set_connected_state(False)
 
         result = await conn.recv(1024)
 

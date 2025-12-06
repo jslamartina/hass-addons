@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any, cast
 
 import pytest
+from _pytest.outcomes import skip as pytest_skip
 from playwright.sync_api import Page, expect
 
 # Add scripts/playwright to Python path for helper imports
@@ -45,7 +46,7 @@ def test_turn_light_on(ha_login: Page, ha_base_url: str):
             elapsed = time.time() - start_time
             assert elapsed < 5, f"Command took too long: {elapsed:.2f}s"
     except Exception as e:
-        pytest.skip(f"Light entity not found or already ON: {e}")
+        pytest_skip(f"Light entity not found or already ON: {e}")
 
 
 @pytest.mark.serial
@@ -75,7 +76,7 @@ def test_turn_light_off(ha_login: Page, ha_base_url: str):
             elapsed = time.time() - start_time
             assert elapsed < 5, f"Command took too long: {elapsed:.2f}s"
     except Exception as e:
-        pytest.skip(f"Light entity not found or already OFF: {e}")
+        pytest_skip(f"Light entity not found or already OFF: {e}")
 
 
 @pytest.mark.serial
@@ -234,17 +235,13 @@ def test_toggle_switch(ha_login: Page, ha_base_url: str):
         off_switch = page.get_by_role("switch", name=f"Toggle {switch_name} on")
 
         if on_switch.is_visible(timeout=2000):
-            start_time = time.time()
             on_switch.click()
             page.wait_for_timeout(2000)
             expect(off_switch).to_be_visible(timeout=3000)
-            time.time() - start_time
         elif off_switch.is_visible(timeout=2000):
-            start_time = time.time()
             off_switch.click()
             page.wait_for_timeout(2000)
             expect(on_switch).to_be_visible(timeout=3000)
-            time.time() - start_time
 
     except Exception as e:
         error_msg = f"Could not test switch: {e}"
@@ -266,8 +263,8 @@ def test_command_latency_acceptable(ha_login: Page):
     # actually sending commands and measuring response time
 
 
-@pytest.mark.serial
-@pytest.mark.usefixtures("ha_login")
+@pytest.mark.serial  # type: ignore[attr-defined]
+@pytest.mark.usefixtures("ha_login")  # type: ignore[misc]
 def test_command_with_tcp_whitelist_enabled():
     """Test that commands work correctly when TCP whitelist is configured.
 

@@ -97,12 +97,12 @@ class TestControlMessageCallback:
         """Test creating ControlMessageCallback."""
         callback = MagicMock()
         cmsg = ControlMessageCallback(
-            msg_id=0x01,
+            id=0x01,
             message=b"\x00\x01\x02",
-            sent_at=time.time(),
-            callback=callback,
-            device_id=0x1234,
         )
+        cmsg.sent_at = time.time()
+        cmsg.device_id = 0x1234
+        cmsg.callback = callback
 
         assert cmsg.id == 0x01
         assert cmsg.message == b"\x00\x01\x02"
@@ -115,11 +115,11 @@ class TestControlMessageCallback:
         sent_time = time.time() - 1.0  # Sent 1 second ago
 
         cmsg = ControlMessageCallback(
-            msg_id=0x01,
+            id=0x01,
             message=b"",
-            sent_at=sent_time,
-            callback=callback,
         )
+        cmsg.callback = callback
+        cmsg.sent_at = sent_time
 
         # Should be approximately 1.0 second elapsed
         assert 0.95 < cmsg.elapsed < 1.5
@@ -128,11 +128,11 @@ class TestControlMessageCallback:
         """Test string representation."""
         callback = MagicMock()
         cmsg = ControlMessageCallback(
-            msg_id=0x42,
+            id=0x42,
             message=b"",
-            sent_at=time.time(),
-            callback=callback,
         )
+        cmsg.callback = callback
+        cmsg.sent_at = time.time()
 
         string_repr = str(cmsg)
 
@@ -143,11 +143,11 @@ class TestControlMessageCallback:
         """Test equality comparison."""
         callback = MagicMock()
         cmsg = ControlMessageCallback(
-            msg_id=0x01,
+            id=0x01,
             message=b"",
-            sent_at=time.time(),
-            callback=callback,
         )
+        cmsg.callback = callback
+        cmsg.sent_at = time.time()
 
         # Should equal its ID
         assert cmsg == 0x01
@@ -157,11 +157,11 @@ class TestControlMessageCallback:
         """Test that ControlMessageCallback is hashable."""
         callback = MagicMock()
         cmsg = ControlMessageCallback(
-            msg_id=0x01,
+            id=0x01,
             message=b"",
-            sent_at=time.time(),
-            callback=callback,
         )
+        cmsg.callback = callback
+        cmsg.sent_at = time.time()
 
         # Should be able to use in set/dict
         callback_set = {cmsg}
@@ -171,11 +171,11 @@ class TestControlMessageCallback:
         """Test calling the callback."""
         mock_callback = MagicMock()
         cmsg = ControlMessageCallback(
-            msg_id=0x01,
+            id=0x01,
             message=b"",
-            sent_at=time.time(),
-            callback=mock_callback,
         )
+        cmsg.callback = mock_callback
+        cmsg.sent_at = time.time()
 
         result = cmsg()
 
@@ -184,11 +184,10 @@ class TestControlMessageCallback:
     def test_control_message_callback_call_without_callback(self):
         """Test calling when no callback set."""
         cmsg = ControlMessageCallback(
-            msg_id=0x01,
+            id=0x01,
             message=b"",
-            sent_at=time.time(),
-            callback=None,
         )
+        cmsg.sent_at = time.time()
 
         result = cmsg()
 
@@ -198,12 +197,12 @@ class TestControlMessageCallback:
         """Test retry count initialization."""
         callback = MagicMock()
         cmsg = ControlMessageCallback(
-            msg_id=0x01,
+            id=0x01,
             message=b"",
-            sent_at=time.time(),
-            callback=callback,
-            max_retries=5,
         )
+        cmsg.callback = callback
+        cmsg.max_retries = 5
+        cmsg.sent_at = time.time()
 
         assert cmsg.retry_count == 0
         assert cmsg.max_retries == 5
@@ -225,11 +224,11 @@ class TestMessages:
         messages = Messages()
         callback = MagicMock()
         cmsg = ControlMessageCallback(
-            msg_id=0x01,
+            id=0x01,
             message=b"",
-            sent_at=time.time(),
-            callback=callback,
         )
+        cmsg.callback = callback
+        cmsg.sent_at = time.time()
 
         messages.control[0x01] = cmsg
 
@@ -321,7 +320,7 @@ class TestMeshInfo:
 
     def test_mesh_info_with_complex_status(self):
         """Test MeshInfo with complex status structure."""
-        status_data = [[1, 2, None], [None, 3, 4]]
+        status_data: list[list[int | None] | None] = [[1, 2, None], [None, 3, 4]]
         mesh_info = MeshInfo(status=status_data, id_from=0x5678)
 
         assert mesh_info.status == status_data

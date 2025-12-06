@@ -7,7 +7,8 @@ import subprocess
 import time
 from typing import Any, cast
 
-import pytest
+from _pytest.outcomes import fail as pytest_fail
+from _pytest.outcomes import skip as pytest_skip
 
 
 def get_json_logs():
@@ -161,9 +162,7 @@ def test_mesh_refresh_performance_group_commands():
 
         # Verify within threshold
         threshold_ms = 500
-        if perf["max_total_ms"] <= threshold_ms:
-            pass
-        else:
-            pytest.fail(f" FAIL: Mesh refresh took {perf['max_total_ms']:.1f}ms, exceeds {threshold_ms}ms threshold")
+        if perf["max_total_ms"] > threshold_ms:
+            pytest_fail(f" FAIL: Mesh refresh took {perf['max_total_ms']:.1f}ms, exceeds {threshold_ms}ms threshold")
     else:
-        pytest.skip("Mesh refresh logs not found - cannot measure performance")
+        pytest_skip("Mesh refresh logs not found - cannot measure performance")

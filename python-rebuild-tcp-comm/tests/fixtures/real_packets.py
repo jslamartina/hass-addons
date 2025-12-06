@@ -143,8 +143,7 @@ HEARTBEAT_CLOUD_0xD8_METADATA: PacketMetadata = PacketMetadata(
 
 # Device Info Flow (0x43 → 0x48)
 DEVICE_INFO_0x43_DEV_TO_CLOUD: bytes = bytes.fromhex(
-    "43 00 00 00 1e 32 5d 53 17 01 01 06 c6 20 02 00 "
-    "ab c5 20 02 00 04 c4 20 02 00 01 c3 20 02 00 05 c2 90 00",
+    "43 00 00 00 1e 32 5d 53 17 01 01 06 c6 20 02 00 ab c5 20 02 00 04 c4 20 02 00 01 c3 20 02 00 05 c2 90 00",
 )
 DEVICE_INFO_0x43_METADATA: PacketMetadata = PacketMetadata(
     device_type="device",
@@ -168,8 +167,7 @@ INFO_ACK_0x48_METADATA: PacketMetadata = PacketMetadata(
 
 # Toggle Command Flow (0x73 → 0x7B) - Phase 0.5 Toggle Injection Tests
 TOGGLE_ON_0x73_CLOUD_TO_DEV: bytes = bytes.fromhex(
-    "73 00 00 00 1f 45 88 0f 3a 00 10 00 00 7e 10 01 00 00 "
-    "f8 8e 0c 00 10 01 00 00 00 50 00 f7 11 02 01 01 07 7e",
+    "73 00 00 00 1f 45 88 0f 3a 00 10 00 00 7e 10 01 00 00 f8 8e 0c 00 10 01 00 00 00 50 00 f7 11 02 01 01 07 7e",
 )
 TOGGLE_ON_0x73_METADATA: PacketMetadata = PacketMetadata(
     device_type="cloud",
@@ -181,8 +179,7 @@ TOGGLE_ON_0x73_METADATA: PacketMetadata = PacketMetadata(
 )
 
 TOGGLE_OFF_0x73_CLOUD_TO_DEV: bytes = bytes.fromhex(
-    "73 00 00 00 1f 45 88 0f 3a 00 11 00 00 7e 11 01 00 00 "
-    "f8 8e 0c 00 11 01 00 00 00 50 00 f7 11 02 00 01 07 7e",
+    "73 00 00 00 1f 45 88 0f 3a 00 11 00 00 7e 11 01 00 00 f8 8e 0c 00 11 01 00 00 00 50 00 f7 11 02 00 01 07 7e",
 )
 TOGGLE_OFF_0x73_METADATA: PacketMetadata = PacketMetadata(
     device_type="cloud",
@@ -264,10 +261,7 @@ DEVICE_INFO_0x43_FRAMED_3_METADATA: PacketMetadata = PacketMetadata(
     captured_at="2025-11-06T08:20:59.868595",
     device_id="45:88:0d:50",
     operation="device_info",
-    notes=(
-        "90-byte device info with 0x7e framing, checksum 0xc1 "
-        "(same as FRAMED_1), different endpoint"
-    ),
+    notes=("90-byte device info with 0x7e framing, checksum 0xc1 (same as FRAMED_1), different endpoint"),
 )
 
 # Status Broadcast packets with diverse endpoints and checksums
@@ -388,8 +382,7 @@ STATUS_BROADCAST_0x83_FRAMED_11_METADATA: PacketMetadata = PacketMetadata(
 # Pattern: msg_id appears at bytes 10-12 in both request and ACK
 
 ACK_VAL_0x7B_PAIR_01_CMD: bytes = bytes.fromhex(
-    "73 00 00 00 1f 45 88 0f 3a aa bb cc 00 7e aa 01 00 00 "
-    "f8 8e 0c 00 aa 01 00 00 00 50 00 f7 11 02 01 01 56 7e",
+    "73 00 00 00 1f 45 88 0f 3a aa bb cc 00 7e aa 01 00 00 f8 8e 0c 00 aa 01 00 00 00 50 00 f7 11 02 01 01 56 7e",
 )
 ACK_VAL_0x7B_PAIR_01_CMD_META: PacketMetadata = PacketMetadata(
     device_type="cloud",
@@ -410,8 +403,7 @@ ACK_VAL_0x7B_PAIR_01_ACK_META: PacketMetadata = PacketMetadata(
 )
 
 ACK_VAL_0x7B_PAIR_02_CMD: bytes = bytes.fromhex(
-    "73 00 00 00 1f 45 88 0f 3a 11 22 33 00 7e 11 01 00 00 "
-    "f8 8e 0c 00 11 01 00 00 00 50 00 f7 11 02 00 01 65 7e",
+    "73 00 00 00 1f 45 88 0f 3a 11 22 33 00 7e 11 01 00 00 f8 8e 0c 00 11 01 00 00 00 50 00 f7 11 02 00 01 65 7e",
 )
 ACK_VAL_0x7B_PAIR_02_CMD_META: PacketMetadata = PacketMetadata(
     device_type="cloud",
@@ -432,8 +424,7 @@ ACK_VAL_0x7B_PAIR_02_ACK_META: PacketMetadata = PacketMetadata(
 )
 
 ACK_VAL_0x7B_PAIR_03_CMD: bytes = bytes.fromhex(
-    "73 00 00 00 1f 32 5d 53 17 ff 00 ff 00 7e ff 01 00 00 "
-    "f8 8e 0c 00 ff 01 00 00 00 c6 00 f7 11 02 01 01 ab 7e",
+    "73 00 00 00 1f 32 5d 53 17 ff 00 ff 00 7e ff 01 00 00 f8 8e 0c 00 ff 01 00 00 00 c6 00 f7 11 02 01 01 ab 7e",
 )
 ACK_VAL_0x7B_PAIR_03_CMD_META: PacketMetadata = PacketMetadata(
     device_type="cloud",
@@ -454,8 +445,7 @@ ACK_VAL_0x7B_PAIR_03_ACK_META: PacketMetadata = PacketMetadata(
 )
 
 ACK_VAL_0x7B_PAIR_04_CMD: bytes = bytes.fromhex(
-    "73 00 00 00 1f 38 e8 cf 46 12 34 56 00 7e 12 01 00 00 "
-    "f8 8e 0c 00 12 01 00 00 00 a5 00 f7 11 02 01 01 78 7e",
+    "73 00 00 00 1f 38 e8 cf 46 12 34 56 00 7e 12 01 00 00 f8 8e 0c 00 12 01 00 00 00 a5 00 f7 11 02 01 01 78 7e",
 )
 ACK_VAL_0x7B_PAIR_04_CMD_META: PacketMetadata = PacketMetadata(
     device_type="cloud",
@@ -476,8 +466,7 @@ ACK_VAL_0x7B_PAIR_04_ACK_META: PacketMetadata = PacketMetadata(
 )
 
 ACK_VAL_0x7B_PAIR_05_CMD: bytes = bytes.fromhex(
-    "73 00 00 00 1f 3d 54 66 a6 ab cd ef 00 7e ab 01 00 00 "
-    "f8 8e 0c 00 ab 01 00 00 00 c5 00 f7 11 02 01 01 25 7e",
+    "73 00 00 00 1f 3d 54 66 a6 ab cd ef 00 7e ab 01 00 00 f8 8e 0c 00 ab 01 00 00 00 c5 00 f7 11 02 01 01 25 7e",
 )
 ACK_VAL_0x7B_PAIR_05_CMD_META: PacketMetadata = PacketMetadata(
     device_type="cloud",
@@ -498,8 +487,7 @@ ACK_VAL_0x7B_PAIR_05_ACK_META: PacketMetadata = PacketMetadata(
 )
 
 ACK_VAL_0x7B_PAIR_06_CMD: bytes = bytes.fromhex(
-    "73 00 00 00 1f 60 b1 74 37 de ad be 00 7e de 01 00 00 "
-    "f8 8e 0c 00 de 01 00 00 00 c4 00 f7 11 02 00 01 48 7e",
+    "73 00 00 00 1f 60 b1 74 37 de ad be 00 7e de 01 00 00 f8 8e 0c 00 de 01 00 00 00 c4 00 f7 11 02 00 01 48 7e",
 )
 ACK_VAL_0x7B_PAIR_06_CMD_META: PacketMetadata = PacketMetadata(
     device_type="cloud",
@@ -520,8 +508,7 @@ ACK_VAL_0x7B_PAIR_06_ACK_META: PacketMetadata = PacketMetadata(
 )
 
 ACK_VAL_0x7B_PAIR_07_CMD: bytes = bytes.fromhex(
-    "73 00 00 00 1f 60 b1 7a 37 ca fe ba 00 7e ca 01 00 00 "
-    "f8 8e 0c 00 ca 01 00 00 00 c3 00 f7 11 02 01 01 3e 7e",
+    "73 00 00 00 1f 60 b1 7a 37 ca fe ba 00 7e ca 01 00 00 f8 8e 0c 00 ca 01 00 00 00 c3 00 f7 11 02 01 01 3e 7e",
 )
 ACK_VAL_0x7B_PAIR_07_CMD_META: PacketMetadata = PacketMetadata(
     device_type="cloud",
@@ -542,8 +529,7 @@ ACK_VAL_0x7B_PAIR_07_ACK_META: PacketMetadata = PacketMetadata(
 )
 
 ACK_VAL_0x7B_PAIR_08_CMD: bytes = bytes.fromhex(
-    "73 00 00 00 1f 60 b1 7c b4 ba dc 0d 00 7e ba 01 00 00 "
-    "f8 8e 0c 00 ba 01 00 00 00 c2 00 f7 11 02 01 01 3c 7e",
+    "73 00 00 00 1f 60 b1 7c b4 ba dc 0d 00 7e ba 01 00 00 f8 8e 0c 00 ba 01 00 00 00 c2 00 f7 11 02 01 01 3c 7e",
 )
 ACK_VAL_0x7B_PAIR_08_CMD_META: PacketMetadata = PacketMetadata(
     device_type="cloud",
@@ -564,8 +550,7 @@ ACK_VAL_0x7B_PAIR_08_ACK_META: PacketMetadata = PacketMetadata(
 )
 
 ACK_VAL_0x7B_PAIR_09_CMD: bytes = bytes.fromhex(
-    "73 00 00 00 1f 60 b1 8e 42 f0 0d fa 00 7e f0 01 00 00 "
-    "f8 8e 0c 00 f0 01 00 00 00 c1 00 f7 11 02 00 01 7a 7e",
+    "73 00 00 00 1f 60 b1 8e 42 f0 0d fa 00 7e f0 01 00 00 f8 8e 0c 00 f0 01 00 00 00 c1 00 f7 11 02 00 01 7a 7e",
 )
 ACK_VAL_0x7B_PAIR_09_CMD_META: PacketMetadata = PacketMetadata(
     device_type="cloud",
@@ -586,8 +571,7 @@ ACK_VAL_0x7B_PAIR_09_ACK_META: PacketMetadata = PacketMetadata(
 )
 
 ACK_VAL_0x7B_PAIR_10_CMD: bytes = bytes.fromhex(
-    "73 00 00 00 1f 38 e8 ee 97 01 23 45 00 7e 01 01 00 00 "
-    "f8 8e 0c 00 01 01 00 00 00 c0 00 f7 11 02 01 01 8b 7e",
+    "73 00 00 00 1f 38 e8 ee 97 01 23 45 00 7e 01 01 00 00 f8 8e 0c 00 01 01 00 00 00 c0 00 f7 11 02 01 01 8b 7e",
 )
 ACK_VAL_0x7B_PAIR_10_CMD_META: PacketMetadata = PacketMetadata(
     device_type="cloud",
@@ -608,8 +592,7 @@ ACK_VAL_0x7B_PAIR_10_ACK_META: PacketMetadata = PacketMetadata(
 )
 
 ACK_VAL_0x7B_PAIR_11_CMD: bytes = bytes.fromhex(
-    "73 00 00 00 1f 38 e8 dd 4d 67 89 ab 00 7e 67 01 00 00 "
-    "f8 8e 0c 00 67 01 00 00 00 50 00 f7 11 02 01 01 de 7e",
+    "73 00 00 00 1f 38 e8 dd 4d 67 89 ab 00 7e 67 01 00 00 f8 8e 0c 00 67 01 00 00 00 50 00 f7 11 02 01 01 de 7e",
 )
 ACK_VAL_0x7B_PAIR_11_CMD_META: PacketMetadata = PacketMetadata(
     device_type="cloud",
@@ -1280,8 +1263,7 @@ ACK_VAL_0xD8_PAIR_10_ACK_META: PacketMetadata = PacketMetadata(
 
 # Triplet 1: Toggle ON command retries
 RETRY_SET_01_ORIG: bytes = bytes.fromhex(
-    "73 00 00 00 1f 45 88 0f 3a aa bb cc 00 7e aa 01 00 00 "
-    "f8 8e 0c 00 aa 01 00 00 00 50 00 f7 11 02 01 01 56 7e",
+    "73 00 00 00 1f 45 88 0f 3a aa bb cc 00 7e aa 01 00 00 f8 8e 0c 00 aa 01 00 00 00 50 00 f7 11 02 01 01 56 7e",
 )
 RETRY_SET_01_ORIG_META: PacketMetadata = PacketMetadata(
     device_type="cloud",
@@ -1292,8 +1274,7 @@ RETRY_SET_01_ORIG_META: PacketMetadata = PacketMetadata(
     notes="Toggle ON original, dedup_key: 73:45880f3a:aabbcc:payload_hash",
 )
 RETRY_SET_01_RETRY_1: bytes = bytes.fromhex(
-    "73 00 00 00 1f 45 88 0f 3a aa bb cc 00 7e aa 01 00 00 "
-    "f8 8e 0c 00 aa 01 00 00 00 50 00 f7 11 02 01 01 56 7e",
+    "73 00 00 00 1f 45 88 0f 3a aa bb cc 00 7e aa 01 00 00 f8 8e 0c 00 aa 01 00 00 00 50 00 f7 11 02 01 01 56 7e",
 )
 RETRY_SET_01_RETRY_1_META: PacketMetadata = PacketMetadata(
     device_type="cloud",
@@ -1304,8 +1285,7 @@ RETRY_SET_01_RETRY_1_META: PacketMetadata = PacketMetadata(
     notes="Toggle ON retry 1, identical dedup_key (should deduplicate)",
 )
 RETRY_SET_01_RETRY_2: bytes = bytes.fromhex(
-    "73 00 00 00 1f 45 88 0f 3a aa bb cc 00 7e aa 01 00 00 "
-    "f8 8e 0c 00 aa 01 00 00 00 50 00 f7 11 02 01 01 56 7e",
+    "73 00 00 00 1f 45 88 0f 3a aa bb cc 00 7e aa 01 00 00 f8 8e 0c 00 aa 01 00 00 00 50 00 f7 11 02 01 01 56 7e",
 )
 RETRY_SET_01_RETRY_2_META: PacketMetadata = PacketMetadata(
     device_type="cloud",
@@ -1318,8 +1298,7 @@ RETRY_SET_01_RETRY_2_META: PacketMetadata = PacketMetadata(
 
 # Triplet 2: Toggle OFF command retries
 RETRY_SET_02_ORIG: bytes = bytes.fromhex(
-    "73 00 00 00 1f 45 88 0f 3a 11 22 33 00 7e 11 01 00 00 "
-    "f8 8e 0c 00 11 01 00 00 00 50 00 f7 11 02 00 01 65 7e",
+    "73 00 00 00 1f 45 88 0f 3a 11 22 33 00 7e 11 01 00 00 f8 8e 0c 00 11 01 00 00 00 50 00 f7 11 02 00 01 65 7e",
 )
 RETRY_SET_02_ORIG_META: PacketMetadata = PacketMetadata(
     device_type="cloud",
@@ -1330,8 +1309,7 @@ RETRY_SET_02_ORIG_META: PacketMetadata = PacketMetadata(
     notes="Toggle OFF original, dedup_key: 73:45880f3a:112233:payload_hash",
 )
 RETRY_SET_02_RETRY_1: bytes = bytes.fromhex(
-    "73 00 00 00 1f 45 88 0f 3a 11 22 33 00 7e 11 01 00 00 "
-    "f8 8e 0c 00 11 01 00 00 00 50 00 f7 11 02 00 01 65 7e",
+    "73 00 00 00 1f 45 88 0f 3a 11 22 33 00 7e 11 01 00 00 f8 8e 0c 00 11 01 00 00 00 50 00 f7 11 02 00 01 65 7e",
 )
 RETRY_SET_02_RETRY_1_META: PacketMetadata = PacketMetadata(
     device_type="cloud",
@@ -1342,8 +1320,7 @@ RETRY_SET_02_RETRY_1_META: PacketMetadata = PacketMetadata(
     notes="Toggle OFF retry 1",
 )
 RETRY_SET_02_RETRY_2: bytes = bytes.fromhex(
-    "73 00 00 00 1f 45 88 0f 3a 11 22 33 00 7e 11 01 00 00 "
-    "f8 8e 0c 00 11 01 00 00 00 50 00 f7 11 02 00 01 65 7e",
+    "73 00 00 00 1f 45 88 0f 3a 11 22 33 00 7e 11 01 00 00 f8 8e 0c 00 11 01 00 00 00 50 00 f7 11 02 00 01 65 7e",
 )
 RETRY_SET_02_RETRY_2_META: PacketMetadata = PacketMetadata(
     device_type="cloud",
@@ -1356,8 +1333,7 @@ RETRY_SET_02_RETRY_2_META: PacketMetadata = PacketMetadata(
 
 # Triplet 3: Brightness 50% retries
 RETRY_SET_03_ORIG: bytes = bytes.fromhex(
-    "73 00 00 00 1f 32 5d 53 17 ff 00 ff 00 7e ff 01 00 00 "
-    "f8 8e 0c 00 ff 01 00 00 00 32 00 f7 11 02 32 01 db 7e",
+    "73 00 00 00 1f 32 5d 53 17 ff 00 ff 00 7e ff 01 00 00 f8 8e 0c 00 ff 01 00 00 00 32 00 f7 11 02 32 01 db 7e",
 )
 RETRY_SET_03_ORIG_META: PacketMetadata = PacketMetadata(
     device_type="cloud",
@@ -1368,8 +1344,7 @@ RETRY_SET_03_ORIG_META: PacketMetadata = PacketMetadata(
     notes="Brightness 50% original",
 )
 RETRY_SET_03_RETRY_1: bytes = bytes.fromhex(
-    "73 00 00 00 1f 32 5d 53 17 ff 00 ff 00 7e ff 01 00 00 "
-    "f8 8e 0c 00 ff 01 00 00 00 32 00 f7 11 02 32 01 db 7e",
+    "73 00 00 00 1f 32 5d 53 17 ff 00 ff 00 7e ff 01 00 00 f8 8e 0c 00 ff 01 00 00 00 32 00 f7 11 02 32 01 db 7e",
 )
 RETRY_SET_03_RETRY_1_META: PacketMetadata = PacketMetadata(
     device_type="cloud",
@@ -1380,8 +1355,7 @@ RETRY_SET_03_RETRY_1_META: PacketMetadata = PacketMetadata(
     notes="Brightness 50% retry 1",
 )
 RETRY_SET_03_RETRY_2: bytes = bytes.fromhex(
-    "73 00 00 00 1f 32 5d 53 17 ff 00 ff 00 7e ff 01 00 00 "
-    "f8 8e 0c 00 ff 01 00 00 00 32 00 f7 11 02 32 01 db 7e",
+    "73 00 00 00 1f 32 5d 53 17 ff 00 ff 00 7e ff 01 00 00 f8 8e 0c 00 ff 01 00 00 00 32 00 f7 11 02 32 01 db 7e",
 )
 RETRY_SET_03_RETRY_2_META: PacketMetadata = PacketMetadata(
     device_type="cloud",
@@ -1394,8 +1368,7 @@ RETRY_SET_03_RETRY_2_META: PacketMetadata = PacketMetadata(
 
 # Triplet 4: Brightness 100% retries
 RETRY_SET_04_ORIG: bytes = bytes.fromhex(
-    "73 00 00 00 1f 38 e8 cf 46 12 34 56 00 7e 12 01 00 00 "
-    "f8 8e 0c 00 12 01 00 00 00 64 00 f7 11 02 64 01 15 7e",
+    "73 00 00 00 1f 38 e8 cf 46 12 34 56 00 7e 12 01 00 00 f8 8e 0c 00 12 01 00 00 00 64 00 f7 11 02 64 01 15 7e",
 )
 RETRY_SET_04_ORIG_META: PacketMetadata = PacketMetadata(
     device_type="cloud",
@@ -1406,8 +1379,7 @@ RETRY_SET_04_ORIG_META: PacketMetadata = PacketMetadata(
     notes="Brightness 100% original",
 )
 RETRY_SET_04_RETRY_1: bytes = bytes.fromhex(
-    "73 00 00 00 1f 38 e8 cf 46 12 34 56 00 7e 12 01 00 00 "
-    "f8 8e 0c 00 12 01 00 00 00 64 00 f7 11 02 64 01 15 7e",
+    "73 00 00 00 1f 38 e8 cf 46 12 34 56 00 7e 12 01 00 00 f8 8e 0c 00 12 01 00 00 00 64 00 f7 11 02 64 01 15 7e",
 )
 RETRY_SET_04_RETRY_1_META: PacketMetadata = PacketMetadata(
     device_type="cloud",
@@ -1418,8 +1390,7 @@ RETRY_SET_04_RETRY_1_META: PacketMetadata = PacketMetadata(
     notes="Brightness 100% retry 1",
 )
 RETRY_SET_04_RETRY_2: bytes = bytes.fromhex(
-    "73 00 00 00 1f 38 e8 cf 46 12 34 56 00 7e 12 01 00 00 "
-    "f8 8e 0c 00 12 01 00 00 00 64 00 f7 11 02 64 01 15 7e",
+    "73 00 00 00 1f 38 e8 cf 46 12 34 56 00 7e 12 01 00 00 f8 8e 0c 00 12 01 00 00 00 64 00 f7 11 02 64 01 15 7e",
 )
 RETRY_SET_04_RETRY_2_META: PacketMetadata = PacketMetadata(
     device_type="cloud",
@@ -1432,8 +1403,7 @@ RETRY_SET_04_RETRY_2_META: PacketMetadata = PacketMetadata(
 
 # Triplet 5: Brightness 10% retries
 RETRY_SET_05_ORIG: bytes = bytes.fromhex(
-    "73 00 00 00 1f 3d 54 66 a6 ab cd ef 00 7e ab 01 00 00 "
-    "f8 8e 0c 00 ab 01 00 00 00 0a 00 f7 11 02 0a 01 5d 7e",
+    "73 00 00 00 1f 3d 54 66 a6 ab cd ef 00 7e ab 01 00 00 f8 8e 0c 00 ab 01 00 00 00 0a 00 f7 11 02 0a 01 5d 7e",
 )
 RETRY_SET_05_ORIG_META: PacketMetadata = PacketMetadata(
     device_type="cloud",
@@ -1444,8 +1414,7 @@ RETRY_SET_05_ORIG_META: PacketMetadata = PacketMetadata(
     notes="Brightness 10% original",
 )
 RETRY_SET_05_RETRY_1: bytes = bytes.fromhex(
-    "73 00 00 00 1f 3d 54 66 a6 ab cd ef 00 7e ab 01 00 00 "
-    "f8 8e 0c 00 ab 01 00 00 00 0a 00 f7 11 02 0a 01 5d 7e",
+    "73 00 00 00 1f 3d 54 66 a6 ab cd ef 00 7e ab 01 00 00 f8 8e 0c 00 ab 01 00 00 00 0a 00 f7 11 02 0a 01 5d 7e",
 )
 RETRY_SET_05_RETRY_1_META: PacketMetadata = PacketMetadata(
     device_type="cloud",
@@ -1456,8 +1425,7 @@ RETRY_SET_05_RETRY_1_META: PacketMetadata = PacketMetadata(
     notes="Brightness 10% retry 1",
 )
 RETRY_SET_05_RETRY_2: bytes = bytes.fromhex(
-    "73 00 00 00 1f 3d 54 66 a6 ab cd ef 00 7e ab 01 00 00 "
-    "f8 8e 0c 00 ab 01 00 00 00 0a 00 f7 11 02 0a 01 5d 7e",
+    "73 00 00 00 1f 3d 54 66 a6 ab cd ef 00 7e ab 01 00 00 f8 8e 0c 00 ab 01 00 00 00 0a 00 f7 11 02 0a 01 5d 7e",
 )
 RETRY_SET_05_RETRY_2_META: PacketMetadata = PacketMetadata(
     device_type="cloud",
@@ -1472,211 +1440,163 @@ RETRY_SET_05_RETRY_2_META: PacketMetadata = PacketMetadata(
 # (Using shorter naming for space efficiency)
 
 RETRY_SET_06_ORIG: bytes = bytes.fromhex(
-    "73 00 00 00 1f 60 b1 74 37 de ad be 00 7e de 01 00 00 f8 8e 0c 00 de 01 00 00 00 "
-    "19 00 f7 11 02 19 01 84 7e",
+    "73 00 00 00 1f 60 b1 74 37 de ad be 00 7e de 01 00 00 f8 8e 0c 00 de 01 00 00 00 19 00 f7 11 02 19 01 84 7e",
 )
 RETRY_SET_06_RETRY_1: bytes = bytes.fromhex(
-    "73 00 00 00 1f 60 b1 74 37 de ad be 00 7e de 01 00 00 f8 8e 0c 00 de 01 00 00 00 "
-    "19 00 f7 11 02 19 01 84 7e",
+    "73 00 00 00 1f 60 b1 74 37 de ad be 00 7e de 01 00 00 f8 8e 0c 00 de 01 00 00 00 19 00 f7 11 02 19 01 84 7e",
 )
 RETRY_SET_06_RETRY_2: bytes = bytes.fromhex(
-    "73 00 00 00 1f 60 b1 74 37 de ad be 00 7e de 01 00 00 f8 8e 0c 00 de 01 00 00 00 "
-    "19 00 f7 11 02 19 01 84 7e",
+    "73 00 00 00 1f 60 b1 74 37 de ad be 00 7e de 01 00 00 f8 8e 0c 00 de 01 00 00 00 19 00 f7 11 02 19 01 84 7e",
 )
 
 RETRY_SET_07_ORIG: bytes = bytes.fromhex(
-    "73 00 00 00 1f 60 b1 7a 37 ca fe ba 00 7e ca 01 00 00 f8 8e 0c 00 ca 01 00 00 00 "
-    "32 00 f7 11 02 32 01 dc 7e",
+    "73 00 00 00 1f 60 b1 7a 37 ca fe ba 00 7e ca 01 00 00 f8 8e 0c 00 ca 01 00 00 00 32 00 f7 11 02 32 01 dc 7e",
 )
 RETRY_SET_07_RETRY_1: bytes = bytes.fromhex(
-    "73 00 00 00 1f 60 b1 7a 37 ca fe ba 00 7e ca 01 00 00 f8 8e 0c 00 ca 01 00 00 00 "
-    "32 00 f7 11 02 32 01 dc 7e",
+    "73 00 00 00 1f 60 b1 7a 37 ca fe ba 00 7e ca 01 00 00 f8 8e 0c 00 ca 01 00 00 00 32 00 f7 11 02 32 01 dc 7e",
 )
 RETRY_SET_07_RETRY_2: bytes = bytes.fromhex(
-    "73 00 00 00 1f 60 b1 7a 37 ca fe ba 00 7e ca 01 00 00 f8 8e 0c 00 ca 01 00 00 00 "
-    "32 00 f7 11 02 32 01 dc 7e",
+    "73 00 00 00 1f 60 b1 7a 37 ca fe ba 00 7e ca 01 00 00 f8 8e 0c 00 ca 01 00 00 00 32 00 f7 11 02 32 01 dc 7e",
 )
 
 RETRY_SET_08_ORIG: bytes = bytes.fromhex(
-    "73 00 00 00 1f 60 b1 7c b4 ba dc 0d 00 7e ba 01 00 00 f8 8e 0c 00 ba 01 00 00 00 "
-    "4b 00 f7 11 02 4b 01 f5 7e",
+    "73 00 00 00 1f 60 b1 7c b4 ba dc 0d 00 7e ba 01 00 00 f8 8e 0c 00 ba 01 00 00 00 4b 00 f7 11 02 4b 01 f5 7e",
 )
 RETRY_SET_08_RETRY_1: bytes = bytes.fromhex(
-    "73 00 00 00 1f 60 b1 7c b4 ba dc 0d 00 7e ba 01 00 00 f8 8e 0c 00 ba 01 00 00 00 "
-    "4b 00 f7 11 02 4b 01 f5 7e",
+    "73 00 00 00 1f 60 b1 7c b4 ba dc 0d 00 7e ba 01 00 00 f8 8e 0c 00 ba 01 00 00 00 4b 00 f7 11 02 4b 01 f5 7e",
 )
 RETRY_SET_08_RETRY_2: bytes = bytes.fromhex(
-    "73 00 00 00 1f 60 b1 7c b4 ba dc 0d 00 7e ba 01 00 00 f8 8e 0c 00 ba 01 00 00 00 "
-    "4b 00 f7 11 02 4b 01 f5 7e",
+    "73 00 00 00 1f 60 b1 7c b4 ba dc 0d 00 7e ba 01 00 00 f8 8e 0c 00 ba 01 00 00 00 4b 00 f7 11 02 4b 01 f5 7e",
 )
 
 RETRY_SET_09_ORIG: bytes = bytes.fromhex(
-    "73 00 00 00 1f 60 b1 8e 42 f0 0d fa 00 7e f0 01 00 00 f8 8e 0c 00 f0 01 00 00 00 "
-    "00 00 f7 11 02 00 01 92 7e",
+    "73 00 00 00 1f 60 b1 8e 42 f0 0d fa 00 7e f0 01 00 00 f8 8e 0c 00 f0 01 00 00 00 00 00 f7 11 02 00 01 92 7e",
 )
 RETRY_SET_09_RETRY_1: bytes = bytes.fromhex(
-    "73 00 00 00 1f 60 b1 8e 42 f0 0d fa 00 7e f0 01 00 00 f8 8e 0c 00 f0 01 00 00 00 "
-    "00 00 f7 11 02 00 01 92 7e",
+    "73 00 00 00 1f 60 b1 8e 42 f0 0d fa 00 7e f0 01 00 00 f8 8e 0c 00 f0 01 00 00 00 00 00 f7 11 02 00 01 92 7e",
 )
 RETRY_SET_09_RETRY_2: bytes = bytes.fromhex(
-    "73 00 00 00 1f 60 b1 8e 42 f0 0d fa 00 7e f0 01 00 00 f8 8e 0c 00 f0 01 00 00 00 "
-    "00 00 f7 11 02 00 01 92 7e",
+    "73 00 00 00 1f 60 b1 8e 42 f0 0d fa 00 7e f0 01 00 00 f8 8e 0c 00 f0 01 00 00 00 00 00 f7 11 02 00 01 92 7e",
 )
 
 RETRY_SET_10_ORIG: bytes = bytes.fromhex(
-    "73 00 00 00 1f 38 e8 ee 97 01 23 45 00 7e 01 01 00 00 f8 8e 0c 00 01 01 00 00 00 "
-    "64 00 f7 11 02 64 01 0f 7e",
+    "73 00 00 00 1f 38 e8 ee 97 01 23 45 00 7e 01 01 00 00 f8 8e 0c 00 01 01 00 00 00 64 00 f7 11 02 64 01 0f 7e",
 )
 RETRY_SET_10_RETRY_1: bytes = bytes.fromhex(
-    "73 00 00 00 1f 38 e8 ee 97 01 23 45 00 7e 01 01 00 00 f8 8e 0c 00 01 01 00 00 00 "
-    "64 00 f7 11 02 64 01 0f 7e",
+    "73 00 00 00 1f 38 e8 ee 97 01 23 45 00 7e 01 01 00 00 f8 8e 0c 00 01 01 00 00 00 64 00 f7 11 02 64 01 0f 7e",
 )
 RETRY_SET_10_RETRY_2: bytes = bytes.fromhex(
-    "73 00 00 00 1f 38 e8 ee 97 01 23 45 00 7e 01 01 00 00 f8 8e 0c 00 01 01 00 00 00 "
-    "64 00 f7 11 02 64 01 0f 7e",
+    "73 00 00 00 1f 38 e8 ee 97 01 23 45 00 7e 01 01 00 00 f8 8e 0c 00 01 01 00 00 00 64 00 f7 11 02 64 01 0f 7e",
 )
 
 RETRY_SET_11_ORIG: bytes = bytes.fromhex(
-    "73 00 00 00 1f 38 e8 dd 4d 67 89 ab 00 7e 67 01 00 00 f8 8e 0c 00 67 01 00 00 00 "
-    "50 00 f7 11 02 01 01 d8 7e",
+    "73 00 00 00 1f 38 e8 dd 4d 67 89 ab 00 7e 67 01 00 00 f8 8e 0c 00 67 01 00 00 00 50 00 f7 11 02 01 01 d8 7e",
 )
 RETRY_SET_11_RETRY_1: bytes = bytes.fromhex(
-    "73 00 00 00 1f 38 e8 dd 4d 67 89 ab 00 7e 67 01 00 00 f8 8e 0c 00 67 01 00 00 00 "
-    "50 00 f7 11 02 01 01 d8 7e",
+    "73 00 00 00 1f 38 e8 dd 4d 67 89 ab 00 7e 67 01 00 00 f8 8e 0c 00 67 01 00 00 00 50 00 f7 11 02 01 01 d8 7e",
 )
 RETRY_SET_11_RETRY_2: bytes = bytes.fromhex(
-    "73 00 00 00 1f 38 e8 dd 4d 67 89 ab 00 7e 67 01 00 00 f8 8e 0c 00 67 01 00 00 00 "
-    "50 00 f7 11 02 01 01 d8 7e",
+    "73 00 00 00 1f 38 e8 dd 4d 67 89 ab 00 7e 67 01 00 00 f8 8e 0c 00 67 01 00 00 00 50 00 f7 11 02 01 01 d8 7e",
 )
 
 RETRY_SET_12_ORIG: bytes = bytes.fromhex(
-    "73 00 00 00 1f 45 88 0f 3a 22 33 44 00 7e 22 01 00 00 f8 8e 0c 00 22 01 00 00 00 "
-    "0a 00 f7 11 02 0a 01 6f 7e",
+    "73 00 00 00 1f 45 88 0f 3a 22 33 44 00 7e 22 01 00 00 f8 8e 0c 00 22 01 00 00 00 0a 00 f7 11 02 0a 01 6f 7e",
 )
 RETRY_SET_12_RETRY_1: bytes = bytes.fromhex(
-    "73 00 00 00 1f 45 88 0f 3a 22 33 44 00 7e 22 01 00 00 f8 8e 0c 00 22 01 00 00 00 "
-    "0a 00 f7 11 02 0a 01 6f 7e",
+    "73 00 00 00 1f 45 88 0f 3a 22 33 44 00 7e 22 01 00 00 f8 8e 0c 00 22 01 00 00 00 0a 00 f7 11 02 0a 01 6f 7e",
 )
 RETRY_SET_12_RETRY_2: bytes = bytes.fromhex(
-    "73 00 00 00 1f 45 88 0f 3a 22 33 44 00 7e 22 01 00 00 f8 8e 0c 00 22 01 00 00 00 "
-    "0a 00 f7 11 02 0a 01 6f 7e",
+    "73 00 00 00 1f 45 88 0f 3a 22 33 44 00 7e 22 01 00 00 f8 8e 0c 00 22 01 00 00 00 0a 00 f7 11 02 0a 01 6f 7e",
 )
 
 RETRY_SET_13_ORIG: bytes = bytes.fromhex(
-    "73 00 00 00 1f 32 5d 53 17 55 66 77 00 7e 55 01 00 00 f8 8e 0c 00 55 01 00 00 00 "
-    "19 00 f7 11 02 19 01 20 7e",
+    "73 00 00 00 1f 32 5d 53 17 55 66 77 00 7e 55 01 00 00 f8 8e 0c 00 55 01 00 00 00 19 00 f7 11 02 19 01 20 7e",
 )
 RETRY_SET_13_RETRY_1: bytes = bytes.fromhex(
-    "73 00 00 00 1f 32 5d 53 17 55 66 77 00 7e 55 01 00 00 f8 8e 0c 00 55 01 00 00 00 "
-    "19 00 f7 11 02 19 01 20 7e",
+    "73 00 00 00 1f 32 5d 53 17 55 66 77 00 7e 55 01 00 00 f8 8e 0c 00 55 01 00 00 00 19 00 f7 11 02 19 01 20 7e",
 )
 RETRY_SET_13_RETRY_2: bytes = bytes.fromhex(
-    "73 00 00 00 1f 32 5d 53 17 55 66 77 00 7e 55 01 00 00 f8 8e 0c 00 55 01 00 00 00 "
-    "19 00 f7 11 02 19 01 20 7e",
+    "73 00 00 00 1f 32 5d 53 17 55 66 77 00 7e 55 01 00 00 f8 8e 0c 00 55 01 00 00 00 19 00 f7 11 02 19 01 20 7e",
 )
 
 RETRY_SET_14_ORIG: bytes = bytes.fromhex(
-    "73 00 00 00 1f 38 e8 cf 46 88 99 aa 00 7e 88 01 00 00 f8 8e 0c 00 88 01 00 00 00 "
-    "32 00 f7 11 02 32 01 52 7e",
+    "73 00 00 00 1f 38 e8 cf 46 88 99 aa 00 7e 88 01 00 00 f8 8e 0c 00 88 01 00 00 00 32 00 f7 11 02 32 01 52 7e",
 )
 RETRY_SET_14_RETRY_1: bytes = bytes.fromhex(
-    "73 00 00 00 1f 38 e8 cf 46 88 99 aa 00 7e 88 01 00 00 f8 8e 0c 00 88 01 00 00 00 "
-    "32 00 f7 11 02 32 01 52 7e",
+    "73 00 00 00 1f 38 e8 cf 46 88 99 aa 00 7e 88 01 00 00 f8 8e 0c 00 88 01 00 00 00 32 00 f7 11 02 32 01 52 7e",
 )
 RETRY_SET_14_RETRY_2: bytes = bytes.fromhex(
-    "73 00 00 00 1f 38 e8 cf 46 88 99 aa 00 7e 88 01 00 00 f8 8e 0c 00 88 01 00 00 00 "
-    "32 00 f7 11 02 32 01 52 7e",
+    "73 00 00 00 1f 38 e8 cf 46 88 99 aa 00 7e 88 01 00 00 f8 8e 0c 00 88 01 00 00 00 32 00 f7 11 02 32 01 52 7e",
 )
 
 RETRY_SET_15_ORIG: bytes = bytes.fromhex(
-    "73 00 00 00 1f 3d 54 66 a6 bb cc dd 00 7e bb 01 00 00 f8 8e 0c 00 bb 01 00 00 00 "
-    "4b 00 f7 11 02 4b 01 6b 7e",
+    "73 00 00 00 1f 3d 54 66 a6 bb cc dd 00 7e bb 01 00 00 f8 8e 0c 00 bb 01 00 00 00 4b 00 f7 11 02 4b 01 6b 7e",
 )
 RETRY_SET_15_RETRY_1: bytes = bytes.fromhex(
-    "73 00 00 00 1f 3d 54 66 a6 bb cc dd 00 7e bb 01 00 00 f8 8e 0c 00 bb 01 00 00 00 "
-    "4b 00 f7 11 02 4b 01 6b 7e",
+    "73 00 00 00 1f 3d 54 66 a6 bb cc dd 00 7e bb 01 00 00 f8 8e 0c 00 bb 01 00 00 00 4b 00 f7 11 02 4b 01 6b 7e",
 )
 RETRY_SET_15_RETRY_2: bytes = bytes.fromhex(
-    "73 00 00 00 1f 3d 54 66 a6 bb cc dd 00 7e bb 01 00 00 f8 8e 0c 00 bb 01 00 00 00 "
-    "4b 00 f7 11 02 4b 01 6b 7e",
+    "73 00 00 00 1f 3d 54 66 a6 bb cc dd 00 7e bb 01 00 00 f8 8e 0c 00 bb 01 00 00 00 4b 00 f7 11 02 4b 01 6b 7e",
 )
 
 RETRY_SET_16_ORIG: bytes = bytes.fromhex(
-    "73 00 00 00 1f 60 b1 74 37 cc dd ee 00 7e cc 01 00 00 f8 8e 0c 00 cc 01 00 00 00 "
-    "64 00 f7 11 02 64 01 2d 7e",
+    "73 00 00 00 1f 60 b1 74 37 cc dd ee 00 7e cc 01 00 00 f8 8e 0c 00 cc 01 00 00 00 64 00 f7 11 02 64 01 2d 7e",
 )
 RETRY_SET_16_RETRY_1: bytes = bytes.fromhex(
-    "73 00 00 00 1f 60 b1 74 37 cc dd ee 00 7e cc 01 00 00 f8 8e 0c 00 cc 01 00 00 00 "
-    "64 00 f7 11 02 64 01 2d 7e",
+    "73 00 00 00 1f 60 b1 74 37 cc dd ee 00 7e cc 01 00 00 f8 8e 0c 00 cc 01 00 00 00 64 00 f7 11 02 64 01 2d 7e",
 )
 RETRY_SET_16_RETRY_2: bytes = bytes.fromhex(
-    "73 00 00 00 1f 60 b1 74 37 cc dd ee 00 7e cc 01 00 00 f8 8e 0c 00 cc 01 00 00 00 "
-    "64 00 f7 11 02 64 01 2d 7e",
+    "73 00 00 00 1f 60 b1 74 37 cc dd ee 00 7e cc 01 00 00 f8 8e 0c 00 cc 01 00 00 00 64 00 f7 11 02 64 01 2d 7e",
 )
 
 RETRY_SET_17_ORIG: bytes = bytes.fromhex(
-    "73 00 00 00 1f 60 b1 7a 37 dd ee ff 00 7e dd 01 00 00 f8 8e 0c 00 dd 01 00 00 00 "
-    "00 00 f7 11 02 00 01 7e 7e",
+    "73 00 00 00 1f 60 b1 7a 37 dd ee ff 00 7e dd 01 00 00 f8 8e 0c 00 dd 01 00 00 00 00 00 f7 11 02 00 01 7e 7e",
 )
 RETRY_SET_17_RETRY_1: bytes = bytes.fromhex(
-    "73 00 00 00 1f 60 b1 7a 37 dd ee ff 00 7e dd 01 00 00 f8 8e 0c 00 dd 01 00 00 00 "
-    "00 00 f7 11 02 00 01 7e 7e",
+    "73 00 00 00 1f 60 b1 7a 37 dd ee ff 00 7e dd 01 00 00 f8 8e 0c 00 dd 01 00 00 00 00 00 f7 11 02 00 01 7e 7e",
 )
 RETRY_SET_17_RETRY_2: bytes = bytes.fromhex(
-    "73 00 00 00 1f 60 b1 7a 37 dd ee ff 00 7e dd 01 00 00 f8 8e 0c 00 dd 01 00 00 00 "
-    "00 00 f7 11 02 00 01 7e 7e",
+    "73 00 00 00 1f 60 b1 7a 37 dd ee ff 00 7e dd 01 00 00 f8 8e 0c 00 dd 01 00 00 00 00 00 f7 11 02 00 01 7e 7e",
 )
 
 RETRY_SET_18_ORIG: bytes = bytes.fromhex(
-    "73 00 00 00 1f 60 b1 7c b4 ee ff 00 00 7e ee 01 00 00 f8 8e 0c 00 ee 01 00 00 00 "
-    "0a 00 f7 11 02 0a 01 9d 7e",
+    "73 00 00 00 1f 60 b1 7c b4 ee ff 00 00 7e ee 01 00 00 f8 8e 0c 00 ee 01 00 00 00 0a 00 f7 11 02 0a 01 9d 7e",
 )
 RETRY_SET_18_RETRY_1: bytes = bytes.fromhex(
-    "73 00 00 00 1f 60 b1 7c b4 ee ff 00 00 7e ee 01 00 00 f8 8e 0c 00 ee 01 00 00 00 "
-    "0a 00 f7 11 02 0a 01 9d 7e",
+    "73 00 00 00 1f 60 b1 7c b4 ee ff 00 00 7e ee 01 00 00 f8 8e 0c 00 ee 01 00 00 00 0a 00 f7 11 02 0a 01 9d 7e",
 )
 RETRY_SET_18_RETRY_2: bytes = bytes.fromhex(
-    "73 00 00 00 1f 60 b1 7c b4 ee ff 00 00 7e ee 01 00 00 f8 8e 0c 00 ee 01 00 00 00 "
-    "0a 00 f7 11 02 0a 01 9d 7e",
+    "73 00 00 00 1f 60 b1 7c b4 ee ff 00 00 7e ee 01 00 00 f8 8e 0c 00 ee 01 00 00 00 0a 00 f7 11 02 0a 01 9d 7e",
 )
 
 RETRY_SET_19_ORIG: bytes = bytes.fromhex(
-    "73 00 00 00 1f 60 b1 8e 42 ff 00 11 00 7e ff 01 00 00 f8 8e 0c 00 ff 01 00 00 00 "
-    "19 00 f7 11 02 19 01 a4 7e",
+    "73 00 00 00 1f 60 b1 8e 42 ff 00 11 00 7e ff 01 00 00 f8 8e 0c 00 ff 01 00 00 00 19 00 f7 11 02 19 01 a4 7e",
 )
 RETRY_SET_19_RETRY_1: bytes = bytes.fromhex(
-    "73 00 00 00 1f 60 b1 8e 42 ff 00 11 00 7e ff 01 00 00 f8 8e 0c 00 ff 01 00 00 00 "
-    "19 00 f7 11 02 19 01 a4 7e",
+    "73 00 00 00 1f 60 b1 8e 42 ff 00 11 00 7e ff 01 00 00 f8 8e 0c 00 ff 01 00 00 00 19 00 f7 11 02 19 01 a4 7e",
 )
 RETRY_SET_19_RETRY_2: bytes = bytes.fromhex(
-    "73 00 00 00 1f 60 b1 8e 42 ff 00 11 00 7e ff 01 00 00 f8 8e 0c 00 ff 01 00 00 00 "
-    "19 00 f7 11 02 19 01 a4 7e",
+    "73 00 00 00 1f 60 b1 8e 42 ff 00 11 00 7e ff 01 00 00 f8 8e 0c 00 ff 01 00 00 00 19 00 f7 11 02 19 01 a4 7e",
 )
 
 RETRY_SET_20_ORIG: bytes = bytes.fromhex(
-    "73 00 00 00 1f 38 e8 ee 97 00 11 22 00 7e 00 01 00 00 f8 8e 0c 00 00 01 00 00 00 "
-    "32 00 f7 11 02 32 01 d3 7e",
+    "73 00 00 00 1f 38 e8 ee 97 00 11 22 00 7e 00 01 00 00 f8 8e 0c 00 00 01 00 00 00 32 00 f7 11 02 32 01 d3 7e",
 )
 RETRY_SET_20_RETRY_1: bytes = bytes.fromhex(
-    "73 00 00 00 1f 38 e8 ee 97 00 11 22 00 7e 00 01 00 00 f8 8e 0c 00 00 01 00 00 00 "
-    "32 00 f7 11 02 32 01 d3 7e",
+    "73 00 00 00 1f 38 e8 ee 97 00 11 22 00 7e 00 01 00 00 f8 8e 0c 00 00 01 00 00 00 32 00 f7 11 02 32 01 d3 7e",
 )
 RETRY_SET_20_RETRY_2: bytes = bytes.fromhex(
-    "73 00 00 00 1f 38 e8 ee 97 00 11 22 00 7e 00 01 00 00 f8 8e 0c 00 00 01 00 00 00 "
-    "32 00 f7 11 02 32 01 d3 7e",
+    "73 00 00 00 1f 38 e8 ee 97 00 11 22 00 7e 00 01 00 00 f8 8e 0c 00 00 01 00 00 00 32 00 f7 11 02 32 01 d3 7e",
 )
 
 RETRY_SET_21_ORIG: bytes = bytes.fromhex(
-    "73 00 00 00 1f 38 e8 dd 4d 11 22 33 00 7e 11 01 00 00 f8 8e 0c 00 11 01 00 00 00 "
-    "4b 00 f7 11 02 4b 01 01 7e",
+    "73 00 00 00 1f 38 e8 dd 4d 11 22 33 00 7e 11 01 00 00 f8 8e 0c 00 11 01 00 00 00 4b 00 f7 11 02 4b 01 01 7e",
 )
 RETRY_SET_21_RETRY_1: bytes = bytes.fromhex(
-    "73 00 00 00 1f 38 e8 dd 4d 11 22 33 00 7e 11 01 00 00 f8 8e 0c 00 11 01 00 00 00 "
-    "4b 00 f7 11 02 4b 01 01 7e",
+    "73 00 00 00 1f 38 e8 dd 4d 11 22 33 00 7e 11 01 00 00 f8 8e 0c 00 11 01 00 00 00 4b 00 f7 11 02 4b 01 01 7e",
 )
 RETRY_SET_21_RETRY_2: bytes = bytes.fromhex(
-    "73 00 00 00 1f 38 e8 dd 4d 11 22 33 00 7e 11 01 00 00 f8 8e 0c 00 11 01 00 00 00 "
-    "4b 00 f7 11 02 4b 01 01 7e",
+    "73 00 00 00 1f 38 e8 dd 4d 11 22 33 00 7e 11 01 00 00 f8 8e 0c 00 11 01 00 00 00 4b 00 f7 11 02 4b 01 01 7e",
 )
 
 
@@ -1698,9 +1618,7 @@ EDGE_TRUNCATED_HEADER_META: PacketMetadata = PacketMetadata(
     notes="Truncated header (3 bytes), should_fail=True",
 )
 
-EDGE_INVALID_LENGTH: bytes = (
-    bytes.fromhex("73 00 00 00 ff") + b"\x00" * 10
-)  # Claims 255 bytes but only has 15 total
+EDGE_INVALID_LENGTH: bytes = bytes.fromhex("73 00 00 00 ff") + b"\x00" * 10  # Claims 255 bytes but only has 15 total
 EDGE_INVALID_LENGTH_META: PacketMetadata = PacketMetadata(
     device_type="test",
     firmware_version="N/A",
@@ -1711,8 +1629,7 @@ EDGE_INVALID_LENGTH_META: PacketMetadata = PacketMetadata(
 )
 
 EDGE_MISSING_START_MARKER: bytes = bytes.fromhex(
-    "73 00 00 00 1f 45 88 0f 3a aa bb cc 00 aa 01 00 00 "
-    "f8 8e 0c 00 aa 01 00 00 00 50 00 f7 11 02 01 01 56",
+    "73 00 00 00 1f 45 88 0f 3a aa bb cc 00 aa 01 00 00 f8 8e 0c 00 aa 01 00 00 00 50 00 f7 11 02 01 01 56",
 )  # Missing 0x7e markers
 EDGE_MISSING_START_MARKER_META: PacketMetadata = PacketMetadata(
     device_type="test",
@@ -1724,8 +1641,7 @@ EDGE_MISSING_START_MARKER_META: PacketMetadata = PacketMetadata(
 )
 
 EDGE_INVALID_CHECKSUM: bytes = bytes.fromhex(
-    "73 00 00 00 1f 45 88 0f 3a aa bb cc 00 7e aa 01 00 00 "
-    "f8 8e 0c 00 aa 01 00 00 00 50 00 f7 11 02 01 01 FF 7e",
+    "73 00 00 00 1f 45 88 0f 3a aa bb cc 00 7e aa 01 00 00 f8 8e 0c 00 aa 01 00 00 00 50 00 f7 11 02 01 01 FF 7e",
 )  # Checksum 0xFF is wrong
 EDGE_INVALID_CHECKSUM_META: PacketMetadata = PacketMetadata(
     device_type="test",
@@ -1769,9 +1685,7 @@ EDGE_MIN_VALID_0x73_META: PacketMetadata = PacketMetadata(
     notes="Minimal valid 0x73 packet (20 bytes total)",
 )
 
-EDGE_LARGE_MULTIPLIER: bytes = (
-    bytes.fromhex("73 00 00 01 00") + b"\x00" * 256
-)  # Length multiplier = 1
+EDGE_LARGE_MULTIPLIER: bytes = bytes.fromhex("73 00 00 01 00") + b"\x00" * 256  # Length multiplier = 1
 EDGE_LARGE_MULTIPLIER_META: PacketMetadata = PacketMetadata(
     device_type="test",
     firmware_version="N/A",
@@ -1807,8 +1721,7 @@ EDGE_ENDPOINT_ALL_FF_META: PacketMetadata = PacketMetadata(
 )
 
 EDGE_MSG_ID_ALL_ZEROS: bytes = bytes.fromhex(
-    "73 00 00 00 1f 45 88 0f 3a 00 00 00 00 7e 00 01 00 00 "
-    "f8 8e 0c 00 00 01 00 00 00 50 00 f7 11 02 01 01 53 7e",
+    "73 00 00 00 1f 45 88 0f 3a 00 00 00 00 7e 00 01 00 00 f8 8e 0c 00 00 01 00 00 00 50 00 f7 11 02 01 01 53 7e",
 )
 EDGE_MSG_ID_ALL_ZEROS_META: PacketMetadata = PacketMetadata(
     device_type="test",
@@ -1820,8 +1733,7 @@ EDGE_MSG_ID_ALL_ZEROS_META: PacketMetadata = PacketMetadata(
 )
 
 EDGE_MSG_ID_ALL_FF: bytes = bytes.fromhex(
-    "73 00 00 00 1f 45 88 0f 3a ff ff ff 00 7e ff 01 00 00 "
-    "f8 8e 0c 00 ff 01 00 00 00 50 00 f7 11 02 01 01 a5 7e",
+    "73 00 00 00 1f 45 88 0f 3a ff ff ff 00 7e ff 01 00 00 f8 8e 0c 00 ff 01 00 00 00 50 00 f7 11 02 01 01 a5 7e",
 )
 EDGE_MSG_ID_ALL_FF_META: PacketMetadata = PacketMetadata(
     device_type="test",
@@ -1855,8 +1767,7 @@ EDGE_DEVICE_INFO_SINGLE_META: PacketMetadata = PacketMetadata(
 )
 
 EDGE_MAX_BRIGHTNESS: bytes = bytes.fromhex(
-    "73 00 00 00 1f 45 88 0f 3a aa bb cc 00 7e aa 01 00 00 "
-    "f8 8e 0c 00 aa 01 00 00 00 64 00 f7 11 02 64 01 15 7e",
+    "73 00 00 00 1f 45 88 0f 3a aa bb cc 00 7e aa 01 00 00 f8 8e 0c 00 aa 01 00 00 00 64 00 f7 11 02 64 01 15 7e",
 )  # Brightness = 100 (0x64)
 EDGE_MAX_BRIGHTNESS_META: PacketMetadata = PacketMetadata(
     device_type="test",
@@ -1868,8 +1779,7 @@ EDGE_MAX_BRIGHTNESS_META: PacketMetadata = PacketMetadata(
 )
 
 EDGE_MIN_BRIGHTNESS: bytes = bytes.fromhex(
-    "73 00 00 00 1f 45 88 0f 3a aa bb cc 00 7e aa 01 00 00 "
-    "f8 8e 0c 00 aa 01 00 00 00 01 00 f7 11 02 01 01 54 7e",
+    "73 00 00 00 1f 45 88 0f 3a aa bb cc 00 7e aa 01 00 00 f8 8e 0c 00 aa 01 00 00 00 01 00 f7 11 02 01 01 54 7e",
 )  # Brightness = 1 (minimum non-zero)
 EDGE_MIN_BRIGHTNESS_META: PacketMetadata = PacketMetadata(
     device_type="test",
@@ -1906,8 +1816,7 @@ EDGE_PARTIAL_PAYLOAD_META: PacketMetadata = PacketMetadata(
 )
 
 EDGE_DOUBLE_START_MARKER: bytes = bytes.fromhex(
-    "73 00 00 00 20 45 88 0f 3a aa bb cc 00 7e 7e aa 01 00 00 "
-    "f8 8e 0c 00 aa 01 00 00 00 50 00 f7 11 02 01 01 56 7e",
+    "73 00 00 00 20 45 88 0f 3a aa bb cc 00 7e 7e aa 01 00 00 f8 8e 0c 00 aa 01 00 00 00 50 00 f7 11 02 01 01 56 7e",
 )  # Double 0x7e at start
 EDGE_DOUBLE_START_MARKER_META: PacketMetadata = PacketMetadata(
     device_type="test",
@@ -1919,8 +1828,7 @@ EDGE_DOUBLE_START_MARKER_META: PacketMetadata = PacketMetadata(
 )
 
 EDGE_NO_END_MARKER: bytes = bytes.fromhex(
-    "73 00 00 00 1e 45 88 0f 3a aa bb cc 00 7e aa 01 00 00 "
-    "f8 8e 0c 00 aa 01 00 00 00 50 00 f7 11 02 01 01 56",
+    "73 00 00 00 1e 45 88 0f 3a aa bb cc 00 7e aa 01 00 00 f8 8e 0c 00 aa 01 00 00 00 50 00 f7 11 02 01 01 56",
 )  # Missing trailing 0x7e
 EDGE_NO_END_MARKER_META: PacketMetadata = PacketMetadata(
     device_type="test",
@@ -1953,8 +1861,7 @@ SWITCH_HANDSHAKE_0x23_META: PacketMetadata = PacketMetadata(
 )
 
 SWITCH_TOGGLE_0x73: bytes = bytes.fromhex(
-    "73 00 00 00 1f a1 b2 c3 d4 10 20 30 00 7e 10 01 00 00 "
-    "f8 8e 0c 00 10 01 00 00 00 01 00 f7 11 02 01 01 25 7e",
+    "73 00 00 00 1f a1 b2 c3 d4 10 20 30 00 7e 10 01 00 00 f8 8e 0c 00 10 01 00 00 00 01 00 f7 11 02 01 01 25 7e",
 )
 SWITCH_TOGGLE_0x73_META: PacketMetadata = PacketMetadata(
     device_type="switch",
@@ -1993,8 +1900,7 @@ PLUG_HANDSHAKE_0x23_META: PacketMetadata = PacketMetadata(
 )
 
 PLUG_TOGGLE_0x73: bytes = bytes.fromhex(
-    "73 00 00 00 1f e5 f6 a7 b8 20 30 40 00 7e 20 01 00 00 "
-    "f8 8e 0c 00 20 01 00 00 00 01 00 f7 11 02 01 01 35 7e",
+    "73 00 00 00 1f e5 f6 a7 b8 20 30 40 00 7e 20 01 00 00 f8 8e 0c 00 20 01 00 00 00 01 00 f7 11 02 01 01 35 7e",
 )
 PLUG_TOGGLE_0x73_META: PacketMetadata = PacketMetadata(
     device_type="plug",

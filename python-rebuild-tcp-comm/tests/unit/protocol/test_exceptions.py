@@ -1,8 +1,11 @@
 """Unit tests for protocol exception types."""
+# pyright: reportUnknownVariableType=false, reportUnknownMemberType=false, reportAttributeAccessIssue=false
 
 from __future__ import annotations
 
-from _pytest.outcomes import fail
+from typing import cast
+
+import pytest
 
 from protocol.exceptions import CyncProtocolError, PacketDecodeError, PacketFramingError
 
@@ -83,21 +86,15 @@ def test_exceptions_inherit_from_base() -> None:
 def test_cync_protocol_error_catch_all() -> None:
     """Test CyncProtocolError can catch all protocol exceptions."""
     error_reason = "test_reason"
-    try:
+    with pytest.raises(CyncProtocolError) as excinfo_decode:
         raise PacketDecodeError(error_reason)
-    except CyncProtocolError as err:
-        assert isinstance(err, PacketDecodeError)
-        assert "test_reason" in str(err)
-    else:  # pragma: no cover
-        fail("Expected PacketDecodeError to be caught as CyncProtocolError")
+    decode_exc = cast(PacketDecodeError, excinfo_decode.value)
+    assert "test_reason" in str(decode_exc)
     error_framing = "test_framing"
-    try:
+    with pytest.raises(CyncProtocolError) as excinfo_framing:
         raise PacketFramingError(error_framing)
-    except CyncProtocolError as err:
-        assert isinstance(err, PacketFramingError)
-        assert "test_framing" in str(err)
-    else:  # pragma: no cover
-        fail("Expected PacketFramingError to be caught as CyncProtocolError")
+    framing_exc = cast(PacketFramingError, excinfo_framing.value)
+    assert "test_framing" in str(framing_exc)
 
 
 def test_packet_decode_error_all_reasons() -> None:

@@ -2,6 +2,7 @@
 
 Tests observer registration and notification in MITMProxy.
 """
+# pyright: reportUnknownMemberType=false, reportAttributeAccessIssue=false
 
 from unittest.mock import MagicMock, patch
 
@@ -14,10 +15,23 @@ from mitm.mitm_proxy import MITMProxy
 EXPECTED_OBSERVER_COUNT_MULTIPLE = 3  # Number of observers for multiple registration test
 
 
+class TestableMITMProxy(MITMProxy):
+    """Expose protected observer notifications for testing."""
+
+    def notify_packet(self, direction: PacketDirection, data: bytes, connection_id: int) -> None:
+        self._notify_observers_packet(direction, data, connection_id)
+
+    def notify_connection_established(self, connection_id: int) -> None:
+        self._notify_observers_connection_established(connection_id)
+
+    def notify_connection_closed(self, connection_id: int) -> None:
+        self._notify_observers_connection_closed(connection_id)
+
+
 @pytest.fixture
-def proxy() -> MITMProxy:
+def proxy() -> TestableMITMProxy:
     """Create MITMProxy instance for testing."""
-    return MITMProxy(
+    return TestableMITMProxy(
         listen_port=23779,
         upstream_host="localhost",
         upstream_port=23779,
@@ -35,14 +49,14 @@ def mock_observer() -> MagicMock:
     return observer
 
 
-def test_proxy_initializes_empty_observers_list(proxy: MITMProxy) -> None:
+def test_proxy_initializes_empty_observers_list(proxy: TestableMITMProxy) -> None:
     """Test proxy initializes with empty observers list."""
     assert hasattr(proxy, "observers")
     assert isinstance(proxy.observers, list)
     assert len(proxy.observers) == 0
 
 
-def test_register_observer_adds_to_list(proxy: MITMProxy, mock_observer: MagicMock) -> None:
+def test_register_observer_adds_to_list(proxy: TestableMITMProxy, mock_observer: MagicMock) -> None:
     """Test register_observer adds observer to list."""
     initial_count = len(proxy.observers)
 
@@ -52,7 +66,7 @@ def test_register_observer_adds_to_list(proxy: MITMProxy, mock_observer: MagicMo
     assert mock_observer in proxy.observers
 
 
-def test_register_multiple_observers(proxy: MITMProxy) -> None:
+def test_register_multiple_observers(proxy: TestableMITMProxy) -> None:
     """Test multiple observers can be registered."""
     observer1 = MagicMock(spec=PacketObserver)
     observer2 = MagicMock(spec=PacketObserver)
@@ -70,7 +84,7 @@ def test_register_multiple_observers(proxy: MITMProxy) -> None:
 
 @patch("sys.stderr")
 def test_register_observer_prints_confirmation(
-    mock_stderr: MagicMock, proxy: MITMProxy, mock_observer: MagicMock
+    mock_stderr: MagicMock, proxy: TestableMITMProxy, mock_observer: MagicMock
 ) -> None:
     """Test register_observer prints confirmation message."""
     mock_observer.__class__.__name__ = "TestObserver"
@@ -82,9 +96,7 @@ def test_register_observer_prints_confirmation(
     assert mock_stderr.write.called
 
 
-def test_notify_observers_packet_calls_all_observers(
-    proxy: MITMProxy, mock_observer: MagicMock
-) -> None:
+def test_notify_observers_packet_calls_all_observers(proxy: TestableMITMProxy, mock_observer: MagicMock) -> None:
     """Test _notify_observers_packet calls all registered observers."""
     observer2 = MagicMock(spec=PacketObserver)
     proxy.register_observer(mock_observer)
@@ -93,47 +105,33 @@ def test_notify_observers_packet_calls_all_observers(
     data = b"\x73\x00\x00\x00\x1e"
     connection_id = 1
 
-    proxy._notify_observers_packet(PacketDirection.DEVICE_TO_CLOUD, data, connection_id)
+    proxy.notify_packet(PacketDirection.DEVICE_TO_CLOUD, data, connection_id)
     # Both observers should be called
-    mock_observer.on_packet_received.assert_called_once_with(
-        PacketDirection.DEVICE_TO_CLOUD, data, connection_id
-    )
-    observer2.on_packet_received.assert_called_once_with(
-        PacketDirection.DEVICE_TO_CLOUD, data, connection_id
-    )
+    mock_observer.on_packet_received.assert_called_once_with(PacketDirection.DEVICE_TO_CLOUD, data, connection_id)
+    observer2.on_packet_received.assert_called_once_with(PacketDirection.DEVICE_TO_CLOUD, data, connection_id)
 
 
-def test_notify_observers_packet_device_to_cloud(
-    proxy: MITMProxy, mock_observer: MagicMock
-) -> None:
+def test_notify_observers_packet_device_to_cloud(proxy: TestableMITMProxy, mock_observer: MagicMock) -> None:
     """Test packet notification with DEVICE_TO_CLOUD direction."""
     proxy.register_observer(mock_observer)
     data = b"\x73\x00\x00\x00\x1e"
     connection_id = 42
 
-    proxy._notify_observers_packet(PacketDirection.DEVICE_TO_CLOUD, data, connection_id)
-    mock_observer.on_packet_received.assert_called_once_with(
-        PacketDirection.DEVICE_TO_CLOUD, data, connection_id
-    )
+    proxy.notify_packet(PacketDirection.DEVICE_TO_CLOUD, data, connection_id)
+    mock_observer.on_packet_received.assert_called_once_with(PacketDirection.DEVICE_TO_CLOUD, data, connection_id)
 
 
-def test_notify_observers_packet_cloud_to_device(
-    proxy: MITMProxy, mock_observer: MagicMock
-) -> None:
+def test_notify_observers_packet_cloud_to_device(proxy: TestableMITMProxy, mock_observer: MagicMock) -> None:
     """Test packet notification with CLOUD_TO_DEVICE direction."""
     proxy.register_observer(mock_observer)
     data = b"\x7b\x00\x00\x00\x0a"
     connection_id = 99
 
-    proxy._notify_observers_packet(PacketDirection.CLOUD_TO_DEVICE, data, connection_id)
-    mock_observer.on_packet_received.assert_called_once_with(
-        PacketDirection.CLOUD_TO_DEVICE, data, connection_id
-    )
+    proxy.notify_packet(PacketDirection.CLOUD_TO_DEVICE, data, connection_id)
+    mock_observer.on_packet_received.assert_called_once_with(PacketDirection.CLOUD_TO_DEVICE, data, connection_id)
 
 
-def test_notify_observers_connection_established(
-    proxy: MITMProxy, mock_observer: MagicMock
-) -> None:
+def test_notify_observers_connection_established(proxy: TestableMITMProxy, mock_observer: MagicMock) -> None:
     """Test _notify_observers_connection_established calls all observers."""
     observer2 = MagicMock(spec=PacketObserver)
     proxy.register_observer(mock_observer)
@@ -141,12 +139,12 @@ def test_notify_observers_connection_established(
 
     connection_id = 1
 
-    proxy._notify_observers_connection_established(connection_id)
+    proxy.notify_connection_established(connection_id)
     mock_observer.on_connection_established.assert_called_once_with(connection_id)
     observer2.on_connection_established.assert_called_once_with(connection_id)
 
 
-def test_notify_observers_connection_closed(proxy: MITMProxy, mock_observer: MagicMock) -> None:
+def test_notify_observers_connection_closed(proxy: TestableMITMProxy, mock_observer: MagicMock) -> None:
     """Test _notify_observers_connection_closed calls all observers."""
     observer2 = MagicMock(spec=PacketObserver)
     proxy.register_observer(mock_observer)
@@ -154,7 +152,7 @@ def test_notify_observers_connection_closed(proxy: MITMProxy, mock_observer: Mag
 
     connection_id = 1
 
-    proxy._notify_observers_connection_closed(connection_id)
+    proxy.notify_connection_closed(connection_id)
     mock_observer.on_connection_closed.assert_called_once_with(connection_id)
     observer2.on_connection_closed.assert_called_once_with(connection_id)
 
@@ -162,7 +160,7 @@ def test_notify_observers_connection_closed(proxy: MITMProxy, mock_observer: Mag
 @patch("sys.stderr")
 def test_observer_exception_doesnt_break_proxy(
     _mock_stderr: MagicMock,  # noqa: PT019
-    proxy: MITMProxy,
+    proxy: TestableMITMProxy,
     mock_observer: MagicMock,
 ) -> None:
     """Test that observer failures don't break proxy operation."""
@@ -178,19 +176,17 @@ def test_observer_exception_doesnt_break_proxy(
     connection_id = 1
 
     # Should not raise - proxy catches exceptions
-    proxy._notify_observers_packet(PacketDirection.DEVICE_TO_CLOUD, data, connection_id)
+    proxy.notify_packet(PacketDirection.DEVICE_TO_CLOUD, data, connection_id)
     # First observer was called (and failed)
     mock_observer.on_packet_received.assert_called_once()
 
     # Second observer should still be called despite first one failing
-    observer2.on_packet_received.assert_called_once_with(
-        PacketDirection.DEVICE_TO_CLOUD, data, connection_id
-    )
+    observer2.on_packet_received.assert_called_once_with(PacketDirection.DEVICE_TO_CLOUD, data, connection_id)
 
 
 @patch("sys.stderr")
 def test_observer_exception_is_logged(
-    mock_stderr: MagicMock, proxy: MITMProxy, mock_observer: MagicMock
+    mock_stderr: MagicMock, proxy: TestableMITMProxy, mock_observer: MagicMock
 ) -> None:
     """Test that observer exceptions are logged."""
     error_message = "Test observer error"
@@ -200,20 +196,20 @@ def test_observer_exception_is_logged(
     data = b"\x73\x00\x00\x00\x1e"
     connection_id = 1
 
-    proxy._notify_observers_packet(PacketDirection.DEVICE_TO_CLOUD, data, connection_id)
+    proxy.notify_packet(PacketDirection.DEVICE_TO_CLOUD, data, connection_id)
     # Error should be printed to stderr
     assert mock_stderr.write.called
 
 
-def test_no_observers_registered(proxy: MITMProxy) -> None:
+def test_no_observers_registered(proxy: TestableMITMProxy) -> None:
     """Test notification methods work with no observers registered."""
     # Should not raise errors
-    proxy._notify_observers_packet(PacketDirection.DEVICE_TO_CLOUD, b"\x73", 1)
-    proxy._notify_observers_connection_established(1)
-    proxy._notify_observers_connection_closed(1)
+    proxy.notify_packet(PacketDirection.DEVICE_TO_CLOUD, b"\x73", 1)
+    proxy.notify_connection_established(1)
+    proxy.notify_connection_closed(1)
 
 
-def test_observer_receives_correct_data(proxy: MITMProxy, mock_observer: MagicMock) -> None:
+def test_observer_receives_correct_data(proxy: TestableMITMProxy, mock_observer: MagicMock) -> None:
     """Test observer receives exact data passed to notification."""
     proxy.register_observer(mock_observer)
 
@@ -227,7 +223,7 @@ def test_observer_receives_correct_data(proxy: MITMProxy, mock_observer: MagicMo
     ]
 
     for data, conn_id in test_cases:
-        proxy._notify_observers_packet(PacketDirection.DEVICE_TO_CLOUD, data, conn_id)
+        proxy.notify_packet(PacketDirection.DEVICE_TO_CLOUD, data, conn_id)
     # Verify all calls received correct data
     assert mock_observer.on_packet_received.call_count == len(test_cases)
     for idx, (data, conn_id) in enumerate(test_cases):
@@ -237,7 +233,7 @@ def test_observer_receives_correct_data(proxy: MITMProxy, mock_observer: MagicMo
         assert call_args[0][2] == conn_id
 
 
-def test_observer_list_order_preserved(proxy: MITMProxy) -> None:
+def test_observer_list_order_preserved(proxy: TestableMITMProxy) -> None:
     """Test observers are called in registration order."""
     call_order: list[int] = []
 
@@ -260,6 +256,6 @@ def test_observer_list_order_preserved(proxy: MITMProxy) -> None:
     proxy.register_observer(observer3)
 
     # Notify all observers
-    proxy._notify_observers_packet(PacketDirection.DEVICE_TO_CLOUD, b"\x73", 1)
+    proxy.notify_packet(PacketDirection.DEVICE_TO_CLOUD, b"\x73", 1)
     # Verify they were called in registration order
     assert call_order == [1, 2, 3]

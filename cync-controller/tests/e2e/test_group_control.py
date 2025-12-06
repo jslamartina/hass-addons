@@ -1,9 +1,28 @@
 """E2E tests for group control - Bug 4: Switches don't sync when group is controlled."""
 
-from typing import cast
+from typing import Literal, TypedDict, cast
 
 import pytest
+from _pytest.outcomes import fail as pytest_fail
+from _pytest.outcomes import skip as pytest_skip
 from playwright.sync_api import Page, expect
+
+
+class Transition(TypedDict):
+    """State transition for a group control scenario."""
+
+    from_state: str
+    to: str
+    description: str
+
+
+class Scenario(TypedDict):
+    """E2E group control scenario definition."""
+
+    name: str
+    entity_name: str
+    type: Literal["group", "device"]
+    transitions: list[Transition]
 
 
 def test_group_turns_off_all_switches(ha_login: Page, ha_base_url: str):
@@ -32,9 +51,9 @@ def test_group_turns_off_all_switches(ha_login: Page, ha_base_url: str):
         group_off = page.get_by_role("switch", name="Toggle Hallway Lights off")
 
         if not (group_on.is_visible(timeout=1000) or group_off.is_visible(timeout=1000)):
-            pytest.skip("Hallway Lights group not found on Overview dashboard")
+            pytest_skip("Hallway Lights group not found on Overview dashboard")
     except Exception:
-        pytest.skip("Hallway Lights group not found on Overview dashboard")
+        pytest_skip("Hallway Lights group not found on Overview dashboard")
 
     # Step 1: Turn the group ON
     try:
@@ -93,7 +112,7 @@ def test_group_turns_off_all_switches(ha_login: Page, ha_base_url: str):
     if switches_synced:
         pass
     else:
-        pytest.fail(" FAILED: Some switches did not sync after group OFF command")
+        pytest_fail(" FAILED: Some switches did not sync after group OFF command")
 
 
 def test_group_turns_on_all_switches(ha_login: Page, ha_base_url: str):
@@ -121,7 +140,7 @@ def test_group_turns_on_all_switches(ha_login: Page, ha_base_url: str):
     # Step 2: Turn the group ON
     on_switch = page.get_by_role("switch", name="Toggle Hallway Lights on")
     if not on_switch.is_visible(timeout=2000):
-        pytest.skip("Hallway Lights group not found or not in expected state")
+        pytest_skip("Hallway Lights group not found or not in expected state")
 
     on_switch.click()
     # Wait for MQTT sync to propagate to all switches
@@ -148,7 +167,7 @@ def test_group_turns_on_all_switches(ha_login: Page, ha_base_url: str):
     if switches_synced:
         pass
     else:
-        pytest.fail(" FAILED: Some switches did not sync after group ON command")
+        pytest_fail(" FAILED: Some switches did not sync after group ON command")
 
 
 def test_individual_switch_control_still_works(ha_login: Page, ha_base_url: str):
@@ -181,7 +200,7 @@ def test_individual_switch_control_still_works(ha_login: Page, ha_base_url: str)
         page.wait_for_timeout(3000)  # Wait for MQTT update
         # Just verify the command was accepted - don't assert on UI state
     else:
-        pytest.skip(f"Hallway {switch_name} not found on Overview dashboard")
+        pytest_skip(f"Hallway {switch_name} not found on Overview dashboard")
 
 
 def test_individual_switch_toggle_no_flicker(ha_login: Page, ha_base_url: str):
@@ -217,7 +236,7 @@ def test_individual_switch_toggle_no_flicker(ha_login: Page, ha_base_url: str):
         initial_state = "OFF"
         target_state = "ON"
     else:
-        pytest.skip(f"Hallway {switch_name} not found on Overview dashboard")
+        pytest_skip(f"Hallway {switch_name} not found on Overview dashboard")
 
     # Step 2: Click the toggle
     if target_state == "OFF":
@@ -266,16 +285,14 @@ def test_individual_switch_toggle_no_flicker(ha_login: Page, ha_base_url: str):
     final_state = state_transitions[-1]["state"] if state_transitions else None
 
     if flicker_detected:
-        pytest.fail("UX flicker detected: Switch briefly reverted to previous state")
+        pytest_fail("UX flicker detected: Switch briefly reverted to previous state")
     elif final_state != target_state:
         pass
     else:
         pass
 
 
-@pytest.mark.skip(
-    reason="Known Home Assistant UI rendering limitation - flicker is a HA UI artifact, not a bug in Cync Controller"
-)
+@pytest.mark.skip(reason="Known Home Assistant UI limitation; flicker is UI artifact, not controller bug")  # type: ignore[misc]
 def test_comprehensive_flicker_detection(ha_login: Page, ha_base_url: str):
     """Comprehensive flicker detection test for all entity types.
 
@@ -320,15 +337,15 @@ def test_comprehensive_flicker_detection(ha_login: Page, ha_base_url: str):
 
     page.wait_for_timeout(1000)
 
-    test_scenarios = [
+    test_scenarios: list[Scenario] = [
         {
             "name": "Hallway Lights GROUP",
             "entity_name": "Hallway Lights",
             "type": "group",
             "transitions": [
-                {"from": "any", "to": "ON", "description": "Turn group ON"},
-                {"from": "ON", "to": "OFF", "description": "Turn group OFF"},
-                {"from": "OFF", "to": "ON", "description": "Turn group ON again"},
+                {"from_state": "any", "to": "ON", "description": "Turn group ON"},
+                {"from_state": "ON", "to": "OFF", "description": "Turn group OFF"},
+                {"from_state": "OFF", "to": "ON", "description": "Turn group ON again"},
             ],
         },
         {
@@ -336,9 +353,9 @@ def test_comprehensive_flicker_detection(ha_login: Page, ha_base_url: str):
             "entity_name": "Floodlight 1",
             "type": "device",
             "transitions": [
-                {"from": "any", "to": "ON", "description": "Turn bulb ON"},
-                {"from": "ON", "to": "OFF", "description": "Turn bulb OFF"},
-                {"from": "OFF", "to": "ON", "description": "Turn bulb ON again"},
+                {"from_state": "any", "to": "ON", "description": "Turn bulb ON"},
+                {"from_state": "ON", "to": "OFF", "description": "Turn bulb OFF"},
+                {"from_state": "OFF", "to": "ON", "description": "Turn bulb ON again"},
             ],
         },
         {
@@ -346,9 +363,9 @@ def test_comprehensive_flicker_detection(ha_login: Page, ha_base_url: str):
             "entity_name": "4way Switch",
             "type": "device",
             "transitions": [
-                {"from": "any", "to": "ON", "description": "Turn switch ON"},
-                {"from": "ON", "to": "OFF", "description": "Turn switch OFF"},
-                {"from": "OFF", "to": "ON", "description": "Turn switch ON again"},
+                {"from_state": "any", "to": "ON", "description": "Turn switch ON"},
+                {"from_state": "ON", "to": "OFF", "description": "Turn switch OFF"},
+                {"from_state": "OFF", "to": "ON", "description": "Turn switch ON again"},
             ],
         },
     ]
@@ -356,15 +373,14 @@ def test_comprehensive_flicker_detection(ha_login: Page, ha_base_url: str):
     all_passed = True
 
     for scenario in test_scenarios:
-        entity_name: str = cast(str, scenario["entity_name"])
+        entity_name = scenario["entity_name"]
         # Group entity names are used directly, individual devices use "Hallway {name}" format
         control_name: str = entity_name if scenario["type"] == "group" else f"Hallway {entity_name}"
 
         try:
             # Test each transition
-            for i, transition in enumerate(scenario["transitions"]):  # type: ignore[reportUnknownVariableType]
+            for i, transition in enumerate(scenario["transitions"]):
                 target_state = transition["to"]
-                transition["description"]
 
                 # Find the switch control
                 if target_state == "ON":
@@ -442,4 +458,4 @@ def test_comprehensive_flicker_detection(ha_login: Page, ha_base_url: str):
     if all_passed:
         pass
     else:
-        pytest.fail("Flicker detected in one or more scenarios")
+        pytest_fail("Flicker detected in one or more scenarios")

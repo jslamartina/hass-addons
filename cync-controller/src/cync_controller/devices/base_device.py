@@ -411,7 +411,7 @@ class CyncDevice(DeviceCommands):
         if bool_value != self._online:
             self._online = bool_value
             if g.mqtt_client and self.id is not None:
-                g.tasks.append(asyncio.get_running_loop().create_task(g.mqtt_client.pub_online(self.id, bool_value)))
+                g.tasks.append(asyncio.get_running_loop().create_task(g.mqtt_client.pub_online(self.id, bool_value)))  # pyright: ignore[reportUnknownMemberType]
 
     @property
     def current_status(self) -> list[int | None]:
@@ -451,12 +451,12 @@ class CyncDevice(DeviceCommands):
             self._state = normalized_value
 
     @property
-    def brightness(self):
-        """Return the cached brightness value."""
+    def brightness(self) -> int | None:
+        """Return the cached brightness value (0-100) if known."""
         return self._brightness
 
     @brightness.setter
-    def brightness(self, value: int):
+    def brightness(self, value: int) -> None:
         self._validate_byte_range(value, "Brightness")
         if value != self._brightness:
             self._brightness = value

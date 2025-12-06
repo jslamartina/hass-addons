@@ -4,8 +4,11 @@ Tests for MQTTClient.start_receiver_task() MQTT message routing,
 command parsing, export button handling, and error recovery.
 """
 
+from __future__ import annotations
+
 import asyncio
 import json
+from collections.abc import Generator
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -17,11 +20,13 @@ class TestMQTTClientMessageHandling:
     """Tests for MQTTClient message handling and MQTT routing."""
 
     @pytest.fixture(autouse=True)
-    def reset_mqtt_singleton(self):
+    def reset_mqtt_singleton(self) -> Generator[None]:
         """Reset MQTTClient singleton between tests."""
-        MQTTClient._instance = None
-        yield
-        MQTTClient._instance = None
+        with (
+            patch.object(MQTTClient, "_instance", None),
+            patch.object(MQTTClient, "_initialized", False),
+        ):
+            yield
 
     @pytest.mark.asyncio
     async def test_receiver_handles_set_power_command(self):
@@ -39,7 +44,7 @@ class TestMQTTClientMessageHandling:
             mock_g.mqtt_client = None
 
             client = MQTTClient()
-            client._connected = True
+            client.set_connected(True)
             client.client = MagicMock()
 
             # Verify device exists and can receive commands
@@ -102,7 +107,7 @@ class TestMQTTClientMessageHandling:
             mock_g.ncync_server.devices = {}
 
             client = MQTTClient()
-            client._connected = True
+            client.set_connected(True)
 
             # Test JSON parsing error handling
             malformed_json = "{invalid json"
@@ -121,12 +126,12 @@ class TestMQTTClientMessageHandling:
             mock_g.ncync_server.devices = {}
 
             client = MQTTClient()
-            client._connected = True
+            client.set_connected(True)
             client.client = MagicMock()
 
             # Verify client can be instantiated without crashing
             assert client is not None
-            assert client._connected is True
+            assert client.is_connected is True
 
     @pytest.mark.asyncio
     async def test_receiver_handles_unknown_device_id(self):
@@ -179,8 +184,9 @@ class TestMQTTClientMessageHandling:
 
             _ = MQTTClient()
 
-            async def failing_task():
-                raise RuntimeError("Task error")
+            async def failing_task() -> None:
+                error_msg = "Task error"
+                raise RuntimeError(error_msg)
 
             task = asyncio.create_task(failing_task())
             await asyncio.sleep(0.1)

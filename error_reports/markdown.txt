@@ -1,8 +1,0 @@
-
-> hass-addons@1.0.0 lint:markdown
-> markdownlint-cli2 '**/*.md' '**/*.mdc'
-
-markdownlint-cli2 v0.19.0 (markdownlint v0.39.0)
-Finding: **/*.md **/*.mdc !node_modules/** !.venv/** !**/.venv/** !**/node_modules/**
-Linting: 200 file(s)
-Summary: 0 error(s)

@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Analyze captured packets and generate documentation."""
 
 import json
@@ -93,9 +92,7 @@ def main():
 
     packets_list = cast("list[dict[str, Any]]", analysis["packets"])
     for ptype in sorted(types_found):
-        examples: list[dict[str, Any]] = [
-            p for p in packets_list if cast("str", p["hex"]).startswith(ptype)
-        ]
+        examples: list[dict[str, Any]] = [p for p in packets_list if cast("str", p["hex"]).startswith(ptype)]
         if examples:
             example = examples[0]
             direction = cast("str", example["direction"])

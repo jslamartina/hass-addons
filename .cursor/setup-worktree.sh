@@ -132,13 +132,11 @@ setup_python_environment() {
   log_info "Installing python-rebuild-tcp-comm dependencies (Poetry project)"
   pushd "$REPO_ROOT/python-rebuild-tcp-comm" > /dev/null
   # Configure Poetry to not create its own venv and use the current Python
-  # This ensures dependencies go to the shared venv
   export POETRY_VENV_PATH="$VENV_DIR"
   poetry config virtualenvs.create false --local
-  poetry config virtualenvs.in-project false --local
   # Install dependencies without installing the package itself (--no-root)
   # This installs all dependencies from pyproject.toml to the shared venv
-  poetry install --no-root --no-interaction > /dev/null
+  poetry install > /dev/null
   unset POETRY_VENV_PATH
   popd > /dev/null
   log_info "  ✓ Poetry dependencies installed successfully"

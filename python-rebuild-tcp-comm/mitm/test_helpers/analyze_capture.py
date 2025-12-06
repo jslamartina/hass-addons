@@ -58,9 +58,7 @@ def parse_capture_file(filepath: Path) -> dict[str, Any]:
     return {
         "total_validated": len(validated_matches),
         "total_failed": len(failed_matches),
-        "error_rate": (
-            (len(failed_matches) / len(validated_matches) * 100) if validated_matches else 0.0
-        ),
+        "error_rate": ((len(failed_matches) / len(validated_matches) * 100) if validated_matches else 0.0),
         "packet_types": dict(packet_types),
         "direction_counts": dict(direction_counts),
         "raw_packet_counts": {
@@ -117,8 +115,7 @@ def format_statistics_report(stats: dict[str, Any]) -> str:
         report.append(f"  ✅ PASS: ≥{MIN_DECODED_PACKETS_REQUIRED} packets decoded")
     else:
         report.append(
-            f"  ❌ FAIL: Only {stats['total_validated']} packets "
-            f"(need ≥{MIN_DECODED_PACKETS_REQUIRED})",
+            f"  ❌ FAIL: Only {stats['total_validated']} packets (need ≥{MIN_DECODED_PACKETS_REQUIRED})",
         )
 
     if stats["error_rate"] < 1.0:

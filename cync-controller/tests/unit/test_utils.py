@@ -5,9 +5,10 @@ Tests utility functions including byte/hex conversions, signal handling, and for
 
 import asyncio
 import uuid
+import warnings
 from collections.abc import Awaitable, Callable
 from pathlib import Path
-from typing import cast
+from typing import TypeVar, cast
 from unittest.mock import AsyncMock, MagicMock, create_autospec, patch
 
 import pytest
@@ -30,6 +31,18 @@ from cync_controller.utils import (
 SignalHandlerFunc = Callable[[int], None]
 signal_handler_fn: SignalHandlerFunc = cast(SignalHandlerFunc, utils.signal_handler)  # type: ignore[reportUnknownMemberType]
 
+_F = TypeVar("_F", bound=Callable[..., object])
+
+
+def parametrize(*args: object, **kwargs: object) -> Callable[[_F], _F]:
+    """Typed wrapper around pytest.mark.parametrize for pyright."""
+
+    def decorator(func: _F) -> _F:
+        mark = pytest.mark.parametrize(*args, **kwargs)  # pyright: ignore[reportCallIssue, reportArgumentType]
+        return cast(_F, mark(func))
+
+    return decorator
+
 
 async def run_async_cleanup() -> None:
     """Call the private async cleanup with typing to satisfy pyright."""
@@ -43,8 +56,10 @@ def create_mock_task() -> MagicMock:
 
 
 # Filter RuntimeWarning about unawaited AsyncMockMixin coroutines from test cleanup
-pytestmark = pytest.mark.filterwarnings(
-    "ignore:coroutine 'AsyncMockMixin._execute_mock_call' was never awaited:RuntimeWarning",
+warnings.filterwarnings(
+    action="ignore",
+    message="coroutine 'AsyncMockMixin._execute_mock_call' was never awaited",
+    category=RuntimeWarning,
 )
 
 
@@ -202,7 +217,7 @@ class TestPythonVersionCheck:
 class TestHexListRoundtrips:
     """Tests for reliable hex/list conversions with various data."""
 
-    @pytest.mark.parametrize(
+    @parametrize(
         "int_list",
         [
             [0],
@@ -219,7 +234,7 @@ class TestHexListRoundtrips:
 
         assert recovered_list == int_list
 
-    @pytest.mark.parametrize(
+    @parametrize(
         "byte_data",
         [
             b"",

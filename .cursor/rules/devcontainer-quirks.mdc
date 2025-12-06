@@ -1,5 +1,5 @@
 ---
-description: Devcontainer quirks and setup
+description: Use when setting up, troubleshooting, or customizing the devcontainer.
 appliesTo:
   - ".devcontainer/**"
   - ".devcontainer.json"

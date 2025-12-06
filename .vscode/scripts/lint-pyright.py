@@ -133,15 +133,21 @@ def main() -> int:
     # Define projects to lint
     projects: list[ProjectConfig] = [
         {
-            "name": "hass-addons",
-            "config": workspace_root / "pyrightconfig.json",
+            "name": "cync-controller",
+            "config": workspace_root / "cync-controller" / "pyrightconfig.json",
             "default_targets": [
                 "cync-controller/src",
                 "cync-controller/tests",
+            ],
+        },
+        {
+            "name": "python-rebuild-tcp-comm",
+            "config": workspace_root / "python-rebuild-tcp-comm" / "pyrightconfig.json",
+            "default_targets": [
                 "python-rebuild-tcp-comm/src",
                 "python-rebuild-tcp-comm/tests",
             ],
-        }
+        },
     ]
 
     all_results: list[subprocess.CompletedProcess[str]] = []

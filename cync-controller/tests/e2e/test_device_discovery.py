@@ -2,7 +2,7 @@
 
 import sys
 from pathlib import Path
-from typing import Any, cast
+from typing import Any
 
 import pytest
 from playwright.sync_api import Page
@@ -19,8 +19,8 @@ from addon_helpers import (  # type: ignore[import-untyped, reportUnknownVariabl
 ADDON_SLUG = "local_cync-controller"
 
 
-@pytest.mark.serial
-@pytest.mark.usefixtures("ha_login")
+@pytest.mark.serial  # type: ignore[attr-defined]
+@pytest.mark.usefixtures("ha_login")  # type: ignore[misc]
 def test_addon_starts_successfully():
     """Test that the add-on starts successfully and shows running status.
 
@@ -30,7 +30,7 @@ def test_addon_starts_successfully():
     restart_addon_and_wait(ADDON_SLUG, wait_seconds=5)
 
     # Check status
-    status: dict[str, Any] = cast(dict[str, Any], get_addon_status(ADDON_SLUG))  # type: ignore[reportUnknownVariableType]
+    status: dict[str, object] = get_addon_status(ADDON_SLUG)  # type: ignore[reportUnknownVariableType]
 
     assert status.get("state") == "started", f"Add-on not started: {status.get('state')}"
 
@@ -137,5 +137,5 @@ def test_entity_unique_ids_are_consistent(ha_login: Page):
 
     # Note: Would need to query HA API to verify no duplicate entities created
     # For now, verify add-on restarts successfully multiple times
-    status: dict[str, Any] = cast(dict[str, Any], get_addon_status(ADDON_SLUG))  # type: ignore[reportUnknownVariableType]
+    status: dict[str, Any] = get_addon_status(ADDON_SLUG)  # type: ignore[reportUnknownVariableType]
     assert status.get("state") == "started", "Add-on failed after multiple restarts"

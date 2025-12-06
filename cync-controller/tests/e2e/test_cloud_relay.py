@@ -2,7 +2,7 @@
 
 import sys
 from pathlib import Path
-from typing import Any, cast
+from typing import Any
 
 import pytest
 
@@ -29,7 +29,7 @@ def restore_baseline():
 
     # Only restore if not already in baseline mode
     try:
-        current_config: dict[str, Any] = cast(dict[str, Any], get_addon_config(ADDON_SLUG))
+        current_config: dict[str, Any] = get_addon_config(ADDON_SLUG)
         if not current_config.get("cloud_relay", {}).get("enabled", False):
             return
 
@@ -39,8 +39,8 @@ def restore_baseline():
         pass
 
 
-@pytest.mark.serial
-@pytest.mark.usefixtures("restore_baseline")
+@pytest.mark.serial  # type: ignore[attr-defined]
+@pytest.mark.usefixtures("restore_baseline")  # type: ignore[misc]
 def test_apply_baseline_preset():
     """Test applying baseline (LAN-only) preset.
 
@@ -50,17 +50,17 @@ def test_apply_baseline_preset():
     restart_addon_and_wait(ADDON_SLUG, wait_seconds=5)
 
     # Verify config
-    config: dict[str, Any] = cast(dict[str, Any], get_addon_config(ADDON_SLUG))
+    config: dict[str, Any] = get_addon_config(ADDON_SLUG)
 
     assert config["cloud_relay"]["enabled"] is False, "Cloud relay should be disabled"
 
     # Verify add-on running
-    status: dict[str, Any] = cast(dict[str, Any], get_addon_status(ADDON_SLUG))
+    status: dict[str, Any] = get_addon_status(ADDON_SLUG)
     assert status.get("state") == "started", "Add-on not running"
 
 
-@pytest.mark.serial
-@pytest.mark.usefixtures("restore_baseline")
+@pytest.mark.serial  # type: ignore[attr-defined]
+@pytest.mark.usefixtures("restore_baseline")  # type: ignore[misc]
 def test_apply_relay_with_forward_preset():
     """Test applying relay-with-forward preset.
 
@@ -70,19 +70,19 @@ def test_apply_relay_with_forward_preset():
     restart_addon_and_wait(ADDON_SLUG, wait_seconds=5)
 
     # Verify config
-    config: dict[str, Any] = cast(dict[str, Any], get_addon_config(ADDON_SLUG))
+    config: dict[str, Any] = get_addon_config(ADDON_SLUG)
 
     assert config["cloud_relay"]["enabled"] is True, "Cloud relay should be enabled"
     assert config["cloud_relay"]["forward_to_cloud"] is True, "Should forward to cloud"
     assert config["cloud_relay"]["debug_packet_logging"] is False, "Debug logging should be off"
 
     # Check logs for relay mode
-    logs: list[dict[str, Any]] = cast(list[dict[str, Any]], read_json_logs(ADDON_SLUG, lines=100))
+    logs: list[dict[str, Any]] = read_json_logs(ADDON_SLUG, lines=100)
     [log for log in logs if "relay" in log.get("message", "").lower()]
 
 
-@pytest.mark.serial
-@pytest.mark.usefixtures("restore_baseline")
+@pytest.mark.serial  # type: ignore[attr-defined]
+@pytest.mark.usefixtures("restore_baseline")  # type: ignore[misc]
 def test_apply_relay_debug_preset():
     """Test applying relay-debug preset.
 
@@ -92,19 +92,19 @@ def test_apply_relay_debug_preset():
     restart_addon_and_wait(ADDON_SLUG, wait_seconds=5)
 
     # Verify config
-    config: dict[str, Any] = cast(dict[str, Any], get_addon_config(ADDON_SLUG))
+    config: dict[str, Any] = get_addon_config(ADDON_SLUG)
 
     assert config["cloud_relay"]["enabled"] is True, "Cloud relay should be enabled"
     assert config["cloud_relay"]["debug_packet_logging"] is True, "Debug logging should be on"
 
     # Check for debug logs
-    logs: list[dict[str, Any]] = cast(list[dict[str, Any]], read_json_logs(ADDON_SLUG, lines=200))
-    debug_logs: list[dict[str, Any]] = cast(list[dict[str, Any]], filter_logs_by_level(logs, "DEBUG"))
+    logs: list[dict[str, Any]] = read_json_logs(ADDON_SLUG, lines=200)
+    debug_logs: list[dict[str, Any]] = filter_logs_by_level(logs, "DEBUG")
     [log for log in debug_logs if "packet" in log.get("message", "").lower()]
 
 
-@pytest.mark.serial
-@pytest.mark.usefixtures("restore_baseline")
+@pytest.mark.serial  # type: ignore[attr-defined]
+@pytest.mark.usefixtures("restore_baseline")  # type: ignore[misc]
 def test_apply_lan_only_preset():
     """Test applying lan-only preset.
 
@@ -114,14 +114,14 @@ def test_apply_lan_only_preset():
     restart_addon_and_wait(ADDON_SLUG, wait_seconds=5)
 
     # Verify config
-    config: dict[str, Any] = cast(dict[str, Any], get_addon_config(ADDON_SLUG))
+    config: dict[str, Any] = get_addon_config(ADDON_SLUG)
 
     assert config["cloud_relay"]["enabled"] is True, "Cloud relay should be enabled"
     assert config["cloud_relay"]["forward_to_cloud"] is False, "Should NOT forward to cloud"
 
 
-@pytest.mark.serial
-@pytest.mark.usefixtures("restore_baseline")
+@pytest.mark.serial  # type: ignore[attr-defined]
+@pytest.mark.usefixtures("restore_baseline")  # type: ignore[misc]
 def test_switch_between_modes():
     """Test switching between different relay modes.
 
@@ -137,16 +137,16 @@ def test_switch_between_modes():
         assert apply_addon_preset(preset_name), f"Failed to apply {preset_name}"
         # Skip restart for each mode - too many restarts in rapid succession
         # Just verify config was applied
-        config: dict[str, Any] = cast(dict[str, Any], get_addon_config(ADDON_SLUG))
+        config: dict[str, Any] = get_addon_config(ADDON_SLUG)
         assert config["cloud_relay"]["enabled"] == relay_enabled, f"Cloud relay state mismatch for {preset_name}"
 
         # Verify add-on still running
-        status: dict[str, Any] = cast(dict[str, Any], get_addon_status(ADDON_SLUG))
+        status: dict[str, Any] = get_addon_status(ADDON_SLUG)
         assert status.get("state") == "started", f"Add-on failed after {preset_name}"
 
 
-@pytest.mark.serial
-@pytest.mark.usefixtures("restore_baseline")
+@pytest.mark.serial  # type: ignore[attr-defined]
+@pytest.mark.usefixtures("restore_baseline")  # type: ignore[misc]
 def test_commands_fail_in_relay_mode():
     """Test that commands from HA do NOT work in relay mode.
 
@@ -161,7 +161,7 @@ def test_commands_fail_in_relay_mode():
     # Expected: Command fails or shows "unavailable"
 
     # Check logs for "No TCP bridges" error
-    logs: list[dict[str, Any]] = cast(list[dict[str, Any]], read_json_logs(ADDON_SLUG, lines=100))
+    logs: list[dict[str, Any]] = read_json_logs(ADDON_SLUG, lines=100)
     error_logs: list[dict[str, Any]] = [log for log in logs if "no tcp" in log.get("message", "").lower()]
 
     if error_logs:
@@ -170,8 +170,8 @@ def test_commands_fail_in_relay_mode():
         pass
 
 
-@pytest.mark.serial
-@pytest.mark.usefixtures("restore_baseline")
+@pytest.mark.serial  # type: ignore[attr-defined]
+@pytest.mark.usefixtures("restore_baseline")  # type: ignore[misc]
 def test_return_to_baseline_restores_commands():
     """Test that returning to baseline mode restores command functionality.
 
@@ -181,16 +181,16 @@ def test_return_to_baseline_restores_commands():
     assert apply_addon_preset("preset-relay-with-forward"), "Failed to apply preset"
     restart_addon_and_wait(ADDON_SLUG, wait_seconds=5)
 
-    config_relay: dict[str, Any] = cast(dict[str, Any], get_addon_config(ADDON_SLUG))
+    config_relay: dict[str, Any] = get_addon_config(ADDON_SLUG)
     assert config_relay["cloud_relay"]["enabled"] is True
 
     # Return to baseline
     assert apply_addon_preset("preset-baseline"), "Failed to apply baseline"
     restart_addon_and_wait(ADDON_SLUG, wait_seconds=5)
 
-    config_baseline: dict[str, Any] = cast(dict[str, Any], get_addon_config(ADDON_SLUG))
+    config_baseline: dict[str, Any] = get_addon_config(ADDON_SLUG)
     assert config_baseline["cloud_relay"]["enabled"] is False
 
     # Verify add-on running properly
-    status: dict[str, Any] = cast(dict[str, Any], get_addon_status(ADDON_SLUG))
+    status: dict[str, Any] = get_addon_status(ADDON_SLUG)
     assert status.get("state") == "started"

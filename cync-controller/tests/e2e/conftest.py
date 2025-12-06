@@ -6,6 +6,7 @@ import re
 from pathlib import Path
 
 import pytest
+from _pytest.outcomes import skip as pytest_skip
 from playwright.sync_api import Page
 
 logger = logging.getLogger(__name__)
@@ -52,7 +53,7 @@ def browser_context_args():
 
 
 @pytest.fixture(scope="session")
-def ha_credentials():
+def ha_credentials() -> dict[str, str]:
     """Load Home Assistant credentials from environment or file."""
     # Try environment variables first
     username = os.getenv("HA_USERNAME")
@@ -70,7 +71,7 @@ def ha_credentials():
                         password = line.split("=", 1)[1].strip()
 
     if not username or not password:
-        pytest.skip("Home Assistant credentials not found")
+        pytest_skip("Home Assistant credentials not found")
 
     return {"username": username, "password": password}
 
@@ -82,7 +83,7 @@ def ha_base_url():
 
 
 @pytest.fixture
-def ha_login(page: Page, ha_base_url: str, ha_credentials: dict):
+def ha_login(page: Page, ha_base_url: str, ha_credentials: dict[str, str]):
     """Log into Home Assistant and return the authenticated page."""
     # Navigate to Home Assistant
     _ = page.goto(ha_base_url)

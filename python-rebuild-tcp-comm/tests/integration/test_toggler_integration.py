@@ -8,7 +8,6 @@ import urllib.request
 from typing import TYPE_CHECKING
 
 import pytest
-from _pytest.outcomes import fail
 
 from harness.toggler import toggle_device_with_retry
 from metrics import start_metrics_server
@@ -157,9 +156,7 @@ async def test_retry_intermittent_connection_failure(
     # Verify eventual success
     assert result is True, "Should succeed on second attempt"
     # Verify two connection attempts (first rejected, second succeeded)
-    assert mock_tcp_server.connection_count == EXPECTED_PACKET_COUNT, (
-        "Should have two connection attempts"
-    )
+    assert mock_tcp_server.connection_count == EXPECTED_PACKET_COUNT, "Should have two connection attempts"
     # Verify packet was received on second attempt
     assert len(mock_tcp_server.received_packets) == 1, "Should receive one packet"
 
@@ -190,13 +187,9 @@ async def test_retry_intermittent_timeout(
         # Should fail because both attempts timeout
         assert result is False, "Should fail when all attempts timeout"
         # Verify both attempts were made
-        assert server1.connection_count == EXPECTED_PACKET_COUNT, (
-            "Should have two connection attempts"
-        )
+        assert server1.connection_count == EXPECTED_PACKET_COUNT, "Should have two connection attempts"
         # Server receives packet but doesn't respond
-        assert len(server1.received_packets) == EXPECTED_PACKET_COUNT, (
-            "Should receive packets on both attempts"
-        )
+        assert len(server1.received_packets) == EXPECTED_PACKET_COUNT, "Should receive packets on both attempts"
     finally:
         await server1.stop()
 
@@ -222,13 +215,9 @@ async def test_all_attempts_timeout(
     # Verify failure
     assert result is False, "Should fail when all attempts timeout"
     # Verify both attempts were made
-    assert mock_tcp_server_timeout.connection_count == EXPECTED_PACKET_COUNT, (
-        "Should attempt connection twice"
-    )
+    assert mock_tcp_server_timeout.connection_count == EXPECTED_PACKET_COUNT, "Should attempt connection twice"
     # Server should receive packets but not respond
-    assert len(mock_tcp_server_timeout.received_packets) == EXPECTED_PACKET_COUNT, (
-        "Server should receive both packets"
-    )
+    assert len(mock_tcp_server_timeout.received_packets) == EXPECTED_PACKET_COUNT, "Server should receive both packets"
 
 
 @pytest.mark.asyncio
@@ -319,7 +308,7 @@ async def test_metrics_endpoint_accessible(
         with urllib.request.urlopen(metrics_url, timeout=5) as response:  # noqa: S310
             metrics_text = response.read().decode("utf-8")
     except Exception as err:
-        fail(f"Failed to access metrics endpoint: {err}")
+        pytest.fail(f"Failed to access metrics endpoint: {err}")
 
     # Verify metrics exist in output
     assert "tcp_comm_packet_sent_total" in metrics_text, "Should have sent packet metric"
@@ -327,9 +316,9 @@ async def test_metrics_endpoint_accessible(
     assert "tcp_comm_packet_latency_seconds" in metrics_text, "Should have latency metric"
     # Verify device_id label is present (at least somewhere in metrics)
     # Note: The actual device_id might be URL-encoded or quoted
-    assert (
-        unique_device_id in metrics_text or unique_device_id.replace("_", "%5F") in metrics_text
-    ), "Metrics should contain device_id label"
+    assert unique_device_id in metrics_text or unique_device_id.replace("_", "%5F") in metrics_text, (
+        "Metrics should contain device_id label"
+    )
 
     # Verify success outcome is recorded
     assert 'outcome="success"' in metrics_text, "Should have success outcome in metrics"

@@ -1,12 +1,12 @@
 {
-  "extends": "../pyrightconfig.json",
-  "include": ["."],
-  "venvPath": "..",
-  "venv": ".venv",
-  "executionEnvironments": [
-    {
-      "root": ".",
-      "extraPaths": ["src", "../scripts/playwright"]
-    }
+  "include": ["src", "tests"],
+  "exclude": [".venv"],
+  "stubPath": "../typings",
+  "extraPaths": [
+    "src",
+    "tests",
+    "../typings",
+    "../scripts",
+    "../scripts/playwright"
   ]
 }

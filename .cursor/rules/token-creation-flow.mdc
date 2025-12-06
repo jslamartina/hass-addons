@@ -1,5 +1,5 @@
 ---
-description: Automated Long-Lived Access Token (LLAT) creation flow
+description: Use when working on automated LLAT creation or debugging token issues.
 ---
 
 # Token Creation Flow

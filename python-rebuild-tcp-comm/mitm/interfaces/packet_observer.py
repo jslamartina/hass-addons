@@ -23,9 +23,7 @@ class PacketObserver(Protocol):
     Plugins implement these methods to receive packet notifications.
     """
 
-    def on_packet_received(
-        self, direction: PacketDirection, data: bytes, connection_id: int
-    ) -> None:
+    def on_packet_received(self, direction: PacketDirection, data: bytes, connection_id: int) -> None:
         """Called when packet received.
 
         Args:

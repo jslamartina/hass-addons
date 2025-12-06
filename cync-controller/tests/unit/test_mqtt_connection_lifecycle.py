@@ -6,6 +6,7 @@ reconnection logic, error recovery, and task lifecycle.
 
 import asyncio
 import contextlib
+from typing import cast
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -130,7 +131,9 @@ class TestMQTTClientConnectionLifecycle:
             client.client.publish = AsyncMock()
             client.client.subscribe = AsyncMock()
             # Mock the command_router's start_receiver_task method
-            client.command_router.start_receiver_task = AsyncMock(side_effect=asyncio.CancelledError())
+            assert client.command_router is not None
+            command_router = cast(MagicMock, client.command_router)
+            command_router.start_receiver_task = AsyncMock(side_effect=asyncio.CancelledError())
 
             start_task = asyncio.create_task(client.start())
             await asyncio.sleep(0.15)
@@ -140,7 +143,7 @@ class TestMQTTClientConnectionLifecycle:
                 await start_task
 
             # Verify start_receiver_task was called when connect succeeded
-            client.command_router.start_receiver_task.assert_called()
+            command_router.start_receiver_task.assert_called()
 
     @pytest.mark.asyncio
     async def test_start_resilience_multiple_failures(self):

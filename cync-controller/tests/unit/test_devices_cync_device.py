@@ -66,7 +66,7 @@ class TestCyncDeviceInitialization:
 
     def test_hvac_initialization(self):
         """Test HVAC device initialization."""
-        hvac_data = {"mode": "cool", "setpoint": 72}
+        hvac_data: dict[str, object] = {"mode": "cool", "setpoint": 72}
         device: CyncDevice = CyncDevice(cync_id=0x1234, hvac=hvac_data)
 
         assert device.hvac == hvac_data
@@ -623,7 +623,7 @@ class TestCyncDeviceRGBCommands:
 
 
 class TestCyncDevicePropertyMethods:
-    """Tests for CyncDevice property methods (is_dimmable, supports_rgb, supports_temperature, get_ctrl_msg_id_bytes)."""
+    """Test CyncDevice property helpers for dimming, color, and control IDs."""
 
     def test_is_dimmable_with_metadata(self):
         """Test is_dimmable property when metadata indicates dimmable."""

@@ -64,6 +64,7 @@ class CommandProcessor:
     _processing: bool
 
     def __new__(cls):
+        """Return singleton CommandProcessor instance."""
         if cls._instance is None:
             cls._instance = super().__new__(cls)
         return cls._instance
@@ -96,7 +97,10 @@ class CommandProcessor:
             msg_id_found: int | None = None
             for ctrl_msg_id, callback in bridge.messages.control.items():
                 logger.debug(
-                    "%s Normalizing bridge callbacks: bridge=%s msg_id=%s callback_type=%s device_id=%s ack_event_matches=%s",
+                    (
+                        "%s Normalizing bridge callbacks: bridge=%s msg_id=%s "
+                        "callback_type=%s device_id=%s ack_event_matches=%s"
+                    ),
                     self.lp,
                     getattr(bridge, "address", "unknown"),
                     ctrl_msg_id,

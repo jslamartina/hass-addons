@@ -176,9 +176,7 @@ class DeviceOperations:
         self.protocol = protocol
         self.is_primary = False  # Primary device designation
         self.parse_mesh_status = False  # Flag for parsing responses
-        self.device_cache: OrderedDict[str, DeviceInfo] = (
-            OrderedDict()
-        )  # Parsed device structs (LRU)
+        self.device_cache: OrderedDict[str, DeviceInfo] = OrderedDict()  # Parsed device structs (LRU)
         self._cache_lock = asyncio.Lock()  # Protect cache operations
         self.logger_prefix = "[DeviceOps]"
 
@@ -568,9 +566,7 @@ class DeviceOperations:
             )
             # Wrap unexpected exceptions in MeshInfoRequestError for consistency
             error_code = "unexpected_error"
-            error_msg = (
-                f"Unexpected error during mesh info request (correlation_id={correlation_id}): {e}"
-            )
+            error_msg = f"Unexpected error during mesh info request (correlation_id={correlation_id}): {e}"
             raise MeshInfoRequestError(error_code, error_msg) from e
         else:
             # Success path - return responses
@@ -596,9 +592,7 @@ class DeviceOperations:
             raise ValueError(error_msg)
 
         if len(device_id) != self.DEVICE_ID_LENGTH_BYTES:
-            error_msg = (
-                f"device_id must be {self.DEVICE_ID_LENGTH_BYTES} bytes, got {len(device_id)}"
-            )
+            error_msg = f"device_id must be {self.DEVICE_ID_LENGTH_BYTES} bytes, got {len(device_id)}"
             raise ValueError(error_msg)
 
         # Validate timeout
@@ -884,10 +878,7 @@ class DeviceOperations:
         )
 
         if len(raw_bytes) != DEVICE_TYPE_LENGTH_BYTES:
-            error_msg = (
-                f"Invalid device struct length: {len(raw_bytes)} "
-                f"(expected {DEVICE_TYPE_LENGTH_BYTES})"
-            )
+            error_msg = f"Invalid device struct length: {len(raw_bytes)} (expected {DEVICE_TYPE_LENGTH_BYTES})"
             raise DeviceStructParseError(error_msg)
 
         # Extract fields

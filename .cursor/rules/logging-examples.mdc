@@ -1,5 +1,5 @@
 ---
-description: Logging patterns and examples
+description: Use when you need concrete logging examples or patterns to copy.
 appliesTo:
   - "**/*.py"
 ---

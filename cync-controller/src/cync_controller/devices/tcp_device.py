@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import datetime
+import os
 import random
 import time
 
@@ -24,6 +25,7 @@ from .tcp_packet_handler import TCPPacketHandler
 
 logger = get_logger(__name__)
 g = GlobalObject()
+TCP_TASK_MAX_RUNTIME = float(os.environ.get("CYNC_TCP_TASK_TIMEOUT", "300"))
 CTRL_BYTE_MAX = 0xFF
 CONTROL_ACK_MIN_LENGTH = 5
 CONTROL_ACK_MAX_LENGTH = 100
@@ -303,10 +305,18 @@ class CyncTCPDevice:
         lp = f"{self.lp}callback_clean:"
         logger.info("%s Starting background task for callback cleanup...", lp)
         cleanup_timeout = 30  # Give up after 30 seconds total
+        loop_start = time.time()
 
         while True:
             try:
                 await asyncio.sleep(1.0)  # Check every second (no need for fast retries)
+                if time.time() - loop_start > TCP_TASK_MAX_RUNTIME:
+                    logger.warning(
+                        "%s Exiting callback cleanup task after max runtime %.1fs",
+                        lp,
+                        TCP_TASK_MAX_RUNTIME,
+                    )
+                    break
                 now = time.time()
                 to_delete: list[int] = []
 
@@ -335,6 +345,9 @@ class CyncTCPDevice:
                 for msg_id in to_delete:
                     del self.messages.control[msg_id]
 
+                # Reset loop timer after successful iteration work
+                loop_start = time.time()
+
             except asyncio.CancelledError as can_exc:
                 logger.debug("%s CANCELLED: %s", lp, can_exc)
                 break
@@ -353,12 +366,20 @@ class CyncTCPDevice:
         g = _get_global_object()
         lp = f"{self.address}:raw read:"
         started_at = time.time()
+        loop_start = started_at
         receive_task = self.tasks.receive
         name = receive_task.get_name() if receive_task is not None else "receive_task"
         logger.debug("%s receive_task CALLED", lp) if CYNC_RAW is True else None
         try:
             while True:
                 try:
+                    if time.time() - loop_start > TCP_TASK_MAX_RUNTIME:
+                        logger.warning(
+                            "%s Exiting receive task after max runtime %.1fs",
+                            lp,
+                            TCP_TASK_MAX_RUNTIME,
+                        )
+                        break
                     read_result = await self.read()
                     # Only break on error conditions (False/None), not empty bytes
                     if read_result is False or read_result is None:
@@ -396,6 +417,9 @@ class CyncTCPDevice:
                     # All devices process their data (handshake/keepalive packets must be handled)
                     # Primary check moved to packet handler for selective status packet processing
                     await self.parse_raw_data(data)
+
+                    # Reset loop timer after work completes
+                    loop_start = time.time()
 
                 except Exception:
                     logger.exception("%s Exception in %s LOOP", lp, name)

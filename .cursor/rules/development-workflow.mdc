@@ -1,6 +1,6 @@
 ---
-description: 3-step development workflow (edit, rebuild, verify) with integrated quality gates
-alwaysApply: true
+description: Use when you need full development workflow details, rebuild/restart rules, and manual lint commands.
+alwaysApply: false
 ---
 
 # Development Workflow

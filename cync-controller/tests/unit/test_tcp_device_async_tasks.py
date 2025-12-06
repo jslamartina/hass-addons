@@ -9,6 +9,7 @@ import time
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+from _pytest.outcomes import skip as pytest_skip
 
 from cync_controller.devices.tcp_device import CyncTCPDevice
 from cync_controller.structs import ControlMessageCallback
@@ -23,8 +24,9 @@ class TestCyncTCPDeviceAsyncTasks:
     into smaller, more isolated helper methods.
     """
 
-    @pytest.mark.skip("Complex async task mocking requires extensive global state setup")
-    async def test_callback_cleanup_task_retry_logic(self):
+    @pytest.mark.asyncio
+    async def test_callback_cleanup_task_retry_logic(self) -> None:
+        pytest_skip("Complex async task mocking requires extensive global state setup")
         """Test callback cleanup task retries commands without ACK."""
         reader = AsyncMock()
         writer = AsyncMock()
@@ -33,15 +35,12 @@ class TestCyncTCPDeviceAsyncTasks:
 
         # Create a callback that won't be ACKed
         msg_id = 0x01
-        callback = ControlMessageCallback(
-            msg_id=msg_id,
-            message=b"test",
-            sent_at=time.time() - 0.6,  # 600ms ago (past retry_timeout of 0.5s)
-            callback=AsyncMock(),
-            device_id=0x12,
-            retry_count=0,
-            max_retries=3,
-        )
+        callback = ControlMessageCallback(msg_id, message=b"test")
+        callback.callback = AsyncMock()
+        callback.max_retries = 3
+        callback.sent_at = time.time() - 0.6  # 600ms ago (past retry_timeout of 0.5s)
+        callback.device_id = 0x12
+        callback.retry_count = 0
         tcp_device.messages.control[msg_id] = callback
 
         # Mock write to track retries
@@ -62,8 +61,9 @@ class TestCyncTCPDeviceAsyncTasks:
         with contextlib.suppress(asyncio.CancelledError):
             await task
 
-    @pytest.mark.skip("Complex async task mocking requires extensive global state setup")
-    async def test_callback_cleanup_task_timeout(self):
+    @pytest.mark.asyncio
+    async def test_callback_cleanup_task_timeout(self) -> None:
+        pytest_skip("Complex async task mocking requires extensive global state setup")
         """Test callback cleanup task removes stale callbacks after timeout."""
         reader = AsyncMock()
         writer = AsyncMock()
@@ -72,15 +72,12 @@ class TestCyncTCPDeviceAsyncTasks:
 
         # Create a callback that's been waiting too long
         msg_id = 0x01
-        callback = ControlMessageCallback(
-            msg_id=msg_id,
-            message=b"test",
-            sent_at=time.time() - 35,  # 35 seconds ago (past cleanup_timeout of 30s)
-            callback=AsyncMock(),
-            device_id=0x12,
-            retry_count=0,
-            max_retries=3,
-        )
+        callback = ControlMessageCallback(msg_id, message=b"test")
+        callback.callback = AsyncMock()
+        callback.max_retries = 3
+        callback.sent_at = time.time() - 35  # 35 seconds ago (past cleanup_timeout of 30s)
+        callback.device_id = 0x12
+        callback.retry_count = 0
         tcp_device.messages.control[msg_id] = callback
 
         # Start cleanup task
@@ -97,8 +94,9 @@ class TestCyncTCPDeviceAsyncTasks:
         with contextlib.suppress(asyncio.CancelledError):
             await task
 
-    @pytest.mark.skip("Complex async task mocking requires extensive global state setup")
-    async def test_receive_task_reads_data(self):
+    @pytest.mark.asyncio
+    async def test_receive_task_reads_data(self) -> None:
+        pytest_skip("Complex async task mocking requires extensive global state setup")
         """Test receive_task processes incoming data."""
         reader = AsyncMock()
         writer = AsyncMock()
@@ -109,7 +107,7 @@ class TestCyncTCPDeviceAsyncTasks:
         test_data = bytes([0x83, 0x00, 0x00, 0x00, 0x05, 0x01, 0x02, 0x03, 0x04])
         call_count = 0
 
-        async def mock_read(chunk=None):
+        async def mock_read(chunk: int | None = None):
             nonlocal call_count
             call_count += 1
             if call_count == 1:
@@ -141,8 +139,9 @@ class TestCyncTCPDeviceAsyncTasks:
             with contextlib.suppress(asyncio.CancelledError):
                 await task
 
-    @pytest.mark.skip("Complex async task mocking requires extensive global state setup")
-    async def test_receive_task_skips_non_primary(self):
+    @pytest.mark.asyncio
+    async def test_receive_task_skips_non_primary(self) -> None:
+        pytest_skip("Complex async task mocking requires extensive global state setup")
         """Test receive_task skips when not primary TCP device."""
         reader = AsyncMock()
         writer = AsyncMock()

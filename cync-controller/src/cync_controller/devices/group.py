@@ -1,5 +1,7 @@
 """Helpers for coordinating Cync groups across multiple devices."""
+# pyright: reportUnnecessaryComparison=false, reportUnnecessaryIsInstance=false
 
+import asyncio
 import time
 from typing import override
 
@@ -133,9 +135,13 @@ class CyncGroup:
         - online: True if ANY member is online
         """
         members = self.members
-        online_members = [m for m in members if m.online]
+        # Filter to online members only - online is bool, never None per protocol
+        online_members: list[CyncDeviceProtocol] = []
+        for m in members:
+            if m.online:  # online is bool per CyncDeviceProtocol, never None
+                online_members.append(m)
 
-        if not online_members:
+        if len(online_members) == 0:
             return None
 
         # State: ON if any member is ON
@@ -143,13 +149,23 @@ class CyncGroup:
         agg_state = 1 if any_on else 0
 
         # Brightness: average of online members
-        brightnesses = [m.brightness for m in online_members if m.brightness is not None]
-        agg_brightness = int(sum(brightnesses) / len(brightnesses)) if brightnesses else 0
+        brightnesses: list[int] = []
+        for m in online_members:
+            # brightness on protocol can be None; keep explicit Optional for type checker
+            brightness_value: int | None = m.brightness
+            if brightness_value is not None:
+                brightnesses.append(brightness_value)
+        agg_brightness = int(sum(brightnesses) / len(brightnesses)) if len(brightnesses) > 0 else 0
 
         # Temperature: average of online members
-        temperatures = [
-            m.temperature for m in online_members if m.temperature is not None and m.temperature <= PERCENT_MAX
-        ]
+        # Filter to only include temperatures within valid range (0-100)
+        # Note: temperature is always int per CyncDeviceProtocol (line 134)
+        temperatures: list[int] = []
+        for member in online_members:
+            # temperature is int per CyncDeviceProtocol, never None
+            temp: int = member.temperature
+            if temp <= PERCENT_MAX:
+                temperatures.append(temp)
         agg_temperature = int(sum(temperatures) / len(temperatures)) if temperatures else 0
 
         result: dict[str, int | bool] = {
@@ -225,7 +241,7 @@ class CyncGroup:
         payload.extend(inner_struct)
         return bytes(payload)
 
-    async def set_power(self, state: int):
+    async def set_power(self, state: int) -> tuple[asyncio.Event, list[CyncTCPDeviceProtocol]] | None:
         """Send power command to all devices in the group using the group ID.
 
         :param state: Power state (0=off, 1=on)
@@ -233,14 +249,14 @@ class CyncGroup:
         lp = f"{self.lp}set_power:"
         if state not in (0, 1):
             logger.error("%s Invalid state! must be 0 or 1", lp)
-            return
+            return None
 
         if not self._validate_group_id(lp):
-            return
+            return None
 
         group_id = self.id
         if group_id is None:
-            return
+            return None
 
         # Use full 16-bit group ID encoding
         id_low: int = group_id & 0xFF
@@ -276,7 +292,7 @@ class CyncGroup:
 
         bridge_info: tuple[CyncTCPDeviceProtocol, bytes, int] | None = self._get_bridge_device_info(lp)
         if bridge_info is None:
-            return
+            return None
         bridge_device: CyncTCPDeviceProtocol
         queue_id: bytes
         cmsg_id: int
@@ -306,13 +322,14 @@ class CyncGroup:
 
         # Register callback for ACK (no optimistic group publish)
         # Use None for noop callbacks - avoids creating unawaited coroutines
+        ack_event = asyncio.Event()
         m_cb = ControlMessageCallback(
-            msg_id=cmsg_id,
+            id=cmsg_id,
             message=payload_bytes,
-            sent_at=time.time(),
-            callback=None,
-            device_id=self.id,
         )
+        m_cb.sent_at = time.time()
+        m_cb.device_id = self.id
+        m_cb.ack_event = ack_event
         bridge_device.messages.control[cmsg_id] = m_cb
         logger.debug("%s Registered callback for msg_id=%s", lp, cmsg_id)
 
@@ -327,22 +344,33 @@ class CyncGroup:
         write_result: bool | None = await bridge_device.write(payload_bytes)
         logger.debug("%s bridge_device.write() RETURNED: %s", lp, write_result)
 
-    async def set_brightness(self, brightness: int):
+        logger.debug(
+            "%s Returning ACK event for group power command",
+            lp,
+            extra={
+                "cmsg_id": cmsg_id,
+                "bridge_address": getattr(bridge_device, "address", None),
+                "state": state,
+            },
+        )
+        return ack_event, [bridge_device]
+
+    async def set_brightness(self, bri: int) -> tuple[asyncio.Event, list[CyncTCPDeviceProtocol]] | None:
         """Send brightness command to all devices in the group using the group ID.
 
         :param brightness: Brightness value (0-100)
         """
         lp = f"{self.lp}set_brightness:"
-        if brightness < PERCENT_MIN or brightness > PERCENT_MAX:
+        if bri < PERCENT_MIN or bri > PERCENT_MAX:
             logger.error("%s Invalid brightness! must be 0-100", lp)
-            return
+            return None
 
         if not self._validate_group_id(lp):
-            return
+            return None
 
         group_id = self.id
         if group_id is None:
-            return
+            return None
 
         # Use full 16-bit group ID encoding
         id_low = group_id & 0xFF
@@ -370,7 +398,7 @@ class CyncGroup:
             0x11,
             0x02,
             0x01,
-            brightness,
+            bri,
             0xFF,
             0xFF,
             0xFF,
@@ -381,7 +409,7 @@ class CyncGroup:
 
         bridge_info: tuple[CyncTCPDeviceProtocol, bytes, int] | None = self._get_bridge_device_info(lp)
         if bridge_info is None:
-            return
+            return None
         bridge_device: CyncTCPDeviceProtocol
         queue_id: bytes
         cmsg_id: int
@@ -392,7 +420,7 @@ class CyncGroup:
         logger.info(
             "%s Sending brightness=%s to group '%s' (ID: %s) with %s devices",
             lp,
-            brightness,
+            bri,
             self.name,
             self.id,
             len(self.member_ids),
@@ -413,15 +441,18 @@ class CyncGroup:
 
         # Register callback for ACK (no optimistic group publish)
         # Use None for noop callbacks - avoids creating unawaited coroutines
+        ack_event = asyncio.Event()
         m_cb = ControlMessageCallback(
-            msg_id=cmsg_id,
+            id=cmsg_id,
             message=payload_bytes,
-            sent_at=time.time(),
-            callback=None,
-            device_id=self.id,
         )
+        m_cb.sent_at = time.time()
+        m_cb.device_id = self.id
+        m_cb.ack_event = ack_event
         bridge_device.messages.control[cmsg_id] = m_cb
         _ = await bridge_device.write(payload_bytes)
+
+        return ack_event, [bridge_device]
 
     async def set_temperature(self, temperature: int):
         """Send color temperature command to all devices in the group using the group ID.
@@ -510,12 +541,11 @@ class CyncGroup:
         # Register callback for ACK (no optimistic group publish)
         # Use None for noop callbacks - avoids creating unawaited coroutines
         m_cb = ControlMessageCallback(
-            msg_id=cmsg_id,
+            id=cmsg_id,
             message=payload_bytes,
-            sent_at=time.time(),
-            callback=None,
-            device_id=self.id,
         )
+        m_cb.sent_at = time.time()
+        m_cb.device_id = self.id
         bridge_device.messages.control[cmsg_id] = m_cb
         _ = await bridge_device.write(payload_bytes)
 

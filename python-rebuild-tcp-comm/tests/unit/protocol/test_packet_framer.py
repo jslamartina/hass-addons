@@ -133,9 +133,7 @@ class TestPacketFramerBasic:
         assert packets == []
         assert len(framer.buffer) == SMALL_PACKET_COUNT
         # Send rest of first + complete second packet
-        rest_and_next = (
-            (b"\x02" * 5) + bytes([PACKET_TYPE_HANDSHAKE, 0x00, 0x00, 0x00, 0x03]) + (b"\x03" * 3)
-        )
+        rest_and_next = (b"\x02" * 5) + bytes([PACKET_TYPE_HANDSHAKE, 0x00, 0x00, 0x00, 0x03]) + (b"\x03" * 3)
         packets = framer.feed(rest_and_next)
 
         assert len(packets) == MIN_PACKET_SIZE
@@ -205,9 +203,7 @@ class TestPacketFramerSecurity:
 
         # Key check: Buffer should remain small (not accumulating unbounded data)
         # This proves memory exhaustion attack is prevented
-        assert (
-            len(framer.buffer) < LARGE_TEST_ITERATIONS
-        )  # Much smaller than LARGE_TEST_ITERATIONS * 8 bytes fed
+        assert len(framer.buffer) < LARGE_TEST_ITERATIONS  # Much smaller than LARGE_TEST_ITERATIONS * 8 bytes fed
 
     def test_large_corrupt_stream_triggers_recovery_limit(self) -> None:
         """Test framer with >500 byte corrupt stream (exceeds recovery attempts)."""
@@ -228,9 +224,7 @@ class TestPacketFramerSecurity:
         framer = PacketFramer()
 
         # Send invalid header + valid packet
-        invalid = bytes(
-            [PACKET_TYPE_DATA_CHANNEL, 0x00, 0x00, 0x20, 0x00]
-        )  # Claims 8192 bytes (too large)
+        invalid = bytes([PACKET_TYPE_DATA_CHANNEL, 0x00, 0x00, 0x20, 0x00])  # Claims 8192 bytes (too large)
         valid = bytes([PACKET_TYPE_HANDSHAKE, 0x00, 0x00, 0x00, 0x03]) + (b"\xaa" * 3)
 
         combined = invalid + valid

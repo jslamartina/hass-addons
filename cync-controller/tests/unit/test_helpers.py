@@ -6,7 +6,7 @@ in TCP device unit tests.
 
 
 def create_packet(pkt_type: int, total_length: int, data: bytes = b""):
-    """Helper to create valid packet structure.
+    """Create a valid packet structure.
 
     Args:
         pkt_type: Packet type byte (0x23, 0xC3, etc.)

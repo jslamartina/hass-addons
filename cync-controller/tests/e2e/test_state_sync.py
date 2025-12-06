@@ -3,9 +3,10 @@
 import sys
 import time
 from pathlib import Path
-from typing import Any, cast
+from typing import Any
 
 import pytest
+from _pytest.outcomes import skip as pytest_skip
 from playwright.sync_api import Page
 
 # Add scripts/playwright to Python path for helper imports
@@ -41,7 +42,7 @@ def test_mqtt_command_updates_device_state(ha_login: Page, ha_base_url: str):
         elif off_switch.is_visible(timeout=2000):
             off_switch.click()
         else:
-            pytest.skip("Light entity not found")
+            pytest_skip("Light entity not found")
 
         # Wait for state update
         page.wait_for_timeout(2000)
@@ -50,7 +51,7 @@ def test_mqtt_command_updates_device_state(ha_login: Page, ha_base_url: str):
         assert elapsed < 3, f"State sync took too long: {elapsed:.2f}s"
 
     except Exception as e:
-        pytest.skip(f"Could not test state sync: {e}")
+        pytest_skip(f"Could not test state sync: {e}")
 
 
 @pytest.mark.serial
@@ -95,7 +96,7 @@ def test_simultaneous_commands_to_multiple_devices(ha_login: Page, ha_base_url: 
     # Wait for all to complete
     page.wait_for_timeout(3000)
 
-    time.time() - start_time
+    _ = time.time() - start_time
 
 
 def test_no_cascading_refresh_storms():
@@ -104,7 +105,7 @@ def test_no_cascading_refresh_storms():
     Expected: No excessive refresh commands in logs after state changes.
     """
     # Read logs
-    logs: list[dict[str, Any]] = cast(list[dict[str, Any]], read_json_logs(ADDON_SLUG, lines=200))
+    logs: list[dict[str, Any]] = read_json_logs(ADDON_SLUG, lines=200)
 
     # Look for refresh-related logs
     refresh_logs: list[dict[str, Any]] = [log for log in logs if "refresh" in log.get("message", "").lower()]
@@ -159,7 +160,7 @@ def test_group_command_synchronization(ha_login: Page, ha_base_url: str):
                 pass
 
     except Exception as e:
-        pytest.skip(f"Could not test group synchronization: {e}")
+        pytest_skip(f"Could not test group synchronization: {e}")
 
 
 def test_state_updates_logged_correctly():
@@ -168,13 +169,13 @@ def test_state_updates_logged_correctly():
     Expected: State change logs contain necessary context.
     """
     # Read logs
-    logs: list[dict[str, Any]] = cast(list[dict[str, Any]], read_json_logs(ADDON_SLUG, lines=200))
+    logs: list[dict[str, Any]] = read_json_logs(ADDON_SLUG, lines=200)
 
     # Look for state-related logs
     state_logs: list[dict[str, Any]] = [log for log in logs if "state" in log.get("message", "").lower()]
 
     if state_logs:
-        state_logs[0]
+        _ = state_logs[0]
 
 
 @pytest.mark.serial
@@ -188,8 +189,8 @@ def test_physical_device_changes_reflect_in_ha(ha_login: Page, ha_base_url: str)
     page.wait_for_load_state("networkidle")
 
     # Check logs for status packets
-    logs: list[dict[str, Any]] = cast(list[dict[str, Any]], read_json_logs(ADDON_SLUG, lines=100))
-    [log for log in logs if "0x83" in log.get("message", "") or "status" in log.get("message", "").lower()]
+    logs: list[dict[str, Any]] = read_json_logs(ADDON_SLUG, lines=100)
+    _ = [log for log in logs if "0x83" in log.get("message", "") or "status" in log.get("message", "").lower()]
 
 
 def test_no_state_flicker_during_updates():
@@ -200,7 +201,7 @@ def test_no_state_flicker_during_updates():
     # This is primarily tested through logs
     # Flicker would show as rapid state changes in short time
 
-    logs: list[dict[str, Any]] = cast(list[dict[str, Any]], read_json_logs(ADDON_SLUG, lines=200))
+    logs: list[dict[str, Any]] = read_json_logs(ADDON_SLUG, lines=200)
 
     # Look for rapid state changes (would need timestamp analysis)
-    [log for log in logs if "state" in log.get("message", "").lower()]
+    _ = [log for log in logs if "state" in log.get("message", "").lower()]

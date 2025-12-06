@@ -58,10 +58,12 @@
     "playwright": "^1.56.0",
     "prettier": "^3.6.2",
     "prettier-plugin-sh": "^0.18.0",
+    "prettier-plugin-toml": "^2.0.6",
     "pyright": "^1.1.400",
     "ts-node": "^10.9.2",
     "typescript": "^5.9.3",
-    "typescript-eslint": "^8.47.0"
+    "typescript-eslint": "^8.47.0",
+    "@openai/codex": "^0.63.0"
   },
   "dependencies": {
     "@brave/brave-search-mcp-server": "^2.0.59",

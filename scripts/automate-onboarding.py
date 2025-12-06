@@ -14,7 +14,7 @@ import sys
 import time
 from collections.abc import Callable
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 from urllib.parse import urljoin
 
 try:
@@ -26,10 +26,20 @@ except ImportError:
     sys.exit(1)
 
 try:
-    from colorama import Fore, Style, init  # pyright: ignore[reportMissingModuleSource, reportAssignmentType]
+    from colorama import (  # pyright: ignore[reportMissingModuleSource, reportAssignmentType]
+        Fore as _ColoramaFore,
+    )
+    from colorama import (
+        Style as _ColoramaStyle,
+    )
+    from colorama import (
+        init,
+    )
 
     init(autoreset=True)
     _has_colorama: bool = True
+    Fore = _ColoramaFore  # type: ignore[assignment]
+    Style = _ColoramaStyle  # type: ignore[assignment]
 except ImportError:
     # Fallback to no colors if colorama not installed
     _has_colorama = False
@@ -72,7 +82,7 @@ if credentials_file.exists():
 
 # Load token from environment
 AUTH_TOKEN: str | None = os.getenv("LONG_LIVED_ACCESS_TOKEN") or os.getenv(
-    "ONBOARDING_TOKEN"
+    "ONBOARDING_TOKEN",
 )
 
 
@@ -105,7 +115,8 @@ class OnboardingClient:
         print(f"{Fore.RED}[onboarding] ❌{Style.RESET_ALL} {message}")
 
     def get_onboarding_status(
-        self, require_auth: bool = False
+        self,
+        require_auth: bool = False,
     ) -> list[dict[str, Any]] | None:
         """Get current onboarding status
 
@@ -118,7 +129,8 @@ class OnboardingClient:
         url = urljoin(self.base_url, "/api/onboarding")
         try:
             # Try without auth first if not required (works when onboarding is in progress)
-            if not require_auth and not self.auth_token:
+            auth_token: str | None = cast("str | None", self.auth_token)  # type: ignore[reportUnknownMemberType]
+            if not require_auth and not auth_token:
                 try:
                     response = requests.get(url, timeout=10)
                     if response.status_code == 200:
@@ -381,9 +393,9 @@ class OnboardingClient:
                 # Try refreshing token and retry
                 if refresh_token_fn:
                     self._log_info("Attempting to refresh token and retry...")
-                    fresh_token = refresh_token_fn(force_refresh=True)
+                    fresh_token: str | None = refresh_token_fn(force_refresh=True)  # type: ignore[reportCallIssue, reportUnknownVariableType]
                     if fresh_token:
-                        self.auth_token = fresh_token
+                        self.auth_token = fresh_token  # type: ignore[reportUnknownMemberType]
                         self.session.headers["Authorization"] = f"Bearer {fresh_token}"
                         try:
                             response = self.session.post(url, json=payload, timeout=30)
@@ -424,7 +436,8 @@ class OnboardingClient:
             Tuple[success: bool, restart_needed: Optional[int]]
 
         """
-        if not self.auth_token:
+        auth_token: str | None = cast("str | None", self.auth_token)  # type: ignore[reportUnknownMemberType]
+        if not auth_token:
             self._log_error("Authentication token required for analytics step")
             return False, None
 
@@ -459,9 +472,9 @@ class OnboardingClient:
                 # Try refreshing token and retry
                 if refresh_token_fn:
                     self._log_info("Attempting to refresh token and retry...")
-                    fresh_token = refresh_token_fn(force_refresh=True)
+                    fresh_token: str | None = refresh_token_fn(force_refresh=True)  # type: ignore[reportCallIssue, reportUnknownVariableType]
                     if fresh_token:
-                        self.auth_token = fresh_token
+                        self.auth_token = fresh_token  # type: ignore[reportUnknownMemberType]
                         self.session.headers["Authorization"] = f"Bearer {fresh_token}"
                         try:
                             response = self.session.post(url, json=payload, timeout=30)
@@ -500,7 +513,8 @@ class OnboardingClient:
             Tuple[success: bool, restart_needed: Optional[int]]
 
         """
-        if not self.auth_token:
+        auth_token: str | None = cast("str | None", self.auth_token)  # type: ignore[reportUnknownMemberType]
+        if not auth_token:
             self._log_error("Authentication token required for integration step")
             return False, None
 
@@ -800,7 +814,10 @@ def main():
         print("[onboarding] ✅ User creation completed")
 
         # Check if we got a token from user creation
-        if client_for_user_creation.auth_token:
+        auth_token_check: str | None = cast(
+            "str | None", client_for_user_creation.auth_token
+        )  # type: ignore[reportUnknownMemberType]
+        if auth_token_check:
             print("[onboarding] ✅ Token obtained from user creation")
             client = client_for_user_creation  # Use client with token
             # Now get incomplete steps with auth

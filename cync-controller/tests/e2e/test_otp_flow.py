@@ -4,7 +4,7 @@ import pytest
 from playwright.sync_api import Page, expect
 
 
-@pytest.mark.skip(reason="Requires live Cync account with OTP - run manually")
+@pytest.mark.skip(reason="Requires live Cync account with OTP - run manually")  # type: ignore[misc]
 def test_otp_double_submission(ingress_page: Page):
     """Test Bug 1: OTP submission fails the first time, succeeds the second time.
 

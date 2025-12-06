@@ -49,9 +49,7 @@ def calculate_packet_distribution(packet_types: dict[str, int]) -> dict[str, flo
     return {ptype: (count / total * 100) for ptype, count in packet_types.items()}
 
 
-def generate_statistics_table(
-    packet_types: dict[str, int], direction_counts: dict[str, int]
-) -> str:
+def generate_statistics_table(packet_types: dict[str, int], direction_counts: dict[str, int]) -> str:
     """Generate formatted statistics table.
 
     Args:
@@ -100,9 +98,7 @@ def identify_missing_packet_types(observed_types: list[str]) -> list[str]:
     return sorted(missing)
 
 
-def assess_validation_quality(
-    total_validated: int, total_failed: int, packet_types: dict[str, int]
-) -> dict[str, bool]:
+def assess_validation_quality(total_validated: int, total_failed: int, packet_types: dict[str, int]) -> dict[str, bool]:
     """Assess validation quality against acceptance criteria.
 
     Args:

@@ -97,9 +97,7 @@ class ACKTimeoutError(CyncProtocolError):
         correlation_id: Correlation ID for observability
     """
 
-    def __init__(
-        self, msg_id: bytes, timeout_seconds: float, retries: int, correlation_id: str = ""
-    ):
+    def __init__(self, msg_id: bytes, timeout_seconds: float, retries: int, correlation_id: str = ""):
         self.msg_id = msg_id
         self.timeout_seconds = timeout_seconds
         self.retries = retries

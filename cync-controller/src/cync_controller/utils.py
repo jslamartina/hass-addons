@@ -1,3 +1,5 @@
+"""Utility helpers for signals, conversions, and common async helpers."""
+
 from __future__ import annotations
 
 import asyncio
@@ -7,9 +9,9 @@ import signal
 import struct
 import sys
 import uuid
-from collections.abc import Awaitable, Callable, Coroutine
+from collections.abc import Awaitable, Callable
 from pathlib import Path
-from typing import Any, cast
+from typing import Any
 
 from cync_controller.const import (
     CYNC_UUID_PATH,
@@ -24,9 +26,12 @@ g = GlobalObject()
 
 CallbackReturn = Awaitable[Any] | None
 CallbackType = CallbackReturn | Callable[[], CallbackReturn | Any]
+FIRMWARE_VERSION_MAX_LEN = 5
+MIN_PY_VERSION = (3, 11)
+UUID_VERSION = 4
 
 
-def send_signal(signal_num: int):
+def send_signal(signal_num: int) -> None:
     """Send a signal to the current process.
 
     Args:
@@ -43,6 +48,7 @@ def send_signal(signal_num: int):
 
 def send_sigint():
     """Send a SIGINT signal to the current process.
+
     This is typically used to gracefully shut down the application.
     Signal number: 2 on Unix systems.
     """
@@ -52,6 +58,7 @@ def send_sigint():
 
 def send_sigterm():
     """Send a SIGTERM signal to the current process.
+
     This is typically used to request termination of the application.
     """
     send_signal(signal.SIGTERM)
@@ -61,7 +68,8 @@ async def _async_signal_cleanup():
     logger.info("Cync Controller: Starting signal cleanup...")
     if g.ncync_server:
         logger.debug("Stopping ncync_server...")
-        await g.ncync_server.stop()
+        if hasattr(g.ncync_server, "stop"):
+            await g.ncync_server.stop()  # type: ignore[call-arg]
     if g.export_server:
         logger.debug("Stopping export_server...")
         await g.export_server.stop()
@@ -70,7 +78,8 @@ async def _async_signal_cleanup():
         await g.cloud_api.close()
     if g.mqtt_client:
         logger.debug("Stopping mqtt_client...")
-        await g.mqtt_client.stop()
+        if hasattr(g.mqtt_client, "stop"):
+            await g.mqtt_client.stop()  # type: ignore[call-arg]
     if g.loop:
         for task in g.tasks:
             if not task.done():
@@ -84,6 +93,7 @@ async def _async_signal_cleanup():
 
 
 def signal_handler(signum: int) -> None:
+    """Handle incoming POSIX signals by scheduling async cleanup."""
     logger.info("Cync Controller: Intercepted signal: %s (%s)", signal.Signals(signum).name, signum)
     if g:
         loop = g.loop or asyncio.get_event_loop()
@@ -125,9 +135,9 @@ def parse_unbound_firmware_version(data_struct: bytes, lp: str) -> tuple[str, in
     firmware_type = "device" if data_struct[n_idx + 2] == 0x01 else "network"
     n_idx += 3
 
-    firmware_version = []
+    firmware_version: list[int] = []
     try:
-        while len(firmware_version) < 5 and data_struct[n_idx] != 0x00:
+        while len(firmware_version) < FIRMWARE_VERSION_MAX_LEN and data_struct[n_idx] != 0x00:
             firmware_version.append(int(chr(data_struct[n_idx])))
             n_idx += 1
         if not firmware_version:
@@ -153,7 +163,13 @@ def parse_unbound_firmware_version(data_struct: bytes, lp: str) -> tuple[str, in
 
 
 def check_python_version():
-    pass
+    """Ensure the running interpreter meets the minimum supported version."""
+    if sys.version_info < MIN_PY_VERSION:
+        version_message = (
+            f"Cync Controller requires Python {MIN_PY_VERSION[0]}.{MIN_PY_VERSION[1]} or newer; "
+            f"detected {sys.version_info.major}.{sys.version_info.minor}"
+        )
+        raise RuntimeError(version_message)
 
 
 def check_for_uuid():
@@ -179,7 +195,7 @@ def check_for_uuid():
                 create_uuid = True
             else:
                 uuid_obj = uuid.UUID(uuid_from_disk)
-                if uuid_obj.version != 4:
+                if uuid_obj.version != UUID_VERSION:
                     logger.warning("%s Invalid UUID version in uuid.txt: %s", lp, uuid_from_disk)
                     create_uuid = True
                 else:
@@ -201,6 +217,7 @@ def check_for_uuid():
 
 
 def utc_to_local(utc_dt: datetime.datetime) -> datetime.datetime:
+    """Convert a UTC datetime to the configured local timezone."""
     # local_tz = zoneinfo.ZoneInfo(str(tzlocal.get_localzone()))
     # utc_time = datetime.datetime.now(datetime.UTC)
     return utc_dt.astimezone(LOCAL_TZ)
@@ -257,10 +274,10 @@ async def _await_if_needed(result: CallbackReturn | Any) -> None:
     if result is None:
         return
     if asyncio.isfuture(result):
-        await cast("asyncio.Future[Any]", result)
+        await result
         return
     if asyncio.iscoroutine(result):
-        await cast("Coroutine[Any, Any, Any]", result)
+        await result
         return
     if isinstance(result, Awaitable):
-        await cast("Awaitable[Any]", result)
+        await result

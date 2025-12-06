@@ -1,5 +1,5 @@
 ---
-description: Standardized exception handling patterns for python-rebuild-tcp-comm
+description: Use when implementing or refactoring exception handling in python-rebuild-tcp-comm.
 appliesTo:
   - "python-rebuild-tcp-comm/**/*.py"
 ---

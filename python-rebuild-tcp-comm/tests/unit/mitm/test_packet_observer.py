@@ -31,9 +31,7 @@ def test_packet_observer_protocol_structural_subtyping() -> None:
     class ValidObserver:
         """Valid observer implementation."""
 
-        def on_packet_received(
-            self, direction: PacketDirection, data: bytes, connection_id: int
-        ) -> None:
+        def on_packet_received(self, direction: PacketDirection, data: bytes, connection_id: int) -> None:
             """Packet received handler."""
 
         def on_connection_established(self, connection_id: int) -> None:
@@ -58,9 +56,7 @@ def test_packet_observer_protocol_missing_method() -> None:
     class IncompleteObserver:
         """Observer missing on_connection_closed method."""
 
-        def on_packet_received(
-            self, direction: PacketDirection, data: bytes, connection_id: int
-        ) -> None:
+        def on_packet_received(self, direction: PacketDirection, data: bytes, connection_id: int) -> None:
             """Packet received handler."""
 
         def on_connection_established(self, connection_id: int) -> None:
@@ -83,9 +79,7 @@ def test_packet_observer_protocol_method_signatures() -> None:
     class TestObserver:
         """Test observer for signature validation."""
 
-        def on_packet_received(
-            self, direction: PacketDirection, data: bytes, connection_id: int
-        ) -> None:
+        def on_packet_received(self, direction: PacketDirection, data: bytes, connection_id: int) -> None:
             """Packet received handler."""
 
         def on_connection_established(self, connection_id: int) -> None:

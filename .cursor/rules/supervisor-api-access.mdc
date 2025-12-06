@@ -1,5 +1,5 @@
 ---
-description: Supervisor API Auth
+description: Use when calling the Home Assistant Supervisor API or handling its authentication.
 alwaysApply: false
 ---
 

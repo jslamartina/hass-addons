@@ -171,11 +171,7 @@ def _format_packet_types(stats: ValidationStats) -> list[str]:
     if stats["packet_types"]:
         lines.append("Packet Types Decoded:")
         for ptype, count in sorted(stats["packet_types"].items()):
-            pct = (
-                (count / stats["decoded_successfully"] * 100)
-                if stats["decoded_successfully"] > 0
-                else 0
-            )
+            pct = (count / stats["decoded_successfully"] * 100) if stats["decoded_successfully"] > 0 else 0
             lines.append(f"  {ptype}: {count:,} packets ({pct:.1f}%)")
         lines.append("")
     return lines
@@ -200,14 +196,10 @@ def _format_acceptance_criteria(stats: ValidationStats) -> tuple[list[str], bool
     decoded_pass = stats["decoded_successfully"] >= MIN_DECODED_PACKETS_REQUIRED
     if decoded_pass:
         lines.append(
-            f"  ✅ PASS: Decoded {stats['decoded_successfully']:,} packets "
-            f"(≥MIN_DECODED_PACKETS_REQUIRED required)"
+            f"  ✅ PASS: Decoded {stats['decoded_successfully']:,} packets (≥MIN_DECODED_PACKETS_REQUIRED required)"
         )
     else:
-        lines.append(
-            f"  ❌ FAIL: Only {stats['decoded_successfully']} packets "
-            f"(need ≥MIN_DECODED_PACKETS_REQUIRED)"
-        )
+        lines.append(f"  ❌ FAIL: Only {stats['decoded_successfully']} packets (need ≥MIN_DECODED_PACKETS_REQUIRED)")
 
     error_rate_pass = stats["error_rate"] < MAX_ERROR_RATE
     if error_rate_pass:
@@ -278,9 +270,7 @@ def main() -> int:
     if len(sys.argv) < MIN_ARGS_REQUIRED:
         print("Usage: python validate_codec_on_captures.py <capture_file> [packet_limit]")
         print("\nExample:")
-        print(
-            "  python validate_codec_on_captures.py mitm/captures/capture_20251108_221408.txt 1000"
-        )
+        print("  python validate_codec_on_captures.py mitm/captures/capture_20251108_221408.txt 1000")
         print("  (Processes first 1000 packets)")
         return 1
 
@@ -312,10 +302,7 @@ def main() -> int:
     passed = (
         stats["decoded_successfully"] >= MIN_DECODED_PACKETS_REQUIRED
         and stats["error_rate"] < MAX_ERROR_RATE
-        and all(
-            ptype in [pt.lower() for pt in stats["packet_types"]]
-            for ptype in ["0x23", "0x73", "0x83", "0xd3"]
-        )
+        and all(ptype in [pt.lower() for pt in stats["packet_types"]] for ptype in ["0x23", "0x73", "0x83", "0xd3"])
     )
 
     return 0 if passed else 1

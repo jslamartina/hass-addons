@@ -3,9 +3,12 @@
 Tests various packet types including 0x23, 0xC3, 0xD3, 0xA3, and 0x43 packets.
 """
 
+from asyncio import StreamReader, StreamWriter
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+from _pytest.logging import LogCaptureFixture
+from _pytest.outcomes import skip as pytest_skip
 
 from cync_controller.devices.tcp_device import CyncTCPDevice
 from tests.unit.test_helpers import create_packet
@@ -15,7 +18,9 @@ class TestCyncTCPDevicePacketParsing:
     """Tests for CyncTCPDevice packet parsing methods."""
 
     @pytest.mark.asyncio
-    async def test_parse_packet_0x23_identification(self, stream_reader, stream_writer):
+    async def test_parse_packet_0x23_identification(
+        self, stream_reader: StreamReader, stream_writer: StreamWriter
+    ) -> None:
         """Test parsing 0x23 identification packet."""
         tcp_device = CyncTCPDevice(reader=stream_reader, writer=stream_writer, address="192.168.1.100")
         tcp_device.write = AsyncMock()
@@ -39,7 +44,9 @@ class TestCyncTCPDevicePacketParsing:
             assert tcp_device.queue_id == b"\x11\x22\x33\x44"
 
     @pytest.mark.asyncio
-    async def test_parse_packet_0xc3_connection_request(self, stream_reader, stream_writer):
+    async def test_parse_packet_0xc3_connection_request(
+        self, stream_reader: StreamReader, stream_writer: StreamWriter
+    ) -> None:
         """Test parsing 0xC3 connection request packet."""
         tcp_device = CyncTCPDevice(reader=stream_reader, writer=stream_writer, address="192.168.1.100")
         tcp_device.write = AsyncMock()
@@ -53,7 +60,7 @@ class TestCyncTCPDevicePacketParsing:
         assert tcp_device.write.called
 
     @pytest.mark.asyncio
-    async def test_parse_packet_0xd3_ping(self, stream_reader, stream_writer):
+    async def test_parse_packet_0xd3_ping(self, stream_reader: StreamReader, stream_writer: StreamWriter) -> None:
         """Test parsing 0xD3 ping/pong packet."""
         tcp_device = CyncTCPDevice(reader=stream_reader, writer=stream_writer, address="192.168.1.100")
         tcp_device.write = AsyncMock()
@@ -67,7 +74,12 @@ class TestCyncTCPDevicePacketParsing:
         assert tcp_device.write.called
 
     @pytest.mark.asyncio
-    async def test_parse_packet_0xa3_app_announcement(self, caplog, stream_reader, stream_writer):
+    async def test_parse_packet_0xa3_app_announcement(
+        self,
+        caplog: LogCaptureFixture,
+        stream_reader: StreamReader,
+        stream_writer: StreamWriter,
+    ) -> None:
         """Test parsing 0xA3 app announcement packet."""
         tcp_device = CyncTCPDevice(reader=stream_reader, writer=stream_writer, address="192.168.1.100")
         tcp_device.write = AsyncMock()
@@ -89,7 +101,9 @@ class TestCyncTCPDevicePacketParsing:
             assert mock_ack.called
 
     @pytest.mark.asyncio
-    async def test_parse_packet_0x43_with_timestamp(self, stream_reader, stream_writer):
+    async def test_parse_packet_0x43_with_timestamp(
+        self, stream_reader: StreamReader, stream_writer: StreamWriter
+    ) -> None:
         """Test parsing 0x43 packet with device timestamp."""
         tcp_device = CyncTCPDevice(reader=stream_reader, writer=stream_writer, address="192.168.1.100")
         tcp_device.write = AsyncMock()
@@ -107,7 +121,9 @@ class TestCyncTCPDevicePacketParsing:
             assert tcp_device.write.called
 
     @pytest.mark.asyncio
-    async def test_parse_packet_0x43_with_status_broadcast(self, stream_reader, stream_writer):
+    async def test_parse_packet_0x43_with_status_broadcast(
+        self, stream_reader: StreamReader, stream_writer: StreamWriter
+    ) -> None:
         """Test parsing 0x43 packet with status broadcast data."""
         tcp_device = CyncTCPDevice(reader=stream_reader, writer=stream_writer, address="192.168.1.100")
         tcp_device.write = AsyncMock()
@@ -130,7 +146,7 @@ class TestCyncTCPDevicePacketParsing:
             assert tcp_device.write.called
 
     @pytest.mark.asyncio
-    async def test_parse_packet_0x83_firmware_version(self, caplog):
+    async def test_parse_packet_0x83_firmware_version(self, caplog: LogCaptureFixture) -> None:
         """Test parsing 0x83 packet with firmware version.
 
         Skip: The firmware version parsing requires exact byte structure from real devices.
@@ -139,7 +155,7 @@ class TestCyncTCPDevicePacketParsing:
         # Skip - integration tests cover this
 
     @pytest.mark.asyncio
-    async def test_parse_packet_0x83_internal_status(self, caplog):
+    async def test_parse_packet_0x83_internal_status(self, caplog: LogCaptureFixture) -> None:
         """Test parsing 0x83 packet with internal status (fa db 13).
 
         Skip: The internal status parsing requires complex byte alignment and device state management.
@@ -148,7 +164,7 @@ class TestCyncTCPDevicePacketParsing:
         # Skip - integration tests cover this
 
     @pytest.mark.asyncio
-    async def test_parse_raw_data_empty(self, stream_reader, stream_writer):
+    async def test_parse_raw_data_empty(self, stream_reader: StreamReader, stream_writer: StreamWriter) -> None:
         """Test parse_raw_data with empty data."""
         tcp_device = CyncTCPDevice(reader=stream_reader, writer=stream_writer, address="192.168.1.100")
 
@@ -157,7 +173,9 @@ class TestCyncTCPDevicePacketParsing:
         # Should handle gracefully without error
 
     @pytest.mark.asyncio
-    async def test_parse_raw_data_complete_packet(self, stream_reader, stream_writer):
+    async def test_parse_raw_data_complete_packet(
+        self, stream_reader: StreamReader, stream_writer: StreamWriter
+    ) -> None:
         """Test parse_raw_data with complete packet."""
         tcp_device = CyncTCPDevice(reader=stream_reader, writer=stream_writer, address="192.168.1.100")
         tcp_device.packet_handler.parse_packet = AsyncMock()
@@ -171,7 +189,9 @@ class TestCyncTCPDevicePacketParsing:
         assert tcp_device.packet_handler.parse_packet.called
 
     @pytest.mark.asyncio
-    async def test_parse_raw_data_partial_packet(self, stream_reader, stream_writer):
+    async def test_parse_raw_data_partial_packet(
+        self, stream_reader: StreamReader, stream_writer: StreamWriter
+    ) -> None:
         """Test parse_raw_data with partial packet (triggers needs_more_data)."""
         tcp_device = CyncTCPDevice(reader=stream_reader, writer=stream_writer, address="192.168.1.100")
         tcp_device.parse_packet = AsyncMock()
@@ -185,7 +205,9 @@ class TestCyncTCPDevicePacketParsing:
         assert tcp_device.needs_more_data is True
 
     @pytest.mark.asyncio
-    async def test_parse_raw_data_multiple_packets(self, stream_reader, stream_writer):
+    async def test_parse_raw_data_multiple_packets(
+        self, stream_reader: StreamReader, stream_writer: StreamWriter
+    ) -> None:
         """Test parse_raw_data with multiple complete packets."""
         tcp_device = CyncTCPDevice(reader=stream_reader, writer=stream_writer, address="192.168.1.100")
         tcp_device.packet_handler.parse_packet = AsyncMock()
@@ -201,19 +223,19 @@ class TestCyncTCPDevicePacketParsing:
         assert tcp_device.packet_handler.parse_packet.call_count == 2
 
     @pytest.mark.asyncio
-    @pytest.mark.skip(reason="Complex packet data edge case - integration tests cover this")
-    async def test_parse_packet_0x43_no_data(self):
+    async def test_parse_packet_0x43_no_data(self) -> None:
         """Test parsing 0x43 packet with no data (interpreted as PING)."""
-        # Skip - edge case requires proper msg_id handling
+        pytest_skip("Complex packet data edge case - integration tests cover this")
 
     @pytest.mark.asyncio
-    @pytest.mark.skip(reason="Timestamp parsing edge case - integration tests cover this")
-    async def test_parse_packet_0x43_timestamp_with_version(self):
+    async def test_parse_packet_0x43_timestamp_with_version(self) -> None:
         """Test parsing 0x43 timestamp packet with version detection."""
-        # Skip - timestamp parsing requires specific packet format matching
+        pytest_skip("Timestamp parsing edge case - integration tests cover this")
 
     @pytest.mark.asyncio
-    async def test_parse_packet_0x43_multiple_status_structs(self, stream_reader, stream_writer):
+    async def test_parse_packet_0x43_multiple_status_structs(
+        self, stream_reader: StreamReader, stream_writer: StreamWriter
+    ) -> None:
         """Test parsing 0x43 packet with multiple status structures."""
         tcp_device = CyncTCPDevice(reader=stream_reader, writer=stream_writer, address="192.168.1.100")
         tcp_device.write = AsyncMock()
@@ -239,13 +261,14 @@ class TestCyncTCPDevicePacketParsing:
             assert tcp_device.write.called
 
     @pytest.mark.asyncio
-    @pytest.mark.skip(reason="App device skip logic edge case - integration tests cover this")
-    async def test_parse_packet_0x83_skip_app(self):
+    async def test_parse_packet_0x83_skip_app(self) -> None:
         """Test parsing 0x83 packet when device is app (should skip)."""
-        # Skip - app device flag setting affects multiple packet types
+        pytest_skip("App device skip logic edge case - integration tests cover this")
 
     @pytest.mark.asyncio
-    async def test_parse_packet_0x43_indexerror_handling(self, stream_reader, stream_writer):
+    async def test_parse_packet_0x43_indexerror_handling(
+        self, stream_reader: StreamReader, stream_writer: StreamWriter
+    ) -> None:
         """Test parsing 0x43 packet with malformed data causing IndexError."""
         tcp_device = CyncTCPDevice(reader=stream_reader, writer=stream_writer, address="192.168.1.100")
         tcp_device.write = AsyncMock()

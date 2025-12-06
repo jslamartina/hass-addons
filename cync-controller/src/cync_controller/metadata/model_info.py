@@ -20,6 +20,8 @@ class DeviceClassification(StrEnum):
 
 @dataclass
 class SwitchCapabilities:
+    """Capabilities specific to Cync switch-style devices."""
+
     power: bool = True
     dimmable: bool = False
     fan: bool = False
@@ -28,6 +30,8 @@ class SwitchCapabilities:
 
 @dataclass
 class LightCapabilities:
+    """Capabilities supported by Cync lighting devices."""
+
     power: bool = True
     dimmable: bool = True
     tunable_white: bool = False
@@ -38,6 +42,8 @@ class LightCapabilities:
 
 @dataclass
 class DeviceProtocol:
+    """Protocols supported by a device."""
+
     BTLE: bool = True
     TCP: bool = False
     MATTER: bool = False
@@ -45,6 +51,8 @@ class DeviceProtocol:
 
 @dataclass
 class LightCharacteristics:
+    """Physical light characteristics such as color temperature range."""
+
     min_kelvin: int | None = None
     max_kelvin: int | None = None
     lumens: int | None = None
@@ -52,6 +60,8 @@ class LightCharacteristics:
 
 @dataclass
 class DeviceTypeInfo:
+    """Metadata describing a specific Cync device model."""
+
     type: DeviceClassification = field(default=DeviceClassification.UNKNOWN)
     model_name: str | None = "Unknown Device, See repo issue tracker"
     model_id: str | None = None

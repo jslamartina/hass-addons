@@ -1,5 +1,5 @@
 ---
-description: Debugging the application and viewing logs
+description: Use when debugging via logs or needing commands to inspect application logs.
 alwaysApply: false
 ---
 

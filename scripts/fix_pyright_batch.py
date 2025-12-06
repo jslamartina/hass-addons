@@ -31,6 +31,7 @@ def run_pyright() -> str:
     print("Running Pyright to collect errors...")
     result = subprocess.run(
         ["basedpyright", "--project", str(CYNC_CONTROLLER / "pyrightconfig.json")],
+        check=False,
         cwd=str(CYNC_CONTROLLER),
         capture_output=True,
         text=True,
@@ -51,7 +52,8 @@ def parse_pyright_output(output: str) -> dict[str, list[dict[str, Any]]]:
             # Remove repo path prefix if present
             if CYNC_CONTROLLER.as_posix() in current_file:
                 current_file = current_file.replace(
-                    CYNC_CONTROLLER.as_posix() + "/", ""
+                    CYNC_CONTROLLER.as_posix() + "/",
+                    "",
                 )
             continue
 
@@ -75,7 +77,7 @@ def parse_pyright_output(output: str) -> dict[str, list[dict[str, Any]]]:
                         "severity": severity,
                         "message": message,
                         "rule": rule,
-                    }
+                    },
                 )
 
     return dict(errors_by_file)
@@ -84,14 +86,14 @@ def parse_pyright_output(output: str) -> dict[str, list[dict[str, Any]]]:
 def find_init_methods(file_path: Path) -> list[int]:
     """Find all `__init__` methods missing `-> None` annotation."""
     try:
-        with open(file_path, "r", encoding="utf-8") as f:
+        with open(file_path, encoding="utf-8") as f:
             content = f.read()
             tree = ast.parse(content, filename=str(file_path))
     except Exception as e:
         print(f"Warning: Could not parse {file_path}: {e}")
         return []
 
-    init_lines = []
+    init_lines: list[int] = []
     for node in ast.walk(tree):
         if isinstance(node, ast.FunctionDef) and node.name == "__init__":
             # Check if it has a return annotation
@@ -107,7 +109,7 @@ def add_init_return_type(file_path: Path, init_lines: list[int]) -> int:
         return 0
 
     try:
-        with open(file_path, "r", encoding="utf-8") as f:
+        with open(file_path, encoding="utf-8") as f:
             content = f.read()
             lines = content.splitlines(keepends=True)
     except Exception as e:
@@ -116,7 +118,8 @@ def add_init_return_type(file_path: Path, init_lines: list[int]) -> int:
 
     fixed = 0
     for line_num in sorted(
-        init_lines, reverse=True
+        init_lines,
+        reverse=True,
     ):  # Process backwards to preserve line numbers
         line_idx = line_num - 1
         if line_idx >= len(lines):
@@ -138,7 +141,8 @@ def add_init_return_type(file_path: Path, init_lines: list[int]) -> int:
         else:
             # Multi-line definition - find the closing "):"
             for i in range(
-                start_idx, min(start_idx + 20, len(lines))
+                start_idx,
+                min(start_idx + 20, len(lines)),
             ):  # Look ahead max 20 lines
                 if ") ->" in lines[i]:
                     break  # Already has return type
@@ -167,7 +171,9 @@ def generate_error_report(errors_by_file: dict[str, list[dict[str, Any]]]) -> No
 
         # Sort by error count
         sorted_files = sorted(
-            errors_by_file.items(), key=lambda x: len(x[1]), reverse=True
+            errors_by_file.items(),
+            key=lambda x: len(x[1]),
+            reverse=True,
         )
 
         for file_path, errors in sorted_files:
@@ -175,17 +181,19 @@ def generate_error_report(errors_by_file: dict[str, list[dict[str, Any]]]) -> No
             f.write("-" * 80 + "\n")
 
             # Group by rule
-            by_rule = defaultdict(list)
+            by_rule: defaultdict[str, list[dict[str, Any]]] = defaultdict(list)
             for error in errors:
                 by_rule[error["rule"]].append(error)
 
             for rule, rule_errors in sorted(
-                by_rule.items(), key=lambda x: len(x[1]), reverse=True
+                by_rule.items(),
+                key=lambda x: len(x[1]),
+                reverse=True,
             ):
                 f.write(f"\n  {rule} ({len(rule_errors)} occurrences):\n")
                 for error in sorted(rule_errors, key=lambda x: x["line"]):
                     f.write(
-                        f"    Line {error['line']}:{error['col']} - {error['message']}\n"
+                        f"    Line {error['line']}:{error['col']} - {error['message']}\n",
                     )
 
     print(f"\nError report saved to: {report_file}")

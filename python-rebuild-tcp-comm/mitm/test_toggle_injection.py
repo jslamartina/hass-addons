@@ -245,9 +245,7 @@ def parse_capture_logs(capture_file: Path, since_time: float | None = None) -> l
     return packets
 
 
-def find_ack_for_msg_id(
-    packets: list[dict[str, Any]], msg_id: int, ack_type: str = "7b"
-) -> dict[str, Any] | None:
+def find_ack_for_msg_id(packets: list[dict[str, Any]], msg_id: int, ack_type: str = "7b") -> dict[str, Any] | None:
     """
     Find ACK packet matching msg_id.
 
@@ -270,10 +268,7 @@ def find_ack_for_msg_id(
 
         # Check for msg_id in expected positions (bytes 10-11 typically)
         hex_bytes = hex_data.split()
-        if (
-            len(hex_bytes) > MSG_ID_POSITION_CHECK
-            and hex_bytes[MSG_ID_POSITION_CHECK] == msg_id_hex
-        ):
+        if len(hex_bytes) > MSG_ID_POSITION_CHECK and hex_bytes[MSG_ID_POSITION_CHECK] == msg_id_hex:
             return packet
 
     return None
@@ -369,10 +364,7 @@ async def run_toggle_test(
         msg_id = 0x10 + i
         state = (i % 2) == 0  # Alternate ON/OFF
 
-        print(
-            f"[{i + 1}/{iterations}] Injecting {'ON' if state else 'OFF'} command "
-            f"(msg_id=0x{msg_id:02x})..."
-        )
+        print(f"[{i + 1}/{iterations}] Injecting {'ON' if state else 'OFF'} command (msg_id=0x{msg_id:02x})...")
 
         # Craft packet
         packet = craft_toggle_packet(endpoint, msg_id, device_id, state)
@@ -436,12 +428,8 @@ async def run_toggle_test(
             "min": min(latencies),
             "max": max(latencies),
             "p50": latencies[len(latencies) // 2],
-            "p95": latencies[int(len(latencies) * 0.95)]
-            if len(latencies) >= MIN_SAMPLES_FOR_P95
-            else latencies[-1],
-            "p99": latencies[int(len(latencies) * 0.99)]
-            if len(latencies) >= TIMEOUT_MS
-            else latencies[-1],
+            "p95": latencies[int(len(latencies) * 0.95)] if len(latencies) >= MIN_SAMPLES_FOR_P95 else latencies[-1],
+            "p99": latencies[int(len(latencies) * 0.99)] if len(latencies) >= TIMEOUT_MS else latencies[-1],
         }
 
     return results
@@ -530,8 +518,7 @@ async def run_mesh_info_test(
                         print(f"✓ Mesh info data received ({len(devices)} devices in this packet)")
                         for dev in devices:
                             print(
-                                f"  Device {dev['device_id']:3d}: "
-                                f"state={dev['state']}, brightness={dev['brightness']}"
+                                f"  Device {dev['device_id']:3d}: state={dev['state']}, brightness={dev['brightness']}"
                             )
 
             if results["devices_found"] > 0:
@@ -600,9 +587,7 @@ def main():
 
     # Run test
     if args.test == "toggle":
-        results = asyncio.run(
-            run_toggle_test(args.api_url, endpoint, args.device_id, args.iterations, capture_file)
-        )
+        results = asyncio.run(run_toggle_test(args.api_url, endpoint, args.device_id, args.iterations, capture_file))
     else:
         results = asyncio.run(run_mesh_info_test(args.api_url, endpoint, capture_file))
 

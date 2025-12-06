@@ -38,7 +38,7 @@ def measure_time(start_time: float) -> float:
 
 
 def timed(operation_name: str | None = None) -> Callable[[Callable[P, T]], Callable[P, T]]:
-    """Decorator for timing synchronous functions with configurable threshold warnings.
+    """Decorate synchronous functions to time them with configurable threshold warnings.
 
     Logs execution time and warns if operation exceeds configured threshold.
     Can be disabled via CYNC_PERF_TRACKING environment variable.
@@ -86,7 +86,7 @@ def timed(operation_name: str | None = None) -> Callable[[Callable[P, T]], Calla
 def timed_async(
     operation_name: str | None = None,
 ) -> Callable[[Callable[P, Coroutine[object, object, T]]], Callable[P, Coroutine[object, object, T]]]:
-    """Decorator for timing async functions with configurable threshold warnings.
+    """Time async functions with configurable threshold warnings.
 
     Logs execution time and warns if operation exceeds configured threshold.
     Can be disabled via CYNC_PERF_TRACKING environment variable.

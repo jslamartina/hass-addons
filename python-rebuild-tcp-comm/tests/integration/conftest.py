@@ -78,7 +78,7 @@ class MockTCPServer:
         )
         # Get the actual port assigned
         if self.port == 0:
-            self.port = self.server.sockets[0].getsockname()[1]
+            self.port = self.server.sockets[0].getsockname()[1]  # type: ignore[union-attr, index]
         logger.info("Mock TCP server started on %s:%d", self.host, self.port)
 
     async def stop(self) -> None:
@@ -302,7 +302,7 @@ def performance_tracker() -> PerformanceTracker:
 
 def pytest_terminal_summary(
     terminalreporter: TerminalReporter,
-    exitstatus: int,
+    _exitstatus: int,
     config: Config,
 ) -> None:
     """Hook to display performance report at end of test session."""
@@ -331,5 +331,5 @@ def _init_performance_tracker(  # pyright: ignore[reportUnusedFunction]
 ) -> PerformanceTracker:
     """Initialize performance tracker in pytest config."""
     config: Config = request.config
-    setattr(config, "_performance_tracker", performance_tracker)
+    config._performance_tracker = performance_tracker  # type: ignore[attr-defined]
     return performance_tracker

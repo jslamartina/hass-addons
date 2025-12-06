@@ -62,6 +62,7 @@ class HumanReadableFormatter(logging.Formatter):
     """Formatter that outputs human-readable logs with correlation IDs."""
 
     def __init__(self) -> None:
+        """Initialize formatter with timestamp and correlation ID layout."""
         # Format: timestamp level [module:line] correlation_id > message
         super().__init__(
             fmt="%(asctime)s.%(msecs)03d %(levelname)s [%(module)s:%(lineno)d] %(correlation_id)s > %(message)s",
@@ -170,7 +171,7 @@ class CyncLogger:
             self.logger.addHandler(human_handler)
 
     def _log(self, level: int, msg: str, *args: object, extra: Mapping[str, object] | None = None) -> None:
-        """Internal logging method with structured context support."""
+        """Log with structured context support."""
         extra_payload: Mapping[str, object] | None = None
         if extra:
             extra_payload = {"extra_data": dict(extra)}
