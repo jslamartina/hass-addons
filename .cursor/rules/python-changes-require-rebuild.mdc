@@ -1,6 +1,6 @@
 ---
 globs: cync-controller/src/**/*.py
-description: Python changes require Docker rebuild
+description: Use when deciding whether changes require rebuild.sh vs just an add-on restart.
 appliesTo:
   - "**/*.py"
 ---

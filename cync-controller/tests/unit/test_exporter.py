@@ -1,16 +1,24 @@
-"""
-Unit tests for exporter.py module.
+"""Unit tests for exporter.py module.
 
 Tests FastAPI endpoints for OTP flow, device export, and ExportServer lifecycle.
 """
+# pyright: reportPrivateUsage=false
+
+from __future__ import annotations
 
 import asyncio
 import contextlib
+from collections.abc import Iterator
+from pathlib import Path
+from typing import cast
 from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
 import aiohttp
 import pytest
+from _pytest.monkeypatch import MonkeyPatch
 from fastapi import HTTPException
+
+from cync_controller.structs import CyncCloudAPIProtocol, GlobalObject, GlobalObjEnv, MQTTClientProtocol
 
 # Mock StaticFiles before import to avoid directory initialization error
 with patch("starlette.staticfiles.StaticFiles"):
@@ -18,46 +26,74 @@ with patch("starlette.staticfiles.StaticFiles"):
 
 
 @pytest.fixture(autouse=True)
-def reset_export_server_singleton():
-    """Reset ExportServer singleton between tests"""
+def reset_export_server_singleton() -> Iterator[None]:
+    """Reset ExportServer singleton between tests."""
+    original_instance = getattr(ExportServer, "_instance", None)
     ExportServer._instance = None
-    yield
-    ExportServer._instance = None
+    try:
+        yield
+    finally:
+        ExportServer._instance = original_instance
 
 
 @pytest.fixture
-def mock_global_object():
-    """Mock the global object to avoid dependencies"""
-    with patch("cync_controller.exporter.g") as mock_g:
-        mock_g.cloud_api = MagicMock()
-        mock_g.env = MagicMock()
-        mock_g.env.mqtt_topic = "cync_lan"
-        mock_g.mqtt_client = None
-        yield mock_g
+def mock_global_object(monkeypatch: MonkeyPatch) -> GlobalObject:
+    """Mock the global object to avoid dependencies."""
+    mock_g = cast(GlobalObject, MagicMock(spec=GlobalObject))
+    mock_g.cloud_api = cast(CyncCloudAPIProtocol, MagicMock())
+    mock_g.env = GlobalObjEnv()
+    mock_g.env.mqtt_topic = "cync_lan"
+    mock_g.mqtt_client = None
+    monkeypatch.setattr("cync_controller.exporter.g", mock_g, raising=False)
+    return mock_g
 
 
 @pytest.fixture
-def mock_static_dir(tmp_path):
-    """Create a temporary static directory for testing"""
+def mock_static_dir(tmp_path: Path) -> Path:
+    """Create a temporary static directory for testing."""
     static_dir = tmp_path / "static"
     static_dir.mkdir()
     index_file = static_dir / "index.html"
-    index_file.write_text("<html>Test Page</html>")
+    _ = index_file.write_text("<html>Test Page</html>")
     return static_dir
 
 
+def _mock_mqtt_client() -> MQTTClientProtocol:
+    return MagicMock(spec=MQTTClientProtocol)
+
+
+def _get_cloud_api(mock_global_object: GlobalObject) -> CyncCloudAPIProtocol:
+    assert mock_global_object.cloud_api is not None
+    return mock_global_object.cloud_api
+
+
+def _get_mqtt_client(mock_global_object: GlobalObject) -> MQTTClientProtocol:
+    mqtt_client = mock_global_object.mqtt_client
+    if mqtt_client is None:
+        mqtt_client = _mock_mqtt_client()
+        mock_global_object.mqtt_client = mqtt_client
+    assert mqtt_client is not None
+    return mqtt_client
+
+
+def _assert_detail_dict(exception: HTTPException) -> dict[str, object]:
+    detail = exception.detail
+    assert isinstance(detail, dict)
+    return cast(dict[str, object], detail)
+
+
 class TestExportServerInitialization:
-    """Tests for ExportServer initialization"""
+    """Tests for ExportServer initialization."""
 
     def test_init_is_singleton(self):
-        """Test that ExportServer is a singleton"""
+        """Test that ExportServer is a singleton."""
         server1 = ExportServer()
         server2 = ExportServer()
 
         assert server1 is server2
 
     def test_init_creates_uvicorn_server(self):
-        """Test that initialization creates uvicorn server with correct config"""
+        """Test that initialization creates uvicorn server with correct config."""
         with (
             patch("cync_controller.exporter.uvicorn.Server"),
             patch("cync_controller.exporter.uvicorn.Config") as mock_config,
@@ -70,13 +106,13 @@ class TestExportServerInitialization:
 
 
 class TestExportServerLifecycle:
-    """Tests for ExportServer start and stop"""
+    """Tests for ExportServer start and stop."""
 
     @pytest.mark.asyncio
-    async def test_start_sets_running_flag(self, mock_global_object):
-        """Test that start sets running flag and publishes MQTT message"""
-        mock_global_object.mqtt_client = MagicMock()
-        mock_global_object.mqtt_client.publish = AsyncMock()
+    async def test_start_sets_running_flag(self, mock_global_object: GlobalObject) -> None:
+        """Test that start sets running flag and publishes MQTT message."""
+        mqtt_client = _get_mqtt_client(mock_global_object)
+        mqtt_client.publish = AsyncMock()
 
         server = ExportServer()
         server.uvi_server.serve = AsyncMock()
@@ -85,15 +121,15 @@ class TestExportServerLifecycle:
         await asyncio.sleep(0.1)
 
         assert server.running is True
-        assert mock_global_object.mqtt_client.publish.called
+        assert mqtt_client.publish.called
 
-        start_task.cancel()
+        _ = start_task.cancel()
         with contextlib.suppress(asyncio.CancelledError):
             await start_task
 
     @pytest.mark.asyncio
-    async def test_start_with_cancelled_error(self, mock_global_object):
-        """Test that start handles CancelledError gracefully"""
+    async def test_start_with_cancelled_error(self, mock_global_object: GlobalObject) -> None:
+        """Test that start handles CancelledError gracefully."""
         server = ExportServer()
         server.uvi_server.serve = AsyncMock(side_effect=asyncio.CancelledError())
 
@@ -104,10 +140,10 @@ class TestExportServerLifecycle:
         assert server.running is True  # Set before cancelled
 
     @pytest.mark.asyncio
-    async def test_stop_shuts_down_server(self, mock_global_object):
-        """Test that stop calls uvicorn shutdown"""
-        mock_global_object.mqtt_client = MagicMock()
-        mock_global_object.mqtt_client.publish = AsyncMock()
+    async def test_stop_shuts_down_server(self, mock_global_object: GlobalObject) -> None:
+        """Test that stop calls uvicorn shutdown."""
+        mqtt_client = _get_mqtt_client(mock_global_object)
+        mqtt_client.publish = AsyncMock()
 
         server = ExportServer()
         server.running = True
@@ -120,10 +156,10 @@ class TestExportServerLifecycle:
         assert server.running is False
 
     @pytest.mark.asyncio
-    async def test_stop_publishes_mqtt_message(self, mock_global_object):
-        """Test that stop publishes MQTT message indicating server stopped"""
-        mock_global_object.mqtt_client = MagicMock()
-        mock_global_object.mqtt_client.publish = AsyncMock()
+    async def test_stop_publishes_mqtt_message(self, mock_global_object: GlobalObject) -> None:
+        """Test that stop publishes MQTT message indicating server stopped."""
+        mqtt_client = _get_mqtt_client(mock_global_object)
+        mqtt_client.publish = AsyncMock()
 
         server = ExportServer()
         server.running = True
@@ -132,15 +168,15 @@ class TestExportServerLifecycle:
 
         await server.stop()
 
-        assert mock_global_object.mqtt_client.publish.called
+        assert mqtt_client.publish.called
 
 
 class TestFastAPIEndpoints:
-    """Tests for FastAPI endpoint functions"""
+    """Tests for FastAPI endpoint functions."""
 
     @pytest.mark.asyncio
-    async def test_get_index(self, mock_static_dir):
-        """Test index page serves HTML content"""
+    async def test_get_index(self, mock_static_dir: Path) -> None:
+        """Test index page serves HTML content."""
         with (
             patch("cync_controller.exporter.CYNC_STATIC_DIR", str(mock_static_dir)),
             patch("pathlib.Path.open") as mock_open,
@@ -158,10 +194,11 @@ class TestFastAPIEndpoints:
                 assert result == "<html>Test Content</html>"
 
     @pytest.mark.asyncio
-    async def test_start_export_success(self, mock_global_object):
-        """Test start_export with valid token"""
-        mock_global_object.cloud_api.check_token = AsyncMock(return_value=True)
-        mock_global_object.cloud_api.export_config_file = AsyncMock(return_value=True)
+    async def test_start_export_success(self, mock_global_object: GlobalObject) -> None:
+        """Test start_export with valid token."""
+        cloud_api = _get_cloud_api(mock_global_object)
+        cloud_api.check_token = AsyncMock(return_value=True)
+        cloud_api.export_config_file = AsyncMock(return_value=True)
 
         from cync_controller.exporter import start_export
 
@@ -171,10 +208,11 @@ class TestFastAPIEndpoints:
         assert "message" in result
 
     @pytest.mark.asyncio
-    async def test_start_export_requires_otp(self, mock_global_object):
-        """Test start_export requests OTP when token invalid"""
-        mock_global_object.cloud_api.check_token = AsyncMock(return_value=False)
-        mock_global_object.cloud_api.request_otp = AsyncMock(return_value=True)
+    async def test_start_export_requires_otp(self, mock_global_object: GlobalObject) -> None:
+        """Test start_export requests OTP when token invalid."""
+        cloud_api = _get_cloud_api(mock_global_object)
+        cloud_api.check_token = AsyncMock(return_value=False)
+        cloud_api.request_otp = AsyncMock(return_value=True)
 
         from cync_controller.exporter import start_export
 
@@ -184,23 +222,29 @@ class TestFastAPIEndpoints:
         assert "OTP requested" in result["message"]
 
     @pytest.mark.asyncio
-    async def test_start_export_failure(self, mock_global_object):
-        """Test start_export raises HTTPException on failure"""
-        mock_global_object.cloud_api.check_token = AsyncMock(side_effect=Exception("API Error"))
+    async def test_start_export_failure(self, mock_global_object: GlobalObject) -> None:
+        """Test start_export raises HTTPException on failure."""
+        cloud_api = _get_cloud_api(mock_global_object)
+        cloud_api.check_token = AsyncMock(side_effect=Exception("API Error"))
 
         from cync_controller.exporter import start_export
 
-        with pytest.raises(HTTPException) as exc:
-            await start_export()
-
-        detail = exc.value.detail
+        exception: HTTPException | None = None
+        try:
+            _ = await start_export()
+        except HTTPException as exc:
+            exception = exc
+        assert exception is not None
+        detail = _assert_detail_dict(exception)
+        message = cast(str, detail["message"])
         assert "error_id" in detail
-        assert "Failed to start export" in detail["message"]
+        assert "Failed to start export" in message
 
     @pytest.mark.asyncio
-    async def test_request_otp_success(self, mock_global_object):
-        """Test request_otp succeeds"""
-        mock_global_object.cloud_api.request_otp = AsyncMock(return_value=True)
+    async def test_request_otp_success(self, mock_global_object: GlobalObject) -> None:
+        """Test request_otp succeeds."""
+        cloud_api = _get_cloud_api(mock_global_object)
+        cloud_api.request_otp = AsyncMock(return_value=True)
 
         from cync_controller.exporter import request_otp
 
@@ -210,9 +254,10 @@ class TestFastAPIEndpoints:
         assert "OTP requested successfully" in result["message"]
 
     @pytest.mark.asyncio
-    async def test_request_otp_failure(self, mock_global_object):
-        """Test request_otp returns failure message"""
-        mock_global_object.cloud_api.request_otp = AsyncMock(return_value=False)
+    async def test_request_otp_failure(self, mock_global_object: GlobalObject) -> None:
+        """Test request_otp returns failure message."""
+        cloud_api = _get_cloud_api(mock_global_object)
+        cloud_api.request_otp = AsyncMock(return_value=False)
 
         from cync_controller.exporter import request_otp
 
@@ -222,10 +267,11 @@ class TestFastAPIEndpoints:
         assert "Failed to request OTP" in result["message"]
 
     @pytest.mark.asyncio
-    async def test_submit_otp_success(self, mock_global_object):
-        """Test submit_otp with valid OTP"""
-        mock_global_object.cloud_api.send_otp = AsyncMock(return_value=True)
-        mock_global_object.cloud_api.export_config_file = AsyncMock(return_value=True)
+    async def test_submit_otp_success(self, mock_global_object: GlobalObject) -> None:
+        """Test submit_otp with valid OTP."""
+        cloud_api = _get_cloud_api(mock_global_object)
+        cloud_api.send_otp = AsyncMock(return_value=True)
+        cloud_api.export_config_file = AsyncMock(return_value=True)
 
         from cync_controller.exporter import OTPRequest, submit_otp
 
@@ -237,9 +283,10 @@ class TestFastAPIEndpoints:
         assert "Export completed successfully" in result["message"]
 
     @pytest.mark.asyncio
-    async def test_submit_otp_invalid_code(self, mock_global_object):
-        """Test submit_otp with invalid OTP"""
-        mock_global_object.cloud_api.send_otp = AsyncMock(return_value=False)
+    async def test_submit_otp_invalid_code(self, mock_global_object: GlobalObject) -> None:
+        """Test submit_otp with invalid OTP."""
+        cloud_api = _get_cloud_api(mock_global_object)
+        cloud_api.send_otp = AsyncMock(return_value=False)
 
         from cync_controller.exporter import OTPRequest, submit_otp
 
@@ -251,10 +298,11 @@ class TestFastAPIEndpoints:
         assert "Invalid OTP" in result["message"]
 
     @pytest.mark.asyncio
-    async def test_submit_otp_export_failure(self, mock_global_object):
-        """Test submit_otp when export fails after valid OTP"""
-        mock_global_object.cloud_api.send_otp = AsyncMock(return_value=True)
-        mock_global_object.cloud_api.export_config_file = AsyncMock(return_value=False)
+    async def test_submit_otp_export_failure(self, mock_global_object: GlobalObject) -> None:
+        """Test submit_otp when export fails after valid OTP."""
+        cloud_api = _get_cloud_api(mock_global_object)
+        cloud_api.send_otp = AsyncMock(return_value=True)
+        cloud_api.export_config_file = AsyncMock(return_value=False)
 
         from cync_controller.exporter import OTPRequest, submit_otp
 
@@ -266,8 +314,8 @@ class TestFastAPIEndpoints:
         assert "Failed to complete export" in result["message"]
 
     @pytest.mark.asyncio
-    async def test_health_check(self):
-        """Test health_check endpoint"""
+    async def test_health_check(self) -> None:
+        """Test health_check endpoint."""
         from cync_controller.exporter import health_check
 
         result = await health_check()
@@ -276,10 +324,10 @@ class TestFastAPIEndpoints:
         assert "Cync Export Server is running" in result["message"]
 
     @pytest.mark.asyncio
-    async def test_download_config_file_exists(self, tmp_path):
-        """Test download_config returns file when config exists"""
+    async def test_download_config_file_exists(self, tmp_path: Path) -> None:
+        """Test download_config returns file when config exists."""
         config_file = tmp_path / "cync_mesh.yaml"
-        config_file.write_text("test config")
+        _ = config_file.write_text("test config")
 
         with patch("cync_controller.exporter.CYNC_CONFIG_FILE_PATH", str(config_file)):
             from cync_controller.exporter import download_config
@@ -294,19 +342,19 @@ class TestFastAPIEndpoints:
             assert result.path == str(config_file)
 
     @pytest.mark.asyncio
-    async def test_download_config_file_missing(self, tmp_path):
-        """Test download_config raises HTTPException when file missing"""
+    async def test_download_config_file_missing(self, tmp_path: Path) -> None:
+        """Test download_config raises HTTPException when file missing."""
         missing_config = tmp_path / "missing.yaml"
 
         with patch("cync_controller.exporter.CYNC_CONFIG_FILE_PATH", str(missing_config)):
             from cync_controller.exporter import download_config
 
             with pytest.raises(Exception, match=r".*"):
-                await download_config()
+                _ = await download_config()
 
     @pytest.mark.asyncio
-    async def test_restart_success(self, mock_global_object):
-        """Test restart endpoint with valid supervisor token"""
+    async def test_restart_success(self, mock_global_object: GlobalObject) -> None:
+        """Test restart endpoint with valid supervisor token."""
         with (
             patch("cync_controller.exporter.os.environ") as mock_env,
             patch("cync_controller.exporter.aiohttp.ClientSession") as mock_session_class,
@@ -336,8 +384,8 @@ class TestFastAPIEndpoints:
             assert "restarting" in result["message"].lower()
 
     @pytest.mark.asyncio
-    async def test_restart_no_token(self):
-        """Test restart fails without supervisor token"""
+    async def test_restart_no_token(self) -> None:
+        """Test restart fails without supervisor token."""
         with patch("cync_controller.exporter.os.environ") as mock_env:
             mock_env.get.return_value = None
 
@@ -349,8 +397,8 @@ class TestFastAPIEndpoints:
             assert "Supervisor token" in result["message"]
 
     @pytest.mark.asyncio
-    async def test_restart_supervisor_non_200_returns_masked_http_exception(self):
-        """Test restart masks supervisor error details"""
+    async def test_restart_supervisor_non_200_returns_masked_http_exception(self) -> None:
+        """Test restart masks supervisor error details."""
         with (
             patch("cync_controller.exporter.os.environ") as mock_env,
             patch("cync_controller.exporter.aiohttp.ClientSession") as mock_session_class,
@@ -373,17 +421,21 @@ class TestFastAPIEndpoints:
 
             from cync_controller.exporter import restart
 
-            with pytest.raises(HTTPException) as exc:
-                await restart()
-
-            detail = exc.value.detail
+            exception: HTTPException | None = None
+            try:
+                _ = await restart()
+            except HTTPException as exc:
+                exception = exc
+            assert exception is not None
+            detail = _assert_detail_dict(exception)
+            message = cast(str, detail["message"])
             assert "error_id" in detail
-            assert "super secret failure" not in detail["message"]
-            assert "Supervisor" in detail["message"]
+            assert "super secret failure" not in message
+            assert "Supervisor" in message
 
     @pytest.mark.asyncio
-    async def test_restart_aiohttp_client_error_masked(self):
-        """Test restart masks aiohttp client errors"""
+    async def test_restart_aiohttp_client_error_masked(self) -> None:
+        """Test restart masks aiohttp client errors."""
         with (
             patch("cync_controller.exporter.os.environ") as mock_env,
             patch("cync_controller.exporter.aiohttp.ClientSession") as mock_session_class,
@@ -398,17 +450,21 @@ class TestFastAPIEndpoints:
 
             from cync_controller.exporter import restart
 
-            with pytest.raises(HTTPException) as exc:
-                await restart()
-
-            detail = exc.value.detail
+            exception: HTTPException | None = None
+            try:
+                _ = await restart()
+            except HTTPException as exc:
+                exception = exc
+            assert exception is not None
+            detail = _assert_detail_dict(exception)
+            message = cast(str, detail["message"])
             assert "error_id" in detail
-            assert "boom" not in detail["message"]
-            assert "Failed to contact Supervisor API" in detail["message"]
+            assert "boom" not in message
+            assert "Failed to contact Supervisor API" in message
 
     @pytest.mark.asyncio
-    async def test_restart_api_unexpected_error_masked(self):
-        """Test restart masks unexpected errors"""
+    async def test_restart_api_unexpected_error_masked(self) -> None:
+        """Test restart masks unexpected errors."""
         with (
             patch("cync_controller.exporter.os.environ") as mock_env,
             patch("cync_controller.exporter.aiohttp.ClientSession") as mock_session_class,
@@ -423,10 +479,14 @@ class TestFastAPIEndpoints:
 
             from cync_controller.exporter import restart
 
-            with pytest.raises(HTTPException) as exc:
-                await restart()
-
-            detail = exc.value.detail
+            exception: HTTPException | None = None
+            try:
+                _ = await restart()
+            except HTTPException as exc:
+                exception = exc
+            assert exception is not None
+            detail = _assert_detail_dict(exception)
+            message = cast(str, detail["message"])
             assert "error_id" in detail
-            assert "connection error" not in detail["message"].lower()
-            assert "unexpected error" in detail["message"].lower()
+            assert "connection error" not in message.lower()
+            assert "unexpected error" in message.lower()

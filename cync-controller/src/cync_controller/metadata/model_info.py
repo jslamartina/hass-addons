@@ -1,8 +1,16 @@
+"""Device model information and metadata for Cync devices.
+
+Provides data structures and enums for device classification, capabilities,
+protocols, and characteristics used throughout the Cync Controller.
+"""
+
 from dataclasses import dataclass, field
 from enum import StrEnum
 
 
 class DeviceClassification(StrEnum):
+    """Device type classification enum for Cync devices."""
+
     LIGHT = "light"
     SWITCH = "switch"
     THERMOSTAT = "thermostat"
@@ -12,6 +20,8 @@ class DeviceClassification(StrEnum):
 
 @dataclass
 class SwitchCapabilities:
+    """Capabilities specific to Cync switch-style devices."""
+
     power: bool = True
     dimmable: bool = False
     fan: bool = False
@@ -20,6 +30,8 @@ class SwitchCapabilities:
 
 @dataclass
 class LightCapabilities:
+    """Capabilities supported by Cync lighting devices."""
+
     power: bool = True
     dimmable: bool = True
     tunable_white: bool = False
@@ -30,6 +42,8 @@ class LightCapabilities:
 
 @dataclass
 class DeviceProtocol:
+    """Protocols supported by a device."""
+
     BTLE: bool = True
     TCP: bool = False
     MATTER: bool = False
@@ -37,6 +51,8 @@ class DeviceProtocol:
 
 @dataclass
 class LightCharacteristics:
+    """Physical light characteristics such as color temperature range."""
+
     min_kelvin: int | None = None
     max_kelvin: int | None = None
     lumens: int | None = None
@@ -44,6 +60,8 @@ class LightCharacteristics:
 
 @dataclass
 class DeviceTypeInfo:
+    """Metadata describing a specific Cync device model."""
+
     type: DeviceClassification = field(default=DeviceClassification.UNKNOWN)
     model_name: str | None = "Unknown Device, See repo issue tracker"
     model_id: str | None = None
@@ -54,7 +72,7 @@ class DeviceTypeInfo:
     @property
     def model_string(self) -> str:
         """Return a string representation of the model name, ID and characteristics."""
-        base_str = self.model_name
+        base_str = self.model_name or "Unknown Device"
         add_str = ""
         if self.model_id:
             add_str = self.model_id
@@ -73,7 +91,7 @@ class DeviceTypeInfo:
                 add_str += f"{kelvin_data}"
         if add_str:
             add_str = f" [{add_str}]"
-        return base_str + add_str
+        return f"{base_str}{add_str}"
 
 
 """Maps a device type ID to its corresponding DeviceTypeInfo."""

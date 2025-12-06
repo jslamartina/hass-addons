@@ -11,6 +11,7 @@ import json
 import os
 import signal
 import sys
+from typing import Any
 
 import httpx
 
@@ -41,7 +42,7 @@ def get_api_key() -> str:
     print("Error: BRAVE_AI_GROUNDING_API_KEY not found", file=sys.stderr)
     print("  - Not set in environment", file=sys.stderr)
     print(f"  - Not found in {package_env}", file=sys.stderr)
-    print("", file=sys.stderr)
+    print(file=sys.stderr)
     print(
         "To set up credentials, copy .env.example to .env and add your API key:",
         file=sys.stderr,
@@ -54,7 +55,9 @@ def get_api_key() -> str:
 
 
 async def stream_brave_ai(
-    query: str, enable_research: bool = False, enable_citations: bool = True
+    query: str,
+    enable_research: bool = False,
+    enable_citations: bool = True,
 ):
     """Stream Brave AI Grounding response to stdout."""
     api_key = get_api_key()
@@ -76,23 +79,26 @@ async def stream_brave_ai(
     if enable_research:
         payload["enable_research"] = True
 
-    citations = []
+    citations: list[dict[str, Any]] = []
     usage_info = None
 
     async with httpx.AsyncClient(timeout=300.0) as client:
-        async with client.stream(
-            "POST", url, json=payload, headers=headers
-        ) as response:
-            response.raise_for_status()
+        async with client.stream(  # type: ignore[reportGeneralTypeIssues]
+            "POST",
+            url,
+            json=payload,
+            headers=headers,
+        ) as response:  # type: ignore[reportUnknownVariableType]
+            response.raise_for_status()  # type: ignore[reportUnknownMemberType]
 
-            async for line in response.aiter_lines():
-                if line.startswith("data: "):
-                    data_str = line[6:]
+            async for line in response.aiter_lines():  # type: ignore[reportUnknownMemberType, reportUnknownVariableType]
+                if line.startswith("data: "):  # type: ignore[reportUnknownMemberType]
+                    data_str: str = line[6:]  # type: ignore[reportUnknownArgumentType]
                     if data_str == "[DONE]":
                         break
 
                     try:
-                        data = json.loads(data_str)
+                        data = json.loads(data_str)  # type: ignore[reportUnknownArgumentType]
                         if "choices" in data and len(data["choices"]) > 0:
                             delta = data["choices"][0].get("delta", {})
                             content = delta.get("content", "")
@@ -101,7 +107,8 @@ async def stream_brave_ai(
                                 if content.startswith("<citation>"):
                                     # Extract citation JSON
                                     citation_json = content.replace(
-                                        "<citation>", ""
+                                        "<citation>",
+                                        "",
                                     ).replace("</citation>", "")
                                     try:
                                         citation = json.loads(citation_json)
@@ -111,7 +118,8 @@ async def stream_brave_ai(
                                 elif content.startswith("<usage>"):
                                     # Extract usage JSON
                                     usage_json = content.replace("<usage>", "").replace(
-                                        "</usage>", ""
+                                        "</usage>",
+                                        "",
                                     )
                                     try:
                                         usage_info = json.loads(usage_json)
@@ -130,18 +138,19 @@ async def stream_brave_ai(
         print("\n" + "=" * 60)
         print("SOURCES")
         print("=" * 60)
-        for i, cite in enumerate(citations, 1):
-            print(f"\n[{i}] {cite.get('url', 'N/A')}")  # type: ignore[union-attr]
-            if "snippet" in cite:
-                snippet = cite["snippet"]  # type: ignore[typeddict-item]
+        for i, cite in enumerate(citations, 1):  # type: ignore[reportUnknownArgumentType]
+            cite_dict: dict[str, Any] = cite  # type: ignore[reportUnknownVariableType]
+            print(f"\n[{i}] {cite_dict.get('url', 'N/A')}")  # type: ignore[union-attr]
+            if "snippet" in cite_dict:
+                snippet = cite_dict["snippet"]  # type: ignore[typeddict-item]
                 # Snippet might be JSON string, try to parse it
                 try:
                     snippet_data = json.loads(snippet)  # type: ignore[arg-type]
                     if isinstance(snippet_data, dict):
                         # Print structured snippet
-                        for key, value in snippet_data.items():
+                        for key, value in snippet_data.items():  # type: ignore[reportUnknownVariableType]
                             if key not in ["@context", "@type"] and value:
-                                print(f"    {key}: {str(value)[:100]}...")
+                                print(f"    {key}: {str(value)[:100]}...")  # type: ignore[reportUnknownArgumentType]
                 except (json.JSONDecodeError, TypeError):
                     # Print as plain text
                     print(f"    {snippet[:200]}...")
@@ -171,7 +180,7 @@ def main():
             args.query,
             enable_research=args.research,
             enable_citations=not args.no_citations,
-        )
+        ),
     )
 
 

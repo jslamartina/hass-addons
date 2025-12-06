@@ -15,9 +15,7 @@ from typing import Final
 DEFAULT_OFFSET_AFTER_START: Final[int] = 6
 
 
-def calculate_checksum_between_markers(
-    packet: bytes, *, offset_after_start: int = DEFAULT_OFFSET_AFTER_START
-) -> int:
+def calculate_checksum_between_markers(packet: bytes, *, offset_after_start: int = DEFAULT_OFFSET_AFTER_START) -> int:
     """Compute checksum for a packet with 0x7E-delimited inner structure.
 
     Algorithm (verified against captured packets):
@@ -61,7 +59,5 @@ def insert_checksum_in_place(
         checksum_index: Index where checksum byte should be written
         offset_after_start: Offset after 0x7E start marker used in calculation
     """
-    checksum = calculate_checksum_between_markers(
-        bytes(packet), offset_after_start=offset_after_start
-    )
+    checksum = calculate_checksum_between_markers(bytes(packet), offset_after_start=offset_after_start)
     packet[checksum_index] = checksum

@@ -1,6 +1,6 @@
 ---
-alwaysApply: true
-description: Markdownlint formatting conventions and default rules for writing properly formatted markdown files
+alwaysApply: false
+description: Use when fixing markdownlint errors or formatting Markdown files.
 ---
 
 # Markdownlint Formatting Conventions

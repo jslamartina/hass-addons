@@ -1,7 +1,5 @@
 """Unit tests for connection manager."""
 
-# pyright: reportPrivateUsage=false
-
 from __future__ import annotations
 
 import asyncio
@@ -19,6 +17,7 @@ from protocol.packet_types import (
     PACKET_TYPE_HELLO_ACK,
     CyncPacket,
 )
+from tests.helpers.expectations import expect_async_exception
 from transport.connection_manager import ConnectionManager, ConnectionState
 from transport.exceptions import CyncConnectionError
 from transport.retry_policy import TimeoutConfig
@@ -26,6 +25,20 @@ from transport.socket_abstraction import TCPConnection
 
 # Test constants
 MAX_EXPECTED_LOCK_HOLD_TIME_SECONDS = 0.1  # Should be very fast (< 100ms)
+
+
+class ConnectionManagerTestHarness(ConnectionManager):
+    """Expose protected helpers for testing."""
+
+    @property
+    def data_packet_queue(self) -> asyncio.Queue[CyncPacket]:
+        return self._data_packet_queue
+
+    def create_packet_router_task(self) -> asyncio.Task[None]:
+        return asyncio.create_task(self._packet_router())
+
+    async def process_packets_for_test(self, packets: list[bytes]) -> None:
+        await self._process_packets(packets)
 
 
 class TestConnectionState:
@@ -47,14 +60,14 @@ class TestConnectionManagerInit:
         conn = MagicMock(spec=TCPConnection)
         protocol = MagicMock(spec=CyncProtocol)
 
-        mgr = ConnectionManager(conn, protocol)
+        mgr = ConnectionManagerTestHarness(conn, protocol)
 
         assert mgr.conn == conn
         assert mgr.protocol == protocol
         assert mgr.state == ConnectionState.DISCONNECTED
         assert mgr.ack_handler is None
         assert isinstance(mgr.framer, PacketFramer)
-        assert isinstance(mgr._data_packet_queue, asyncio.Queue)
+        assert isinstance(mgr.data_packet_queue, asyncio.Queue)
         assert len(mgr.pending_requests) == 0
 
     def test_init_with_timeout_config(self):
@@ -63,7 +76,7 @@ class TestConnectionManagerInit:
         protocol = MagicMock(spec=CyncProtocol)
         timeout_config = TimeoutConfig(measured_p99_ms=100.0)
 
-        mgr = ConnectionManager(conn, protocol, timeout_config=timeout_config)
+        mgr = ConnectionManagerTestHarness(conn, protocol, timeout_config=timeout_config)
 
         assert mgr.timeout_config == timeout_config
 
@@ -73,7 +86,7 @@ class TestConnectionManagerInit:
         protocol = MagicMock(spec=CyncProtocol)
         ack_handler = AsyncMock()
 
-        mgr = ConnectionManager(conn, protocol, ack_handler=ack_handler)
+        mgr = ConnectionManagerTestHarness(conn, protocol, ack_handler=ack_handler)
 
         assert mgr.ack_handler == ack_handler
 
@@ -100,7 +113,7 @@ class TestConnectionManagerConnect:
         ack_response = bytes([PACKET_TYPE_HELLO_ACK]) + b"ack_data"
         conn.recv.return_value = ack_response
 
-        mgr = ConnectionManager(conn, protocol)
+        mgr = ConnectionManagerTestHarness(conn, protocol)
 
         result = await mgr.connect(endpoint, auth_code)
 
@@ -133,7 +146,7 @@ class TestConnectionManagerConnect:
         conn.send.return_value = True
         conn.recv.side_effect = TimeoutError()
 
-        mgr = ConnectionManager(conn, protocol)
+        mgr = ConnectionManagerTestHarness(conn, protocol)
 
         result = await mgr.connect(endpoint, auth_code)
 
@@ -155,7 +168,7 @@ class TestConnectionManagerConnect:
         # Invalid ACK (wrong packet type)
         conn.recv.return_value = bytes([0x7B]) + b"wrong_ack"
 
-        mgr = ConnectionManager(conn, protocol)
+        mgr = ConnectionManagerTestHarness(conn, protocol)
 
         result = await mgr.connect(endpoint, auth_code)
 
@@ -175,7 +188,7 @@ class TestConnectionManagerConnect:
 
         conn.send.return_value = False  # Send failure
 
-        mgr = ConnectionManager(conn, protocol)
+        mgr = ConnectionManagerTestHarness(conn, protocol)
 
         result = await mgr.connect(endpoint, auth_code)
 
@@ -210,19 +223,19 @@ class TestConnectionManagerPacketRouter:
             StopAsyncIteration(),
         ]  # StopAsyncIteration signals connection closed
 
-        mgr = ConnectionManager(conn, protocol)
+        mgr = ConnectionManagerTestHarness(conn, protocol)
         mgr.state = ConnectionState.CONNECTED
 
         # Start packet router task
-        router_task = asyncio.create_task(mgr._packet_router())
+        router_task = mgr.create_packet_router_task()
 
         # Wait for packet to be processed (router will break on StopAsyncIteration)
         with contextlib.suppress(StopAsyncIteration):
             await router_task
 
         # Check that packet was queued
-        assert not mgr._data_packet_queue.empty()
-        queued_packet = mgr._data_packet_queue.get_nowait()
+        assert not mgr.data_packet_queue.empty()
+        queued_packet = mgr.data_packet_queue.get_nowait()
         assert queued_packet == data_packet
 
     @pytest.mark.asyncio
@@ -246,11 +259,11 @@ class TestConnectionManagerPacketRouter:
             StopAsyncIteration(),
         ]  # StopAsyncIteration signals connection closed
 
-        mgr = ConnectionManager(conn, protocol)
+        mgr = ConnectionManagerTestHarness(conn, protocol)
         mgr.state = ConnectionState.CONNECTED
         mgr.endpoint = b"\x01\x02\x03\x04\x05"
 
-        router_task = asyncio.create_task(mgr._packet_router())
+        router_task = mgr.create_packet_router_task()
 
         await asyncio.sleep(0.1)
 
@@ -259,7 +272,7 @@ class TestConnectionManagerPacketRouter:
             await router_task
 
         # Heartbeat ACK should not be queued (handled directly)
-        assert mgr._data_packet_queue.empty()
+        assert mgr.data_packet_queue.empty()
 
     @pytest.mark.asyncio
     async def test_packet_router_ack_handler_callback(self):
@@ -283,10 +296,10 @@ class TestConnectionManagerPacketRouter:
             StopAsyncIteration(),
         ]  # StopAsyncIteration signals connection closed
 
-        mgr = ConnectionManager(conn, protocol, ack_handler=ack_handler)
+        mgr = ConnectionManagerTestHarness(conn, protocol, ack_handler=ack_handler)
         mgr.state = ConnectionState.CONNECTED
 
-        router_task = asyncio.create_task(mgr._packet_router())
+        router_task = mgr.create_packet_router_task()
 
         await asyncio.sleep(0.1)
 
@@ -323,17 +336,17 @@ class TestConnectionManagerPacketRouter:
         )
         protocol.decode_packet.return_value = data_packet
 
-        mgr = ConnectionManager(conn, protocol)
+        mgr = ConnectionManagerTestHarness(conn, protocol)
         mgr.state = ConnectionState.CONNECTED
 
-        router_task = asyncio.create_task(mgr._packet_router())
+        router_task = mgr.create_packet_router_task()
 
         # Wait for packet router to process packets and break on StopAsyncIteration
         with contextlib.suppress(StopAsyncIteration):
             await router_task
 
         # PacketFramer should have buffered partial packet and extracted complete one
-        assert not mgr._data_packet_queue.empty()
+        assert not mgr.data_packet_queue.empty()
 
 
 class TestConnectionManagerReconnect:
@@ -354,7 +367,7 @@ class TestConnectionManagerReconnect:
         ack_response = bytes([PACKET_TYPE_HELLO_ACK]) + b"ack_data"
         conn.recv.return_value = ack_response
 
-        mgr = ConnectionManager(conn, protocol)
+        mgr = ConnectionManagerTestHarness(conn, protocol)
         mgr.endpoint = endpoint
         mgr.auth_code = auth_code
         mgr.state = ConnectionState.CONNECTED
@@ -380,14 +393,12 @@ class TestConnectionManagerReconnect:
         conn = AsyncMock(spec=TCPConnection)
         protocol = MagicMock(spec=CyncProtocol)
 
-        mgr = ConnectionManager(conn, protocol)
+        mgr = ConnectionManagerTestHarness(conn, protocol)
         mgr.endpoint = b""
         mgr.auth_code = b""
 
-        with pytest.raises(CyncConnectionError) as exc_info:
-            await mgr.reconnect("test_reason")
-
-        assert "no credentials stored" in str(exc_info.value)
+        err = await expect_async_exception(mgr.reconnect, CyncConnectionError, "test_reason")
+        assert "no credentials stored" in str(err)
 
 
 class TestConnectionManagerDisconnect:
@@ -399,13 +410,14 @@ class TestConnectionManagerDisconnect:
         conn = AsyncMock(spec=TCPConnection)
         protocol = MagicMock(spec=CyncProtocol)
 
-        mgr = ConnectionManager(conn, protocol)
+        mgr = ConnectionManagerTestHarness(conn, protocol)
         mgr.state = ConnectionState.CONNECTED
         mgr.endpoint = b"\x01\x02\x03\x04\x05"
 
         # Create mock tasks (short sleep - just enough to test cancellation)
-        packet_router_task = asyncio.create_task(asyncio.sleep(0.1))
-        reconnect_task = asyncio.create_task(asyncio.sleep(0.1))
+        packet_router_task: asyncio.Task[None] = asyncio.create_task(asyncio.sleep(0.1))
+        reconnect_task_raw: asyncio.Task[None] = asyncio.create_task(asyncio.sleep(0.1))
+        reconnect_task: asyncio.Task[bool | None] = reconnect_task_raw  # type: ignore[assignment]
         mgr.packet_router_task = packet_router_task
         mgr.reconnect_task = reconnect_task
 
@@ -431,7 +443,7 @@ class TestConnectionManagerWithStateCheck:
         conn = MagicMock(spec=TCPConnection)
         protocol = MagicMock(spec=CyncProtocol)
 
-        mgr = ConnectionManager(conn, protocol)
+        mgr = ConnectionManagerTestHarness(conn, protocol)
         mgr.state = ConnectionState.CONNECTED
 
         action = AsyncMock(return_value="result")
@@ -447,15 +459,13 @@ class TestConnectionManagerWithStateCheck:
         conn = MagicMock(spec=TCPConnection)
         protocol = MagicMock(spec=CyncProtocol)
 
-        mgr = ConnectionManager(conn, protocol)
+        mgr = ConnectionManagerTestHarness(conn, protocol)
         mgr.state = ConnectionState.DISCONNECTED
 
         action = AsyncMock()
 
-        with pytest.raises(CyncConnectionError) as exc_info:
-            await mgr.with_state_check("test_operation", action)
-
-        assert "CONNECTED state" in str(exc_info.value)
+        err = await expect_async_exception(mgr.with_state_check, CyncConnectionError, "test_operation", action)
+        assert "CONNECTED state" in str(err)
         action.assert_not_called()
 
     @pytest.mark.asyncio
@@ -464,7 +474,7 @@ class TestConnectionManagerWithStateCheck:
         conn = MagicMock(spec=TCPConnection)
         protocol = MagicMock(spec=CyncProtocol)
 
-        mgr = ConnectionManager(conn, protocol)
+        mgr = ConnectionManagerTestHarness(conn, protocol)
         mgr.state = ConnectionState.CONNECTED
 
         action = AsyncMock(return_value="result")
@@ -497,7 +507,7 @@ class TestConnectionManagerFIFOQueue:
         ack_response = bytes([PACKET_TYPE_HELLO_ACK]) + b"ack_data"
         conn.recv.return_value = ack_response
 
-        mgr = ConnectionManager(conn, protocol)
+        mgr = ConnectionManagerTestHarness(conn, protocol)
 
         result = await mgr.connect(endpoint, auth_code)
 
@@ -521,7 +531,7 @@ class TestConnectionManagerIsConnected:
         conn = MagicMock(spec=TCPConnection)
         protocol = MagicMock(spec=CyncProtocol)
 
-        mgr = ConnectionManager(conn, protocol)
+        mgr = ConnectionManagerTestHarness(conn, protocol)
         mgr.state = ConnectionState.CONNECTED
 
         assert mgr.is_connected() is True
@@ -531,7 +541,7 @@ class TestConnectionManagerIsConnected:
         conn = MagicMock(spec=TCPConnection)
         protocol = MagicMock(spec=CyncProtocol)
 
-        mgr = ConnectionManager(conn, protocol)
+        mgr = ConnectionManagerTestHarness(conn, protocol)
         mgr.state = ConnectionState.DISCONNECTED
 
         assert mgr.is_connected() is False
@@ -592,10 +602,10 @@ class TestConnectionManagerExceptionHandling:
         packet_bytes = b"\x28\x00\x00\x00\x02ack"
         conn.recv.side_effect = [packet_bytes, StopAsyncIteration()]
 
-        mgr = ConnectionManager(conn, protocol, ack_handler=ack_handler)
+        mgr = ConnectionManagerTestHarness(conn, protocol, ack_handler=ack_handler)
         mgr.state = ConnectionState.CONNECTED
 
-        router_task = asyncio.create_task(mgr._packet_router())
+        router_task = mgr.create_packet_router_task()
 
         # Should raise the protocol error
         with pytest.raises(CyncProtocolError):
@@ -621,10 +631,10 @@ class TestConnectionManagerExceptionHandling:
         packet_bytes = b"\x28\x00\x00\x00\x02ack"
         conn.recv.side_effect = [packet_bytes, StopAsyncIteration()]
 
-        mgr = ConnectionManager(conn, protocol, ack_handler=ack_handler)
+        mgr = ConnectionManagerTestHarness(conn, protocol, ack_handler=ack_handler)
         mgr.state = ConnectionState.CONNECTED
 
-        router_task = asyncio.create_task(mgr._packet_router())
+        router_task = mgr.create_packet_router_task()
 
         # Should not raise - unexpected errors are swallowed
         with contextlib.suppress(StopAsyncIteration):
@@ -655,15 +665,15 @@ class TestConnectionManagerExceptionHandling:
             good_packet,
         ]
 
-        mgr = ConnectionManager(conn, protocol)
+        mgr = ConnectionManagerTestHarness(conn, protocol)
         mgr.state = ConnectionState.CONNECTED
 
         # Process packets directly
-        await mgr._process_packets([bad_packet_bytes, good_packet_bytes])
+        await mgr.process_packets_for_test([bad_packet_bytes, good_packet_bytes])
 
         # Should have processed the second packet despite first decode error
-        assert not mgr._data_packet_queue.empty()
-        queued_packet = mgr._data_packet_queue.get_nowait()
+        assert not mgr.data_packet_queue.empty()
+        queued_packet = mgr.data_packet_queue.get_nowait()
         assert queued_packet == good_packet
 
     @pytest.mark.asyncio
@@ -675,12 +685,12 @@ class TestConnectionManagerExceptionHandling:
         # Simulate exception during packet processing
         conn.recv.side_effect = RuntimeError("Unexpected error")
 
-        mgr = ConnectionManager(conn, protocol)
+        mgr = ConnectionManagerTestHarness(conn, protocol)
         mgr.state = ConnectionState.CONNECTED
         mgr.endpoint = b"\x01\x02\x03\x04\x05"
         mgr.auth_code = b"\x10" * 16  # Set credentials so reconnect can work
 
-        router_task = asyncio.create_task(mgr._packet_router())
+        router_task = mgr.create_packet_router_task()
 
         # Should raise the exception (which triggers reconnect)
         with pytest.raises(RuntimeError):

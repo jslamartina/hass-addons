@@ -1,6 +1,6 @@
 ---
-description: 3-step development workflow (edit, rebuild, verify) with integrated quality gates
-alwaysApply: true
+description: Use when you need full development workflow details, rebuild/restart rules, and manual lint commands.
+alwaysApply: false
 ---
 
 # Development Workflow
@@ -64,16 +64,13 @@ npm run lint:markdown:fix && npx prettier --write "**/*.md"
 
 ## Everything
 npm run lint && npm run format
-$()$(
-  markdown
+```
 
-  ## MQTT Entity Management
+## MQTT Entity Management
 
-  When changing
-)suggested_area$(
-  or other discovery fields:
+When changing `suggested_area` or other discovery fields:
 
-)$()bash
+```bash
 ## Clean up stale entities
 sudo python3 scripts/delete-mqtt-safe.py [--dry-run]
 ha addons restart local_cync-controller

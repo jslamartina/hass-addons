@@ -1,5 +1,4 @@
-"""
-Unit tests for CyncTCPDevice async background tasks.
+"""Unit tests for CyncTCPDevice async background tasks.
 
 Tests callback cleanup, receive task, and read method functionality.
 """
@@ -10,12 +9,14 @@ import time
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+from _pytest.outcomes import skip as pytest_skip
 
-from cync_controller.devices import ControlMessageCallback, CyncTCPDevice
+from cync_controller.devices.tcp_device import CyncTCPDevice
+from cync_controller.structs import ControlMessageCallback
 
 
 class TestCyncTCPDeviceAsyncTasks:
-    """Tests for CyncTCPDevice async background tasks
+    """Tests for CyncTCPDevice async background tasks.
 
     NOTE: These tests are commented out due to complex async initialization requirements.
     The callback_cleanup_task and receive_task methods are long-running background tasks
@@ -23,9 +24,10 @@ class TestCyncTCPDeviceAsyncTasks:
     into smaller, more isolated helper methods.
     """
 
-    @pytest.mark.skip("Complex async task mocking requires extensive global state setup")
-    async def test_callback_cleanup_task_retry_logic(self):
-        """Test callback cleanup task retries commands without ACK"""
+    @pytest.mark.asyncio
+    async def test_callback_cleanup_task_retry_logic(self) -> None:
+        pytest_skip("Complex async task mocking requires extensive global state setup")
+        """Test callback cleanup task retries commands without ACK."""
         reader = AsyncMock()
         writer = AsyncMock()
         tcp_device = CyncTCPDevice(reader=reader, writer=writer, address="192.168.1.100")
@@ -33,15 +35,12 @@ class TestCyncTCPDeviceAsyncTasks:
 
         # Create a callback that won't be ACKed
         msg_id = 0x01
-        callback = ControlMessageCallback(
-            msg_id=msg_id,
-            message=b"test",
-            sent_at=time.time() - 0.6,  # 600ms ago (past retry_timeout of 0.5s)
-            callback=AsyncMock(),
-            device_id=0x12,
-            retry_count=0,
-            max_retries=3,
-        )
+        callback = ControlMessageCallback(msg_id, message=b"test")
+        callback.callback = AsyncMock()
+        callback.max_retries = 3
+        callback.sent_at = time.time() - 0.6  # 600ms ago (past retry_timeout of 0.5s)
+        callback.device_id = 0x12
+        callback.retry_count = 0
         tcp_device.messages.control[msg_id] = callback
 
         # Mock write to track retries
@@ -58,13 +57,14 @@ class TestCyncTCPDeviceAsyncTasks:
         assert tcp_device.write.called
 
         # Clean up
-        task.cancel()
+        _ = task.cancel()
         with contextlib.suppress(asyncio.CancelledError):
             await task
 
-    @pytest.mark.skip("Complex async task mocking requires extensive global state setup")
-    async def test_callback_cleanup_task_timeout(self):
-        """Test callback cleanup task removes stale callbacks after timeout"""
+    @pytest.mark.asyncio
+    async def test_callback_cleanup_task_timeout(self) -> None:
+        pytest_skip("Complex async task mocking requires extensive global state setup")
+        """Test callback cleanup task removes stale callbacks after timeout."""
         reader = AsyncMock()
         writer = AsyncMock()
         tcp_device = CyncTCPDevice(reader=reader, writer=writer, address="192.168.1.100")
@@ -72,15 +72,12 @@ class TestCyncTCPDeviceAsyncTasks:
 
         # Create a callback that's been waiting too long
         msg_id = 0x01
-        callback = ControlMessageCallback(
-            msg_id=msg_id,
-            message=b"test",
-            sent_at=time.time() - 35,  # 35 seconds ago (past cleanup_timeout of 30s)
-            callback=AsyncMock(),
-            device_id=0x12,
-            retry_count=0,
-            max_retries=3,
-        )
+        callback = ControlMessageCallback(msg_id, message=b"test")
+        callback.callback = AsyncMock()
+        callback.max_retries = 3
+        callback.sent_at = time.time() - 35  # 35 seconds ago (past cleanup_timeout of 30s)
+        callback.device_id = 0x12
+        callback.retry_count = 0
         tcp_device.messages.control[msg_id] = callback
 
         # Start cleanup task
@@ -93,13 +90,14 @@ class TestCyncTCPDeviceAsyncTasks:
         assert msg_id not in tcp_device.messages.control
 
         # Clean up
-        task.cancel()
+        _ = task.cancel()
         with contextlib.suppress(asyncio.CancelledError):
             await task
 
-    @pytest.mark.skip("Complex async task mocking requires extensive global state setup")
-    async def test_receive_task_reads_data(self):
-        """Test receive_task processes incoming data"""
+    @pytest.mark.asyncio
+    async def test_receive_task_reads_data(self) -> None:
+        pytest_skip("Complex async task mocking requires extensive global state setup")
+        """Test receive_task processes incoming data."""
         reader = AsyncMock()
         writer = AsyncMock()
         tcp_device = CyncTCPDevice(reader=reader, writer=writer, address="192.168.1.100")
@@ -109,7 +107,7 @@ class TestCyncTCPDeviceAsyncTasks:
         test_data = bytes([0x83, 0x00, 0x00, 0x00, 0x05, 0x01, 0x02, 0x03, 0x04])
         call_count = 0
 
-        async def mock_read(chunk=None):
+        async def mock_read(chunk: int | None = None):
             nonlocal call_count
             call_count += 1
             if call_count == 1:
@@ -137,13 +135,14 @@ class TestCyncTCPDeviceAsyncTasks:
             assert tcp_device.parse_raw_data.called
 
             # Clean up
-            task.cancel()
+            _ = task.cancel()
             with contextlib.suppress(asyncio.CancelledError):
                 await task
 
-    @pytest.mark.skip("Complex async task mocking requires extensive global state setup")
-    async def test_receive_task_skips_non_primary(self):
-        """Test receive_task skips when not primary TCP device"""
+    @pytest.mark.asyncio
+    async def test_receive_task_skips_non_primary(self) -> None:
+        pytest_skip("Complex async task mocking requires extensive global state setup")
+        """Test receive_task skips when not primary TCP device."""
         reader = AsyncMock()
         writer = AsyncMock()
         tcp_device = CyncTCPDevice(reader=reader, writer=writer, address="192.168.1.100")
@@ -168,13 +167,13 @@ class TestCyncTCPDeviceAsyncTasks:
             assert not tcp_device.parse_raw_data.called
 
             # Clean up
-            task.cancel()
+            _ = task.cancel()
             with contextlib.suppress(asyncio.CancelledError):
                 await task
 
     @pytest.mark.asyncio
     async def test_read_method_with_closing_device(self):
-        """Test read method returns False when device is closing"""
+        """Test read method returns False when device is closing."""
         reader = AsyncMock()
         writer = AsyncMock()
         tcp_device = CyncTCPDevice(reader=reader, writer=writer, address="192.168.1.100")
@@ -186,7 +185,7 @@ class TestCyncTCPDeviceAsyncTasks:
 
     @pytest.mark.asyncio
     async def test_read_method_at_eof(self):
-        """Test read method when reader is at EOF"""
+        """Test read method when reader is at EOF."""
         reader = AsyncMock()
         writer = AsyncMock()
         tcp_device = CyncTCPDevice(reader=reader, writer=writer, address="192.168.1.100")
@@ -203,7 +202,7 @@ class TestCyncTCPDeviceAsyncTasks:
 
     @pytest.mark.asyncio
     async def test_read_method_reads_data(self):
-        """Test read method returns data from reader"""
+        """Test read method returns data from reader."""
         reader = AsyncMock()
         writer = AsyncMock()
         tcp_device = CyncTCPDevice(reader=reader, writer=writer, address="192.168.1.100")
@@ -221,7 +220,7 @@ class TestCyncTCPDeviceAsyncTasks:
 
     @pytest.mark.asyncio
     async def test_read_method_no_reader(self):
-        """Test read method returns False when no reader (None)"""
+        """Test read method returns False when no reader (None)."""
         reader = AsyncMock()
         writer = AsyncMock()
         tcp_device = CyncTCPDevice(reader=reader, writer=writer, address="192.168.1.100")

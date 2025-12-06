@@ -1,5 +1,5 @@
 ---
-description: Python logging configuration patterns and anti-patterns
+description: Use when editing logging configuration or designing logging structures.
 appliesTo:
   - "**/*.py"
 ---

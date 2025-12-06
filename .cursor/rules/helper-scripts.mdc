@@ -1,5 +1,5 @@
 ---
-description: Helper scripts and automation tools available in the project
+description: Use when you need to know which helper scripts exist and how to run them.
 appliesTo:
   - "scripts/**"
   - "hass-credentials.env"

@@ -214,9 +214,7 @@ def main() -> None:
             packet["packet_type"].upper(),
             packet["length"],
         )
-        if (
-            i < FIRST_PACKETS_TO_SHOW or i >= limit - LAST_PACKETS_TO_SHOW
-        ):  # Show first N and last M
+        if i < FIRST_PACKETS_TO_SHOW or i >= limit - LAST_PACKETS_TO_SHOW:  # Show first N and last M
             logger.info("  %s", packet["hex_bytes"])
         elif i == FIRST_PACKETS_TO_SHOW:
             logger.info("  ...")

@@ -12,7 +12,6 @@ VSCODE_CONFIG_DIR="${WORKSPACE_PARENT}/.vscode"
 sudo mkdir -p "${VSCODE_CONFIG_DIR}"
 sudo tee "${VSCODE_CONFIG_DIR}/settings.json" > /dev/null << EOF
 {
-  "python.defaultInterpreterPath": "/usr/local/bin/python3",
   "python.analysis.extraPaths": [
     "${CYNC_CONTROLLER_DIR}",
     "${WORKSPACE_DIRECTORY}"

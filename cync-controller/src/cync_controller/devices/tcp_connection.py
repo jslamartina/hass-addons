@@ -1,11 +1,15 @@
-"""
-TCP connection management utilities for CyncTCPDevice.
-"""
+"""TCP connection management utilities for CyncTCPDevice."""
+
+from __future__ import annotations
 
 import asyncio
 import time
+from typing import TYPE_CHECKING
 
 from cync_controller.logging_abstraction import get_logger
+
+if TYPE_CHECKING:
+    from cync_controller.devices.tcp_device import CyncTCPDevice
 
 logger = get_logger(__name__)
 
@@ -13,12 +17,13 @@ logger = get_logger(__name__)
 class TCPConnectionManager:
     """Manages TCP connection lifecycle and health monitoring."""
 
-    def __init__(self, tcp_device):
-        self.tcp_device = tcp_device
-        self.connection_start_time = time.time()
-        self.last_heartbeat = time.time()
-        self.heartbeat_interval = 30.0  # seconds
-        self.connection_timeout = 300.0  # 5 minutes
+    def __init__(self, tcp_device: CyncTCPDevice) -> None:
+        """Initialize the manager for a specific TCP device instance."""
+        self.tcp_device: CyncTCPDevice = tcp_device
+        self.connection_start_time: float = time.time()
+        self.last_heartbeat: float = time.time()
+        self.heartbeat_interval: float = 30.0  # seconds
+        self.connection_timeout: float = 300.0  # 5 minutes
 
     async def monitor_connection_health(self):
         """Monitor connection health and handle timeouts."""
@@ -38,10 +43,8 @@ class TCPConnectionManager:
                     break
 
                 # Update heartbeat if we've received data recently
-                if (
-                    hasattr(self.tcp_device, "last_data_received")
-                    and current_time - self.tcp_device.last_data_received < self.heartbeat_interval
-                ):
+                last_data: float = getattr(self.tcp_device, "last_data_received", 0.0)
+                if last_data and current_time - last_data < self.heartbeat_interval:
                     self.last_heartbeat = current_time
 
             except asyncio.CancelledError:
@@ -53,11 +56,12 @@ class TCPConnectionManager:
         """Update the last heartbeat timestamp."""
         self.last_heartbeat = time.time()
 
-    def get_connection_stats(self):
+    def get_connection_stats(self) -> dict[str, float | bool]:
         """Get connection statistics."""
         uptime = time.time() - self.connection_start_time
-        return {
+        result: dict[str, float | bool] = {
             "uptime_seconds": uptime,
             "last_heartbeat": self.last_heartbeat,
             "is_healthy": time.time() - self.last_heartbeat < self.connection_timeout,
         }
+        return result

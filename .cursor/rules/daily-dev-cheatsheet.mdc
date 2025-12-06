@@ -1,5 +1,5 @@
 ---
-description: Quick reference for most common daily development tasks
+description: Use as a quick reference for common development commands and workflows.
 appliesTo:
   - "**/*.py"
   - "**/*.sh"

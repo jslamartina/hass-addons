@@ -1,39 +1,43 @@
 [build-system]
-requires = ["setuptools>=61.0", "wheel"]
-build-backend = "setuptools.build_meta"
+requires = ["poetry-core>=2.2.1,<3"]
+build-backend = "poetry.core.masonry.api"
 
 [project]
 name = "cync_controller"
 version = "0.0.4.13"
 description = "A Python library for local async MQTT control of Cync/C by GE smart devices"
 readme = "README.md"
-authors = [{name = "jslamartina", email = "6307064+jslamartina@users.noreply.github.com"}]
-classifiers = [
-    "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.14",
-    "Operating System :: OS Independent",
-    "License :: OSI Approved :: MIT License",
-]
-requires-python = ">=3.14"
+authors = [{name = "Joseph LaMartina", email = "6307064+jslamartina@users.noreply.github.com"}]
+license = "MIT"
+requires-python = ">=3.14.1,<3.15"
 dependencies = [
-    "pyyaml==6.0.3",
-    "uvloop>=0.21.0",
-    "aiomqtt==2.4.0",
-    "aiohttp>=3.10.8",
-    "fastapi>=0.115.12",
-    "uvicorn>=0.34.3",
-    "tzlocal>=5.3.1",
+    "pyyaml>=6.0.3,<7",
+    "uvloop>=0.21.0,<1",
+    "aiomqtt>=2.4.0,<3",
+    "aiohttp>=3.10.8,<4",
+    "fastapi>=0.115.12,<1",
+    "uvicorn>=0.34.3,<1",
+    "tzlocal>=5.3.1,<6",
 ]
-[project.optional-dependencies]
-dev = [
-    "python-dotenv>=1.1.0",
+
+[tool.poetry]
+packages = [
+    { include = "cync_controller", from = "src" }
 ]
-test = [
-    "pytest>=8.0.0",
-    "pytest-asyncio>=0.23.0",
-    "pytest-playwright>=0.4.0",
-    "pytest-xdist>=3.0.0",
-]
+
+[tool.poetry.group.dev.dependencies]
+python-dotenv = "^1.1"
+types-PyYAML = "^6.0"
+
+[tool.poetry.group.test.dependencies]
+pytest = "^9.0"
+pytest-playwright = "^0.7"
+pytest-asyncio = "^1.3"
+pytest-cov = "^7.0"
+pytest-timeout = "^2.4"
+pytest-xdist = "^3.8"
+ruff = "^0.14"
+basedpyright = "^1.35"
 
 [project.scripts]
 cync-controller = "cync_controller.main:main"
@@ -55,6 +59,7 @@ respect-gitignore = true
 [tool.ruff.lint]
 # Select rules to check (more comprehensive)
 select = [
+    "D",     # flake8-docstrings (docstrings)
     "E",     # pycodestyle errors
     "W",     # pycodestyle warnings
     "F",     # pyflakes
@@ -83,51 +88,48 @@ select = [
     "TRY",   # tryceratops (exception handling)
     "RUF",   # ruff-specific rules (includes RUF001-003 for ambiguous unicode)
 ]
-ignore = [
-    "E501",    # line too long (handled by formatter)
-    "F405",    # star imports may be undefined
-    "F403",    # star import used; unable to detect undefined names
-    "T20",     # print statements (used for CLI output)
-    "TRY003",  # avoid specifying long messages outside exception class
-    "PLR0913", # too many arguments
-    "PLR2004", # magic value comparison
-]
 
 [tool.ruff.lint.per-file-ignores]
-"__init__.py" = ["F401"]  # Allow unused imports in __init__.py files
-
-# Lazy imports for test mocking support (intentional)
-"src/cync_controller/devices/base_device.py" = ["PLC0415"]
-"src/cync_controller/devices/device_commands.py" = ["PLC0415"]
-"src/cync_controller/devices/group.py" = ["PLC0415"]
-"src/cync_controller/devices/tcp_device.py" = ["PLC0415", "PLR0912"]
-"src/cync_controller/devices/tcp_packet_handler.py" = ["PLC0415", "PLR0912", "PLR0915"]
-"src/cync_controller/mqtt/client.py" = ["PLC0415", "PLR0912", "PLR0915"]
-"src/cync_controller/mqtt/command_routing.py" = ["PLC0415", "PLR0912", "PLR0915"]
-"src/cync_controller/mqtt/discovery.py" = ["PLC0415", "PLR0912", "PLR0915", "PLW0603"]
-"src/cync_controller/mqtt/state_updates.py" = ["PLC0415", "PLR0912", "PLR0915"]
-
-# Protocol parsers with inherent complexity
-"src/cync_controller/packet_parser.py" = ["PLR0912", "PLR0915"]
-"src/cync_controller/cloud_api.py" = ["PLR0912", "PLR0915"]
-"src/cync_controller/server.py" = ["PLR0912", "PLR0915"]
-"src/cync_controller/utils.py" = ["PLR0912", "PLR0915", "PLC0415"]
-
-# Global configuration reload (intentional design)
-"src/cync_controller/structs.py" = ["PLW0603"]
-
 # Lazy imports to avoid circular dependencies
 "src/cync_controller/instrumentation.py" = ["PLC0415"]
 "src/cync_controller/logging_abstraction.py" = ["PLC0415"]
+"src/cync_controller/cloud_api.py" = ["PLC0415"]
+"src/cync_controller/devices/__init__.py" = ["PLC0415"]
+"src/cync_controller/devices/base_device.py" = ["PLC0415"]
+"src/cync_controller/devices/device_commands.py" = ["PLC0415"]
+"src/cync_controller/devices/group.py" = ["PLC0415"]
+"src/cync_controller/devices/tcp_device.py" = ["PLC0415"]
+"src/cync_controller/devices/tcp_packet_handler.py" = ["PLC0415"]
 
 # Scripts with lazy imports
 "scripts/automate-onboarding.py" = ["PLC0415"]
 
+
 # Tests: allow localized imports, unused args, and test-specific patterns
-"tests/**/*.py" = ["PLC0415", "EM101", "TRY301", "TRY002", "SIM222", "PT018", "PT006", "SIM117", "PLW2901", "PLR1714", "RET504", "PT015", "B011", "RSE102", "E402", "ARG001", "ARG002", "PLR0912", "PLR0915"]
+"tests/**/*.py" = [
+    "PLC0415",  # allow relative imports in tests
+    "EM101",    # allow string literal exceptions
+    "TRY301", "TRY002",  # relax try/except style rules
+    "SIM222", "SIM117",  # allow test helper constructs like nested for/if
+    "PT018", "PT006", "PT015",  # relax pytest fixture style checks
+    "PLW2901", "PLR1714",  # lenient on large helper functions
+    "PLR0912", "PLR0915",  # allow complex/branchy test helpers
+    "PLR0913",  # allow many arguments in fixtures/helpers
+    "ANN201",  # allow missing return annotations in test functions
+    "D100", "D101", "D102", "D103", "D107",  # allow missing docstrings
+    "FBT001", "FBT002", "FBT003",  # allow boolean positional args
+    "PLR2004",  # allow magic numbers in assertions/configs
+    "RET504",  # allow multiple return statements in tests
+    "B011",  # allow hardcoded `assert False` in tests
+    "RSE102",  # allow bare `raise` in tests
+    "E402",  # allow imports not at top (test-only)
+    "ARG001", "ARG002",  # unused fixture arguments
+    "S104",  # allow binding to all interfaces in test setup
+    "SLF001",  # allow tests to access private members explicitly
+    "S101",  # allow `assert` statements in tests
+]
 
 [tool.ruff.format]
-# Ruff formatter (Black-compatible)
 quote-style = "double"
 indent-style = "space"
 line-ending = "auto"

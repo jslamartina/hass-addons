@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-"""
-Validate edit_file context by comparing extracted context against actual file content.
+"""Validate edit_file context by comparing extracted context against actual file content.
 
 This utility performs byte-to-byte comparison to catch mismatches before edit_file calls.
 Useful for debugging whitespace, encoding, and context extraction issues.
@@ -13,13 +12,13 @@ Usage:
 
 Example:
     python3 scripts/validate-edit-context.py src/app.py "def foo():" 10
+
 """
 
 import argparse
 import difflib
 import sys
 from pathlib import Path
-from typing import List, Optional, Tuple
 
 
 class EditContextValidator:
@@ -50,10 +49,9 @@ class EditContextValidator:
     def validate_context(
         self,
         context: str,
-        start_line: Optional[int] = None,
-    ) -> Tuple[bool, str]:
-        """
-        Validate that context matches file content at the expected location.
+        start_line: int | None = None,
+    ) -> tuple[bool, str]:
+        """Validate that context matches file content at the expected location.
 
         Args:
             context: The context string to validate (as it would appear in old_string)
@@ -61,6 +59,7 @@ class EditContextValidator:
 
         Returns:
             Tuple of (is_valid, message)
+
         """
         context_bytes = context.encode("utf-8")
 
@@ -81,8 +80,7 @@ class EditContextValidator:
             # Calculate line number for user info
             line_num = self.bytes_content[:position].count(b"\n") + 1
             return True, f"✓ Context matches at line {line_num}"
-        else:
-            return False, "Bytes match but content differs (encoding issue?)"
+        return False, "Bytes match but content differs (encoding issue?)"
 
     def validate_with_context_lines(
         self,
@@ -90,9 +88,8 @@ class EditContextValidator:
         start_line: int,
         context_before: int = 3,
         context_after: int = 3,
-    ) -> Tuple[bool, str]:
-        """
-        Validate old_string with surrounding context lines.
+    ) -> tuple[bool, str]:
+        """Validate old_string with surrounding context lines.
 
         Args:
             old_string: The exact string to match
@@ -102,6 +99,7 @@ class EditContextValidator:
 
         Returns:
             Tuple of (is_valid, message with context)
+
         """
         is_valid, msg = self.validate_context(old_string, start_line)
 
@@ -115,7 +113,8 @@ class EditContextValidator:
         # Extract surrounding lines
         start = max(0, line_num - context_before - 1)
         end = min(
-            len(self.lines), line_num + len(old_string.splitlines()) + context_after
+            len(self.lines),
+            line_num + len(old_string.splitlines()) + context_after,
         )
 
         context_display = self._format_context(start, end, line_num)
@@ -130,12 +129,12 @@ class EditContextValidator:
         similar = self._find_similar_lines(first_line)
 
         msg = "✗ Context not found in file\n"
-        msg += f"  Searching for: {repr(first_line)}...\n"
+        msg += f"  Searching for: {first_line!r}...\n"
 
         if similar:
             msg += "\n  Similar lines found:\n"
             for line_num, line_content in similar[:3]:
-                msg += f"    Line {line_num}: {repr(line_content[:60])}\n"
+                msg += f"    Line {line_num}: {line_content[:60]!r}\n"
 
         msg += "\n  Check for:\n"
         msg += "    - Whitespace differences (tabs vs spaces)\n"
@@ -146,10 +145,12 @@ class EditContextValidator:
         return msg
 
     def _find_similar_lines(
-        self, search_term: str, max_results: int = 3
-    ) -> List[Tuple[int, str]]:
+        self,
+        search_term: str,
+        max_results: int = 3,
+    ) -> list[tuple[int, str]]:
         """Find lines similar to search_term using difflib."""
-        similar = []
+        similar: list[tuple[int, str]] = []
         for i, line in enumerate(self.lines, 1):
             clean_line = line.rstrip("\n\r")
             ratio = difflib.SequenceMatcher(None, search_term, clean_line).ratio()
@@ -161,7 +162,10 @@ class EditContextValidator:
         )
 
     def _format_context(
-        self, start_line: int, end_line: int, highlight_line: int
+        self,
+        start_line: int,
+        end_line: int,
+        highlight_line: int,
     ) -> str:
         """Format context lines with syntax highlighting."""
         output = "  Context:\n"
@@ -193,7 +197,7 @@ class EditContextValidator:
         report += "Character differences:\n"
         for i, (c1, c2) in enumerate(zip(old_string, file_extraction)):
             if c1 != c2:
-                report += f"  Position {i}: {repr(c1)} != {repr(c2)}\n"
+                report += f"  Position {i}: {c1!r} != {c2!r}\n"
                 if i >= 5:  # Show first 5 differences
                     remaining = sum(
                         1
@@ -228,7 +232,10 @@ Examples:
     parser.add_argument("file", help="File to validate")
     parser.add_argument("context", help="Context string to validate")
     parser.add_argument(
-        "--line", "-l", type=int, help="Starting line number (1-indexed)"
+        "--line",
+        "-l",
+        type=int,
+        help="Starting line number (1-indexed)",
     )
     # TEST: This is a deliberately long line that should be wrapped by the linter to test if auto-formatting is still happening even though we disabled it xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
     parser.add_argument("--verbose", "-v", action="store_true", help="Verbose output")

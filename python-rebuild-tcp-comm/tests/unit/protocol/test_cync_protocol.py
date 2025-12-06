@@ -693,9 +693,7 @@ def test_encode_status_broadcast_basic() -> None:
     """Test basic status broadcast packet encoding with valid inputs."""
     endpoint = bytes.fromhex("45 88 0f 3a 00")
     msg_id = bytes.fromhex("09 00")
-    inner_payload = bytes.fromhex(
-        "1f 00 00 00 fa db 13 00 72 25 11 50 00 50 00 db 11 02 01 01 0a 0a ff ff ff 00 00"
-    )
+    inner_payload = bytes.fromhex("1f 00 00 00 fa db 13 00 72 25 11 50 00 50 00 db 11 02 01 01 0a 0a ff ff ff 00 00")
 
     packet = CyncProtocol.encode_status_broadcast(endpoint, msg_id, inner_payload)
 
@@ -703,9 +701,7 @@ def test_encode_status_broadcast_basic() -> None:
     assert packet[0] == PACKET_TYPE_STATUS_BROADCAST  # Packet type
     assert packet[5:10] == endpoint
     assert packet[10:12] == msg_id
-    assert (
-        packet[STATUS_BROADCAST_START_MARKER_POSITION] == FRAME_MARKER_0x7E
-    )  # Start marker (no padding for 0x83)
+    assert packet[STATUS_BROADCAST_START_MARKER_POSITION] == FRAME_MARKER_0x7E  # Start marker (no padding for 0x83)
 
 
 def test_encode_status_broadcast_with_framing() -> None:
@@ -758,9 +754,7 @@ def test_encode_status_broadcast_checksum_valid() -> None:
     """Encode → decode → verify checksum valid."""
     endpoint = bytes.fromhex("45 88 0f 3a 00")
     msg_id = bytes.fromhex("09 00")
-    inner_payload = bytes.fromhex(
-        "1f 00 00 00 fa db 13 00 72 25 11 50 00 50 00 db 11 02 01 01 0a 0a ff ff ff 00 00"
-    )
+    inner_payload = bytes.fromhex("1f 00 00 00 fa db 13 00 72 25 11 50 00 50 00 db 11 02 01 01 0a 0a ff ff ff 00 00")
 
     # Encode
     encoded = CyncProtocol.encode_status_broadcast(endpoint, msg_id, inner_payload)
@@ -777,9 +771,7 @@ def test_encode_status_broadcast_roundtrip() -> None:
     """Encode → decode → verify all fields match."""
     endpoint = bytes.fromhex("45 88 0f 3a 00")
     msg_id = bytes.fromhex("09 00")
-    inner_payload = bytes.fromhex(
-        "1f 00 00 00 fa db 13 00 72 25 11 50 00 50 00 db 11 02 01 01 0a 0a ff ff ff 00 00"
-    )
+    inner_payload = bytes.fromhex("1f 00 00 00 fa db 13 00 72 25 11 50 00 50 00 db 11 02 01 01 0a 0a ff ff ff 00 00")
 
     # Encode
     encoded = CyncProtocol.encode_status_broadcast(endpoint, msg_id, inner_payload)
@@ -842,9 +834,7 @@ def test_roundtrip_all_packet_types() -> None:
     # Test 0x83 Status Broadcast
     endpoint_sb = bytes.fromhex("45 88 0f 3a 00")
     msg_id_sb = bytes.fromhex("09 00")
-    inner_payload_sb = bytes.fromhex(
-        "1f 00 00 00 fa db 13 00 72 25 11 50 00 50 00 db 11 02 01 01 0a 0a ff ff ff 00 00"
-    )
+    inner_payload_sb = bytes.fromhex("1f 00 00 00 fa db 13 00 72 25 11 50 00 50 00 db 11 02 01 01 0a 0a ff ff ff 00 00")
     encoded_sb = CyncProtocol.encode_status_broadcast(endpoint_sb, msg_id_sb, inner_payload_sb)
     decoded_sb = CyncProtocol.decode_packet(encoded_sb)
     assert decoded_sb.packet_type == PACKET_TYPE_STATUS_BROADCAST
@@ -905,11 +895,7 @@ def test_roundtrip_data_packet_various_payloads() -> None:
 
     for size in payload_sizes:
         # Create payload with pattern
-        inner_payload = (
-            bytes(range(size % PAYLOAD_SIZE_MODULO_256))
-            if size < PAYLOAD_SIZE_MODULO_256
-            else bytes(size)
-        )
+        inner_payload = bytes(range(size % PAYLOAD_SIZE_MODULO_256)) if size < PAYLOAD_SIZE_MODULO_256 else bytes(size)
 
         # Encode
         encoded = CyncProtocol.encode_data_packet(endpoint, msg_id, inner_payload)

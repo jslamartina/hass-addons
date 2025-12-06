@@ -1,5 +1,5 @@
 ---
-description: Critical command handling rules
+description: Use when implementing or updating command callbacks, ACK handling, or timeouts.
 ---
 
 # Critical Command Handling

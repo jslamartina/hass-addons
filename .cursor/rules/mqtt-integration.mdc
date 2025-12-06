@@ -1,6 +1,6 @@
 ---
 globs: cync-controller/src/cync_controller/mqtt_client.py,cync-controller/src/cync_controller/devices.py
-description: MQTT discovery and integration patterns
+description: Use when working on MQTT discovery or Home Assistant integration patterns.
 appliesTo:
   - "cync-controller/src/**/mqtt*.py"
 ---

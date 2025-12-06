@@ -1,5 +1,5 @@
 ---
-description: Performance tuning and optimization patterns
+description: Use when investigating performance issues or optimizing code paths.
 ---
 
 # Performance Tuning

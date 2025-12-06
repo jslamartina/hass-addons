@@ -74,9 +74,7 @@ class DeviceInfo:
 
         # Validate raw_bytes length
         if len(self.raw_bytes) != DEVICE_TYPE_LENGTH_BYTES:
-            error_msg = (
-                f"raw_bytes must be DEVICE_TYPE_LENGTH_BYTES bytes, got {len(self.raw_bytes)}"
-            )
+            error_msg = f"raw_bytes must be DEVICE_TYPE_LENGTH_BYTES bytes, got {len(self.raw_bytes)}"
             raise ValueError(error_msg)
 
         # Validate correlation_id format (UUID v7 string)
@@ -84,7 +82,7 @@ class DeviceInfo:
         # enforced at runtime, and __repr__ uses slicing ([:8]) which requires str type.
         # An object with __len__ but no slicing support would pass length check but crash later.
         if (
-            not isinstance(self.correlation_id, str)  # type: ignore[redundant-expr]
+            not isinstance(self.correlation_id, str)  # pyright: ignore[reportUnnecessaryIsInstance]  # Runtime validation for safety
             or len(self.correlation_id) < UUID_STRING_MIN_LENGTH
         ):
             error_msg = f"correlation_id must be UUID string, got {self.correlation_id}"

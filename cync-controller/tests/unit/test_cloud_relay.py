@@ -1,5 +1,4 @@
-"""
-Unit tests for cloud relay functionality in server.py.
+"""Unit tests for cloud relay functionality in server.py.
 
 Tests cover:
 - CloudRelayConnection initialization (lines 32-55)
@@ -9,17 +8,20 @@ Tests cover:
 - SSL verification disabled warning (lines 108-112)
 - Packet injection checking (lines 282-362)
 """
+# pyright: reportPrivateUsage=false
 
 import ssl
+from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+from _pytest.logging import LogCaptureFixture
 
 from cync_controller.server import CloudRelayConnection
 
 
 @pytest.fixture
-def cloud_relay_connection():
+def cloud_relay_connection() -> CloudRelayConnection:
     """Create a CloudRelayConnection instance for testing."""
     mock_reader = AsyncMock()
     mock_writer = MagicMock()
@@ -101,7 +103,7 @@ class TestCloudConnection:
     """Tests for SSL cloud connection (lines 58-101)."""
 
     @pytest.mark.asyncio
-    async def test_connect_to_cloud_success(self, cloud_relay_connection):
+    async def test_connect_to_cloud_success(self, cloud_relay_connection: CloudRelayConnection):
         """Test successful SSL connection to cloud."""
         # Arrange
         mock_cloud_reader = AsyncMock()
@@ -120,7 +122,7 @@ class TestCloudConnection:
             mock_open.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_connect_to_cloud_failure(self, cloud_relay_connection):
+    async def test_connect_to_cloud_failure(self, cloud_relay_connection: CloudRelayConnection):
         """Test cloud connection failure handling."""
         # Arrange
         with patch("asyncio.open_connection") as mock_open:
@@ -134,7 +136,7 @@ class TestCloudConnection:
             assert cloud_relay_connection.cloud_reader is None
 
     @pytest.mark.asyncio
-    async def test_connect_to_cloud_timeout(self, cloud_relay_connection):
+    async def test_connect_to_cloud_timeout(self, cloud_relay_connection: CloudRelayConnection):
         """Test cloud connection timeout handling."""
         # Arrange
         with patch("asyncio.open_connection") as mock_open:
@@ -178,7 +180,7 @@ class TestRelayStartup:
     """Tests for relay startup (lines 105-195)."""
 
     @pytest.mark.asyncio
-    async def test_start_relay_with_cloud_forwarding(self, cloud_relay_connection):
+    async def test_start_relay_with_cloud_forwarding(self, cloud_relay_connection: CloudRelayConnection):
         """Test relay startup with cloud forwarding enabled."""
         # Arrange
         cloud_relay_connection.forward_to_cloud = True
@@ -202,7 +204,7 @@ class TestRelayStartup:
         cloud_relay_connection.connect_to_cloud.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_start_relay_cloud_connection_fails(self, cloud_relay_connection):
+    async def test_start_relay_cloud_connection_fails(self, cloud_relay_connection: CloudRelayConnection):
         """Test relay startup when cloud connection fails."""
         # Arrange
         cloud_relay_connection.forward_to_cloud = True
@@ -243,7 +245,7 @@ class TestSSLWarnings:
     """Tests for SSL verification disabled warnings (lines 108-112)."""
 
     @pytest.mark.asyncio
-    async def test_ssl_verification_disabled_warning(self, caplog):
+    async def test_ssl_verification_disabled_warning(self, caplog: LogCaptureFixture):
         """Test warning logged when SSL verification is disabled."""
         # Arrange
         mock_reader = AsyncMock()
@@ -272,7 +274,11 @@ class TestPacketInjection:
     """Tests for packet injection checking (lines 282-362)."""
 
     @pytest.mark.asyncio
-    async def test_injection_checker_raw_bytes_injection(self, cloud_relay_connection, tmp_path):
+    async def test_injection_checker_raw_bytes_injection(
+        self,
+        cloud_relay_connection: CloudRelayConnection,
+        tmp_path: Path,
+    ):
         """Test raw bytes packet injection."""
         # Arrange
         mock_writer = MagicMock()
@@ -280,17 +286,17 @@ class TestPacketInjection:
         cloud_relay_connection.device_writer = mock_writer
 
         # Create injection file path
-        inject_file = tmp_path / "cync_inject_raw_bytes.txt"
+        inject_file: Path = tmp_path / "cync_inject_raw_bytes.txt"
         raw_hex = "ff fe fd fc fb fa"
-        inject_file.write_text(raw_hex)
+        _ = inject_file.write_text(raw_hex)
 
         # Act - Simulate injection checker logic
         if inject_file.exists():
             with inject_file.open() as f:
-                hex_content = f.read().strip()
+                hex_content: str = f.read().strip()
             inject_file.unlink()
 
-            hex_bytes = hex_content.replace(" ", "").replace("\n", "")
+            hex_bytes: str = hex_content.replace(" ", "").replace("\n", "")
             packet = bytes.fromhex(hex_bytes)
 
             # Assert
@@ -298,17 +304,21 @@ class TestPacketInjection:
             assert packet == bytes.fromhex("fffefdfcfbfa")
 
     @pytest.mark.asyncio
-    async def test_injection_checker_mode_injection_smart(self, cloud_relay_connection, tmp_path):
+    async def test_injection_checker_mode_injection_smart(
+        self,
+        cloud_relay_connection: CloudRelayConnection,
+        tmp_path: Path,
+    ):
         """Test mode injection for smart mode."""
         # Arrange
-        inject_file = tmp_path / "cync_inject_command.txt"
-        inject_file.write_text("smart")
+        inject_file: Path = tmp_path / "cync_inject_command.txt"
+        _ = inject_file.write_text("smart")
 
         cloud_relay_connection.device_endpoint = bytes([0x12, 0x34, 0x56, 0x78])
 
         # Act - Simulate injection checking
         if inject_file.exists():
-            mode = inject_file.read_text().strip().lower()
+            mode: str = inject_file.read_text().strip().lower()
             inject_file.unlink()
 
             if mode in ["smart", "traditional"]:
@@ -318,17 +328,21 @@ class TestPacketInjection:
                 assert mode_byte == 0x02
 
     @pytest.mark.asyncio
-    async def test_injection_checker_mode_injection_traditional(self, cloud_relay_connection, tmp_path):
+    async def test_injection_checker_mode_injection_traditional(
+        self,
+        cloud_relay_connection: CloudRelayConnection,
+        tmp_path: Path,
+    ):
         """Test mode injection for traditional mode."""
         # Arrange
-        inject_file = tmp_path / "cync_inject_command.txt"
-        inject_file.write_text("traditional")
+        inject_file: Path = tmp_path / "cync_inject_command.txt"
+        _ = inject_file.write_text("traditional")
 
         cloud_relay_connection.device_endpoint = bytes([0x12, 0x34, 0x56, 0x78])
 
         # Act
         if inject_file.exists():
-            mode = inject_file.read_text().strip().lower()
+            mode: str = inject_file.read_text().strip().lower()
             inject_file.unlink()
 
             if mode in ["smart", "traditional"]:
@@ -338,15 +352,16 @@ class TestPacketInjection:
                 assert mode_byte == 0x01
 
     @pytest.mark.asyncio
-    async def test_injection_checker_invalid_mode(self, cloud_relay_connection, tmp_path):
+    async def test_injection_checker_invalid_mode(self, cloud_relay_connection: CloudRelayConnection, tmp_path: Path):
         """Test invalid mode injection is ignored."""
         # Arrange
-        inject_file = tmp_path / "cync_inject_command.txt"
-        inject_file.write_text("invalid_mode")
+        inject_file: Path = tmp_path / "cync_inject_command.txt"
+        _ = inject_file.write_text("invalid_mode")
 
         # Act - Simulate injection checking
+        injected: bool = False
         if inject_file.exists():
-            mode = inject_file.read_text().strip().lower()
+            mode: str = inject_file.read_text().strip().lower()
             inject_file.unlink()
 
             valid_modes = ["smart", "traditional"]
@@ -357,16 +372,16 @@ class TestPacketInjection:
         assert injected is False
 
     @pytest.mark.asyncio
-    async def test_injection_checker_file_cleanup(self, tmp_path):
+    async def test_injection_checker_file_cleanup(self, tmp_path: Path):
         """Test injection files are cleaned up after use."""
         # Arrange
-        inject_file = tmp_path / "cync_inject_command.txt"
-        inject_file.write_text("smart")
+        inject_file: Path = tmp_path / "cync_inject_command.txt"
+        _ = inject_file.write_text("smart")
         assert inject_file.exists()
 
         # Act
         with inject_file.open() as f:
-            f.read()
+            _ = f.read()  # type: ignore[reportUnknownVariableType]
         inject_file.unlink()
 
         # Assert
@@ -377,7 +392,7 @@ class TestRelayClosedown:
     """Tests for relay connection cleanup."""
 
     @pytest.mark.asyncio
-    async def test_relay_close_cleanup(self, cloud_relay_connection):
+    async def test_relay_close_cleanup(self, cloud_relay_connection: CloudRelayConnection):
         """Test relay connection cleanup on close."""
         # Arrange
         mock_cloud_writer = MagicMock()
@@ -399,7 +414,7 @@ class TestRelayErrorHandling:
     """Tests for error handling in relay operations."""
 
     @pytest.mark.asyncio
-    async def test_relay_handles_connection_errors(self, cloud_relay_connection):
+    async def test_relay_handles_connection_errors(self, cloud_relay_connection: CloudRelayConnection):
         """Test relay handles connection errors gracefully."""
         # Arrange
         with patch("asyncio.open_connection") as mock_open:
@@ -412,7 +427,7 @@ class TestRelayErrorHandling:
             assert result is False
 
     @pytest.mark.asyncio
-    async def test_relay_handles_ssl_errors(self, cloud_relay_connection):
+    async def test_relay_handles_ssl_errors(self, cloud_relay_connection: CloudRelayConnection):
         """Test relay handles SSL errors gracefully."""
         # Arrange
         with patch("asyncio.open_connection") as mock_open:

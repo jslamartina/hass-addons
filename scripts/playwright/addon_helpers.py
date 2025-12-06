@@ -1,5 +1,4 @@
-"""
-Playwright Helper Functions for Add-on Testing
+"""Playwright Helper Functions for Add-on Testing.
 
 Python utilities for Supervisor API interactions, Docker operations, and log parsing.
 These helpers work with pytest-playwright and enable comprehensive e2e testing.
@@ -12,14 +11,14 @@ from typing import Any
 
 
 def get_supervisor_token() -> str:
-    """
-    Get Supervisor API token from hassio_cli container.
+    """Get Supervisor API token from hassio_cli container.
 
     Returns:
         Supervisor token string
 
     Raises:
         RuntimeError: If token cannot be retrieved
+
     """
     try:
         result = subprocess.run(
@@ -44,14 +43,14 @@ def get_supervisor_token() -> str:
 
 
 def get_addon_config(addon_slug: str) -> dict[str, Any]:
-    """
-    Get current add-on configuration via Supervisor API.
+    """Get current add-on configuration via Supervisor API.
 
     Args:
         addon_slug: Add-on slug (e.g., "local_cync-controller")
 
     Returns:
         Dictionary containing add-on configuration options
+
     """
     token = get_supervisor_token()
 
@@ -77,8 +76,7 @@ def get_addon_config(addon_slug: str) -> dict[str, Any]:
 
 
 def update_addon_config(addon_slug: str, config: dict[str, Any]) -> bool:
-    """
-    Update add-on configuration via Supervisor API.
+    """Update add-on configuration via Supervisor API.
 
     Args:
         addon_slug: Add-on slug
@@ -86,6 +84,7 @@ def update_addon_config(addon_slug: str, config: dict[str, Any]) -> bool:
 
     Returns:
         True if successful, False otherwise
+
     """
     token = get_supervisor_token()
     config_json = json.dumps({"options": config})
@@ -122,8 +121,7 @@ def update_addon_config(addon_slug: str, config: dict[str, Any]) -> bool:
 
 
 def update_debug_log_level(addon_slug: str, enabled: bool) -> bool:
-    """
-    Toggle debug_log_level configuration option.
+    """Toggle debug_log_level configuration option.
 
     Args:
         addon_slug: Add-on slug
@@ -131,6 +129,7 @@ def update_debug_log_level(addon_slug: str, enabled: bool) -> bool:
 
     Returns:
         True if successful
+
     """
     current_config = get_addon_config(addon_slug)
     current_config["debug_log_level"] = enabled
@@ -138,14 +137,14 @@ def update_debug_log_level(addon_slug: str, enabled: bool) -> bool:
 
 
 def restart_addon(addon_slug: str) -> bool:
-    """
-    Restart add-on via Supervisor API.
+    """Restart add-on via Supervisor API.
 
     Args:
         addon_slug: Add-on slug
 
     Returns:
         True if restart initiated successfully
+
     """
     token = get_supervisor_token()
 
@@ -177,12 +176,12 @@ def restart_addon(addon_slug: str) -> bool:
 
 
 def restart_addon_and_wait(addon_slug: str, wait_seconds: int = 5) -> None:
-    """
-    Restart add-on and wait for it to start up.
+    """Restart add-on and wait for it to start up.
 
     Args:
         addon_slug: Add-on slug
         wait_seconds: Seconds to wait after restart (default: 5)
+
     """
     if not restart_addon(addon_slug):
         msg = f"Failed to restart add-on: {addon_slug}"
@@ -193,14 +192,14 @@ def restart_addon_and_wait(addon_slug: str, wait_seconds: int = 5) -> None:
 
 
 def get_addon_status(addon_slug: str) -> dict[str, Any]:
-    """
-    Get add-on status information via Supervisor API.
+    """Get add-on status information via Supervisor API.
 
     Args:
         addon_slug: Add-on slug
 
     Returns:
         Dictionary with status info (state, version, etc.)
+
     """
     token = get_supervisor_token()
 
@@ -226,8 +225,7 @@ def get_addon_status(addon_slug: str) -> dict[str, Any]:
 
 
 def read_json_logs(addon_slug: str, lines: int = 100) -> list[dict[str, Any]]:
-    """
-    Read JSON logs from add-on container.
+    """Read JSON logs from add-on container.
 
     Args:
         addon_slug: Add-on slug
@@ -235,6 +233,7 @@ def read_json_logs(addon_slug: str, lines: int = 100) -> list[dict[str, Any]]:
 
     Returns:
         List of log entry dictionaries
+
     """
     # Container name uses hyphens: "addon_local_cync-controller"
     container_name = f"addon_{addon_slug}"
@@ -252,7 +251,7 @@ def read_json_logs(addon_slug: str, lines: int = 100) -> list[dict[str, Any]]:
         print(f"Warning: Could not read JSON logs: {result.stderr}")
         return []
 
-    logs = []
+    logs: list[dict[str, Any]] = []
     for line in result.stdout.splitlines():
         line = line.strip()
         if not line:
@@ -267,8 +266,7 @@ def read_json_logs(addon_slug: str, lines: int = 100) -> list[dict[str, Any]]:
 
 
 def read_human_logs(addon_slug: str, lines: int = 100) -> str:
-    """
-    Read human-readable logs via ha CLI.
+    """Read human-readable logs via ha CLI.
 
     Args:
         addon_slug: Add-on slug
@@ -276,6 +274,7 @@ def read_human_logs(addon_slug: str, lines: int = 100) -> str:
 
     Returns:
         Log output as string
+
     """
     result = subprocess.run(
         ["ha", "addons", "logs", addon_slug],
@@ -295,16 +294,16 @@ def read_human_logs(addon_slug: str, lines: int = 100) -> str:
 
 
 def get_log_levels_from_json(logs: list[dict[str, Any]]) -> set[str]:
-    """
-    Extract unique log levels from parsed JSON logs.
+    """Extract unique log levels from parsed JSON logs.
 
     Args:
         logs: List of log entry dictionaries
 
     Returns:
         Set of log level strings (DEBUG, INFO, WARNING, ERROR, CRITICAL)
+
     """
-    levels = set()
+    levels: set[str] = set()
     for entry in logs:
         if "level" in entry:
             levels.add(entry["level"])
@@ -312,16 +311,16 @@ def get_log_levels_from_json(logs: list[dict[str, Any]]) -> set[str]:
 
 
 def count_log_levels(logs: list[dict[str, Any]]) -> dict[str, int]:
-    """
-    Count occurrences of each log level.
+    """Count occurrences of each log level.
 
     Args:
         logs: List of log entry dictionaries
 
     Returns:
         Dictionary mapping log level to count
+
     """
-    counts = {}
+    counts: dict[str, int] = {}
     for entry in logs:
         if "level" in entry:
             level = entry["level"]
@@ -330,10 +329,10 @@ def count_log_levels(logs: list[dict[str, Any]]) -> dict[str, int]:
 
 
 def filter_logs_by_level(
-    logs: list[dict[str, Any]], level: str
+    logs: list[dict[str, Any]],
+    level: str,
 ) -> list[dict[str, Any]]:
-    """
-    Filter logs to only entries of a specific level.
+    """Filter logs to only entries of a specific level.
 
     Args:
         logs: List of log entry dictionaries
@@ -341,15 +340,16 @@ def filter_logs_by_level(
 
     Returns:
         Filtered list of log entries
+
     """
     return [entry for entry in logs if entry.get("level") == level]
 
 
 def filter_logs_by_logger(
-    logs: list[dict[str, Any]], logger_name: str
+    logs: list[dict[str, Any]],
+    logger_name: str,
 ) -> list[dict[str, Any]]:
-    """
-    Filter logs to only entries from a specific logger.
+    """Filter logs to only entries from a specific logger.
 
     Args:
         logs: List of log entry dictionaries
@@ -357,15 +357,16 @@ def filter_logs_by_logger(
 
     Returns:
         Filtered list of log entries
+
     """
     return [entry for entry in logs if entry.get("logger") == logger_name]
 
 
 def apply_addon_preset(
-    preset_name: str, addon_slug: str = "local_cync-controller"
+    preset_name: str,
+    addon_slug: str = "local_cync-controller",
 ) -> bool:
-    """
-    Apply a configuration preset by updating config directly.
+    """Apply a configuration preset by updating config directly.
 
     Args:
         preset_name: Preset name (e.g., "preset-baseline", "preset-relay-debug")
@@ -373,6 +374,7 @@ def apply_addon_preset(
 
     Returns:
         True if successful
+
     """
     current_config = get_addon_config(addon_slug)
 
@@ -383,28 +385,28 @@ def apply_addon_preset(
                 "enabled": False,
                 "forward_to_cloud": True,
                 "debug_packet_logging": False,
-            }
+            },
         },
         "preset-relay-with-forward": {
             "cloud_relay": {
                 "enabled": True,
                 "forward_to_cloud": True,
                 "debug_packet_logging": False,
-            }
+            },
         },
         "preset-relay-debug": {
             "cloud_relay": {
                 "enabled": True,
                 "forward_to_cloud": True,
                 "debug_packet_logging": True,
-            }
+            },
         },
         "preset-lan-only": {
             "cloud_relay": {
                 "enabled": True,
                 "forward_to_cloud": False,
                 "debug_packet_logging": False,
-            }
+            },
         },
     }
 
@@ -416,7 +418,8 @@ def apply_addon_preset(
     config_updates = presets[preset_name]
     for key, value in config_updates.items():
         if key in current_config:
-            if isinstance(value, dict):
+            # All preset values are dicts, merge nested dicts
+            if isinstance(value, dict):  # pyright: ignore[reportUnnecessaryIsInstance]
                 current_config[key].update(value)
             else:
                 current_config[key] = value
@@ -433,14 +436,14 @@ def apply_addon_preset(
 
 
 def stop_addon(addon_slug: str) -> bool:
-    """
-    Stop add-on via ha CLI.
+    """Stop add-on via ha CLI.
 
     Args:
         addon_slug: Add-on slug
 
     Returns:
         True if stop initiated successfully
+
     """
     result = subprocess.run(
         ["docker", "exec", "hassio_cli", "ha", "addons", "stop", addon_slug],
@@ -452,21 +455,21 @@ def stop_addon(addon_slug: str) -> bool:
 
     if result.returncode != 0:
         print(
-            f"stop_addon failed for {addon_slug}: returncode={result.returncode}, stdout={result.stdout}, stderr={result.stderr}"
+            f"stop_addon failed for {addon_slug}: returncode={result.returncode}, stdout={result.stdout}, stderr={result.stderr}",
         )
 
     return result.returncode == 0
 
 
 def start_addon(addon_slug: str) -> bool:
-    """
-    Start add-on via ha CLI (non-blocking).
+    """Start add-on via ha CLI (non-blocking).
 
     Args:
         addon_slug: Add-on slug
 
     Returns:
         True if start initiated successfully
+
     """
     # Start the process and don't wait for completion since EMQX takes a while to start
     process = subprocess.Popen(
@@ -482,5 +485,4 @@ def start_addon(addon_slug: str) -> bool:
     # If it already exited, check the return code
     if process.poll() is None:
         return True
-    else:
-        return process.returncode == 0
+    return process.returncode == 0

@@ -1,5 +1,5 @@
 ---
-description: Critical state management rules
+description: Use when updating device or controller state management or offline/online handling.
 ---
 
 # Critical State Management

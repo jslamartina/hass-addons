@@ -1,5 +1,4 @@
-"""
-Unit tests for MQTTClient connection lifecycle.
+"""Unit tests for MQTTClient connection lifecycle.
 
 Tests for MQTTClient.start() method and connection management including
 reconnection logic, error recovery, and task lifecycle.
@@ -7,6 +6,7 @@ reconnection logic, error recovery, and task lifecycle.
 
 import asyncio
 import contextlib
+from typing import cast
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -15,11 +15,11 @@ from cync_controller.mqtt_client import MQTTClient
 
 
 class TestMQTTClientConnectionLifecycle:
-    """Tests for MQTTClient.start() main connection loop lifecycle"""
+    """Tests for MQTTClient.start() main connection loop lifecycle."""
 
     @pytest.mark.asyncio
     async def test_start_main_loop_basic(self):
-        """Test that start() runs main connection loop"""
+        """Test that start() runs main connection loop."""
         with (
             patch("cync_controller.mqtt_client.g") as mock_g,
             patch("cync_controller.mqtt_client.aiomqtt.Client"),
@@ -38,7 +38,7 @@ class TestMQTTClientConnectionLifecycle:
             # Create a task that will be cancelled after first iteration
             start_task = asyncio.create_task(client.start())
             await asyncio.sleep(0.1)  # Let it start
-            start_task.cancel()
+            _ = start_task.cancel()
 
             with contextlib.suppress(asyncio.CancelledError):
                 await start_task
@@ -48,7 +48,7 @@ class TestMQTTClientConnectionLifecycle:
 
     @pytest.mark.asyncio
     async def test_start_reconnects_on_disconnect(self):
-        """Test automatic reconnection after disconnect"""
+        """Test automatic reconnection after disconnect."""
         with (
             patch("cync_controller.mqtt_client.g") as mock_g,
             patch("cync_controller.mqtt_client.aiomqtt.Client"),
@@ -67,7 +67,7 @@ class TestMQTTClientConnectionLifecycle:
 
             start_task = asyncio.create_task(client.start())
             await asyncio.sleep(0.15)  # Allow retry logic to execute
-            start_task.cancel()
+            _ = start_task.cancel()
 
             with contextlib.suppress(asyncio.CancelledError):
                 await start_task
@@ -77,7 +77,7 @@ class TestMQTTClientConnectionLifecycle:
 
     @pytest.mark.asyncio
     async def test_start_handles_mqtt_error(self):
-        """Test error recovery in main loop"""
+        """Test error recovery in main loop."""
         from aiomqtt import MqttError
 
         with (
@@ -98,7 +98,7 @@ class TestMQTTClientConnectionLifecycle:
 
             start_task = asyncio.create_task(client.start())
             await asyncio.sleep(0.15)  # Allow error handling
-            start_task.cancel()
+            _ = start_task.cancel()
 
             with contextlib.suppress(asyncio.CancelledError):
                 await start_task
@@ -108,7 +108,7 @@ class TestMQTTClientConnectionLifecycle:
 
     @pytest.mark.asyncio
     async def test_start_creates_receiver_task(self):
-        """Test receiver task lifecycle when connection succeeds"""
+        """Test receiver task lifecycle when connection succeeds."""
         with (
             patch("cync_controller.mqtt_client.g") as mock_g,
             patch("cync_controller.mqtt_client.aiomqtt.Client"),
@@ -131,21 +131,23 @@ class TestMQTTClientConnectionLifecycle:
             client.client.publish = AsyncMock()
             client.client.subscribe = AsyncMock()
             # Mock the command_router's start_receiver_task method
-            client.command_router.start_receiver_task = AsyncMock(side_effect=asyncio.CancelledError())
+            assert client.command_router is not None
+            command_router = cast(MagicMock, client.command_router)
+            command_router.start_receiver_task = AsyncMock(side_effect=asyncio.CancelledError())
 
             start_task = asyncio.create_task(client.start())
             await asyncio.sleep(0.15)
-            start_task.cancel()
+            _ = start_task.cancel()
 
             with contextlib.suppress(asyncio.CancelledError):
                 await start_task
 
             # Verify start_receiver_task was called when connect succeeded
-            client.command_router.start_receiver_task.assert_called()
+            command_router.start_receiver_task.assert_called()
 
     @pytest.mark.asyncio
     async def test_start_resilience_multiple_failures(self):
-        """Test that start() handles repeated connection failures gracefully"""
+        """Test that start() handles repeated connection failures gracefully."""
         with (
             patch("cync_controller.mqtt_client.g") as mock_g,
             patch("cync_controller.mqtt_client.aiomqtt.Client"),
@@ -163,7 +165,7 @@ class TestMQTTClientConnectionLifecycle:
 
             start_task = asyncio.create_task(client.start())
             await asyncio.sleep(0.1)  # Let it try at least once
-            start_task.cancel()
+            _ = start_task.cancel()
 
             with contextlib.suppress(asyncio.CancelledError):
                 await start_task

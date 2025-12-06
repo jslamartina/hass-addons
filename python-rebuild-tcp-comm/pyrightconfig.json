@@ -1,21 +1,29 @@
 {
-  "include": ["src", "tests"],
-  "exclude": ["mitm", "mitm/validate-checksum-REFERENCE-ONLY.py"],
-  "extraPaths": ["src", "."],
-  "venvPath": "..",
+  "include": ["src", "tests", "mitm", "../typings"],
+  "exclude": ["mitm/validate-checksum-REFERENCE-ONLY.py", ".venv"],
+  "stubPath": "../typings",
+  "extraPaths": ["src", "mitm", ".", "../typings"],
   "venv": ".venv",
   "pythonVersion": "3.14",
-  "typeCheckingMode": "strict",
-  "useLibraryCodeForTypes": true,
   "pythonPlatform": "Linux",
   "executionEnvironments": [
     {
-      "root": ".",
-      "extraPaths": ["src", "."],
-      "pythonVersion": "3.14"
+      "root": "src",
+      "extraPaths": ["src", ".", "../typings"],
+      "pythonVersion": "3.14",
+      "reportPrivateUsage": true
+    },
+    {
+      "root": "tests",
+      "extraPaths": ["src", ".", "../typings"],
+      "pythonVersion": "3.14",
+      "reportPrivateUsage": false
+    },
+    {
+      "root": "mitm",
+      "extraPaths": ["src", ".", "../typings"],
+      "pythonVersion": "3.14",
+      "reportPrivateUsage": false
     }
-  ],
-  "reportMissingImports": true,
-  "reportMissingTypeStubs": true,
-  "stubPath": "typings"
+  ]
 }

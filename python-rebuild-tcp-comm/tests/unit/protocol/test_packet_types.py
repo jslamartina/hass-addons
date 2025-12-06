@@ -4,6 +4,9 @@ Tests packet type constants, CyncPacket and CyncDataPacket dataclasses,
 and fixture accessibility.
 """
 
+from collections.abc import Callable
+from typing import Any, cast
+
 import pytest
 
 from protocol.packet_types import (
@@ -38,8 +41,17 @@ EXPECTED_PACKET_TYPE_HEARTBEAT_CLOUD = 0xD8
 EXPECTED_PACKET_LENGTH_DATA_PACKET = 37  # Length for data packet test
 
 
+Decorator = Callable[[Callable[..., object]], Callable[..., object]]
+
+
+def typed_parametrize(*args: Any, **kwargs: Any) -> Decorator:
+    """Typed wrapper around pytest.mark.parametrize for pyright."""
+    decorator = pytest.mark.parametrize(*args, **kwargs)
+    return cast(Decorator, decorator)
+
+
 @pytest.mark.unit
-@pytest.mark.parametrize(
+@typed_parametrize(
     ("constant_name", "expected_value"),
     [
         ("PACKET_TYPE_HANDSHAKE", PACKET_TYPE_HANDSHAKE),
@@ -224,7 +236,7 @@ def test_packet_metadata_dataclass_accessible() -> None:
 
 
 @pytest.mark.unit
-@pytest.mark.parametrize(
+@typed_parametrize(
     ("endpoint_hex", "expected_length"),
     [
         ("45 88 0f 3a 00", 5),
