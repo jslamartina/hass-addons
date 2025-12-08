@@ -1,0 +1,185 @@
+{
+  "test": "toggle",
+  "iterations": 10,
+  "successes": 10,
+  "failures": 0,
+  "acks_received": 5,
+  "latencies_ms": [
+    16.665220260620117, 26.52716636657715, 51.010847091674805,
+    14.61935043334961, 14.362812042236328
+  ],
+  "packets": [
+    {
+      "msg_id": 16,
+      "state": "on",
+      "packet_hex": "73 00 00 00 1f 45 88 0f 3a 00 10 00 00 7e 10 01 00 00 f8 8e 0c 00 10 01 00 00 00 50 00 f7 11 02 01 01 07 7e",
+      "injection_response": {
+        "status": "success",
+        "timestamp": "2025-11-06T08:58:55.153750",
+        "direction": "CLOUD\u2192DEV",
+        "length": 36,
+        "connections": 25
+      },
+      "ack": {
+        "timestamp": "2025-11-06T08:58:55.163479",
+        "direction": "DEV\u2192CLOUD",
+        "length": 12,
+        "hex": "7b 00 00 00 07 45 88 0f 3a 00 10 00"
+      },
+      "latency_ms": 16.665220260620117
+    },
+    {
+      "msg_id": 17,
+      "state": "off",
+      "packet_hex": "73 00 00 00 1f 45 88 0f 3a 00 11 00 00 7e 11 01 00 00 f8 8e 0c 00 11 01 00 00 00 50 00 f7 11 02 00 01 07 7e",
+      "injection_response": {
+        "status": "success",
+        "timestamp": "2025-11-06T08:58:55.876216",
+        "direction": "CLOUD\u2192DEV",
+        "length": 36,
+        "connections": 25
+      },
+      "ack": null,
+      "latency_ms": null
+    },
+    {
+      "msg_id": 18,
+      "state": "on",
+      "packet_hex": "73 00 00 00 1f 45 88 0f 3a 00 12 00 00 7e 12 01 00 00 f8 8e 0c 00 12 01 00 00 00 50 00 f7 11 02 01 01 09 7e",
+      "injection_response": {
+        "status": "success",
+        "timestamp": "2025-11-06T08:58:56.604535",
+        "direction": "CLOUD\u2192DEV",
+        "length": 36,
+        "connections": 25
+      },
+      "ack": {
+        "timestamp": "2025-11-06T08:58:56.611893",
+        "direction": "DEV\u2192CLOUD",
+        "length": 12,
+        "hex": "7b 00 00 00 07 45 88 0f 3a 00 12 00"
+      },
+      "latency_ms": 26.52716636657715
+    },
+    {
+      "msg_id": 19,
+      "state": "off",
+      "packet_hex": "73 00 00 00 1f 45 88 0f 3a 00 13 00 00 7e 13 01 00 00 f8 8e 0c 00 13 01 00 00 00 50 00 f7 11 02 00 01 09 7e",
+      "injection_response": {
+        "status": "success",
+        "timestamp": "2025-11-06T08:58:57.323800",
+        "direction": "CLOUD\u2192DEV",
+        "length": 36,
+        "connections": 25
+      },
+      "ack": null,
+      "latency_ms": null
+    },
+    {
+      "msg_id": 20,
+      "state": "on",
+      "packet_hex": "73 00 00 00 1f 45 88 0f 3a 00 14 00 00 7e 14 01 00 00 f8 8e 0c 00 14 01 00 00 00 50 00 f7 11 02 01 01 0b 7e",
+      "injection_response": {
+        "status": "success",
+        "timestamp": "2025-11-06T08:58:58.047916",
+        "direction": "CLOUD\u2192DEV",
+        "length": 36,
+        "connections": 25
+      },
+      "ack": {
+        "timestamp": "2025-11-06T08:58:58.080319",
+        "direction": "DEV\u2192CLOUD",
+        "length": 12,
+        "hex": "7b 00 00 00 07 45 88 0f 3a 00 14 00"
+      },
+      "latency_ms": 51.010847091674805
+    },
+    {
+      "msg_id": 21,
+      "state": "off",
+      "packet_hex": "73 00 00 00 1f 45 88 0f 3a 00 15 00 00 7e 15 01 00 00 f8 8e 0c 00 15 01 00 00 00 50 00 f7 11 02 00 01 0b 7e",
+      "injection_response": {
+        "status": "success",
+        "timestamp": "2025-11-06T08:58:58.777163",
+        "direction": "CLOUD\u2192DEV",
+        "length": 36,
+        "connections": 25
+      },
+      "ack": null,
+      "latency_ms": null
+    },
+    {
+      "msg_id": 22,
+      "state": "on",
+      "packet_hex": "73 00 00 00 1f 45 88 0f 3a 00 16 00 00 7e 16 01 00 00 f8 8e 0c 00 16 01 00 00 00 50 00 f7 11 02 01 01 0d 7e",
+      "injection_response": {
+        "status": "success",
+        "timestamp": "2025-11-06T08:58:59.492236",
+        "direction": "CLOUD\u2192DEV",
+        "length": 36,
+        "connections": 25
+      },
+      "ack": {
+        "timestamp": "2025-11-06T08:58:59.500369",
+        "direction": "DEV\u2192CLOUD",
+        "length": 12,
+        "hex": "7b 00 00 00 07 45 88 0f 3a 00 16 00"
+      },
+      "latency_ms": 14.61935043334961
+    },
+    {
+      "msg_id": 23,
+      "state": "off",
+      "packet_hex": "73 00 00 00 1f 45 88 0f 3a 00 17 00 00 7e 17 01 00 00 f8 8e 0c 00 17 01 00 00 00 50 00 f7 11 02 00 01 0d 7e",
+      "injection_response": {
+        "status": "success",
+        "timestamp": "2025-11-06T08:59:00.216417",
+        "direction": "CLOUD\u2192DEV",
+        "length": 36,
+        "connections": 25
+      },
+      "ack": null,
+      "latency_ms": null
+    },
+    {
+      "msg_id": 24,
+      "state": "on",
+      "packet_hex": "73 00 00 00 1f 45 88 0f 3a 00 18 00 00 7e 18 01 00 00 f8 8e 0c 00 18 01 00 00 00 50 00 f7 11 02 01 01 0f 7e",
+      "injection_response": {
+        "status": "success",
+        "timestamp": "2025-11-06T08:59:00.932838",
+        "direction": "CLOUD\u2192DEV",
+        "length": 36,
+        "connections": 25
+      },
+      "ack": {
+        "timestamp": "2025-11-06T08:59:00.939469",
+        "direction": "DEV\u2192CLOUD",
+        "length": 12,
+        "hex": "7b 00 00 00 07 45 88 0f 3a 00 18 00"
+      },
+      "latency_ms": 14.362812042236328
+    },
+    {
+      "msg_id": 25,
+      "state": "off",
+      "packet_hex": "73 00 00 00 1f 45 88 0f 3a 00 19 00 00 7e 19 01 00 00 f8 8e 0c 00 19 01 00 00 00 50 00 f7 11 02 00 01 0f 7e",
+      "injection_response": {
+        "status": "success",
+        "timestamp": "2025-11-06T08:59:01.660672",
+        "direction": "CLOUD\u2192DEV",
+        "length": 36,
+        "connections": 25
+      },
+      "ack": null,
+      "latency_ms": null
+    }
+  ],
+  "latency_stats": {
+    "min": 14.362812042236328,
+    "max": 51.010847091674805,
+    "p50": 16.665220260620117,
+    "p95": 51.010847091674805,
+    "p99": 51.010847091674805
+  }
+}

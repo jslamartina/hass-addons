@@ -9,9 +9,10 @@ from __future__ import annotations
 import asyncio
 import contextlib
 from collections.abc import Iterator
+from io import StringIO
 from pathlib import Path
 from typing import cast
-from unittest.mock import AsyncMock, MagicMock, Mock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import aiohttp
 import pytest
@@ -111,6 +112,7 @@ class TestExportServerLifecycle:
     @pytest.mark.asyncio
     async def test_start_sets_running_flag(self, mock_global_object: GlobalObject) -> None:
         """Test that start sets running flag and publishes MQTT message."""
+        _ = mock_global_object
         mqtt_client = _get_mqtt_client(mock_global_object)
         mqtt_client.publish = AsyncMock()
 
@@ -130,6 +132,7 @@ class TestExportServerLifecycle:
     @pytest.mark.asyncio
     async def test_start_with_cancelled_error(self, mock_global_object: GlobalObject) -> None:
         """Test that start handles CancelledError gracefully."""
+        _ = mock_global_object
         server = ExportServer()
         server.uvi_server.serve = AsyncMock(side_effect=asyncio.CancelledError())
 
@@ -181,11 +184,7 @@ class TestFastAPIEndpoints:
             patch("cync_controller.exporter.CYNC_STATIC_DIR", str(mock_static_dir)),
             patch("pathlib.Path.open") as mock_open,
         ):
-            mock_file = MagicMock()
-            mock_file.read.return_value = "<html>Test Content</html>"
-            mock_file.__enter__ = Mock(return_value=mock_file)
-            mock_file.__exit__ = Mock(return_value=None)
-            mock_open.return_value = mock_file
+            mock_open.return_value = StringIO("<html>Test Content</html>")
 
             with patch("builtins.open", mock_open, create=True):
                 from cync_controller.exporter import get_index
@@ -355,12 +354,15 @@ class TestFastAPIEndpoints:
     @pytest.mark.asyncio
     async def test_restart_success(self, mock_global_object: GlobalObject) -> None:
         """Test restart endpoint with valid supervisor token."""
+        _ = mock_global_object
         with (
-            patch("cync_controller.exporter.os.environ") as mock_env,
+            patch.dict(
+                "cync_controller.exporter.os.environ",
+                {"SUPERVISOR_TOKEN": "test-token"},
+                clear=False,
+            ),
             patch("cync_controller.exporter.aiohttp.ClientSession") as mock_session_class,
         ):
-            mock_env.get.return_value = "test-token"
-
             mock_response = AsyncMock()
             mock_response.status = 200
             mock_response.text = AsyncMock(return_value="OK")
@@ -386,9 +388,7 @@ class TestFastAPIEndpoints:
     @pytest.mark.asyncio
     async def test_restart_no_token(self) -> None:
         """Test restart fails without supervisor token."""
-        with patch("cync_controller.exporter.os.environ") as mock_env:
-            mock_env.get.return_value = None
-
+        with patch.dict("cync_controller.exporter.os.environ", {}, clear=False):
             from cync_controller.exporter import restart
 
             result = await restart()
@@ -400,11 +400,13 @@ class TestFastAPIEndpoints:
     async def test_restart_supervisor_non_200_returns_masked_http_exception(self) -> None:
         """Test restart masks supervisor error details."""
         with (
-            patch("cync_controller.exporter.os.environ") as mock_env,
+            patch.dict(
+                "cync_controller.exporter.os.environ",
+                {"SUPERVISOR_TOKEN": "test-token"},
+                clear=False,
+            ),
             patch("cync_controller.exporter.aiohttp.ClientSession") as mock_session_class,
         ):
-            mock_env.get.return_value = "test-token"
-
             mock_response = AsyncMock()
             mock_response.status = 500
             mock_response.text = AsyncMock(return_value="super secret failure")
@@ -437,11 +439,13 @@ class TestFastAPIEndpoints:
     async def test_restart_aiohttp_client_error_masked(self) -> None:
         """Test restart masks aiohttp client errors."""
         with (
-            patch("cync_controller.exporter.os.environ") as mock_env,
+            patch.dict(
+                "cync_controller.exporter.os.environ",
+                {"SUPERVISOR_TOKEN": "test-token"},
+                clear=False,
+            ),
             patch("cync_controller.exporter.aiohttp.ClientSession") as mock_session_class,
         ):
-            mock_env.get.return_value = "test-token"
-
             mock_session = MagicMock()
             mock_session.__aenter__ = AsyncMock(return_value=mock_session)
             mock_session.__aexit__ = AsyncMock(return_value=None)
@@ -466,11 +470,13 @@ class TestFastAPIEndpoints:
     async def test_restart_api_unexpected_error_masked(self) -> None:
         """Test restart masks unexpected errors."""
         with (
-            patch("cync_controller.exporter.os.environ") as mock_env,
+            patch.dict(
+                "cync_controller.exporter.os.environ",
+                {"SUPERVISOR_TOKEN": "test-token"},
+                clear=False,
+            ),
             patch("cync_controller.exporter.aiohttp.ClientSession") as mock_session_class,
         ):
-            mock_env.get.return_value = "test-token"
-
             mock_session = MagicMock()
             mock_session.__aenter__ = AsyncMock(return_value=mock_session)
             mock_session.__aexit__ = AsyncMock(return_value=None)

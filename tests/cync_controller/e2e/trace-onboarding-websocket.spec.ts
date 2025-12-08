@@ -5,7 +5,7 @@
  * for reverse engineering analysis.
  */
 
-import { test, expect, Page } from "@playwright/test";
+import { test, Page } from "@playwright/test";
 import * as fs from "fs";
 import * as path from "path";
 
@@ -17,7 +17,7 @@ interface WebSocketMessage {
   timestamp: string;
   direction: "sent" | "received";
   step: string;
-  message: any;
+  message: unknown;
   raw: string;
 }
 
@@ -29,9 +29,11 @@ interface NetworkRequest {
   status?: number;
   requestHeaders?: Record<string, string>;
   responseHeaders?: Record<string, string>;
-  requestBody?: any;
-  responseBody?: any;
+  requestBody?: unknown;
+  responseBody?: unknown;
 }
+
+type OnboardingStep = { step: string; done: boolean };
 
 class OnboardingTracer {
   private page: Page;
@@ -104,7 +106,7 @@ class OnboardingTracer {
           const postData = request.postDataJSON();
           if (postData) {
             Promise.resolve(postData)
-              .then((body: any) => {
+              .then((body: unknown) => {
                 networkReq.requestBody = body;
               })
               .catch(() => {
@@ -132,7 +134,7 @@ class OnboardingTracer {
           try {
             const headers = await response.allHeaders();
             matchingRequest.responseHeaders = headers;
-          } catch (error) {
+          } catch {
             // Ignore if headers unavailable
           }
 
@@ -140,7 +142,7 @@ class OnboardingTracer {
           try {
             const body = await response.json();
             matchingRequest.responseBody = body;
-          } catch (error) {
+          } catch {
             // Ignore if not JSON
           }
         }
@@ -161,11 +163,11 @@ class OnboardingTracer {
         : Buffer.isBuffer(payload)
           ? payload.toString()
           : String(payload);
-    let message: any;
+    let message: unknown;
 
     try {
       message = JSON.parse(raw);
-    } catch (e) {
+    } catch {
       // Not JSON, keep as string
       message = raw;
     }
@@ -247,8 +249,8 @@ async function detectCurrentStep(page: Page): Promise<string> {
     try {
       const response = await page.request.get(`${BASE_URL}/api/onboarding`);
       if (response.ok()) {
-        const data = await response.json();
-        const incompleteSteps = data.filter((step: any) => !step.done);
+        const data = (await response.json()) as OnboardingStep[];
+        const incompleteSteps = data.filter((step) => !step.done);
         if (incompleteSteps.length > 0) {
           console.log(
             `[Detection] API detected incomplete step: ${incompleteSteps[0].step}`,
@@ -259,7 +261,7 @@ async function detectCurrentStep(page: Page): Promise<string> {
           return "complete";
         }
       }
-    } catch (apiError) {
+    } catch {
       // API might not be available, continue with UI detection
       console.log("[Detection] API not available, using UI detection");
     }
@@ -348,91 +350,6 @@ async function detectCurrentStep(page: Page): Promise<string> {
 
   console.log("[Detection] Could not detect step, returning 'unknown'");
   return "unknown";
-}
-
-/**
- * Get all available onboarding steps from API
- */
-async function getAvailableSteps(
-  page: Page,
-): Promise<Array<{ step: string; done: boolean }>> {
-  try {
-    const response = await page.request.get(`${BASE_URL}/api/onboarding`);
-    if (response.ok()) {
-      const data = await response.json();
-      return data;
-    }
-  } catch (error) {
-    console.warn(`[Steps] Failed to get available steps: ${error}`);
-  }
-  return [];
-}
-
-/**
- * Retry an operation with exponential backoff
- */
-async function retryWithBackoff<T>(
-  operation: () => Promise<T>,
-  maxRetries: number = 3,
-  initialDelay: number = 1000,
-  description: string = "Operation",
-): Promise<T> {
-  let lastError: Error | unknown;
-
-  for (let attempt = 0; attempt < maxRetries; attempt++) {
-    try {
-      return await operation();
-    } catch (error) {
-      lastError = error;
-      if (attempt < maxRetries - 1) {
-        const delay = initialDelay * Math.pow(2, attempt);
-        console.warn(
-          `[Retry] ${description} failed (attempt ${attempt + 1}/${maxRetries}), retrying in ${delay}ms...`,
-        );
-        await new Promise((resolve) => setTimeout(resolve, delay));
-      }
-    }
-  }
-
-  throw lastError;
-}
-
-/**
- * Wait for element to be actionable with timeout
- */
-async function waitForActionable(
-  page: Page,
-  locator: any,
-  timeout: number = 10000,
-): Promise<boolean> {
-  try {
-    await locator.waitFor({ state: "visible", timeout });
-    await locator.waitFor({ state: "attached", timeout });
-    return true;
-  } catch (error) {
-    return false;
-  }
-}
-
-/**
- * Safe click with retry
- */
-async function safeClick(
-  page: Page,
-  locator: any,
-  timeout: number = 5000,
-  description: string = "Element",
-): Promise<boolean> {
-  try {
-    if (await waitForActionable(page, locator, timeout)) {
-      await locator.click({ timeout: 5000 });
-      return true;
-    }
-    return false;
-  } catch (error) {
-    console.warn(`[Click] Failed to click ${description}: ${error}`);
-    return false;
-  }
 }
 
 test.describe("Onboarding WebSocket Trace", () => {
@@ -700,7 +617,7 @@ test.describe("Onboarding WebSocket Trace", () => {
               continued = true;
               break;
             }
-          } catch (error) {
+          } catch {
             // Try next selector
           }
         }
@@ -855,10 +772,10 @@ test.describe("Onboarding WebSocket Trace", () => {
       } catch (saveError) {
         console.error(`[Error] Final save attempt failed: ${saveError}`);
       }
+    }
 
-      if (errorOccurred) {
-        throw new Error(`Onboarding trace failed: ${errorMessage}`);
-      }
+    if (errorOccurred) {
+      throw new Error(`Onboarding trace failed: ${errorMessage}`);
     }
   });
 });

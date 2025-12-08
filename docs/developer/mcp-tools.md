@@ -72,7 +72,7 @@ from pathlib import Path
 import re
 
 ## Read and transform without loading into context
-file = Path("cync-controller/src/cync_lan/mqtt_client.py")
+file = Path("src/cync_controller/mqtt/client.py")
 content = file.read_text()
 
 ## Apply transformations

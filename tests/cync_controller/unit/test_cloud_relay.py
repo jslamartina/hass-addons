@@ -12,6 +12,7 @@ Tests cover:
 
 import ssl
 from pathlib import Path
+from typing import cast
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -197,7 +198,7 @@ class TestRelayStartup:
         cloud_relay_connection._check_injection_commands = AsyncMock()
 
         # Act - Call parts of start_relay (simplified)
-        connect_result = await cloud_relay_connection.connect_to_cloud()
+        connect_result = cast(bool, await cloud_relay_connection.connect_to_cloud())
 
         # Assert
         assert connect_result is True
@@ -212,7 +213,7 @@ class TestRelayStartup:
         cloud_relay_connection.close = AsyncMock()
 
         # Act
-        connect_result = await cloud_relay_connection.connect_to_cloud()
+        connect_result = cast(bool, await cloud_relay_connection.connect_to_cloud())
 
         # Assert
         assert connect_result is False
@@ -248,6 +249,7 @@ class TestSSLWarnings:
     async def test_ssl_verification_disabled_warning(self, caplog: LogCaptureFixture):
         """Test warning logged when SSL verification is disabled."""
         # Arrange
+        assert caplog is not None
         mock_reader = AsyncMock()
         mock_writer = MagicMock()
 
@@ -264,7 +266,7 @@ class TestSSLWarnings:
             mock_open.return_value = (AsyncMock(), MagicMock())
 
             # Act
-            await relay.connect_to_cloud()
+            _ = await relay.connect_to_cloud()
 
             # Assert - Warning should have been logged
             # Actual log checking depends on logger implementation
@@ -352,7 +354,7 @@ class TestPacketInjection:
                 assert mode_byte == 0x01
 
     @pytest.mark.asyncio
-    async def test_injection_checker_invalid_mode(self, cloud_relay_connection: CloudRelayConnection, tmp_path: Path):
+    async def test_injection_checker_invalid_mode(self, tmp_path: Path):
         """Test invalid mode injection is ignored."""
         # Arrange
         inject_file: Path = tmp_path / "cync_inject_command.txt"

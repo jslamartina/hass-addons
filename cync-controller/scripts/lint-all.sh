@@ -1,0 +1,179 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+IFS=$'\n\t'
+
+# Load common output functions
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck disable=SC1091  # Source path is dynamic via $SCRIPT_DIR
+source "$SCRIPT_DIR/shell-common/common-output.sh"
+
+# shellcheck disable=SC2034  # LP used by common-output.sh log functions
+LP="[$(basename "$0")]"
+
+REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+
+activate_venv() {
+  if [ -n "${VIRTUAL_ENV:-}" ]; then
+    log_info "Using active virtualenv: $VIRTUAL_ENV"
+    return
+  fi
+
+  local venv_path
+  venv_path=$(poetry env info --path)
+  if [ -f "$venv_path/bin/activate" ]; then
+    log_info "Activating repository virtualenv at $venv_path"
+    # shellcheck disable=SC1090,SC1091  # Source path is dynamic via $venv_path
+    source "$venv_path/bin/activate"
+  else
+    log_warn "Repository virtualenv not found at $venv_path. Run scripts/setup-worktree.sh to create it."
+  fi
+}
+
+activate_venv
+
+echo "================================================"
+echo "Running all linters across the codebase"
+echo "================================================"
+
+# Change to repository root
+cd "$REPO_ROOT"
+
+# Track overall status
+FAILED=0
+
+run_with_limit() {
+  local limit="$1"
+  shift
+  local label="$1"
+  shift
+
+  local tmp
+  tmp="$(mktemp)"
+
+  local status=0
+
+  if "$@" > "$tmp" 2>&1; then
+    # Command succeeded; output is usually small, so print it all
+    cat "$tmp"
+  else
+    status=$?
+    local total_lines
+    total_lines="$(wc -l < "$tmp" || echo 0)"
+
+    if [ "$total_lines" -gt "$limit" ]; then
+      head -n "$limit" "$tmp"
+      echo
+      echo -e "${YELLOW}⚠️ Output truncated to first $limit of $total_lines lines for $label${NC}"
+    else
+      cat "$tmp"
+    fi
+  fi
+
+  rm -f "$tmp"
+  return $status
+}
+
+# Python linting with Ruff
+echo -e "\n${YELLOW}=== Running Ruff (Python linter) ===${NC}"
+if run_with_limit 50 "Ruff (Python linter)" ruff check .; then
+  echo -e "${GREEN}✅ Ruff check passed${NC}"
+else
+  echo -e "${RED}❌ Ruff found issues${NC}"
+  FAILED=1
+fi
+
+# Python formatting with Ruff
+echo -e "\n${YELLOW}=== Running Ruff (Python formatter) ===${NC}"
+if run_with_limit 50 "Ruff (Python formatter)" ruff format --check .; then
+  echo -e "${GREEN}✅ Ruff format check passed${NC}"
+else
+  echo -e "${RED}❌ Ruff found formatting issues (run 'ruff format .' to fix)${NC}"
+  FAILED=1
+fi
+
+# shellcheck disable=SC2329  # run_pyright is invoked indirectly via run_with_limit
+run_pyright() {
+  local pyright_cmd=()
+
+  if command -v basedpyright > /dev/null 2>&1; then
+    pyright_cmd=("basedpyright")
+    log_info "Using basedpyright from PATH: $(command -v basedpyright)"
+  else
+    log_error "basedpyright not found. Install via: pip install basedpyright"
+    return 1
+  fi
+
+  if [ -f "$REPO_ROOT/pyrightconfig.json" ]; then
+    log_info "Checking repository pyrightconfig.json..."
+    if ! "${pyright_cmd[@]}" --project "$REPO_ROOT/pyrightconfig.json"; then
+      return 1
+    fi
+  else
+    log_warn "pyrightconfig.json not found at repository root; skipping type check."
+  fi
+
+  return 0
+}
+
+# Python type checking with basedpyright
+echo -e "\n${YELLOW}=== Running type checker (basedpyright) ===${NC}"
+if run_with_limit 50 "type checker (basedpyright)" run_pyright; then
+  echo -e "${GREEN}✅ pyright check passed${NC}"
+else
+  echo -e "${RED}❌ pyright found type errors or command missing${NC}"
+  FAILED=1
+fi
+
+# shellcheck disable=SC2329  # run_shellcheck_cmd is invoked indirectly via run_with_limit
+run_shellcheck_cmd() {
+  git ls-files '*.sh' | xargs -r shellcheck --severity=info --external-sources
+}
+
+# Shell script linting with ShellCheck
+echo -e "\n${YELLOW}=== Running ShellCheck (Shell script linter) ===${NC}"
+# Use git ls-files to automatically respect .gitignore
+# Check all severity levels (info, warning, error) for comprehensive linting
+# Use -x flag to allow following sourced files (shell-common/common-output.sh)
+if run_with_limit 50 "ShellCheck (Shell script linter)" run_shellcheck_cmd; then
+  echo -e "${GREEN}✅ ShellCheck passed${NC}"
+else
+  echo -e "${RED}❌ ShellCheck found issues${NC}"
+  FAILED=1
+fi
+
+# TypeScript linting with ESLint
+echo -e "\n${YELLOW}=== Running ESLint (TypeScript linter) ===${NC}"
+if run_with_limit 50 "ESLint (TypeScript linter)" npm run lint:typescript --silent; then
+  echo -e "${GREEN}✅ ESLint check passed${NC}"
+else
+  echo -e "${RED}❌ ESLint found issues (run 'npm run lint:typescript:fix' to fix)${NC}"
+  FAILED=1
+fi
+
+# Markdown linting with markdownlint
+echo -e "\n${YELLOW}=== Running markdownlint (Markdown linter) ===${NC}"
+if run_with_limit 50 "markdownlint (Markdown linter)" npm run lint:markdown --silent; then
+  echo -e "${GREEN}✅ markdownlint check passed${NC}"
+else
+  echo -e "${RED}❌ markdownlint found issues (run 'npm run lint:markdown:fix' to fix)${NC}"
+  FAILED=1
+fi
+
+# Format checking with Prettier
+echo -e "\n${YELLOW}=== Running Prettier (Format checker) ===${NC}"
+if run_with_limit 50 "Prettier (Format checker)" npm run format:check --silent; then
+  echo -e "${GREEN}✅ Prettier check passed${NC}"
+else
+  echo -e "${RED}❌ Prettier found formatting issues (run 'npm run format' to fix)${NC}"
+  FAILED=1
+fi
+
+# Summary
+echo -e "\n================================================"
+if [ $FAILED -eq 0 ]; then
+  echo -e "${GREEN}✅ All linters passed!${NC}"
+  exit 0
+else
+  echo -e "${RED}❌ Some linters found issues. See output above.${NC}"
+  exit 1
+fi

@@ -3,8 +3,6 @@
 Tests current status, state conversion, status objects, and version handling.
 """
 
-from typing import Any, cast
-
 import pytest
 from _pytest.logging import LogCaptureFixture
 
@@ -42,16 +40,15 @@ class TestCyncDeviceStateConversion:
     def test_state_setter_with_strings(self):
         """Test state setter accepts various string representations."""
         device = CyncDevice(cync_id=0x1234)
-        device_any = cast(Any, device)
 
         # Test string "on" variations
         for value in ["on", "On", "ON", "true", "True", "TRUE", "yes", "Yes", "YES", "y", "Y", "t", "T"]:
-            device_any.state = value
+            device.state = value  # pyright: ignore[reportAttributeAccessIssue]
             assert device.state == 1
 
         # Test string "off" variations
         for value in ["off", "Off", "OFF", "false", "False", "FALSE", "no", "No", "NO", "n", "N", "f", "F"]:
-            device_any.state = value
+            device.state = value  # pyright: ignore[reportAttributeAccessIssue]
             assert device.state == 0
 
     def test_state_setter_with_integers(self):
@@ -77,18 +74,16 @@ class TestCyncDeviceStateConversion:
     def test_state_setter_invalid_value(self):
         """Test state setter rejects invalid values."""
         device = CyncDevice(cync_id=0x1234)
-        device_any = cast(Any, device)
 
         with pytest.raises(ValueError, match="Invalid value for state"):
-            device_any.state = "invalid"
+            device.state = "invalid"  # pyright: ignore[reportAttributeAccessIssue]
 
     def test_state_setter_invalid_type(self):
         """Test state setter rejects invalid types."""
         device = CyncDevice(cync_id=0x1234)
-        device_any = cast(Any, device)
 
         with pytest.raises(TypeError, match="Invalid type for state"):
-            device_any.state = {"not": "valid"}
+            device.state = {"not": "valid"}  # pyright: ignore[reportAttributeAccessIssue]
 
 
 class TestCyncDeviceStatusObject:
@@ -159,15 +154,13 @@ class TestCyncDevicePropertyEdgeCases:
     def test_is_light_setter_with_non_boolean(self):
         """Test is_light setter logs error with non-boolean value."""
         device = CyncDevice(cync_id=0x12)
-        device_any = cast(Any, device)
-        device_any.is_light = "not a boolean"
+        device.is_light = "not a boolean"  # pyright: ignore[reportAttributeAccessIssue]
         assert device.is_light is False
 
     def test_is_switch_setter_with_non_boolean(self):
         """Test is_switch setter logs error with non-boolean value."""
         device = CyncDevice(cync_id=0x12)
-        device_any = cast(Any, device)
-        device_any.is_switch = "not a boolean"
+        device.is_switch = "not a boolean"  # pyright: ignore[reportAttributeAccessIssue]
         assert device.is_switch is False
 
     def test_version_setter_with_invalid_string(self):
@@ -179,8 +172,7 @@ class TestCyncDevicePropertyEdgeCases:
     def test_mac_setter_with_conversion(self):
         """Test mac setter converts non-string to string."""
         device = CyncDevice(cync_id=0x12)
-        device_any = cast(Any, device)
-        device_any.mac = 12345
+        device.mac = 12345  # pyright: ignore[reportAttributeAccessIssue]
         assert device.mac == "12345"
 
     def test_has_wifi_property_without_metadata(self):

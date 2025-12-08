@@ -3,47 +3,70 @@
 This module provides reusable fixtures for testing Cync LAN components.
 """
 
+import secrets
+from collections.abc import Callable
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
 
+def make_dummy_secret(prefix: str = "secret") -> str:
+    """Return a deterministic-looking but non-literal secret string for tests."""
+    return f"{prefix}-{secrets.token_hex(16)}"
+
+
 @pytest.fixture
-def mock_tcp_device():
+def dummy_secret_factory() -> Callable[[str], str]:
+    """Create non-literal secrets for tests."""
+
+    def _make(prefix: str = "secret") -> str:
+        return make_dummy_secret(prefix)
+
+    return _make
+
+
+JSONDict = dict[str, object]
+
+
+@pytest.fixture
+def mock_tcp_device() -> MagicMock:
     """Mock CyncTCPDevice for testing.
 
     Returns a MagicMock configured with common CyncTCPDevice attributes and methods.
     """
-    device = MagicMock()
+    device: MagicMock = MagicMock()
     device.device_id = 0x1234
     device.address = "192.168.1.100"
     device.write_message = AsyncMock()
     device.register_callback = MagicMock()
-    device.messages = MagicMock()
-    device.messages.control = {}
+    messages: MagicMock = MagicMock()
+    messages.control = {}
+    device.messages = messages
 
     # Use MagicMock for reader/writer with proper sync/async methods
-    device.reader = MagicMock()
-    device.reader.at_eof = MagicMock(return_value=False)
-    device.reader.feed_eof = MagicMock()
+    reader: MagicMock = MagicMock()
+    reader.at_eof = MagicMock(return_value=False)
+    reader.feed_eof = MagicMock()
+    device.reader = reader
 
-    device.writer = MagicMock()
-    device.writer.is_closing = MagicMock(return_value=False)
-    device.writer.close = MagicMock()
-    device.writer.wait_closed = AsyncMock()
-    device.writer.drain = AsyncMock()
-    device.writer.write = MagicMock()
+    writer: MagicMock = MagicMock()
+    writer.is_closing = MagicMock(return_value=False)
+    writer.close = MagicMock()
+    writer.wait_closed = AsyncMock()
+    writer.drain = AsyncMock()
+    writer.write = MagicMock()
+    device.writer = writer
 
     return device
 
 
 @pytest.fixture
-def mock_mqtt_client():
+def mock_mqtt_client() -> AsyncMock:
     """Mock MQTT client for testing.
 
     Returns an AsyncMock configured with common MQTT client methods.
     """
-    client = AsyncMock()
+    client: AsyncMock = AsyncMock()
     client.publish = AsyncMock()
     client.subscribe = AsyncMock()
     client.connect = AsyncMock(return_value=True)
@@ -53,7 +76,7 @@ def mock_mqtt_client():
 
 
 @pytest.fixture
-def sample_control_packet():
+def sample_control_packet() -> bytes:
     """Sample 0x73 control packet for testing.
 
     This is a representative control packet (turn on command).
@@ -64,22 +87,23 @@ def sample_control_packet():
 
 
 @pytest.fixture
-def sample_mesh_info_packet():
+def sample_mesh_info_packet() -> bytes:
     """Sample 0x83 mesh info packet for testing.
 
     This is a representative mesh info response packet.
     """
     # 0x83 packet: Mesh info response
     # Structure: header(1) + padding(3) + length(4) + device_id(2) + mesh data + checksum(2)
-    return bytes.fromhex(
+    packet_hex = (
         "83 00 00 00 2c 00 00 00 6e fc b9 57 0f 01 00 00 00 "
         "00 00 00 00 01 02 03 04 05 06 07 08 09 0a 0b 0c 0d 0e 0f "
-        "ab cd",
+        "ab cd"
     )
+    return bytes.fromhex(packet_hex)
 
 
 @pytest.fixture
-def sample_broadcast_packet():
+def sample_broadcast_packet() -> bytes:
     """Sample 0x43 broadcast packet for testing.
 
     This is a representative broadcast state update packet.
@@ -90,44 +114,48 @@ def sample_broadcast_packet():
 
 
 @pytest.fixture
-def sample_device_data():
+def sample_device_data() -> JSONDict:
     """Sample device configuration data for testing.
 
     Returns a dictionary with typical device configuration.
     """
-    return {
-        "device_id": 0x1234,
-        "name": "Test Light",
-        "room": "Living Room",
-        "model": "SMART_SWITCH",
-        "capabilities": ["on_off", "brightness"],
-        "home": 12345,
-        "mesh_id": 1,
-    }  # type: ignore[return-value]
+    return JSONDict(
+        {
+            "device_id": 0x1234,
+            "name": "Test Light",
+            "room": "Living Room",
+            "model": "SMART_SWITCH",
+            "capabilities": ["on_off", "brightness"],
+            "home": 12345,
+            "mesh_id": 1,
+        }
+    )
 
 
 @pytest.fixture
-def sample_group_data():
+def sample_group_data() -> JSONDict:
     """Sample group configuration data for testing.
 
     Returns a dictionary with typical group configuration.
     """
-    return {
-        "group_id": 0x5678,
-        "name": "Living Room Lights",
-        "room": "Living Room",
-        "device_ids": [0x1234, 0x5678, 0x9ABC],
-        "home": 12345,
-    }  # type: ignore[return-value]
+    return JSONDict(
+        {
+            "group_id": 0x5678,
+            "name": "Living Room Lights",
+            "room": "Living Room",
+            "device_ids": [0x1234, 0x5678, 0x9ABC],
+            "home": 12345,
+        }
+    )
 
 
 @pytest.fixture
-def mock_device():
+def mock_device() -> MagicMock:
     """Mock CyncDevice for testing.
 
     Returns a MagicMock configured with common CyncDevice attributes.
     """
-    device = MagicMock()
+    device: MagicMock = MagicMock()
     device.device_id = 0x1234
     device.name = "Test Light"
     device.room = "Living Room"
@@ -139,8 +167,9 @@ def mock_device():
     device.offline_count = 0
     device.pending_command = False
     device.ready_to_control = True
-    device.tcp_device = AsyncMock()
-    device.tcp_device.register_callback = MagicMock()
+    tcp_device_mock: MagicMock = MagicMock()
+    tcp_device_mock.register_callback = MagicMock()
+    device.tcp_device = tcp_device_mock
     device.set_power = AsyncMock()
     device.set_brightness = AsyncMock()
     device.handle_offline_report = MagicMock()
@@ -149,32 +178,33 @@ def mock_device():
 
 
 @pytest.fixture
-def mock_group():
+def mock_group() -> MagicMock:
     """Mock CyncGroup for testing.
 
     Returns a MagicMock configured with common CyncGroup attributes.
     """
-    group = MagicMock()
+    group: MagicMock = MagicMock()
     group.group_id = 0x5678
     group.name = "Living Room Lights"
     group.room = "Living Room"
     group.power_on = False
     group.brightness = 0
     group.devices = []
-    group.tcp_device = AsyncMock()
-    group.tcp_device.register_callback = MagicMock()
+    tcp_device_mock: MagicMock = MagicMock()
+    tcp_device_mock.register_callback = MagicMock()
+    group.tcp_device = tcp_device_mock
     group.set_power = AsyncMock()
     group.set_brightness = AsyncMock()
     return group
 
 
 @pytest.fixture
-def mock_global_object():
+def mock_global_object() -> MagicMock:
     """Mock GlobalObject for testing.
 
     Returns a MagicMock configured with common GlobalObject attributes.
     """
-    g = MagicMock()
+    g: MagicMock = MagicMock()
     g.devices = {}
     g.groups = {}
     g.tcp_devices = {}
@@ -184,14 +214,14 @@ def mock_global_object():
 
 
 @pytest.fixture
-def stream_reader():
+def stream_reader() -> MagicMock:
     """Mock asyncio.StreamReader with proper sync/async methods.
 
     Returns a MagicMock configured for StreamReader where:
     - Sync methods (at_eof, feed_eof) are MagicMock
     - Async methods (read, readexactly) are AsyncMock
     """
-    reader = MagicMock()
+    reader: MagicMock = MagicMock()
     reader.at_eof = MagicMock(return_value=False)
     reader.feed_eof = MagicMock()
     reader.read = AsyncMock()
@@ -200,14 +230,14 @@ def stream_reader():
 
 
 @pytest.fixture
-def stream_writer():
+def stream_writer() -> MagicMock:
     """Mock asyncio.StreamWriter with proper sync/async methods.
 
     Returns a MagicMock configured for StreamWriter where:
     - Sync methods (is_closing, close, write, get_extra_info) are MagicMock
     - Async methods (drain, wait_closed) are AsyncMock
     """
-    writer = MagicMock()
+    writer: MagicMock = MagicMock()
     writer.is_closing = MagicMock(return_value=False)
     writer.close = MagicMock()
     writer.write = MagicMock()

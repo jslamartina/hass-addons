@@ -1,8 +1,8 @@
 """E2E tests for device discovery and MQTT entity creation."""
 
+import logging
 import sys
 from pathlib import Path
-from typing import Any
 
 import pytest
 from playwright.sync_api import Page
@@ -17,6 +17,8 @@ from scripts.playwright.addon_helpers import (  # type: ignore[import-untyped, r
 )
 
 ADDON_SLUG = "local_cync-controller"
+JSONDict = dict[str, object]
+logger = logging.getLogger(__name__)
 
 
 @pytest.mark.serial  # type: ignore[attr-defined]
@@ -25,11 +27,12 @@ def test_addon_starts_successfully(ha_login: Page):
 
     Expected: Add-on status shows "started" after restart.
     """
+    _ = ha_login
     # Restart add-on
     restart_addon_and_wait(ADDON_SLUG, wait_seconds=5)
 
     # Check status
-    status: dict[str, object] = get_addon_status(ADDON_SLUG)  # type: ignore[reportUnknownVariableType]
+    status: JSONDict = get_addon_status(ADDON_SLUG)  # type: ignore[reportUnknownVariableType]
 
     assert status.get("state") == "started", f"Add-on not started: {status.get('state')}"
 
@@ -56,8 +59,8 @@ def test_mqtt_entities_appear_after_restart(ha_login: Page, ha_base_url: str):
         if search_box.is_visible(timeout=2000):
             search_box.fill("cync")
             page.wait_for_timeout(2000)
-    except Exception:
-        pass
+    except Exception as exc:
+        logger.info("Search box not available for MQTT integration: %s", exc)
 
     # Check if any entities are visible
     # This is a basic check - actual entity verification depends on test environment
@@ -82,8 +85,8 @@ def test_entity_attributes_structure(ha_login: Page, ha_base_url: str):
         if search_box.is_visible(timeout=2000):
             search_box.fill("cync")
             page.wait_for_timeout(2000)
-    except Exception:
-        pass
+    except Exception as exc:
+        logger.info("Search box not available for entity attributes: %s", exc)
 
     page.wait_for_timeout(2000)
 
@@ -129,6 +132,7 @@ def test_entity_unique_ids_are_consistent(ha_login: Page):
 
     Expected: Restarting add-on doesn't create duplicate entities.
     """
+    _ = ha_login
     # Restart add-on twice
     restart_addon_and_wait(ADDON_SLUG, wait_seconds=10)
 
@@ -136,5 +140,5 @@ def test_entity_unique_ids_are_consistent(ha_login: Page):
 
     # Note: Would need to query HA API to verify no duplicate entities created
     # For now, verify add-on restarts successfully multiple times
-    status: dict[str, Any] = get_addon_status(ADDON_SLUG)  # type: ignore[reportUnknownVariableType]
+    status: JSONDict = get_addon_status(ADDON_SLUG)  # type: ignore[reportUnknownVariableType]
     assert status.get("state") == "started", "Add-on failed after multiple restarts"

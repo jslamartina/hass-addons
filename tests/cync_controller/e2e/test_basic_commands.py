@@ -1,9 +1,9 @@
 """E2E tests for basic command execution."""
 
+import logging
 import sys
 import time
 from pathlib import Path
-from typing import Any, cast
 
 import pytest
 from _pytest.outcomes import skip as pytest_skip
@@ -13,9 +13,13 @@ from playwright.sync_api import Page, expect
 repo_root = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(repo_root))
 
-from scripts.playwright.addon_helpers import read_json_logs  # type: ignore[import-untyped, reportUnknownVariableType]
+from scripts.playwright.addon_helpers import (  # type: ignore[import-untyped, reportUnknownVariableType]
+    JSONDict,
+    read_json_logs,
+)
 
 ADDON_SLUG = "local_cync-controller"
+logger = logging.getLogger(__name__)
 
 
 @pytest.mark.serial
@@ -103,7 +107,8 @@ def test_set_brightness(ha_login: Page, ha_base_url: str):
                     light_name = candidate
                     entity.click()
                     break
-            except Exception:
+            except Exception as exc:
+                logger.info("Skipping brightness candidate %s due to error: %s", candidate, exc)
                 continue
 
         if light_name is None:
@@ -159,7 +164,8 @@ def test_set_color_temperature(ha_login: Page, ha_base_url: str):
                     light_name = candidate
                     entity.click()
                     break
-            except Exception:
+            except Exception as exc:
+                logger.info("Skipping temperature candidate %s due to error: %s", candidate, exc)
                 continue
 
         if light_name is None:
@@ -221,7 +227,8 @@ def test_toggle_switch(ha_login: Page, ha_base_url: str):
                 if on_switch.is_visible(timeout=1500) or off_switch.is_visible(timeout=1500):
                     switch_name = candidate
                     break
-            except Exception:
+            except Exception as exc:
+                logger.info("Skipping switch candidate %s due to error: %s", candidate, exc)
                 continue
 
         if switch_name is None:
@@ -253,11 +260,12 @@ def test_command_latency_acceptable(ha_login: Page):
 
     This is verified in logs rather than UI to be more reliable.
     """
+    _ = ha_login
     # Read recent logs
-    logs: list[dict[str, Any]] = cast("list[dict[str, Any]]", read_json_logs(ADDON_SLUG, lines=100))  # type: ignore[reportUnknownVariableType]
+    logs: list[JSONDict] = read_json_logs(ADDON_SLUG, lines=100)  # type: ignore[reportUnknownVariableType]
 
     # Look for command-related log entries
-    [cast("dict[str, Any]", log) for log in logs if "command" in cast("dict[str, Any]", log).get("message", "").lower()]  # type: ignore[reportUnknownVariableType]
+    _ = [log for log in logs if "command" in str(log.get("message", "")).lower()]
 
     # This is a basic check - full latency testing would require
     # actually sending commands and measuring response time
@@ -269,6 +277,7 @@ def test_command_with_tcp_whitelist_enabled(ha_login: Page):
 
     Expected: Only whitelisted devices can execute commands.
     """
+    _ = ha_login
 
     # This test would:
     # 1. Configure TCP whitelist

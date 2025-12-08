@@ -7,6 +7,7 @@
         "Lint: Prettier",
         "Lint: Ruff",
         "Lint: ShellCheck",
+        "Lint: ESLint",
         "Lint: Pyright"
       ],
       "problemMatcher": [],
@@ -65,6 +66,30 @@
       }
     },
     {
+      "label": "Lint: ESLint",
+      "type": "shell",
+      "command": "${workspaceFolder}/.vscode/scripts/lint-eslint.py",
+      "problemMatcher": {
+        "owner": "eslint-ci",
+        "source": "eslint-ci",
+        "fileLocation": ["relative", "${workspaceFolder}"],
+        "severity": "warning",
+        "pattern": {
+          "regexp": "^(.+):(\\d+):(\\d+):\\s+(error|warning)\\s+(.*)\\s+\\(([^)]+)\\)$",
+          "file": 1,
+          "line": 2,
+          "column": 3,
+          "severity": 4,
+          "message": 5,
+          "code": 6
+        }
+      },
+      "presentation": {
+        "reveal": "never",
+        "panel": "shared"
+      }
+    },
+    {
       "label": "Lint: Pyright",
       "type": "shell",
       "command": "${workspaceFolder}/.vscode/scripts/lint-pyright.py || true",
@@ -115,6 +140,7 @@
       "dependsOn": [
         "Lint: Prettier (Fix)",
         "Lint: Ruff (Fix)",
+        "Lint: ESLint (Fix)",
         "Lint: ShellCheck (Fix)"
       ],
       "problemMatcher": [],
@@ -138,6 +164,30 @@
       "type": "shell",
       "command": "ruff check . --fix",
       "problemMatcher": [],
+      "presentation": {
+        "reveal": "never",
+        "panel": "shared"
+      }
+    },
+    {
+      "label": "Lint: ESLint (Fix)",
+      "type": "shell",
+      "command": "${workspaceFolder}/.vscode/scripts/lint-eslint.py --fix",
+      "problemMatcher": {
+        "owner": "eslint-ci",
+        "source": "eslint-ci",
+        "fileLocation": ["relative", "${workspaceFolder}"],
+        "severity": "warning",
+        "pattern": {
+          "regexp": "^(.+):(\\d+):(\\d+):\\s+(error|warning)\\s+(.*)\\s+\\(([^)]+)\\)$",
+          "file": 1,
+          "line": 2,
+          "column": 3,
+          "severity": 4,
+          "message": 5,
+          "code": 6
+        }
+      },
       "presentation": {
         "reveal": "never",
         "panel": "shared"

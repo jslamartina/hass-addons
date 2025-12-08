@@ -93,7 +93,7 @@ def ha_login(page: Page, ha_base_url: str, ha_credentials: dict[str, str]):
         return page
 
     # Wait for login form
-    page.wait_for_selector('input[name="username"], input[type="text"]', timeout=10000)
+    _ = page.wait_for_selector('input[name="username"], input[type="text"]', timeout=10000)
 
     # Fill credentials
     username_input = page.locator('input[name="username"], input[type="text"]').first
@@ -128,7 +128,7 @@ def ingress_page(ha_login: Page, ha_base_url: str):
     page.wait_for_load_state("networkidle")
     # Check for any of the possible elements
     try:
-        page.wait_for_selector(
+        _ = page.wait_for_selector(
             "button:has-text('Restart'), #startButton, #otpInput, #restartButton, #successSection", timeout=3000
         )
     except Exception:

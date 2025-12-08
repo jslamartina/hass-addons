@@ -1,0 +1,5 @@
+"""Metadata helpers and device lookup tables for Cync Controller."""
+
+from cync_controller.metadata.model_info import device_type_map
+
+__all__ = ["device_type_map"]

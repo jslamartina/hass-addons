@@ -12,27 +12,27 @@ Successfully integrated MITM proxy functionality into the cync-controller Python
 
 ### Modified Files (3)
 
-1. **`src/cync_lan/const.py`**
+1. **`src/cync_controller/const.py`**
    - Added 6 cloud relay constants
    - Environment variable loading for all relay options
 
-2. **`src/cync_lan/server.py`**
+2. **`src/cync_controller/server.py`**
    - New `CloudRelayConnection` class (~300 lines)
    - Modified `NCyncServer` for relay mode support
    - Bidirectional packet forwarding with inspection
 
-3. **`src/cync_lan/structs.py`**
+3. **`src/cync_controller/structs.py`**
    - Added 6 fields to `GlobalObjEnv`
    - Updated `reload_env()` method
 
 ### New Files (3)
 
-1. **`src/cync_lan/packet_parser.py`**
+1. **`src/cync_controller/packet_parser.py`**
    - Copied from mitm/ tools
    - Parses 11 packet types
    - Extracts device statuses, commands, endpoints
 
-2. **`src/cync_lan/packet_checksum.py`**
+2. **`src/cync_controller/packet_checksum.py`**
    - Copied from mitm/ tools
    - Checksum calculation for crafted packets
 
@@ -58,11 +58,11 @@ Location: `/mnt/supervisor/addons/local/hass-addons/cync-controller/`
 
 ```bash
 On branch hass_addon
-Modified: src/cync_lan/const.py
-Modified: src/cync_lan/server.py
-Modified: src/cync_lan/structs.py
-New: src/cync_lan/packet_checksum.py
-New: src/cync_lan/packet_parser.py
+Modified: src/cync_controller/const.py
+Modified: src/cync_controller/server.py
+Modified: src/cync_controller/structs.py
+New: src/cync_controller/packet_checksum.py
+New: src/cync_controller/packet_parser.py
 New: docs/CLOUD_RELAY.md
 ```
 
@@ -223,10 +223,10 @@ _register_new_connection()
 
    ```bash
    cd /mnt/supervisor/addons/local/hass-addons
-   git add src/cync_lan/packet_*.py
-   git add src/cync_lan/const.py
-   git add src/cync_lan/server.py
-   git add src/cync_lan/structs.py
+   git add src/cync_controller/packet_*.py
+   git add src/cync_controller/const.py
+   git add src/cync_controller/server.py
+   git add src/cync_controller/structs.py
    git add docs/user/cloud-relay.md
    git commit -m "feat: Add cloud relay mode for packet inspection and debugging"
    ```

@@ -4,11 +4,48 @@ Tests for homeassistant_discovery(), device registration,
 MQTT discovery payload generation for all device types.
 """
 
-from unittest.mock import MagicMock, patch
+from dataclasses import dataclass
+from unittest.mock import patch
 
 import pytest
 
 from cync_controller.mqtt_client import MQTTClient
+
+
+@dataclass
+class DummyDevice:
+    """Lightweight typed device used in discovery tests."""
+
+    id: int
+    home_id: int | None = None
+    name: str | None = None
+    type: int | None = None
+    is_light: bool = False
+    is_switch: bool = False
+    is_fan_controller: bool = False
+    supports_rgb: bool = False
+    supports_brightness: bool = False
+    supports_temperature: bool = False
+    offline_count: int = 0
+    is_plug: bool = False
+    status: object | None = None
+    state: int = 0
+    temperature: int = 0
+    red: int = 0
+    green: int = 0
+    blue: int = 0
+    online: bool = True
+    version: int | None = None
+    mac: str | None = None
+
+
+@dataclass
+class DummyGroup:
+    """Typed group used for suggested area tests."""
+
+    id: int
+    name: str
+    member_ids: list[int]
 
 
 class TestMQTTDeviceDiscovery:
@@ -17,9 +54,9 @@ class TestMQTTDeviceDiscovery:
     @pytest.fixture(autouse=True)
     def reset_mqtt_singleton(self):
         """Reset MQTTClient singleton between tests."""
-        MQTTClient._instance = None  # pyright: ignore[reportPrivateUsage]
+        MQTTClient._instance = None
         yield
-        MQTTClient._instance = None  # pyright: ignore[reportPrivateUsage]
+        MQTTClient._instance = None
 
     @pytest.mark.asyncio
     async def test_homeassistant_discovery_light_with_rgb(self):
@@ -31,14 +68,15 @@ class TestMQTTDeviceDiscovery:
             mock_g.uuid = "test-uuid"
 
             # Create RGB light device
-            mock_device = MagicMock()
-            mock_device.id = 0x1001
-            mock_device.home_id = 12345
-            mock_device.name = "RGB Light"
-            mock_device.is_light = True
-            mock_device.supports_rgb = True
-            mock_device.supports_brightness = True
-            mock_device.supports_temperature = False
+            mock_device = DummyDevice(
+                id=0x1001,
+                home_id=12345,
+                name="RGB Light",
+                is_light=True,
+                supports_rgb=True,
+                supports_brightness=True,
+                supports_temperature=False,
+            )
 
             # Verify device properties for discovery
             assert mock_device.supports_rgb is True
@@ -55,12 +93,13 @@ class TestMQTTDeviceDiscovery:
             mock_g.uuid = "test-uuid"
 
             # Create temperature tunable light
-            mock_device = MagicMock()
-            mock_device.id = 0x1002
-            mock_device.is_light = True
-            mock_device.supports_temperature = True
-            mock_device.supports_brightness = True
-            mock_device.supports_rgb = False
+            mock_device = DummyDevice(
+                id=0x1002,
+                is_light=True,
+                supports_temperature=True,
+                supports_brightness=True,
+                supports_rgb=False,
+            )
 
             # Verify temperature capability
             assert mock_device.supports_temperature is True
@@ -76,11 +115,12 @@ class TestMQTTDeviceDiscovery:
             mock_g.uuid = "test-uuid"
 
             # Create switch device
-            mock_device = MagicMock()
-            mock_device.id = 0x2001
-            mock_device.is_switch = True
-            mock_device.is_light = False
-            mock_device.supports_brightness = False
+            mock_device = DummyDevice(
+                id=0x2001,
+                is_switch=True,
+                is_light=False,
+                supports_brightness=False,
+            )
 
             # Verify switch properties (no brightness)
             assert mock_device.is_switch is True
@@ -96,10 +136,11 @@ class TestMQTTDeviceDiscovery:
             mock_g.uuid = "test-uuid"
 
             # Create fan device
-            mock_device = MagicMock()
-            mock_device.id = 0x3001
-            mock_device.is_fan_controller = True
-            mock_device.supports_brightness = True  # Speed control via brightness
+            mock_device = DummyDevice(
+                id=0x3001,
+                is_fan_controller=True,
+                supports_brightness=True,
+            )  # Speed control via brightness
 
             # Verify fan properties
             assert mock_device.is_fan_controller is True
@@ -114,11 +155,12 @@ class TestMQTTDeviceDiscovery:
             mock_g.uuid = "test-uuid"
 
             # Create plug device
-            mock_device = MagicMock()
-            mock_device.id = 0x4001
-            mock_device.type = 9  # Plug device type
-            mock_device.is_light = False
-            mock_device.is_switch = False
+            mock_device = DummyDevice(
+                id=0x4001,
+                type=9,  # Plug device type
+                is_light=False,
+                is_switch=False,
+            )
 
             # Verify plug properties
             assert mock_device.type == 9
@@ -133,10 +175,7 @@ class TestMQTTDeviceDiscovery:
             mock_g.uuid = "test-uuid"
 
             # Create group
-            mock_group = MagicMock()
-            mock_group.id = 100
-            mock_group.name = "Living Room"
-            mock_group.member_ids = [0x1001, 0x1002, 0x1003]
+            mock_group = DummyGroup(id=100, name="Living Room", member_ids=[0x1001, 0x1002, 0x1003])
 
             # Verify group properties
             assert mock_group.name == "Living Room"
@@ -177,14 +216,11 @@ class TestMQTTDeviceDiscovery:
             mock_g.uuid = "test-uuid"
 
             # Create device with room assignment
-            mock_device = MagicMock()
-            mock_device.id = 0x5001
-            mock_device.name = "Bedroom Light"
+            mock_device = DummyDevice(id=0x5001, name="Bedroom Light")
+            assert mock_device.name == "Bedroom Light"
 
             # Create group representing a room
-            mock_room_group = MagicMock()
-            mock_room_group.name = "Bedroom"
-            mock_room_group.member_ids = [0x5001]
+            mock_room_group = DummyGroup(id=200, name="Bedroom", member_ids=[0x5001])
 
             # Verify device can be assigned to room
             assert 0x5001 in mock_room_group.member_ids
@@ -199,12 +235,13 @@ class TestMQTTDeviceDiscovery:
             mock_g.uuid = "test-uuid"
 
             # Create device with metadata
-            mock_device = MagicMock()
-            mock_device.id = 0x6001
-            mock_device.home_id = 12345
-            mock_device.name = "Test Device"
-            mock_device.version = 12345
-            mock_device.mac = "AA:BB:CC:DD:EE:FF"
+            mock_device = DummyDevice(
+                id=0x6001,
+                home_id=12345,
+                name="Test Device",
+                version=12345,
+                mac="AA:BB:CC:DD:EE:FF",
+            )
 
             # Verify metadata present
             assert mock_device.version == 12345
@@ -223,8 +260,7 @@ class TestMQTTDeviceDiscovery:
             _ = MQTTClient()
 
             # Create device
-            mock_device = MagicMock()
-            mock_device.id = 0x7001
+            mock_device = DummyDevice(id=0x7001)
 
             # Register twice - should be idempotent
             first_registration = mock_device.id

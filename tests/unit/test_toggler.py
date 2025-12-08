@@ -1,6 +1,7 @@
 """Tests for toggle harness."""
 
 import asyncio
+from typing import cast
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -32,6 +33,16 @@ class TCPConnectionTestHarness(TCPConnection):
 
 # Test constants
 EXPECTED_MAX_ATTEMPTS = 2
+
+
+def magic(method: object) -> MagicMock:
+    """Cast helper for sync mock methods."""
+    return cast(MagicMock, method)
+
+
+def async_magic(method: object) -> AsyncMock:
+    """Cast helper for async mock methods."""
+    return cast(AsyncMock, method)
 
 
 @pytest.mark.asyncio
@@ -138,13 +149,13 @@ async def test_send_toggle_packet_recv_timeout() -> None:
 @pytest.mark.asyncio
 async def test_toggle_device_with_retry_success() -> None:
     """Test toggle with successful first attempt."""
-    with patch("harness.toggler.TCPConnection") as mock_conn_class:
-        mock_conn = AsyncMock(spec=TCPConnection)
-        mock_conn.connect.return_value = True
+    with patch("cync_controller.harness.toggler.TCPConnection") as mock_conn_class:
+        mock_conn = cast(TCPConnection, AsyncMock(spec=TCPConnection))
+        async_magic(mock_conn.connect).return_value = True
         mock_conn.close = AsyncMock()
         mock_conn_class.return_value = mock_conn
 
-        with patch("harness.toggler.send_toggle_packet", return_value=b"ACK"):
+        with patch("cync_controller.harness.toggler.send_toggle_packet", return_value=b"ACK"):
             result = await toggle_device_with_retry(
                 device_id="TEST123",
                 device_host="127.0.0.1",
@@ -154,22 +165,22 @@ async def test_toggle_device_with_retry_success() -> None:
             )
 
             assert result is True
-            assert mock_conn.connect.call_count == 1
-            assert mock_conn.close.call_count == 1
+            assert async_magic(mock_conn.connect).call_count == 1
+            assert async_magic(mock_conn.close).call_count == 1
 
 
 @pytest.mark.asyncio
 async def test_toggle_device_with_retry_failure_then_success() -> None:
     """Test toggle with retry - first fails, second succeeds."""
-    with patch("harness.toggler.TCPConnection") as mock_conn_class:
-        mock_conn = AsyncMock(spec=TCPConnection)
+    with patch("cync_controller.harness.toggler.TCPConnection") as mock_conn_class:
+        mock_conn = cast(TCPConnection, AsyncMock(spec=TCPConnection))
         # First attempt fails connection, second succeeds
-        mock_conn.connect.side_effect = [False, True]
+        async_magic(mock_conn.connect).side_effect = [False, True]
         mock_conn.close = AsyncMock()
         mock_conn_class.return_value = mock_conn
 
         with (
-            patch("harness.toggler.send_toggle_packet", return_value=b"ACK"),
+            patch("cync_controller.harness.toggler.send_toggle_packet", return_value=b"ACK"),
             patch("asyncio.sleep"),
         ):  # Speed up test by mocking sleep
             result = await toggle_device_with_retry(
@@ -181,15 +192,15 @@ async def test_toggle_device_with_retry_failure_then_success() -> None:
             )
 
             assert result is True
-            assert mock_conn.connect.call_count == EXPECTED_MAX_ATTEMPTS
+            assert async_magic(mock_conn.connect).call_count == EXPECTED_MAX_ATTEMPTS
 
 
 @pytest.mark.asyncio
 async def test_toggle_device_with_retry_all_attempts_fail() -> None:
     """Test toggle with all retry attempts failing."""
-    with patch("harness.toggler.TCPConnection") as mock_conn_class:
-        mock_conn = AsyncMock(spec=TCPConnection)
-        mock_conn.connect.return_value = False
+    with patch("cync_controller.harness.toggler.TCPConnection") as mock_conn_class:
+        mock_conn = cast(TCPConnection, AsyncMock(spec=TCPConnection))
+        async_magic(mock_conn.connect).return_value = False
         mock_conn.close = AsyncMock()
         mock_conn_class.return_value = mock_conn
 
@@ -203,7 +214,7 @@ async def test_toggle_device_with_retry_all_attempts_fail() -> None:
             )
 
             assert result is False
-            assert mock_conn.connect.call_count == EXPECTED_MAX_ATTEMPTS
+            assert async_magic(mock_conn.connect).call_count == EXPECTED_MAX_ATTEMPTS
 
 
 @pytest.mark.asyncio
@@ -213,7 +224,7 @@ async def test_tcp_send_success() -> None:
 
     # Mock connected state
     conn.set_connected_state(True)
-    mock_writer = MagicMock(spec=asyncio.StreamWriter)
+    mock_writer = cast(asyncio.StreamWriter, MagicMock(spec=asyncio.StreamWriter))
     mock_drain = AsyncMock()
     mock_writer.drain = mock_drain
     conn.writer = mock_writer
@@ -221,7 +232,7 @@ async def test_tcp_send_success() -> None:
     result = await conn.send(b"test data")
 
     assert result is True
-    mock_writer.write.assert_called_once_with(b"test data")
+    magic(mock_writer.write).assert_called_once_with(b"test data")
     mock_drain.assert_called_once()
 
 
@@ -236,14 +247,14 @@ async def test_tcp_recv_success() -> None:
 
     # Mock connected state
     conn.set_connected_state(True)
-    mock_reader = AsyncMock(spec=asyncio.StreamReader)
-    mock_reader.read.return_value = b"response data"
+    mock_reader = cast(asyncio.StreamReader, AsyncMock(spec=asyncio.StreamReader))
+    async_magic(mock_reader.read).return_value = b"response data"
     conn.reader = mock_reader
 
     result = await conn.recv(1024)
 
     assert result == b"response data"
-    mock_reader.read.assert_called_once_with(1024)
+    async_magic(mock_reader.read).assert_called_once_with(1024)
 
 
 @pytest.mark.asyncio
@@ -253,8 +264,8 @@ async def test_tcp_recv_connection_closed() -> None:
 
     # Mock connected state
     conn.set_connected_state(True)
-    mock_reader = AsyncMock()
-    mock_reader.read.return_value = b""  # Empty bytes = connection closed
+    mock_reader = cast(asyncio.StreamReader, AsyncMock(spec=asyncio.StreamReader))
+    async_magic(mock_reader.read).return_value = b""  # Empty bytes = connection closed
     conn.reader = mock_reader
 
     result = await conn.recv(1024)
@@ -273,7 +284,7 @@ class TestSocketAbstractionErrorPaths:
 
         # Mock connected state
         conn.set_connected_state(True)
-        mock_writer = MagicMock()
+        mock_writer = cast(asyncio.StreamWriter, MagicMock(spec=asyncio.StreamWriter))
         mock_drain = AsyncMock()
         mock_drain.side_effect = TimeoutError("Send timeout")
         mock_writer.drain = mock_drain
@@ -282,7 +293,7 @@ class TestSocketAbstractionErrorPaths:
         result = await conn.send(b"test data")
 
         assert result is False
-        mock_writer.write.assert_called_once_with(b"test data")
+        magic(mock_writer.write).assert_called_once_with(b"test data")
 
     @pytest.mark.asyncio
     async def test_send_not_connected_returns_false(self):

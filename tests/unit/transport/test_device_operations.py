@@ -12,11 +12,14 @@ Test data uses fixtures from Phase 0.5 packet captures where available.
 from __future__ import annotations
 
 import uuid
+from typing import TYPE_CHECKING, Protocol, cast, override
 from unittest.mock import AsyncMock, Mock
 
 import pytest
 
 from cync_controller.protocol import PACKET_TYPE_STATUS_BROADCAST
+from cync_controller.protocol.cync_protocol import CyncProtocol
+from cync_controller.protocol.packet_types import CyncPacket
 from cync_controller.transport.device_info import (
     DEVICE_TYPE_BULB,
     DeviceInfo,
@@ -27,12 +30,56 @@ from cync_controller.transport.device_info import (
 from cync_controller.transport.device_operations import DeviceOperations
 from tests.helpers.expectations import expect_async_exception
 
+if TYPE_CHECKING:
+    from cync_controller.transport.device_operations import ReliableTransport as BaseReliableTransport
+    from cync_controller.transport.device_operations import ReliableTransportPacket as BaseReliableTransportPacket
+else:
+
+    class BaseReliableTransportPacket(Protocol):
+        packet: CyncPacket
+
+    class BaseReliableTransport(Protocol):
+        async def send_reliable(self, payload: bytes, timeout: float | None = None) -> MockSendResult: ...
+
+        async def recv_reliable(self) -> BaseReliableTransportPacket: ...
+
+
 EXPECTED_DEVICE_COUNT = 2
 
 # Test constants
 MAX_BRIGHTNESS = 255
 DEVICE_TYPE_LENGTH = 24
 EXPECTED_RECV_CALL_COUNT = 2  # One for timeout, one for actual packet
+
+
+class ReliableTransportPacket(BaseReliableTransportPacket, Protocol):
+    """Protocol describing packets returned by ReliableTransport."""
+
+
+class ReliableTransport(BaseReliableTransport, Protocol):
+    """Protocol for the ReliableTransport interface used by DeviceOperations."""
+
+    @override
+    async def send_reliable(self, payload: bytes, timeout: float | None = None) -> MockSendResult: ...
+
+    @override
+    async def recv_reliable(self) -> ReliableTransportPacket: ...
+
+
+class MockReliableTransport(ReliableTransport):
+    """Concrete ReliableTransport mock with typed async methods."""
+
+    def __init__(self) -> None:
+        self.send_reliable_mock: AsyncMock = AsyncMock()
+        self.recv_reliable_mock: AsyncMock = AsyncMock()
+
+    @override
+    async def send_reliable(self, payload: bytes, timeout: float | None = None) -> MockSendResult:
+        return cast(MockSendResult, await self.send_reliable_mock(payload, timeout))
+
+    @override
+    async def recv_reliable(self) -> ReliableTransportPacket:
+        return cast(ReliableTransportPacket, await self.recv_reliable_mock())
 
 
 class DeviceOperationsTestHarness(DeviceOperations):
@@ -48,56 +95,59 @@ class DeviceOperationsTestHarness(DeviceOperations):
         await self._add_to_cache(device_id_hex, device_info)
 
 
-class MockCyncPacket:
+class MockCyncPacket(CyncPacket):
     """Mock CyncPacket for testing."""
 
     def __init__(self, packet_type: int, payload: bytes):
-        self.packet_type = packet_type
-        self.payload = payload
+        super().__init__(
+            packet_type=packet_type,
+            length=len(payload),
+            payload=payload,
+            raw=bytes([packet_type]) + payload,
+        )
 
 
 class MockTrackedPacket:
     """Mock TrackedPacket for testing."""
 
-    def __init__(self, packet: MockCyncPacket):
-        self.packet = packet
+    def __init__(self, packet: CyncPacket):
+        self.packet: CyncPacket = packet
 
 
 class MockSendResult:
     """Mock SendResult for testing."""
 
     def __init__(self, success: bool, reason: str = ""):
-        self.success = success
-        self.reason = reason
+        self.success: bool = success
+        self.reason: str = reason
 
 
 @pytest.fixture
-def mock_transport():
+def mock_transport() -> MockReliableTransport:
     """Create mock ReliableTransport."""
-    transport = Mock()
-    transport.send_reliable = AsyncMock()
-    transport.recv_reliable = AsyncMock()
-    return transport
+    return MockReliableTransport()
 
 
 @pytest.fixture
-def mock_protocol():
+def mock_protocol() -> CyncProtocol:
     """Create mock CyncProtocol."""
-    return Mock()
+    return cast(CyncProtocol, Mock(spec=CyncProtocol))
 
 
 @pytest.fixture
-def device_ops(mock_transport: Mock, mock_protocol: Mock) -> DeviceOperationsTestHarness:
+def device_ops(mock_transport: MockReliableTransport, mock_protocol: Mock) -> DeviceOperationsTestHarness:
     """Create DeviceOperations instance with mocks."""
     return DeviceOperationsTestHarness(mock_transport, mock_protocol)
 
 
 @pytest.mark.asyncio
-async def test_ask_for_mesh_info_success(device_ops: DeviceOperationsTestHarness, mock_transport: Mock) -> None:
+async def test_ask_for_mesh_info_success(
+    device_ops: DeviceOperationsTestHarness, mock_transport: MockReliableTransport
+) -> None:
     """Test successful mesh info request with 0x83 responses."""
     # Setup
     device_ops.set_primary(True)
-    mock_transport.send_reliable.return_value = MockSendResult(success=True)
+    mock_transport.send_reliable_mock.return_value = MockSendResult(success=True)
 
     # Mock 0x83 status broadcast response
     response_packet = MockCyncPacket(
@@ -107,7 +157,7 @@ async def test_ask_for_mesh_info_success(device_ops: DeviceOperationsTestHarness
     tracked_packet = MockTrackedPacket(response_packet)
 
     # Return packet once, then timeout
-    mock_transport.recv_reliable.side_effect = [tracked_packet, TimeoutError()]
+    mock_transport.recv_reliable_mock.side_effect = [tracked_packet, TimeoutError()]
 
     # Execute
     responses = await device_ops.ask_for_mesh_info(parse=False)
@@ -115,16 +165,18 @@ async def test_ask_for_mesh_info_success(device_ops: DeviceOperationsTestHarness
     # Assert
     assert len(responses) == 1
     assert responses[0].packet_type == PACKET_TYPE_STATUS_BROADCAST
-    mock_transport.send_reliable.assert_called_once()
-    assert mock_transport.recv_reliable.call_count == EXPECTED_RECV_CALL_COUNT
+    mock_transport.send_reliable_mock.assert_called_once()
+    assert mock_transport.recv_reliable_mock.call_count == EXPECTED_RECV_CALL_COUNT
 
 
 @pytest.mark.asyncio
-async def test_ask_for_mesh_info_parse(device_ops: DeviceOperationsTestHarness, mock_transport: Mock) -> None:
+async def test_ask_for_mesh_info_parse(
+    device_ops: DeviceOperationsTestHarness, mock_transport: MockReliableTransport
+) -> None:
     """Test mesh info request with parsing enabled."""
     # Setup
     device_ops.set_primary(True)
-    mock_transport.send_reliable.return_value = MockSendResult(success=True)
+    mock_transport.send_reliable_mock.return_value = MockSendResult(success=True)
 
     # Mock 0x83 packet with DEVICE_TYPE_LENGTH-byte device struct
     device_struct = bytes(
@@ -159,7 +211,7 @@ async def test_ask_for_mesh_info_parse(device_ops: DeviceOperationsTestHarness, 
     tracked_packet = MockTrackedPacket(response_packet)
 
     # Return packet once, then timeout
-    mock_transport.recv_reliable.side_effect = [tracked_packet, TimeoutError()]
+    mock_transport.recv_reliable_mock.side_effect = [tracked_packet, TimeoutError()]
 
     # Execute
     responses = await device_ops.ask_for_mesh_info(parse=True)
@@ -184,11 +236,13 @@ async def test_ask_for_mesh_info_primary_only(device_ops: DeviceOperationsTestHa
 
 
 @pytest.mark.asyncio
-async def test_ask_for_mesh_info_send_failed(device_ops: DeviceOperationsTestHarness, mock_transport: Mock) -> None:
+async def test_ask_for_mesh_info_send_failed(
+    device_ops: DeviceOperationsTestHarness, mock_transport: MockReliableTransport
+) -> None:
     """Test mesh info request with send failure."""
     # Setup
     device_ops.set_primary(True)
-    mock_transport.send_reliable.return_value = MockSendResult(success=False, reason="connection_lost")
+    mock_transport.send_reliable_mock.return_value = MockSendResult(success=False, reason="connection_lost")
 
     # Execute & Assert
     err = await expect_async_exception(device_ops.ask_for_mesh_info, MeshInfoRequestError)
@@ -196,11 +250,13 @@ async def test_ask_for_mesh_info_send_failed(device_ops: DeviceOperationsTestHar
 
 
 @pytest.mark.asyncio
-async def test_request_device_info(device_ops: DeviceOperationsTestHarness, mock_transport: Mock) -> None:
+async def test_request_device_info(
+    device_ops: DeviceOperationsTestHarness, mock_transport: MockReliableTransport
+) -> None:
     """Test individual device info request (0x43)."""
     # Setup
     device_id = bytes([0x39, 0x87, 0xC8, 0x57])
-    mock_transport.send_reliable.return_value = MockSendResult(success=True)
+    mock_transport.send_reliable_mock.return_value = MockSendResult(success=True)
 
     # Mock 0x43 device info response
     device_struct = bytes(
@@ -234,7 +290,7 @@ async def test_request_device_info(device_ops: DeviceOperationsTestHarness, mock
     response_packet = MockCyncPacket(packet_type=0x43, payload=device_struct)
     tracked_packet = MockTrackedPacket(response_packet)
 
-    mock_transport.recv_reliable.return_value = tracked_packet
+    mock_transport.recv_reliable_mock.return_value = tracked_packet
 
     # Execute
     device_info = await device_ops.request_device_info(device_id)
@@ -247,12 +303,14 @@ async def test_request_device_info(device_ops: DeviceOperationsTestHarness, mock
 
 
 @pytest.mark.asyncio
-async def test_request_device_info_timeout(device_ops: DeviceOperationsTestHarness, mock_transport: Mock) -> None:
+async def test_request_device_info_timeout(
+    device_ops: DeviceOperationsTestHarness, mock_transport: MockReliableTransport
+) -> None:
     """Test device info request timeout."""
     # Setup
     device_id = bytes([0x39, 0x87, 0xC8, 0x57])
-    mock_transport.send_reliable.return_value = MockSendResult(success=True)
-    mock_transport.recv_reliable.side_effect = TimeoutError()
+    mock_transport.send_reliable_mock.return_value = MockSendResult(success=True)
+    mock_transport.recv_reliable_mock.side_effect = TimeoutError()
 
     # Execute
     device_info = await device_ops.request_device_info(device_id, timeout=1.0)
@@ -465,16 +523,16 @@ class TestDeviceOperationsErrorPaths:
 
         # Execute & Assert
         with pytest.raises(ValueError, match="must be 4 bytes"):
-            await device_ops.request_device_info(invalid_device_id)
+            _ = await device_ops.request_device_info(invalid_device_id)
 
     @pytest.mark.asyncio
     async def test_ask_for_mesh_info_exception_logs_and_raises(
-        self, device_ops: DeviceOperationsTestHarness, mock_transport: Mock
+        self, device_ops: DeviceOperationsTestHarness, mock_transport: MockReliableTransport
     ) -> None:
         """Test that exceptions in ask_for_mesh_info are logged and re-raised."""
         # Setup
         device_ops.set_primary(True)
-        mock_transport.send_reliable.side_effect = ConnectionError("Connection lost")
+        mock_transport.send_reliable_mock.side_effect = ConnectionError("Connection lost")
 
         # Execute & Assert
         err = await expect_async_exception(device_ops.ask_for_mesh_info, MeshInfoRequestError)
@@ -482,16 +540,14 @@ class TestDeviceOperationsErrorPaths:
 
     @pytest.mark.asyncio
     async def test_ask_for_mesh_info_unexpected_exception_wrapped(
-        self, device_ops: DeviceOperationsTestHarness, mock_transport: Mock
+        self, device_ops: DeviceOperationsTestHarness, mock_transport: MockReliableTransport
     ) -> None:
-        """Test that unexpected exceptions are wrapped in MeshInfoRequestError
-        with exception chaining.
-        """
+        """Test that unexpected exceptions are wrapped in MeshInfoRequestError."""
         # Setup
         device_ops.set_primary(True)
         # Mock transport to raise unexpected exception
         # (not ConnectionError, TimeoutError, or OSError)
-        mock_transport.send_reliable.side_effect = ValueError("Unexpected error")
+        mock_transport.send_reliable_mock.side_effect = ValueError("Unexpected error")
 
         # Execute & Assert
         err = await expect_async_exception(device_ops.ask_for_mesh_info, MeshInfoRequestError)
@@ -508,12 +564,12 @@ class TestDeviceOperationsErrorPaths:
 
     @pytest.mark.asyncio
     async def test_request_device_info_send_exception(
-        self, device_ops: DeviceOperationsTestHarness, mock_transport: Mock
+        self, device_ops: DeviceOperationsTestHarness, mock_transport: MockReliableTransport
     ) -> None:
         """Test that send exceptions are caught and re-raised as DeviceInfoRequestError."""
         # Setup
         device_id = bytes([0x39, 0x87, 0xC8, 0x57])
-        mock_transport.send_reliable.side_effect = TimeoutError("Send timeout")
+        mock_transport.send_reliable_mock.side_effect = TimeoutError("Send timeout")
 
         # Execute & Assert
         err = await expect_async_exception(device_ops.request_device_info, DeviceInfoRequestError, device_id)
@@ -527,7 +583,7 @@ class TestDeviceOperationsErrorPaths:
 
         # Execute & Assert
         with pytest.raises(ValueError, match="cannot be empty"):
-            await device_ops.request_device_info(empty_device_id)
+            _ = await device_ops.request_device_info(empty_device_id)
 
     @pytest.mark.asyncio
     async def test_request_device_info_invalid_timeout_negative(self, device_ops: DeviceOperationsTestHarness) -> None:
@@ -538,7 +594,7 @@ class TestDeviceOperationsErrorPaths:
 
         # Execute & Assert
         with pytest.raises(ValueError, match="must be positive"):
-            await device_ops.request_device_info(device_id, timeout=negative_timeout)
+            _ = await device_ops.request_device_info(device_id, timeout=negative_timeout)
 
     @pytest.mark.asyncio
     async def test_request_device_info_invalid_timeout_zero(self, device_ops: DeviceOperationsTestHarness) -> None:
@@ -549,16 +605,16 @@ class TestDeviceOperationsErrorPaths:
 
         # Execute & Assert
         with pytest.raises(ValueError, match="must be positive"):
-            await device_ops.request_device_info(device_id, timeout=zero_timeout)
+            _ = await device_ops.request_device_info(device_id, timeout=zero_timeout)
 
     @pytest.mark.asyncio
     async def test_request_device_info_send_failure_not_success(
-        self, device_ops: DeviceOperationsTestHarness, mock_transport: Mock
+        self, device_ops: DeviceOperationsTestHarness, mock_transport: MockReliableTransport
     ) -> None:
         """Test DeviceInfoRequestError when send_reliable returns success=False."""
         # Setup
         device_id = bytes([0x39, 0x87, 0xC8, 0x57])
-        mock_transport.send_reliable.return_value = MockSendResult(success=False, reason="connection_lost")
+        mock_transport.send_reliable_mock.return_value = MockSendResult(success=False, reason="connection_lost")
 
         # Execute & Assert
         err = await expect_async_exception(device_ops.request_device_info, DeviceInfoRequestError, device_id)
@@ -566,12 +622,12 @@ class TestDeviceOperationsErrorPaths:
 
     @pytest.mark.asyncio
     async def test_request_device_info_oserror_exception(
-        self, device_ops: DeviceOperationsTestHarness, mock_transport: Mock
+        self, device_ops: DeviceOperationsTestHarness, mock_transport: MockReliableTransport
     ) -> None:
         """Test that OSError exceptions are caught and re-raised as DeviceInfoRequestError."""
         # Setup
         device_id = bytes([0x39, 0x87, 0xC8, 0x57])
-        mock_transport.send_reliable.side_effect = OSError("Network unreachable")
+        mock_transport.send_reliable_mock.side_effect = OSError("Network unreachable")
 
         # Execute & Assert
         err = await expect_async_exception(device_ops.request_device_info, DeviceInfoRequestError, device_id)
@@ -579,19 +635,19 @@ class TestDeviceOperationsErrorPaths:
 
     @pytest.mark.asyncio
     async def test_request_device_info_invalid_struct_parse_error(
-        self, device_ops: DeviceOperationsTestHarness, mock_transport: Mock
+        self, device_ops: DeviceOperationsTestHarness, mock_transport: MockReliableTransport
     ) -> None:
         """Test DeviceStructParseError when receiving 0x43 packet with invalid struct."""
         # Setup
         device_id = bytes([0x39, 0x87, 0xC8, 0x57])
-        mock_transport.send_reliable.return_value = MockSendResult(success=True)
+        mock_transport.send_reliable_mock.return_value = MockSendResult(success=True)
 
         # Mock 0x43 packet with invalid struct (too short)
         invalid_struct = bytes([0x01, 0x02, 0x03])  # Only 3 bytes, should be 24
         response_packet = MockCyncPacket(packet_type=0x43, payload=invalid_struct)
         tracked_packet = MockTrackedPacket(response_packet)
 
-        mock_transport.recv_reliable.return_value = tracked_packet
+        mock_transport.recv_reliable_mock.return_value = tracked_packet
 
         # Execute & Assert
         err = await expect_async_exception(device_ops.request_device_info, DeviceStructParseError, device_id)
@@ -599,19 +655,19 @@ class TestDeviceOperationsErrorPaths:
 
     @pytest.mark.asyncio
     async def test_request_device_info_wrong_packet_type_timeout(
-        self, device_ops: DeviceOperationsTestHarness, mock_transport: Mock
+        self, device_ops: DeviceOperationsTestHarness, mock_transport: MockReliableTransport
     ) -> None:
         """Test timeout when receiving wrong packet types (not 0x43)."""
         # Setup
         device_id = bytes([0x39, 0x87, 0xC8, 0x57])
-        mock_transport.send_reliable.return_value = MockSendResult(success=True)
+        mock_transport.send_reliable_mock.return_value = MockSendResult(success=True)
 
         # Mock wrong packet type (0x83 instead of 0x43)
         wrong_packet = MockCyncPacket(packet_type=0x83, payload=bytes(DEVICE_TYPE_LENGTH))
         tracked_packet = MockTrackedPacket(wrong_packet)
 
         # Return wrong packet, then timeout
-        mock_transport.recv_reliable.side_effect = [tracked_packet, TimeoutError()]
+        mock_transport.recv_reliable_mock.side_effect = [tracked_packet, TimeoutError()]
 
         # Execute - should timeout because we never receive 0x43
         device_info = await device_ops.request_device_info(device_id, timeout=0.1)
@@ -619,18 +675,16 @@ class TestDeviceOperationsErrorPaths:
         # Assert - should return None due to timeout
         assert device_info is None
         min_call_count = 2  # At least wrong packet + timeout
-        assert mock_transport.recv_reliable.call_count >= min_call_count
+        assert mock_transport.recv_reliable_mock.call_count >= min_call_count
 
     @pytest.mark.asyncio
     async def test_request_device_info_connection_error_exception(
-        self, device_ops: DeviceOperationsTestHarness, mock_transport: Mock
+        self, device_ops: DeviceOperationsTestHarness, mock_transport: MockReliableTransport
     ) -> None:
-        """Test that ConnectionError exceptions are caught and re-raised as
-        DeviceInfoRequestError.
-        """
+        """Test that ConnectionError exceptions are caught and re-raised as DeviceInfoRequestError."""
         # Setup
         device_id = bytes([0x39, 0x87, 0xC8, 0x57])
-        mock_transport.send_reliable.side_effect = ConnectionError("Connection refused")
+        mock_transport.send_reliable_mock.side_effect = ConnectionError("Connection refused")
 
         # Execute & Assert
         err = await expect_async_exception(device_ops.request_device_info, DeviceInfoRequestError, device_id)
@@ -645,7 +699,7 @@ class TestDeviceOperationsCache:
         """Test that cache evicts oldest entries when over limit."""
         # Temporarily reduce cache size for testing
         original_max = device_ops.MAX_CACHE_SIZE
-        device_ops.MAX_CACHE_SIZE = 3  # pyright: ignore[reportAttributeAccessIssue]  # Small cache for testing
+        device_ops.MAX_CACHE_SIZE = 3  # Small cache for testing
 
         try:
             # Create 4 device structs (one more than cache limit)
@@ -654,7 +708,7 @@ class TestDeviceOperationsCache:
                 device_id = bytes([0x39, 0x87, 0xC8, i])
                 device_struct = device_id + bytes([0] * 20)  # 24 bytes total
                 correlation_id = str(uuid.uuid4())
-                await device_ops.parse_device_struct_for_test(device_struct, correlation_id=correlation_id)
+                _ = await device_ops.parse_device_struct_for_test(device_struct, correlation_id=correlation_id)
                 device_ids.append(device_id.hex())
 
             # First 3 should be in cache
@@ -675,7 +729,7 @@ class TestDeviceOperationsCache:
         """Test that accessing cached device moves it to end (most recent)."""
         # Temporarily reduce cache size for testing
         original_max = device_ops.MAX_CACHE_SIZE
-        device_ops.MAX_CACHE_SIZE = 2  # pyright: ignore[reportAttributeAccessIssue]
+        device_ops.MAX_CACHE_SIZE = 2
 
         try:
             # Add 2 devices
@@ -684,8 +738,8 @@ class TestDeviceOperationsCache:
             device_struct1 = device_id1 + bytes([0] * 20)
             device_struct2 = device_id2 + bytes([0] * 20)
 
-            await device_ops.parse_device_struct_for_test(device_struct1, correlation_id=str(uuid.uuid4()))
-            await device_ops.parse_device_struct_for_test(device_struct2, correlation_id=str(uuid.uuid4()))
+            _ = await device_ops.parse_device_struct_for_test(device_struct1, correlation_id=str(uuid.uuid4()))
+            _ = await device_ops.parse_device_struct_for_test(device_struct2, correlation_id=str(uuid.uuid4()))
 
             # Both should be in cache
             expected_cache_size = 2
@@ -698,7 +752,7 @@ class TestDeviceOperationsCache:
             # Add third device - should evict device2 (oldest), not device1
             device_id3 = bytes([0x39, 0x87, 0xC8, 0x03])
             device_struct3 = device_id3 + bytes([0] * 20)
-            await device_ops.parse_device_struct_for_test(device_struct3, correlation_id=str(uuid.uuid4()))
+            _ = await device_ops.parse_device_struct_for_test(device_struct3, correlation_id=str(uuid.uuid4()))
 
             assert device_id1.hex() in device_ops.device_cache  # Should still be there
             assert device_id2.hex() not in device_ops.device_cache  # Should be evicted

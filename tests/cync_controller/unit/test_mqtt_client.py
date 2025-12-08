@@ -20,6 +20,10 @@ from cync_controller.mqtt_client import (
     SetBrightnessCommand,
     SetPowerCommand,
 )
+from tests.cync_controller.unit.conftest import make_dummy_secret
+
+MQTT_PASSWORD = make_dummy_secret("mqtt-pass")
+MQTT_BAD_PASSWORD = make_dummy_secret("mqtt-bad-pass")
 
 # Filter deprecation warning from aiomqtt.client module
 filterwarnings_mark = cast(Any, pytest.mark.filterwarnings)
@@ -141,7 +145,7 @@ class TestMQTTClientInitialization:
             patch("cync_controller.mqtt.client.CYNC_MQTT_HOST", "192.168.1.100"),
             patch("cync_controller.mqtt.client.CYNC_MQTT_PORT", "1883"),
             patch("cync_controller.mqtt.client.CYNC_MQTT_USER", "testuser"),
-            patch("cync_controller.mqtt.client.CYNC_MQTT_PASS", "testpass"),
+            patch("cync_controller.mqtt.client.CYNC_MQTT_PASS", MQTT_PASSWORD),
             patch("cync_controller.mqtt_client.g") as mock_g,
         ):
             mock_g.uuid = "test-uuid"
@@ -151,7 +155,7 @@ class TestMQTTClientInitialization:
             assert client.broker_host == "192.168.1.100"
             assert client.broker_port == "1883"
             assert client.broker_username == "testuser"
-            assert client.broker_password == "testpass"
+            assert client.broker_password == MQTT_PASSWORD
 
     def test_init_creates_client_id(self):
         """Test that initialization creates unique client ID."""
@@ -178,7 +182,7 @@ class TestMQTTClientConnection:
             mock_g.env.mqtt_host = "localhost"
             mock_g.env.mqtt_port = 1883
             mock_g.env.mqtt_user = "test"
-            mock_g.env.mqtt_pass = "test"
+            mock_g.env.mqtt_pass = MQTT_PASSWORD
             mock_g.reload_env = MagicMock()
 
             # Mock the client instance
@@ -211,7 +215,7 @@ class TestMQTTClientConnection:
             mock_g.env.mqtt_host = "localhost"
             mock_g.env.mqtt_port = 1883
             mock_g.env.mqtt_user = "test"
-            mock_g.env.mqtt_pass = "test"
+            mock_g.env.mqtt_pass = MQTT_PASSWORD
             mock_g.reload_env = MagicMock()
 
             # Mock the client to raise MqttError (connection refused)
@@ -238,7 +242,7 @@ class TestMQTTClientConnection:
             mock_g.env.mqtt_host = "localhost"
             mock_g.env.mqtt_port = 1883
             mock_g.env.mqtt_user = "baduser"
-            mock_g.env.mqtt_pass = "badpass"
+            mock_g.env.mqtt_pass = MQTT_BAD_PASSWORD
             mock_g.reload_env = MagicMock()
 
             # Simulate bad credentials error
@@ -841,7 +845,7 @@ class TestDeviceCommand:
             cmd = DeviceCommand("set_power", "device_1234")
 
             with pytest.raises(NotImplementedError):
-                await cmd.execute()
+                _ = await cmd.execute()
 
     def test_device_command_repr(self):
         """Test DeviceCommand __repr__ method."""
@@ -898,11 +902,11 @@ class TestCommandProcessor:
         processor = CommandProcessor()
 
         # Call __init__ again should not create new queue
-        original_queue = cast("asyncio.Queue[DeviceCommand]", processor._queue)  # type: ignore[reportPrivateUsage]
+        original_queue = processor._queue  # type: ignore[reportPrivateUsage]
         processor.__init__()
 
         # Queue should be the same
-        assert cast("asyncio.Queue[DeviceCommand]", processor._queue) is original_queue  # type: ignore[reportPrivateUsage]
+        assert processor._queue is original_queue  # type: ignore[reportPrivateUsage]
 
     @pytest.mark.asyncio
     async def test_command_processor_enqueue_command(self):
@@ -916,7 +920,7 @@ class TestCommandProcessor:
             await processor.enqueue(cmd)
 
             # Verify command was added to queue
-            assert not cast("asyncio.Queue[DeviceCommand]", processor._queue).empty()  # type: ignore[reportPrivateUsage]
+            assert processor._queue.empty() is False  # type: ignore[reportPrivateUsage]
 
     @pytest.mark.asyncio
     async def test_command_processor_queue_fifo_ordering(self):
@@ -935,7 +939,7 @@ class TestCommandProcessor:
             await processor.enqueue(cmd3)
 
             # Dequeue and verify FIFO order
-            queue = cast("asyncio.Queue[DeviceCommand]", processor._queue)  # type: ignore[reportPrivateUsage]
+            queue = processor._queue  # type: ignore[reportPrivateUsage]
             dequeued1: DeviceCommand = await queue.get()
             dequeued2: DeviceCommand = await queue.get()
             dequeued3: DeviceCommand = await queue.get()
@@ -1275,7 +1279,7 @@ class TestCommandProcessorQueue:
         await processor.enqueue(mock_command)
 
         # Command should be in queue
-        assert cast("asyncio.Queue[DeviceCommand]", processor._queue).qsize() == 1  # type: ignore[reportPrivateUsage]
+        assert processor._queue.qsize() == 1  # type: ignore[reportPrivateUsage]
 
     @pytest.mark.asyncio
     async def test_enqueue_starts_processing(self):
@@ -1435,7 +1439,7 @@ class TestCommandProcessorExecution:
             await asyncio.sleep(0.1)
 
             # Command should have been removed from queue despite failure
-            queue = cast("asyncio.Queue[DeviceCommand]", processor._queue)  # type: ignore[reportPrivateUsage]
+            queue = processor._queue  # type: ignore[reportPrivateUsage]
             assert processor._processing is False or queue.empty()  # type: ignore[reportPrivateUsage]
 
     @pytest.mark.asyncio

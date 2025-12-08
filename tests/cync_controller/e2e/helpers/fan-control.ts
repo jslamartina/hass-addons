@@ -233,7 +233,10 @@ export async function getFanPercentage(
 /**
  * Toggle fan power on or off
  */
-export async function toggleFanPower(page: Page, card: Locator): Promise<void> {
+export async function toggleFanPower(
+  page: Page,
+  _card: Locator,
+): Promise<void> {
   // Use page-level getByRole which pierces ALL shadow DOM boundaries
   const toggleSwitch = page.getByRole("switch").first();
 

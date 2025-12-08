@@ -3,19 +3,50 @@
 import contextlib
 import json
 import re
+import shutil
 import subprocess
 import time
-from typing import Any, cast
+from pathlib import Path
+from typing import cast
 
 from _pytest.outcomes import fail as pytest_fail
 from _pytest.outcomes import skip as pytest_skip
 
+JSONDict = dict[str, object]
+DOCKER_BIN = Path(shutil.which("docker") or "/usr/bin/docker")
+HA_BIN = Path(shutil.which("ha") or "/usr/bin/ha")
+
+if not DOCKER_BIN.is_absolute():
+    msg = "DOCKER_BIN must be an absolute path"
+    raise ValueError(msg)
+if not HA_BIN.is_absolute():
+    msg = "HA_BIN must be an absolute path"
+    raise ValueError(msg)
+
+
+def _run_trusted(
+    cmd: list[str],
+    *,
+    check: bool = False,
+    capture_output: bool = False,
+    text: bool | None = None,
+    timeout: float | None = None,
+) -> subprocess.CompletedProcess[str]:
+    """Run a trusted CLI command composed of fixed arguments."""
+    return subprocess.run(  # noqa: S603
+        cmd,
+        shell=False,
+        check=check,
+        capture_output=capture_output,
+        text=text,
+        timeout=timeout,
+    )
+
 
 def get_json_logs():
     """Get JSON logs from the addon container."""
-    result = subprocess.run(
-        ["docker", "exec", "addon_local_cync-controller", "cat", "/var/log/cync_controller.json"],
-        check=False,
+    result = _run_trusted(
+        [str(DOCKER_BIN), "exec", "addon_local_cync-controller", "cat", "/var/log/cync_controller.json"],
         capture_output=True,
         text=True,
         timeout=10,
@@ -23,35 +54,38 @@ def get_json_logs():
     return result.stdout
 
 
-def parse_json_logs(json_output: str) -> list[dict[str, Any]]:
+def parse_json_logs(json_output: str) -> list[JSONDict]:
     """Parse JSON logs and extract relevant entries."""
-    entries: list[dict[str, Any]] = []
+    entries: list[JSONDict] = []
     for line in json_output.strip().split("\n"):
         if not line:
             continue
         with contextlib.suppress(json.JSONDecodeError):
-            entries.append(cast(dict[str, Any], json.loads(line)))
+            loaded: object = cast(object, json.loads(line))
+            if isinstance(loaded, dict):
+                entries.append(cast(JSONDict, loaded))
     return entries
 
 
 def publish_group_command(state: str):
     """Publish a group command via MQTT."""
-    result = subprocess.run(
+    payload = json.dumps({"state": state})
+    result = _run_trusted(
         [
-            "docker",
+            str(DOCKER_BIN),
             "run",
             "--rm",
             "--network",
             "host",
-            "library/python:3.11-slim",
-            "bash",
-            "-c",
-            f"""
-apt-get update >/dev/null 2>&1 && apt-get install -y mosquitto-clients >/dev/null 2>&1
-mosquitto_pub -h localhost -t "cync_controller_addon/set/device-group-32771" -m '{{"state":"{state}"}}' 2>&1
-""",
+            "eclipse-mosquitto:2",
+            "mosquitto_pub",
+            "-h",
+            "localhost",
+            "-t",
+            "cync_controller_addon/set/device-group-32771",
+            "-m",
+            payload,
         ],
-        check=False,
         capture_output=True,
         text=True,
         timeout=30,
@@ -59,7 +93,7 @@ mosquitto_pub -h localhost -t "cync_controller_addon/set/device-group-32771" -m 
     return result.returncode == 0
 
 
-def measure_mesh_refresh_performance():
+def measure_mesh_refresh_performance() -> JSONDict | None:
     """Measure mesh refresh performance by analyzing JSON logs.
 
     Returns:
@@ -70,10 +104,10 @@ def measure_mesh_refresh_performance():
     entries = parse_json_logs(logs)
 
     # Find MESH_REFRESH_REQ and MESH_REFRESH_DONE pairs with same correlation_id
-    refresh_dones: dict[str, dict[str, Any]] = {}
+    refresh_dones: dict[str, JSONDict] = {}
 
     for entry in entries:
-        msg: str = cast(str, entry.get("message", ""))
+        msg = str(entry.get("message", ""))
 
         # Look for [MESH_REFRESH_DONE] with total_ms and parse_ms
         if "[MESH_REFRESH_DONE]" in msg:
@@ -89,22 +123,19 @@ def measure_mesh_refresh_performance():
                 }
 
     if refresh_dones:
-        totals: list[float] = [data["total_ms"] for data in refresh_dones.values()]
-        parses: list[float] = [data["parse_ms"] for data in refresh_dones.values()]
+        totals: list[float] = [cast(float, data["total_ms"]) for data in refresh_dones.values()]
+        parses: list[float] = [cast(float, data["parse_ms"]) for data in refresh_dones.values()]
 
-        return cast(
-            dict[str, Any],
-            {
-                "count": len(refresh_dones),
-                "avg_total_ms": sum(totals) / len(totals),
-                "max_total_ms": max(totals),
-                "min_total_ms": min(totals),
-                "avg_parse_ms": sum(parses) / len(parses),
-                "max_parse_ms": max(parses),
-                "min_parse_ms": min(parses),
-                "samples": refresh_dones,
-            },
-        )
+        return {
+            "count": len(refresh_dones),
+            "avg_total_ms": sum(totals) / len(totals),
+            "max_total_ms": max(totals),
+            "min_total_ms": min(totals),
+            "avg_parse_ms": sum(parses) / len(parses),
+            "max_parse_ms": max(parses),
+            "min_parse_ms": min(parses),
+            "samples": refresh_dones,
+        }
 
     return None
 
@@ -118,19 +149,12 @@ def test_mesh_refresh_performance_group_commands():
     Goal: Verify mesh refresh completes within 500ms threshold for good UX.
     """
     # Restart addon to get fresh logs
-    _ = subprocess.run(["ha", "addons", "restart", "local_cync-controller"], check=False, timeout=30)
+    _ = _run_trusted([str(HA_BIN), "addons", "restart", "local_cync-controller"], check=False, timeout=30)
     time.sleep(8)  # Wait for addon to fully start and MQTT to connect
 
     # Clear the JSON log file to get a clean baseline
-    subprocess.run(
-        [
-            "docker",
-            "exec",
-            "addon_local_cync-controller",
-            "sh",
-            "-c",
-            'echo "" > /var/log/cync_controller.json',
-        ],
+    _ = _run_trusted(
+        [str(DOCKER_BIN), "exec", "addon_local_cync-controller", "sh", "-c", 'echo "" > /var/log/cync_controller.json'],
         check=False,
         timeout=5,
     )
@@ -157,12 +181,14 @@ def test_mesh_refresh_performance_group_commands():
     perf = measure_mesh_refresh_performance()
 
     if perf:
-        for _i, (_, _data) in enumerate(perf["samples"].items(), 1):  # type: ignore[reportUnknownVariableType]
-            pass
+        samples = cast(dict[str, JSONDict], perf.get("samples", {}))
+        for _i, (_corr_id, _data) in enumerate(samples.items(), 1):
+            _ = (_i, _data)
 
         # Verify within threshold
         threshold_ms = 500
-        if perf["max_total_ms"] > threshold_ms:
-            pytest_fail(f" FAIL: Mesh refresh took {perf['max_total_ms']:.1f}ms, exceeds {threshold_ms}ms threshold")
+        max_total_ms = cast(float, perf["max_total_ms"])
+        if max_total_ms > threshold_ms:
+            pytest_fail(f" FAIL: Mesh refresh took {max_total_ms:.1f}ms, exceeds {threshold_ms}ms threshold")
     else:
         pytest_skip("Mesh refresh logs not found - cannot measure performance")

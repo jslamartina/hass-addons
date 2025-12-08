@@ -7,6 +7,7 @@ import contextlib
 import ssl
 import tempfile
 import time
+from dataclasses import dataclass
 from pathlib import Path as PathLib
 from typing import ClassVar, cast
 
@@ -1065,100 +1066,179 @@ class NCyncServer:
         ssl_context.set_ciphers(":".join(ciphers))
         return ssl_context
 
-    async def parse_status(self, raw_state: bytes, from_pkt: str | None = None):
-        """Parse status packet and publish device/group state updates."""
-        _id = raw_state[0]
+    @dataclass(slots=True)
+    class StatusFields:
+        """Parsed status packet fields."""
 
-        # Log every parse_status call
+        state: int
+        brightness: int
+        temp: int
+        r: int
+        g_val: int
+        b: int
+        connected_to_mesh: int
+        raw_state_hex: str
+
+    def _log_status_entry(self, device_id: int, raw_state: bytes, from_pkt: str | None) -> None:
+        """Log the incoming status packet with timestamp."""
         ts_ms = int(time.time() * 1000)
         state_val = raw_state[1] if len(raw_state) > 1 else 0
         logger.debug(
             "[PARSE_STATUS_ENTRY] ts=%dms id=%s state=%s from_pkt=%s",
             ts_ms,
-            _id,
+            device_id,
             "ON" if state_val else "OFF",
             from_pkt,
         )
 
-        # Debug: log every parse_status call for specific device
-        if _id == DEBUG_DEVICE_ID:
-            logger.debug(
-                "parse_status called for device 103",
-                extra={
-                    "device_id": _id,
-                    "from_pkt": from_pkt,
-                    "raw_state_hex": raw_state.hex(),
-                },
-            )
+    def _log_debug_device_call(self, device_id: int, raw_state: bytes, from_pkt: str | None) -> None:
+        """Log full state for debug device."""
+        if device_id != DEBUG_DEVICE_ID:
+            return
+        logger.debug(
+            "parse_status called for device 103",
+            extra={
+                "device_id": device_id,
+                "from_pkt": from_pkt,
+                "raw_state_hex": raw_state.hex(),
+            },
+        )
 
-        # Check if this is a device or a group
+    def _resolve_status_target(self, device_id: int) -> tuple[CyncDevice | None, CyncGroup | None]:
+        """Return device or group matching status ID."""
         if not g.ncync_server:
             logger.error("ncync_server is None, cannot process device status")
-            return
-        device_proto = g.ncync_server.devices.get(_id)
+            return None, None
+
+        device_proto = g.ncync_server.devices.get(device_id)
         device = cast("CyncDevice | None", device_proto)
-        group_proto = g.ncync_server.groups.get(_id) if device is None else None
+        group_proto = g.ncync_server.groups.get(device_id) if device is None else None
         group = cast("CyncGroup | None", group_proto)
 
         if device is None and group is None:
             logger.warning(
                 "Unknown device/group ID - may be disabled or needs re-export",
                 extra={
-                    "id": _id,
+                    "id": device_id,
                     "note": "Check config file or re-export Cync account devices",
                 },
             )
-            return
+        return device, group
 
-        # Parse status data (same format for devices and groups)
+    def _extract_status_fields(self, raw_state: bytes) -> NCyncServer.StatusFields:
+        """Parse shared status fields from raw packet."""
         state = raw_state[1]
         brightness = raw_state[2]
         temp = raw_state[3]
         r = raw_state[4]
-        _g = raw_state[5]
+        g_val = raw_state[5]
         b = raw_state[6]
-        connected_to_mesh = 1
-        # check if len is enough for online byte, it is optional
-        if len(raw_state) > ONLINE_BYTE_INDEX:
-            # The last byte seems to indicate if the device is online or offline (connected to mesh / powered on)
-            connected_to_mesh = raw_state[ONLINE_BYTE_INDEX]
+        connected_to_mesh = raw_state[ONLINE_BYTE_INDEX] if len(raw_state) > ONLINE_BYTE_INDEX else 1
+        return self.StatusFields(
+            state=state,
+            brightness=brightness,
+            temp=temp,
+            r=r,
+            g_val=g_val,
+            b=b,
+            connected_to_mesh=connected_to_mesh,
+            raw_state_hex=raw_state.hex(),
+        )
 
-        # Handle device
+    def _log_device_debug_details(
+        self,
+        device_id: int,
+        device: CyncDevice,
+        fields: NCyncServer.StatusFields,
+        from_pkt: str | None,
+    ) -> None:
+        """Log detailed state for debug device or fan controllers."""
+        if device_id == DEBUG_DEVICE_ID:
+            logger.debug(
+                "Device 103 details",
+                extra={
+                    "device_id": device_id,
+                    "device_name": device.name,
+                    "is_fan_controller": device.is_fan_controller,
+                    "metadata_type": device.metadata.type if device.metadata else None,
+                    "capabilities": device.metadata.capabilities if device.metadata else None,
+                    "brightness": fields.brightness,
+                },
+            )
+        if device.is_fan_controller:
+            logger.debug(
+                "Fan controller raw brightness",
+                extra={
+                    "device_id": device_id,
+                    "device_name": device.name,
+                    "brightness": fields.brightness,
+                    "raw_state_2": fields.brightness,
+                    "from_pkt": from_pkt,
+                },
+            )
+
+    async def _handle_device_status(
+        self,
+        device: CyncDevice,
+        device_id: int,
+        fields: NCyncServer.StatusFields,
+        from_pkt: str | None,
+    ) -> None:
+        """Handle status updates for a device."""
+        self._log_device_debug_details(device_id, device, fields, from_pkt)
+        self._handle_device_offline_tracking(device, fields.connected_to_mesh, device_id)
+
+        if fields.connected_to_mesh != 0:
+            await self._update_device_state_and_publish(
+                device,
+                fields.state,
+                fields.brightness,
+                fields.temp,
+                fields.r,
+                fields.g_val,
+                fields.b,
+                from_pkt,
+            )
+            await self._update_subgroups_for_device(device, from_pkt)
+
+    async def _handle_group_status(
+        self,
+        group: CyncGroup,
+        group_id: int,
+        fields: NCyncServer.StatusFields,
+        from_pkt: str | None,
+    ) -> None:
+        """Handle status updates for a group."""
+        group.online = fields.connected_to_mesh != 0
+        if fields.connected_to_mesh != 0:
+            await self._update_group_state_and_publish(
+                group,
+                fields.state,
+                fields.brightness,
+                fields.temp,
+                fields.r,
+                fields.g_val,
+                fields.b,
+                group_id,
+                from_pkt,
+            )
+
+    async def parse_status(self, raw_state: bytes, from_pkt: str | None = None):
+        """Parse status packet and publish device/group state updates."""
+        device_id = raw_state[0]
+        self._log_status_entry(device_id, raw_state, from_pkt)
+        self._log_debug_device_call(device_id, raw_state, from_pkt)
+
+        device, group = self._resolve_status_target(device_id)
+        if device is None and group is None:
+            return
+
+        fields = self._extract_status_fields(raw_state)
+
         if device is not None:
-            if _id == DEBUG_DEVICE_ID:
-                logger.debug(
-                    "Device 103 details",
-                    extra={
-                        "device_id": _id,
-                        "device_name": device.name,
-                        "is_fan_controller": device.is_fan_controller,
-                        "metadata_type": device.metadata.type if device.metadata else None,
-                        "capabilities": device.metadata.capabilities if device.metadata else None,
-                        "brightness": brightness,
-                    },
-                )
-            if device.is_fan_controller:
-                logger.debug(
-                    "Fan controller raw brightness",
-                    extra={
-                        "device_id": _id,
-                        "device_name": device.name,
-                        "brightness": brightness,
-                        "raw_state_2": raw_state[2],
-                        "from_pkt": from_pkt,
-                    },
-                )
-            self._handle_device_offline_tracking(device, connected_to_mesh, _id)
-
-            if connected_to_mesh != 0:
-                await self._update_device_state_and_publish(device, state, brightness, temp, r, _g, b, from_pkt)
-                await self._update_subgroups_for_device(device, from_pkt)
-
-        # Handle group
+            await self._handle_device_status(device, device_id, fields, from_pkt)
         elif group is not None:
-            group.online = connected_to_mesh != 0
-            if connected_to_mesh != 0:
-                await self._update_group_state_and_publish(group, state, brightness, temp, r, _g, b, _id, from_pkt)
+            await self._handle_group_status(group, device_id, fields, from_pkt)
 
     async def periodic_status_refresh(self):
         """Periodic sanity check to refresh device status and ensure sync with actual device state."""

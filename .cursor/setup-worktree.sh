@@ -118,10 +118,14 @@ setup_python_environment() {
   # Install dependencies from all Python projects
   # All installations are required - script will fail immediately on any error
 
-  # 1. cync-controller (setuptools)
-  log_info "Installing cync-controller dependencies (with dev/test extras)"
-  python -m pip install -e "$REPO_ROOT/cync-controller[dev,test]" > /dev/null
-  log_info "  ✓ cync-controller installed successfully"
+  # 1. Repository package + dev/test dependencies (Poetry)
+  log_info "Installing repository package and dev/test dependencies (Poetry)"
+  pushd "$REPO_ROOT" > /dev/null
+  export POETRY_VIRTUALENVS_CREATE=false
+  poetry install --with dev,test --no-interaction > /dev/null
+  unset POETRY_VIRTUALENVS_CREATE
+  popd > /dev/null
+  log_info "  ✓ Repository package installed successfully"
 
   # 2. scripts (setuptools)
   log_info "Installing scripts package dependencies"

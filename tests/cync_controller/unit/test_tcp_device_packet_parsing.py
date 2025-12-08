@@ -7,7 +7,6 @@ from asyncio import StreamReader, StreamWriter
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from _pytest.logging import LogCaptureFixture
 from _pytest.outcomes import skip as pytest_skip
 
 from cync_controller.devices.tcp_device import CyncTCPDevice
@@ -74,12 +73,12 @@ class TestCyncTCPDevicePacketParsing:
         # Should send ping ACK
         assert tcp_device.write.called
 
+    @pytest.mark.usefixtures("_caplog")
     @pytest.mark.asyncio
     async def test_parse_packet_0xa3_app_announcement(
         self,
         stream_reader: StreamReader,
         stream_writer: StreamWriter,
-        _caplog: LogCaptureFixture,
     ) -> None:
         """Test parsing 0xA3 app announcement packet."""
         tcp_device = CyncTCPDevice(reader=stream_reader, writer=stream_writer, address="192.168.1.100")

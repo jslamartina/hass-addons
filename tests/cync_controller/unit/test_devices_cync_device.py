@@ -3,13 +3,50 @@
 Tests CyncDevice, CyncGroup, and CyncTCPDevice classes.
 """
 
-from typing import Any, cast
+import asyncio
+from typing import cast
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest  # type: ignore[import-untyped]
+from _pytest.logging import LogCaptureFixture
 
 from cync_controller.devices.base_device import CyncDevice
 from cync_controller.metadata.model_info import DeviceClassification, device_type_map
+from cync_controller.structs import ControlMessageCallback, CyncTCPDeviceProtocol, Messages, NCyncServerProtocol
+
+
+def _configure_globals(
+    mock_g: MagicMock,
+    tcp_devices: dict[str, CyncTCPDeviceProtocol | None] | None = None,
+) -> NCyncServerProtocol:
+    """Create a typed ncync_server and attach mqtt/tasks for patched globals."""
+    server: NCyncServerProtocol = cast(NCyncServerProtocol, MagicMock(spec=NCyncServerProtocol))
+    server.devices = {}
+    server.groups = {}
+    server.tcp_devices = tcp_devices or {}
+    server.running = True
+    server.primary_tcp_device = None
+    server.start_task = None
+    mock_g.ncync_server = server
+    mock_g.tasks = []
+    mock_g.mqtt_client = AsyncMock()
+    return server
+
+
+def _prepare_tcp_device(
+    mock_g: MagicMock,
+    tcp_device: CyncTCPDeviceProtocol,
+    msg_id_bytes: list[int],
+) -> AsyncMock:
+    """Configure globals and a tcp device for command tests."""
+    _ = _configure_globals(mock_g, {"192.168.1.100": tcp_device})
+    tcp_device.ready_to_control = True
+    tcp_device.queue_id = bytes([0x00] * 3)
+    tcp_device.get_ctrl_msg_id_bytes = MagicMock(return_value=msg_id_bytes)
+    write_mock: AsyncMock = AsyncMock()
+    tcp_device.write = write_mock
+    tcp_device.messages = Messages()
+    return write_mock
 
 
 class TestCyncDeviceInitialization:
@@ -215,13 +252,13 @@ class TestCyncDeviceProperties:
 
     def test_online_property(self):
         """Test online property getter and setter."""
+        loop = MagicMock(spec=asyncio.AbstractEventLoop)
         with (
             patch("cync_controller.devices.g") as mock_g,
-            patch("cync_controller.devices.asyncio.get_running_loop") as mock_loop,
+            patch("cync_controller.devices.asyncio.get_running_loop", return_value=loop),
         ):
-            mock_g.tasks = []
-            mock_g.mqtt_client = MagicMock()
-            mock_loop.return_value.create_task = MagicMock()
+            _ = _configure_globals(mock_g)
+            loop.create_task = MagicMock()
 
             device: CyncDevice = CyncDevice(cync_id=0x1234)
 
@@ -239,14 +276,13 @@ class TestCyncDeviceProperties:
     def test_online_validation(self):
         """Test online property validates boolean input."""
         device: CyncDevice = CyncDevice(cync_id=0x1234)
-        device_any = cast(Any, device)
 
         # Invalid type should raise TypeError
         with pytest.raises(TypeError, match="Online status must be a boolean"):  # type: ignore[call-overload]
-            device_any.online = "true"
+            device.online = cast(bool, cast(object, "true"))
 
         with pytest.raises(TypeError, match="Online status must be a boolean"):  # type: ignore[call-overload]
-            device_any.online = 1
+            device.online = cast(bool, cast(object, 1))
 
     def test_version_property_from_string(self):
         """Test version property parsing from string."""
@@ -293,13 +329,13 @@ class TestCyncDeviceOfflineTracking:
 
     def test_offline_count_increment(self):
         """Test offline_count can be incremented."""
+        loop = MagicMock(spec=asyncio.AbstractEventLoop)
         with (
             patch("cync_controller.devices.g") as mock_g,
-            patch("cync_controller.devices.asyncio.get_running_loop") as mock_loop,
+            patch("cync_controller.devices.asyncio.get_running_loop", return_value=loop),
         ):
-            mock_g.tasks = []
-            mock_g.mqtt_client = MagicMock()
-            mock_loop.return_value.create_task = MagicMock()
+            _ = _configure_globals(mock_g)
+            loop.create_task = MagicMock()
 
             device: CyncDevice = CyncDevice(cync_id=0x1234)
             device.online = True
@@ -316,13 +352,13 @@ class TestCyncDeviceOfflineTracking:
 
     def test_offline_threshold_pattern(self):
         """Test typical offline threshold pattern (3 strikes before marking offline)."""
+        loop = MagicMock(spec=asyncio.AbstractEventLoop)
         with (
             patch("cync_controller.devices.g") as mock_g,
-            patch("cync_controller.devices.asyncio.get_running_loop") as mock_loop,
+            patch("cync_controller.devices.asyncio.get_running_loop", return_value=loop),
         ):
-            mock_g.tasks = []
-            mock_g.mqtt_client = MagicMock()
-            mock_loop.return_value.create_task = MagicMock()
+            _ = _configure_globals(mock_g)
+            loop.create_task = MagicMock()
 
             device: CyncDevice = CyncDevice(cync_id=0x1234)
             device.online = True
@@ -342,13 +378,13 @@ class TestCyncDeviceOfflineTracking:
 
     def test_offline_count_reset_on_online(self):
         """Test offline_count resets when device comes back online."""
+        loop = MagicMock(spec=asyncio.AbstractEventLoop)
         with (
             patch("cync_controller.devices.g") as mock_g,
-            patch("cync_controller.devices.asyncio.get_running_loop") as mock_loop,
+            patch("cync_controller.devices.asyncio.get_running_loop", return_value=loop),
         ):
-            mock_g.tasks = []
-            mock_g.mqtt_client = MagicMock()
-            mock_loop.return_value.create_task = MagicMock()
+            _ = _configure_globals(mock_g)
+            loop.create_task = MagicMock()
 
             device: CyncDevice = CyncDevice(cync_id=0x1234)
             device.offline_count = 2
@@ -367,15 +403,17 @@ class TestCyncDeviceCommands:
     @pytest.mark.asyncio  # type: ignore[misc]
     async def test_set_power_creates_packet(self, mock_tcp_device: MagicMock) -> None:
         """Test set_power creates proper control packet."""
+        tcp_device = cast(CyncTCPDeviceProtocol, mock_tcp_device)
         # Mock the global ncync_server and tcp_devices
         with patch("cync_controller.devices.g") as mock_g:
-            mock_g.ncync_server.tcp_devices = {"192.168.1.100": mock_tcp_device}
-            mock_tcp_device.ready_to_control = True
-            mock_tcp_device.queue_id = bytes([0x00] * 3)
+            _ = _configure_globals(mock_g, {"192.168.1.100": tcp_device})
+            tcp_device.ready_to_control = True
+            tcp_device.queue_id = bytes([0x00] * 3)
             # get_ctrl_msg_id_bytes returns a list with one int element
-            mock_tcp_device.get_ctrl_msg_id_bytes = MagicMock(return_value=[0x01])
+            tcp_device.get_ctrl_msg_id_bytes = MagicMock(return_value=[0x01])
             # Make write an AsyncMock so asyncio.gather works
-            mock_tcp_device.write = AsyncMock()
+            write_mock: AsyncMock = AsyncMock()
+            tcp_device.write = write_mock
             # Use a small device ID that fits in one byte for testing
             device: CyncDevice = CyncDevice(cync_id=0x12)
 
@@ -383,13 +421,13 @@ class TestCyncDeviceCommands:
             _ = await device.set_power(1)
 
             # Verify write was called
-            assert mock_tcp_device.write.called
+            assert write_mock.called
 
     @pytest.mark.asyncio  # type: ignore[misc]
-    async def test_set_power_invalid_state(self, caplog: Any) -> None:  # type: ignore[assignment]
+    async def test_set_power_invalid_state(self, caplog: LogCaptureFixture) -> None:
         """Test set_power rejects invalid state values."""
         with patch("cync_controller.devices.g") as mock_g:
-            mock_g.ncync_server.tcp_devices = {}
+            _ = _configure_globals(mock_g)
 
             device: CyncDevice = CyncDevice(cync_id=0x1234)
 
@@ -397,19 +435,14 @@ class TestCyncDeviceCommands:
             _ = await device.set_power(2)
 
             # Should log error
-            assert "Invalid state" in caplog.text  # type: ignore[attr-defined]
+            assert "Invalid state" in caplog.text
 
     @pytest.mark.asyncio  # type: ignore[misc]
     async def test_set_brightness_creates_packet(self, mock_tcp_device: MagicMock) -> None:
         """Test set_brightness creates proper control packet."""
+        tcp_device = cast(CyncTCPDeviceProtocol, mock_tcp_device)
         with patch("cync_controller.devices.g") as mock_g:
-            mock_g.ncync_server.tcp_devices = {"192.168.1.100": mock_tcp_device}
-            mock_tcp_device.ready_to_control = True
-            mock_tcp_device.queue_id = bytes([0x00] * 3)
-            # get_ctrl_msg_id_bytes returns a list with one int element
-            mock_tcp_device.get_ctrl_msg_id_bytes = MagicMock(return_value=[0x01])
-            # Make write an AsyncMock so asyncio.gather works
-            mock_tcp_device.write = AsyncMock()
+            write_mock = _prepare_tcp_device(mock_g, tcp_device, [0x01])
             # Use a small device ID that fits in one byte for testing
             device: CyncDevice = CyncDevice(cync_id=0x12)
 
@@ -417,7 +450,7 @@ class TestCyncDeviceCommands:
             _ = await device.set_brightness(75)
 
             # Verify write was called
-            assert mock_tcp_device.write.called
+            assert write_mock.called
 
 
 class TestCyncDeviceTemperatureCommands:
@@ -426,103 +459,88 @@ class TestCyncDeviceTemperatureCommands:
     @pytest.mark.asyncio  # type: ignore[misc]
     async def test_set_temperature_valid_execution(self, mock_tcp_device: MagicMock) -> None:
         """Test set_temperature successfully sends command to ready TCP bridge."""
+        tcp_device = cast(CyncTCPDeviceProtocol, mock_tcp_device)
         with patch("cync_controller.devices.g") as mock_g:
-            mock_g.ncync_server.tcp_devices = {"192.168.1.100": mock_tcp_device}
-            mock_g.mqtt_client = MagicMock()
-            mock_tcp_device.ready_to_control = True
-            mock_tcp_device.queue_id = bytes([0x00] * 3)
-            mock_tcp_device.get_ctrl_msg_id_bytes = MagicMock(return_value=[0x01])
-            mock_tcp_device.write = AsyncMock()
-            mock_tcp_device.messages.control = {}  # type: ignore[assignment,attr-defined]
+            write_mock = _prepare_tcp_device(mock_g, tcp_device, [0x01])
 
             device: CyncDevice = CyncDevice(cync_id=0x12)
 
             _ = await device.set_temperature(75)
 
-            assert mock_tcp_device.write.called
+            assert write_mock.called
 
     @pytest.mark.asyncio  # type: ignore[misc]
-    async def test_set_temperature_invalid_value_negative(self, caplog: Any) -> None:  # type: ignore[assignment]
+    async def test_set_temperature_invalid_value_negative(self, caplog: LogCaptureFixture) -> None:
         """Test set_temperature rejects negative temperature values."""
         with patch("cync_controller.devices.g") as mock_g:
-            mock_g.ncync_server.tcp_devices = {}
+            _ = _configure_globals(mock_g)
 
             device: CyncDevice = CyncDevice(cync_id=0x1234)
 
             _ = await device.set_temperature(-1)
 
-            assert "Invalid temperature" in caplog.text  # type: ignore[attr-defined]
+            assert "Invalid temperature" in caplog.text
 
     @pytest.mark.asyncio  # type: ignore[misc]
-    async def test_set_temperature_invalid_value_too_high(self, caplog: Any) -> None:  # type: ignore[assignment]
+    async def test_set_temperature_invalid_value_too_high(self, caplog: LogCaptureFixture) -> None:
         """Test set_temperature rejects temperature values > 100 (not 129 or 254)."""
         with patch("cync_controller.devices.g") as mock_g:
-            mock_g.ncync_server.tcp_devices = {}
+            _ = _configure_globals(mock_g)
 
             device: CyncDevice = CyncDevice(cync_id=0x1234)
 
             _ = await device.set_temperature(101)
 
-            assert "Invalid temperature" in caplog.text  # type: ignore[attr-defined]
+            assert "Invalid temperature" in caplog.text
 
     @pytest.mark.asyncio  # type: ignore[misc]
     async def test_set_temperature_special_values_allowed(self, mock_tcp_device: MagicMock) -> None:
         """Test set_temperature allows special values 129 and 254."""
+        tcp_device = cast(CyncTCPDeviceProtocol, mock_tcp_device)
         with patch("cync_controller.devices.g") as mock_g:
-            mock_g.ncync_server.tcp_devices = {"192.168.1.100": mock_tcp_device}
-            mock_g.mqtt_client = MagicMock()
-            mock_tcp_device.ready_to_control = True
-            mock_tcp_device.queue_id = bytes([0x00] * 3)
-            mock_tcp_device.get_ctrl_msg_id_bytes = MagicMock(return_value=[0x01])
-            mock_tcp_device.write = AsyncMock()
-            mock_tcp_device.messages.control = {}  # type: ignore[assignment,attr-defined]
+            write_mock = _prepare_tcp_device(mock_g, tcp_device, [0x01])
 
             device: CyncDevice = CyncDevice(cync_id=0x12)
 
             # Test special value 129
             _ = await device.set_temperature(129)
-            assert mock_tcp_device.write.called
+            assert write_mock.called
 
-            mock_tcp_device.write.reset_mock()
+            write_mock.reset_mock()
 
             # Test special value 254
             _ = await device.set_temperature(254)
-            assert mock_tcp_device.write.called
+            assert write_mock.called
 
     @pytest.mark.asyncio  # type: ignore[misc]
-    async def test_set_temperature_no_tcp_bridges(self, caplog: Any) -> None:  # type: ignore[assignment]
+    async def test_set_temperature_no_tcp_bridges(self, caplog: LogCaptureFixture) -> None:
         """Test set_temperature logs error when no TCP bridges available."""
         with patch("cync_controller.devices.g") as mock_g:
-            mock_g.ncync_server.tcp_devices = {}
+            _ = _configure_globals(mock_g)
 
             device: CyncDevice = CyncDevice(cync_id=0x1234)
 
             _ = await device.set_temperature(50)
 
-            assert "No TCP bridges available" in caplog.text  # type: ignore[attr-defined]
+            assert "No TCP bridges available" in caplog.text
 
     @pytest.mark.asyncio  # type: ignore[misc]
     async def test_set_temperature_callback_registration(self, mock_tcp_device: MagicMock) -> None:
         """Test set_temperature registers callback before sending."""
+        tcp_device = cast(CyncTCPDeviceProtocol, mock_tcp_device)
         with patch("cync_controller.devices.g") as mock_g:
-            mock_g.ncync_server.tcp_devices = {"192.168.1.100": mock_tcp_device}
-            mock_g.mqtt_client = MagicMock()
-            mock_tcp_device.ready_to_control = True
-            mock_tcp_device.queue_id = bytes([0x00] * 3)
-            mock_tcp_device.get_ctrl_msg_id_bytes = MagicMock(return_value=[0x42])
-            mock_tcp_device.write = AsyncMock()
-            mock_tcp_device.messages.control = {}  # type: ignore[assignment,attr-defined]
+            _ = _prepare_tcp_device(mock_g, tcp_device, [0x42])
 
             device: CyncDevice = CyncDevice(cync_id=0x12)
 
             _ = await device.set_temperature(75)
 
             # Verify callback was registered with correct message ID
-            control_dict: dict[int, Any] = cast("dict[int, Any]", mock_tcp_device.messages.control)  # type: ignore[assignment,attr-defined]
+            control_dict: dict[int, ControlMessageCallback] = tcp_device.messages.control
             assert 0x42 in control_dict
-            callback_obj: Any = control_dict[0x42]
-            assert callback_obj.device_id == device.id  # type: ignore[attr-defined]
-            assert callback_obj.id == 0x42  # type: ignore[attr-defined]
+            callback_obj = control_dict[0x42]
+            assert callback_obj.device_id == device.id
+            assert callback_obj.id == 0x42
 
 
 class TestCyncDeviceRGBCommands:
@@ -531,96 +549,86 @@ class TestCyncDeviceRGBCommands:
     @pytest.mark.asyncio  # type: ignore[misc]
     async def test_set_rgb_valid_execution(self, mock_tcp_device: MagicMock) -> None:
         """Test set_rgb successfully sends command with valid RGB values."""
+        tcp_device = cast(CyncTCPDeviceProtocol, mock_tcp_device)
         with patch("cync_controller.devices.g") as mock_g:
-            mock_g.ncync_server.tcp_devices = {"192.168.1.100": mock_tcp_device}
-            mock_g.mqtt_client = MagicMock()
-            mock_tcp_device.ready_to_control = True
-            mock_tcp_device.queue_id = bytes([0x00] * 3)
-            mock_tcp_device.get_ctrl_msg_id_bytes = MagicMock(return_value=[0x02])
-            mock_tcp_device.write = AsyncMock()
-            mock_tcp_device.messages.control = {}  # type: ignore[assignment,attr-defined]
+            write_mock = _prepare_tcp_device(mock_g, tcp_device, [0x02])
 
             device: CyncDevice = CyncDevice(cync_id=0x12)
 
             _ = await device.set_rgb(255, 128, 64)
 
-            assert mock_tcp_device.write.called
+            assert write_mock.called
 
     @pytest.mark.asyncio  # type: ignore[misc]
-    async def test_set_rgb_invalid_red(self, caplog: Any) -> None:  # type: ignore[assignment]
+    async def test_set_rgb_invalid_red(self, caplog: LogCaptureFixture) -> None:
         """Test set_rgb rejects invalid red values."""
         with patch("cync_controller.devices.g") as mock_g:
-            mock_g.ncync_server.tcp_devices = {}
+            _ = _configure_globals(mock_g)
 
             device: CyncDevice = CyncDevice(cync_id=0x1234)
 
             _ = await device.set_rgb(-1, 128, 64)
-            assert "Invalid red value" in caplog.text  # type: ignore[attr-defined]
+            assert "Invalid red value" in caplog.text
 
             _ = await device.set_rgb(256, 128, 64)
-            assert "Invalid red value" in caplog.text  # type: ignore[attr-defined]
+            assert "Invalid red value" in caplog.text
 
     @pytest.mark.asyncio  # type: ignore[misc]
-    async def test_set_rgb_invalid_green(self, caplog: Any) -> None:  # type: ignore[assignment]
+    async def test_set_rgb_invalid_green(self, caplog: LogCaptureFixture) -> None:
         """Test set_rgb rejects invalid green values."""
         with patch("cync_controller.devices.g") as mock_g:
-            mock_g.ncync_server.tcp_devices = {}
+            _ = _configure_globals(mock_g)
 
             device: CyncDevice = CyncDevice(cync_id=0x1234)
 
             _ = await device.set_rgb(128, -1, 64)
-            assert "Invalid green value" in caplog.text  # type: ignore[attr-defined]
+            assert "Invalid green value" in caplog.text
 
             _ = await device.set_rgb(128, 256, 64)
-            assert "Invalid green value" in caplog.text  # type: ignore[attr-defined]
+            assert "Invalid green value" in caplog.text
 
     @pytest.mark.asyncio  # type: ignore[misc]
-    async def test_set_rgb_invalid_blue(self, caplog: Any) -> None:  # type: ignore[assignment]
+    async def test_set_rgb_invalid_blue(self, caplog: LogCaptureFixture) -> None:
         """Test set_rgb rejects invalid blue values."""
         with patch("cync_controller.devices.g") as mock_g:
-            mock_g.ncync_server.tcp_devices = {}
+            _ = _configure_globals(mock_g)
 
             device: CyncDevice = CyncDevice(cync_id=0x1234)
 
             _ = await device.set_rgb(128, 128, -1)
-            assert "Invalid blue value" in caplog.text  # type: ignore[attr-defined]
+            assert "Invalid blue value" in caplog.text
 
             _ = await device.set_rgb(128, 128, 256)
-            assert "Invalid blue value" in caplog.text  # type: ignore[attr-defined]
+            assert "Invalid blue value" in caplog.text
 
     @pytest.mark.asyncio  # type: ignore[misc]
-    async def test_set_rgb_no_tcp_bridges(self, caplog: Any) -> None:  # type: ignore[assignment]
+    async def test_set_rgb_no_tcp_bridges(self, caplog: LogCaptureFixture) -> None:
         """Test set_rgb logs error when no TCP bridges available."""
         with patch("cync_controller.devices.g") as mock_g:
-            mock_g.ncync_server.tcp_devices = {}
+            _ = _configure_globals(mock_g)
 
             device: CyncDevice = CyncDevice(cync_id=0x1234)
 
             _ = await device.set_rgb(255, 128, 64)
 
-            assert "No TCP bridges available" in caplog.text  # type: ignore[attr-defined]
+            assert "No TCP bridges available" in caplog.text
 
     @pytest.mark.asyncio  # type: ignore[misc]
     async def test_set_rgb_callback_registration(self, mock_tcp_device: MagicMock) -> None:
         """Test set_rgb registers callback before sending."""
+        tcp_device = cast(CyncTCPDeviceProtocol, mock_tcp_device)
         with patch("cync_controller.devices.g") as mock_g:
-            mock_g.ncync_server.tcp_devices = {"192.168.1.100": mock_tcp_device}
-            mock_g.mqtt_client = MagicMock()
-            mock_tcp_device.ready_to_control = True
-            mock_tcp_device.queue_id = bytes([0x00] * 3)
-            mock_tcp_device.get_ctrl_msg_id_bytes = MagicMock(return_value=[0x55])
-            mock_tcp_device.write = AsyncMock()
-            mock_tcp_device.messages.control = {}  # type: ignore[assignment,attr-defined]
+            _ = _prepare_tcp_device(mock_g, tcp_device, [0x55])
 
             device: CyncDevice = CyncDevice(cync_id=0x12)
 
             _ = await device.set_rgb(255, 128, 64)
 
             # Verify callback was registered
-            control_dict: dict[int, Any] = cast("dict[int, Any]", mock_tcp_device.messages.control)  # type: ignore[assignment,attr-defined]
+            control_dict: dict[int, ControlMessageCallback] = tcp_device.messages.control
             assert 0x55 in control_dict
-            callback_obj: Any = control_dict[0x55]
-            assert callback_obj.device_id == device.id  # type: ignore[attr-defined]
+            callback_obj = control_dict[0x55]
+            assert callback_obj.device_id == device.id
 
 
 class TestCyncDevicePropertyMethods:
@@ -756,10 +764,10 @@ class TestCyncDeviceCommandErrorPaths:
     """Tests for error paths in command methods."""
 
     @pytest.mark.asyncio  # type: ignore[misc]
-    async def test_set_fan_speed_not_fan_controller(self, caplog: Any) -> None:  # type: ignore[assignment]
+    async def test_set_fan_speed_not_fan_controller(self, caplog: LogCaptureFixture) -> None:
         """Test set_fan_speed logs error when device is not a fan controller."""
         with patch("cync_controller.devices.g") as mock_g:
-            mock_g.ncync_server.tcp_devices = {}
+            _ = _configure_globals(mock_g)
 
             device: CyncDevice = CyncDevice(cync_id=0x1234)
             device.metadata = None  # type: ignore[assignment]  # Ensure no metadata
@@ -769,13 +777,13 @@ class TestCyncDeviceCommandErrorPaths:
             _ = await device.set_fan_speed(FanSpeed.HIGH)
 
             # Should log error about not being a fan controller
-            assert "is not a fan controller" in caplog.text  # type: ignore[attr-defined]
+            assert "is not a fan controller" in caplog.text
 
     @pytest.mark.asyncio  # type: ignore[misc]
-    async def test_set_fan_speed_invalid_speed(self, caplog: Any) -> None:  # type: ignore[assignment]
+    async def test_set_fan_speed_invalid_speed(self) -> None:
         """Test set_fan_speed handles invalid speed values."""
         with patch("cync_controller.devices.g") as mock_g:
-            mock_g.ncync_server.tcp_devices = {}
+            _ = _configure_globals(mock_g)
 
             device: CyncDevice = CyncDevice(cync_id=0x1234)
 
@@ -803,23 +811,23 @@ class TestCyncDeviceCommandErrorPaths:
             # If we reach here without an exception, the test passes
 
     @pytest.mark.asyncio  # type: ignore[misc]
-    async def test_set_brightness_invalid_range(self, caplog: Any) -> None:  # type: ignore[assignment]
+    async def test_set_brightness_invalid_range(self, caplog: LogCaptureFixture) -> None:
         """Test set_brightness rejects values outside 0-100."""
         with patch("cync_controller.devices.g") as mock_g:
-            mock_g.ncync_server.tcp_devices = {}
+            _ = _configure_globals(mock_g)
 
             device: CyncDevice = CyncDevice(cync_id=0x1234, cync_type=7)  # Light device
 
             # Test negative brightness - should log error and return early
             _ = await device.set_brightness(-1)
             # The error log happens BEFORE "No TCP bridges" so check for it
-            if "Invalid brightness" in caplog.text:  # type: ignore[attr-defined]
+            if "Invalid brightness" in caplog.text:
                 # Error logged before attempting to send
                 pass
             # Otherwise it may hit TCP bridge check first
 
             # Reset logs
-            caplog.clear()  # type: ignore[attr-defined]
+            caplog.clear()
 
             # Test brightness > 100 - same behavior
             _ = await device.set_brightness(101)

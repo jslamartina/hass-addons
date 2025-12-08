@@ -9,11 +9,11 @@
   },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "test:unit": "cd cync-controller && pytest tests/unit/",
-    "test:unit:cov": "cd cync-controller && pytest tests/unit/ --cov=cync_lan --cov-report=html --cov-report=term-missing",
-    "test:unit:fast": "cd cync-controller && pytest tests/unit/ -x",
-    "test:unit:serial": "cd cync-controller && pytest tests/unit/ -n 0",
-    "test:unit:watch": "cd cync-controller && pytest-watch tests/unit/",
+    "test:unit": "pytest tests/unit/",
+    "test:unit:cov": "pytest tests/unit/ --cov=cync_controller --cov-report=html --cov-report=term-missing",
+    "test:unit:fast": "pytest tests/unit/ -x",
+    "test:unit:serial": "pytest tests/unit/ -n 0",
+    "test:unit:watch": "pytest-watch tests/unit/",
     "test:unit:mem": "./scripts/monitor-test-memory.sh",
     "lint": "./scripts/lint-all.sh",
     "lint:python": "ruff check .",
@@ -49,6 +49,7 @@
   "homepage": "https://github.com/jslamartina/hass-addons#readme",
   "devDependencies": {
     "@eslint/js": "^9.0.0",
+    "@openai/codex": "^0.63.0",
     "@playwright/test": "^1.56.1",
     "@types/node": "^24.10.1",
     "eslint": "^9.39.1",
@@ -59,11 +60,9 @@
     "prettier": "^3.6.2",
     "prettier-plugin-sh": "^0.18.0",
     "prettier-plugin-toml": "^2.0.6",
-    "pyright": "^1.1.400",
     "ts-node": "^10.9.2",
     "typescript": "^5.9.3",
-    "typescript-eslint": "^8.47.0",
-    "@openai/codex": "^0.63.0"
+    "typescript-eslint": "^8.47.0"
   },
   "dependencies": {
     "@brave/brave-search-mcp-server": "^2.0.59",

@@ -3,7 +3,7 @@
 Tests error handling, edge value handling, and group aggregation with edge cases.
 """
 
-from typing import Any, cast
+from typing import cast
 from unittest.mock import MagicMock, patch
 
 from cync_controller.devices.base_device import CyncDevice
@@ -17,14 +17,13 @@ class TestCyncDeviceErrorPaths:
     def test_device_state_setter_with_float(self):
         """Test state setter accepts float values."""
         device = CyncDevice(cync_id=0x1234)
-        device_any = cast(Any, device)
 
         # Float 1.0 should become 1
-        device_any.state = 1.0
+        device.state = cast(int, 1.0)
         assert device.state == 1
 
         # Float 0.0 should become 0
-        device_any.state = 0.0
+        device.state = cast(int, 0.0)
         assert device.state == 0
 
     def test_device_brightness_edge_values(self):

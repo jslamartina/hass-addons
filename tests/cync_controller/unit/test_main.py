@@ -4,10 +4,15 @@ Tests CyncController singleton, signal handling, and startup/shutdown flows.
 """
 # pyright: reportUnknownMemberType=false, reportAttributeAccessIssue=false
 
+from __future__ import annotations
+
 import asyncio
 import contextlib
-from collections.abc import Generator
+from collections.abc import Generator, Iterable
+from dataclasses import dataclass
 from pathlib import Path
+from types import SimpleNamespace
+from typing import cast
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -21,25 +26,51 @@ with patch("starlette.staticfiles.StaticFiles"), patch("cync_controller.utils.ch
 @pytest.fixture(autouse=True)
 def reset_controller_singleton() -> Generator[None]:
     """Reset CyncController singleton between tests."""
-    CyncController._instance = None  # pyright: ignore[reportPrivateUsage]
+    CyncController._instance = None
     yield
-    CyncController._instance = None  # pyright: ignore[reportPrivateUsage]
+    CyncController._instance = None
+
+
+@dataclass
+class CLIArgs:
+    export_server: bool
+    debug: bool
+    env: str | None
+
+
+@dataclass
+class GlobalMock:
+    loop: asyncio.AbstractEventLoop
+    cli_args: CLIArgs
+    uuid: str
+    ncync_server: object | None
+    mqtt_client: object | None
+    cloud_api: object | None
+    export_server: object | None
+
+
+def _make_global_mock() -> GlobalMock:
+    """Create a typed global object mock with a real event loop."""
+    loop_obj = asyncio.new_event_loop()
+    return GlobalMock(
+        loop=loop_obj,
+        cli_args=CLIArgs(export_server=False, debug=False, env=None),
+        uuid="test-uuid",
+        ncync_server=None,
+        mqtt_client=None,
+        cloud_api=None,
+        export_server=None,
+    )
 
 
 @pytest.fixture
-def mock_global_object() -> Generator[MagicMock]:
+def mock_global_object() -> Generator[GlobalMock]:
     """Mock the global object to avoid dependencies."""
-    with patch("cync_controller.main.g") as mock_g:
-        mock_g.loop = AsyncMock()
-        mock_g.loop.is_closed.return_value = False
-        mock_g.cli_args = MagicMock()
-        mock_g.cli_args.export_server = False
-        mock_g.uuid = "test-uuid"
-        mock_g.ncync_server = None
-        mock_g.mqtt_client = None
-        mock_g.cloud_api = None
-        mock_g.export_server = None
-        yield mock_g
+    g_obj = _make_global_mock()
+
+    with patch("cync_controller.main.g", g_obj):
+        yield g_obj
+    g_obj.loop.close()
 
 
 @pytest.fixture
@@ -74,7 +105,7 @@ class TestCyncControllerStartup:
     @pytest.mark.asyncio
     async def test_start_with_missing_config_file(
         self,
-        mock_global_object: MagicMock,
+        mock_global_object: GlobalMock,
         mock_path_exists: MagicMock,
     ):
         """Test startup when config file doesn't exist."""
@@ -91,7 +122,7 @@ class TestCyncControllerStartup:
     @pytest.mark.asyncio
     async def test_start_loads_config_and_creates_services(
         self,
-        mock_global_object: MagicMock,
+        mock_global_object: GlobalMock,
         mock_path_exists: MagicMock,
     ):
         """Test startup loads config and creates NCyncServer and MQTTClient."""
@@ -134,7 +165,7 @@ class TestCyncControllerStartup:
     @pytest.mark.asyncio
     async def test_start_with_export_server_enabled(
         self,
-        mock_global_object: MagicMock,
+        mock_global_object: GlobalMock,
         mock_path_exists: MagicMock,
     ):
         """Test startup when export server is enabled."""
@@ -191,9 +222,9 @@ class TestCyncControllerStartup:
                 await controller.start_task
 
     @pytest.mark.asyncio
+    @pytest.mark.usefixtures("_mock_global_object")
     async def test_start_failure_calls_stop(
         self,
-        mock_global_object: MagicMock,
         mock_path_exists: MagicMock,
     ):
         """Test that startup failure triggers stop method."""
@@ -242,7 +273,8 @@ class TestCyncControllerShutdown:
     """Tests for CyncController shutdown sequence."""
 
     @pytest.mark.asyncio
-    async def test_stop_sends_sigterm(self, mock_global_object: MagicMock):
+    @pytest.mark.usefixtures("_mock_global_object")
+    async def test_stop_sends_sigterm(self):
         """Test that stop calls send_sigterm."""
         with (
             patch("cync_controller.main.check_for_uuid"),
@@ -260,40 +292,45 @@ class TestParseCLI:
 
     def test_parse_cli_export_server_enabled(self):
         """Test parsing export server argument."""
+        g_instance = _make_global_mock()
         with (
             patch("cync_controller.main.sys.argv", ["test", "--export-server"]),
             patch("cync_controller.main.logger"),
-            patch("cync_controller.main.g") as mock_g,
+            patch("cync_controller.main.g", g_instance),
         ):
             parse_cli()
 
-            assert mock_g.cli_args.export_server is True
+            assert g_instance.cli_args.export_server is True
 
     def test_parse_cli_debug_mode(self):
         """Test parsing debug mode argument."""
+        g_instance = _make_global_mock()
         with (
             patch("cync_controller.main.sys.argv", ["test", "--debug"]),
             patch("cync_controller.main.logger"),
-            patch("cync_controller.main.g") as mock_g,
+            patch("cync_controller.main.g", g_instance),
         ):
             parse_cli()
 
-            assert mock_g.cli_args.debug is True
+            assert g_instance.cli_args.debug is True
 
     def test_parse_cli_env_file(self):
         """Test parsing environment file argument."""
-        test_env_path = Path("/tmp/test.env")
+        test_env_path = Path("test.env")
 
+        g_instance = _make_global_mock()
         with (
             patch("cync_controller.main.sys.argv", ["test", "--env", str(test_env_path)]),
             patch("cync_controller.main.logger"),
-            patch("cync_controller.main.g") as mock_g,
+            patch("cync_controller.main.g", g_instance),
             patch("cync_controller.main.Path") as mock_path,
             patch("cync_controller.main.HAS_DOTENV", True),
         ):
             # Mock dotenv.load_dotenv by adding it to the namespace
-            mock_dotenv = MagicMock()
-            mock_dotenv.load_dotenv.return_value = True
+            def _load_dotenv(*_args: object, **_kwargs: object) -> bool:
+                return True
+
+            mock_dotenv = SimpleNamespace(load_dotenv=_load_dotenv)
             import cync_controller.main
 
             cync_controller.main.dotenv = mock_dotenv
@@ -306,23 +343,25 @@ class TestParseCLI:
 
             parse_cli()
 
-            assert mock_g.cli_args.env == test_env_path
+            assert g_instance.cli_args.env == test_env_path
 
     def test_parse_cli_without_optional_deps(self):
         """Test parsing with python-dotenv not installed."""
-        test_env_path = Path("/tmp/test.env")
+        test_env_path = Path("test.env")
 
         with (
             patch("cync_controller.main.sys.argv", ["test", "--env", str(test_env_path)]),
             patch("cync_controller.main.logger") as mock_logger,
-            patch("cync_controller.main.g"),
+            patch("cync_controller.main.g", _make_global_mock()),
             patch("cync_controller.main.Path"),
             patch("cync_controller.main.HAS_DOTENV", False),
         ):
             parse_cli()
 
             # Should log error about missing dotenv
-            assert any("dotenv module not installed" in str(call) for call in mock_logger.error.call_args_list)
+            error_mock = cast(MagicMock, mock_logger.error)
+            error_calls: list[object] = list(cast(Iterable[object], error_mock.call_args_list))
+            assert any("dotenv module not installed" in str(call) for call in error_calls)
 
 
 class TestMainFunction:

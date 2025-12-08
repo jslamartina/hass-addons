@@ -3,17 +3,15 @@ set -e
 
 echo "Configuring VS Code for multi-repository development..."
 
-# Get the workspace parent directory
-WORKSPACE_PARENT="$(dirname "${WORKSPACE_DIRECTORY}")"
-CYNC_CONTROLLER_DIR="${WORKSPACE_PARENT}/cync-controller"
-VSCODE_CONFIG_DIR="${WORKSPACE_PARENT}/.vscode"
+# Use the workspace root for settings
+VSCODE_CONFIG_DIR="${WORKSPACE_DIRECTORY}/.vscode"
 
 # Create a global settings file for the devcontainer
 sudo mkdir -p "${VSCODE_CONFIG_DIR}"
 sudo tee "${VSCODE_CONFIG_DIR}/settings.json" > /dev/null << EOF
 {
   "python.analysis.extraPaths": [
-    "${CYNC_CONTROLLER_DIR}",
+    "${WORKSPACE_DIRECTORY}/src",
     "${WORKSPACE_DIRECTORY}"
   ],
   "python.linting.enabled": true,
@@ -44,12 +42,12 @@ sudo tee "${VSCODE_CONFIG_DIR}/launch.json" > /dev/null << 'EOF'
       "name": "Debug cync-controller",
       "type": "python",
       "request": "launch",
-      "program": "${workspaceFolder:cync-controller}/cync_lan/main.py",
+      "program": "${workspaceFolder}/src/cync_controller/main.py",
       "args": ["--enable-export"],
       "console": "integratedTerminal",
-      "cwd": "${workspaceFolder:cync-controller}",
+      "cwd": "${workspaceFolder}",
       "env": {
-        "PYTHONPATH": "${workspaceFolder:cync-controller}:${workspaceFolder}"
+        "PYTHONPATH": "${workspaceFolder}:${workspaceFolder}/src"
       }
     }
   ]

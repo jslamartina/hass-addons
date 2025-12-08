@@ -7,44 +7,62 @@ and offline device state handling.
 
 from __future__ import annotations
 
-from collections.abc import Generator
-from typing import cast
+from collections.abc import Iterator
+from dataclasses import dataclass
 from unittest.mock import MagicMock, patch
 
 import pytest
 
 from cync_controller.mqtt_client import MQTTClient
-from cync_controller.structs import CyncDeviceProtocol
 
 
-def _bind_update_device_state_stub(client: MQTTClient) -> None:
-    async def _update_device_state_stub(
-        self: MQTTClient, device: CyncDeviceProtocol, state: int
-    ) -> bool:  # pragma: no cover - behavior tested elsewhere
-        _ = (self, device, state)
-        return True
+@dataclass
+class StateDevice:
+    """Typed device stub for state update tests."""
 
-    client.update_device_state = _update_device_state_stub.__get__(client, MQTTClient)  # type: ignore[assignment]
+    id: int
+    is_switch: bool = False
+    supports_rgb: bool = False
+    online: bool = True
+    available: bool = True
 
 
-def _bind_publish_stub(client: MQTTClient) -> None:
-    async def _publish_stub(*args: object, **kwargs: object) -> None:  # pragma: no cover
-        _ = (args, kwargs)
+@dataclass
+class StateStatus:
+    """Typed status stub for parsing tests."""
 
-    if client.client is not None:
-        client.client.publish = _publish_stub  # type: ignore[assignment]
+    power: int
+    brightness: int
+    temperature: int
+    rgb: tuple[int, int, int]
+    fan_speed: int
+
+
+@dataclass
+class StateServer:
+    """Typed ncync server stub for state update tests."""
+
+    devices: dict[int, StateDevice]
+
+
+def _configure_server(mock_g: MagicMock, devices: dict[int, StateDevice]) -> StateServer:
+    """Attach a typed ncync_server to the patched global object."""
+    server = StateServer(devices=devices)
+    mock_g.ncync_server = server
+    return server
 
 
 class TestMQTTClientStateUpdates:
     """Tests for MQTT client state update methods."""
 
     @pytest.fixture(autouse=True)
-    def reset_mqtt_singleton(self) -> Generator[None]:
+    def reset_mqtt_singleton(self) -> Iterator[None]:
         """Reset MQTTClient singleton between tests."""
-        original_instance = getattr(MQTTClient, "_instance", None)
-        MQTTClient._instance = None  # pyright: ignore[reportPrivateUsage]
-        yield
-        MQTTClient._instance = cast(MQTTClient | None, original_instance)  # pyright: ignore[reportPrivateUsage]
+        with (
+            patch.object(MQTTClient, "_instance", None),
+            patch.object(MQTTClient, "_initialized", False),
+        ):
+            yield
 
     @pytest.mark.asyncio
     async def test_update_switch_from_subgroup(self):
@@ -55,24 +73,13 @@ class TestMQTTClientStateUpdates:
         ):
             mock_g.uuid = "test-uuid"
 
-            # Create switch device
-            mock_switch = MagicMock()
-            mock_switch.id = 0x1001
-            mock_switch.is_switch = True
+            switch = StateDevice(id=0x1001, is_switch=True)
+            _ = _configure_server(mock_g, {switch.id: switch})
 
-            # Create subgroup with state
-            mock_subgroup = MagicMock()
-            mock_subgroup.state = 1
-            mock_subgroup.name = "Test Subgroup"
-
-            mock_g.ncync_server = MagicMock()
-            mock_g.ncync_server.devices = {0x1001: mock_switch}
-
-            client = MQTTClient()
-            _bind_update_device_state_stub(client)
+            _ = MQTTClient()
 
             # Verify device can be updated
-            assert mock_switch.is_switch is True
+            assert switch.is_switch is True
 
     @pytest.mark.asyncio
     async def test_update_brightness_percentage_conversion(self):
@@ -153,19 +160,14 @@ class TestMQTTClientStateUpdates:
         ):
             mock_g.uuid = "test-uuid"
 
-            # Create RGB device
-            mock_device = MagicMock()
-            mock_device.id = 0x2001
-            mock_device.supports_rgb = True
+            rgb_device = StateDevice(id=0x2001, supports_rgb=True)
 
-            mock_g.ncync_server = MagicMock()
-            mock_g.ncync_server.devices = {0x2001: mock_device}
+            _ = _configure_server(mock_g, {rgb_device.id: rgb_device})
 
-            client = MQTTClient()
-            _bind_update_device_state_stub(client)
+            _ = MQTTClient()
 
             # Verify device exists and supports RGB
-            assert mock_device.supports_rgb is True
+            assert rgb_device.supports_rgb is True
 
     @pytest.mark.asyncio
     async def test_update_rgb_color_values(self):
@@ -175,11 +177,6 @@ class TestMQTTClientStateUpdates:
             patch("cync_controller.mqtt_client.aiomqtt.Client"),
         ):
             mock_g.uuid = "test-uuid"
-
-            # Create RGB device
-            mock_device = MagicMock()
-            mock_device.id = 0x2002
-            mock_device.supports_rgb = True
 
             # Test RGB tuple handling
             test_colors = [
@@ -204,16 +201,9 @@ class TestMQTTClientStateUpdates:
         ):
             mock_g.uuid = "test-uuid"
 
-            # Create device status mock
-            mock_status = MagicMock()
-            mock_status.power = 1
-            mock_status.brightness = 100
-            mock_status.temperature = 4000
-            mock_status.rgb = (255, 200, 100)
-            mock_status.fan_speed = 50
+            mock_status = StateStatus(power=1, brightness=100, temperature=4000, rgb=(255, 200, 100), fan_speed=50)
 
-            client = MQTTClient()
-            _bind_update_device_state_stub(client)
+            _ = MQTTClient()
 
             # Verify all fields can be accessed
             assert mock_status.power == 1
@@ -231,22 +221,15 @@ class TestMQTTClientStateUpdates:
         ):
             mock_g.uuid = "test-uuid"
 
-            # Create offline device
-            mock_device = MagicMock()
-            mock_device.id = 0x3001
-            mock_device.online = False
-            mock_device.available = False
+            offline_device = StateDevice(id=0x3001, online=False, available=False)
 
-            mock_g.ncync_server = MagicMock()
-            mock_g.ncync_server.devices = {0x3001: mock_device}
+            _ = _configure_server(mock_g, {offline_device.id: offline_device})
 
-            client = MQTTClient()
-            client.client = MagicMock()
-            _bind_publish_stub(client)
+            _ = MQTTClient()
 
             # Verify device is marked offline
-            assert mock_device.online is False
-            assert mock_device.available is False
+            assert offline_device.online is False
+            assert offline_device.available is False
 
     @pytest.mark.asyncio
     async def test_update_device_state_online_device(self):
@@ -257,19 +240,12 @@ class TestMQTTClientStateUpdates:
         ):
             mock_g.uuid = "test-uuid"
 
-            # Create online device
-            mock_device = MagicMock()
-            mock_device.id = 0x3002
-            mock_device.online = True
-            mock_device.available = True
+            online_device = StateDevice(id=0x3002, online=True, available=True)
 
-            mock_g.ncync_server = MagicMock()
-            mock_g.ncync_server.devices = {0x3002: mock_device}
+            _ = _configure_server(mock_g, {online_device.id: online_device})
 
-            client = MQTTClient()
-            client.client = MagicMock()
-            _bind_publish_stub(client)
+            _ = MQTTClient()
 
             # Verify device is marked online
-            assert mock_device.online is True
-            assert mock_device.available is True
+            assert online_device.online is True
+            assert online_device.available is True

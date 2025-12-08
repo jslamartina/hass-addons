@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import asyncio
-from typing import Any
+from typing import cast
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -11,7 +11,7 @@ from _pytest.logging import LogCaptureFixture
 from _pytest.monkeypatch import MonkeyPatch
 
 from cync_controller.mqtt import command_routing
-from cync_controller.mqtt.command_routing import CommandRouter
+from cync_controller.mqtt.command_routing import CommandRouter, CommandTasks
 from cync_controller.structs import CyncDeviceProtocol, CyncGroupProtocol, FanSpeed, GlobalObject
 
 
@@ -34,10 +34,22 @@ class CommandRouterTestHarness(CommandRouter):
     def parse_topic(self, topic_parts: list[str], lp: str):
         return self._parse_topic_and_get_target(topic_parts, lp)
 
-    async def fan_percentage(self, percentage: int, device: CyncDeviceProtocol, lp: str, tasks: list[Any]) -> None:
+    async def fan_percentage(
+        self,
+        percentage: int,
+        device: CyncDeviceProtocol,
+        lp: str,
+        tasks: CommandTasks,
+    ) -> None:
         await self._handle_fan_percentage(percentage, device, lp, tasks)
 
-    async def fan_preset(self, preset: str, device: CyncDeviceProtocol, lp: str, tasks: list[Any]) -> None:
+    async def fan_preset(
+        self,
+        preset: str,
+        device: CyncDeviceProtocol,
+        lp: str,
+        tasks: CommandTasks,
+    ) -> None:
         await self._handle_fan_preset(preset, device, lp, tasks)
 
     async def extra_data(
@@ -46,14 +58,15 @@ class CommandRouterTestHarness(CommandRouter):
         payload: bytes,
         device: CyncDeviceProtocol | None,
         lp: str,
-        tasks: list[Any],
+        tasks: CommandTasks,
     ) -> None:
         await self._handle_extra_data(extra_data, payload, device, lp, tasks)
 
 
 @pytest.fixture
-def router(mock_ncync_server: MagicMock) -> CommandRouterTestHarness:
+def router(_mock_ncync_server: MagicMock) -> CommandRouterTestHarness:
     """Create a CommandRouter with a minimal MQTT client stub."""
+    _ = _mock_ncync_server
 
     def _passthrough(value: int) -> int:
         return value
@@ -65,8 +78,8 @@ def router(mock_ncync_server: MagicMock) -> CommandRouterTestHarness:
     return CommandRouterTestHarness(mqtt_client)
 
 
-def _make_device(is_fan: bool = False) -> MagicMock:
-    device = MagicMock(spec=CyncDeviceProtocol)
+def _make_device(is_fan: bool = False) -> CyncDeviceProtocol:
+    device = cast(CyncDeviceProtocol, MagicMock(spec=CyncDeviceProtocol))
     device.name = "Device"
     device.id = 10
     device.is_fan_controller = is_fan
@@ -75,8 +88,8 @@ def _make_device(is_fan: bool = False) -> MagicMock:
     return device
 
 
-def _make_group() -> MagicMock:
-    group = MagicMock(spec=CyncGroupProtocol)
+def _make_group() -> CyncGroupProtocol:
+    group = cast(CyncGroupProtocol, MagicMock(spec=CyncGroupProtocol))
     group.name = "Group"
     group.id = 1
     return group
@@ -130,31 +143,33 @@ def test_parse_topic_unknown_group(router: CommandRouterTestHarness, mock_ncync_
 async def test_handle_fan_percentage_maps_expected_value(router: CommandRouterTestHarness) -> None:
     """Fan percentage should map to brightness values."""
     device = _make_device(is_fan=True)
-    tasks: list[Any] = []
+    tasks: CommandTasks = []
 
     await router.fan_percentage(62, device, "lp:", tasks)
-    await asyncio.gather(*tasks)
+    results: list[object] = await asyncio.gather(*tasks)
+    assert results is not None
 
-    device.set_brightness.assert_awaited_once_with(75)
+    cast(AsyncMock, device.set_brightness).assert_awaited_once_with(75)
 
 
 @pytest.mark.asyncio
 async def test_handle_fan_preset_sets_speed(router: CommandRouterTestHarness) -> None:
     """Fan preset should enqueue set_fan_speed with the mapped FanSpeed."""
     device = _make_device(is_fan=True)
-    tasks: list[Any] = []
+    tasks: CommandTasks = []
 
     await router.fan_preset("high", device, "lp:", tasks)
-    await asyncio.gather(*tasks)
+    results: list[object] = await asyncio.gather(*tasks)
+    assert results is not None
 
-    device.set_fan_speed.assert_awaited_once_with(FanSpeed.HIGH)
+    cast(AsyncMock, device.set_fan_speed).assert_awaited_once_with(FanSpeed.HIGH)
 
 
 @pytest.mark.asyncio
 async def test_handle_extra_data_warns_on_non_fan(router: CommandRouterTestHarness, caplog: LogCaptureFixture) -> None:
     """Fan commands against non-fan devices should warn."""
     device = _make_device(is_fan=False)
-    tasks: list[Any] = []
+    tasks: CommandTasks = []
 
     await router.extra_data(["percentage"], b"50", device, "lp:", tasks)
 
@@ -166,9 +181,10 @@ async def test_handle_extra_data_warns_on_non_fan(router: CommandRouterTestHarne
 async def test_handle_extra_data_for_fan_percentage(router: CommandRouterTestHarness) -> None:
     """Fan commands for fan devices should schedule work."""
     device = _make_device(is_fan=True)
-    tasks: list[Any] = []
+    tasks: CommandTasks = []
 
     await router.extra_data(["percentage"], b"25", device, "lp:", tasks)
     assert tasks, "Expected tasks to be scheduled for fan percentage command"
-    await asyncio.gather(*tasks)
-    device.set_brightness.assert_awaited_once_with(25)
+    results: list[object] = await asyncio.gather(*tasks)
+    assert results is not None
+    cast(AsyncMock, device.set_brightness).assert_awaited_once_with(25)

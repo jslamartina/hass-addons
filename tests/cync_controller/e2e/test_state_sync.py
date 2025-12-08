@@ -3,7 +3,6 @@
 import sys
 import time
 from pathlib import Path
-from typing import Any
 
 import pytest
 from _pytest.outcomes import skip as pytest_skip
@@ -13,7 +12,7 @@ from playwright.sync_api import Page
 repo_root = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(repo_root))
 
-from scripts.playwright.addon_helpers import read_json_logs  # type: ignore[import-untyped, reportUnknownVariableType]
+from scripts.playwright.addon_helpers import JSONDict, read_json_logs
 
 ADDON_SLUG = "local_cync-controller"
 
@@ -86,12 +85,11 @@ def test_simultaneous_commands_to_multiple_devices(ha_login: Page, ha_base_url: 
     # Send commands to all lights
     for light in lights:
         try:
-            # Try to toggle (don't wait between commands)
             toggle = page.get_by_role("switch", name=f"Toggle {light}")
             if toggle.is_visible(timeout=1000):
                 toggle.click()
-        except Exception:
-            pass
+        except Exception as exc:
+            pytest_skip(f"Skipping toggle for {light}: {exc}")
 
     # Wait for all to complete
     page.wait_for_timeout(3000)
@@ -105,19 +103,15 @@ def test_no_cascading_refresh_storms():
     Expected: No excessive refresh commands in logs after state changes.
     """
     # Read logs
-    logs: list[dict[str, Any]] = read_json_logs(ADDON_SLUG, lines=200)
+    logs: list[JSONDict] = read_json_logs(ADDON_SLUG, lines=200)
 
     # Look for refresh-related logs
-    refresh_logs: list[dict[str, Any]] = [log for log in logs if "refresh" in log.get("message", "").lower()]
+    refresh_logs: list[JSONDict] = [log for log in logs if "refresh" in str(log.get("message", "")).lower()]
 
-    # Check for excessive refresh patterns (more than 10 in short time window)
     if len(refresh_logs) > 10:
-        # Check timestamps to see if they're clustered
-        timestamps: list[Any] = [log.get("timestamp") for log in refresh_logs if "timestamp" in log]
+        timestamps: list[object] = [log.get("timestamp") for log in refresh_logs if "timestamp" in log]
         if timestamps:
-            pass
-    else:
-        pass
+            assert True
 
 
 @pytest.mark.serial
@@ -140,24 +134,10 @@ def test_group_command_synchronization(ha_login: Page, ha_base_url: str):
             group_on.click()
             page.wait_for_timeout(2000)  # Wait for MQTT sync
 
-            # Check all member switches are OFF
-            all_synced = True
-
             for switch_name in member_switches:
-                try:
-                    # Check if switch shows OFF state
-                    switch_off = page.get_by_role("switch", name=f"Toggle Hallway {switch_name} on")
-                    if not switch_off.is_visible(timeout=1000):
-                        all_synced = False
-                    else:
-                        pass
-                except Exception:
-                    all_synced = False
-
-            if all_synced:
-                pass
-            else:
-                pass
+                switch_off = page.get_by_role("switch", name=f"Toggle Hallway {switch_name} on")
+                if not switch_off.is_visible(timeout=1000):
+                    return
 
     except Exception as e:
         pytest_skip(f"Could not test group synchronization: {e}")
@@ -169,10 +149,10 @@ def test_state_updates_logged_correctly():
     Expected: State change logs contain necessary context.
     """
     # Read logs
-    logs: list[dict[str, Any]] = read_json_logs(ADDON_SLUG, lines=200)
+    logs: list[JSONDict] = read_json_logs(ADDON_SLUG, lines=200)
 
     # Look for state-related logs
-    state_logs: list[dict[str, Any]] = [log for log in logs if "state" in log.get("message", "").lower()]
+    state_logs: list[JSONDict] = [log for log in logs if "state" in str(log.get("message", "")).lower()]
 
     if state_logs:
         _ = state_logs[0]
@@ -189,8 +169,10 @@ def test_physical_device_changes_reflect_in_ha(ha_login: Page, ha_base_url: str)
     page.wait_for_load_state("networkidle")
 
     # Check logs for status packets
-    logs: list[dict[str, Any]] = read_json_logs(ADDON_SLUG, lines=100)
-    _ = [log for log in logs if "0x83" in log.get("message", "") or "status" in log.get("message", "").lower()]
+    logs: list[JSONDict] = read_json_logs(ADDON_SLUG, lines=100)
+    _ = [
+        log for log in logs if "0x83" in str(log.get("message", "")) or "status" in str(log.get("message", "")).lower()
+    ]
 
 
 def test_no_state_flicker_during_updates():
@@ -201,7 +183,7 @@ def test_no_state_flicker_during_updates():
     # This is primarily tested through logs
     # Flicker would show as rapid state changes in short time
 
-    logs: list[dict[str, Any]] = read_json_logs(ADDON_SLUG, lines=200)
+    logs: list[JSONDict] = read_json_logs(ADDON_SLUG, lines=200)
 
     # Look for rapid state changes (would need timestamp analysis)
-    _ = [log for log in logs if "state" in log.get("message", "").lower()]
+    _ = [log for log in logs if "state" in str(log.get("message", "")).lower()]

@@ -6,4 +6,4 @@
 - Tests: `pytest tests` (or narrower paths like `tests/unit`).
 - Console scripts: `cync-controller` and `rebuild-tcp-comm` from the unified wheel.
 - Packaging: root `pyproject.toml` (name/version `cync_controller` 0.0.4.13) with sources in `src/cync_controller`.
-- Add-on build: Dockerfile in `cync-controller/` consumes `cync-controller/src`; keep it in sync with root via `rsync -a --delete ../src/cync_controller/ cync-controller/src/cync_controller/`.
+- Add-on build: Dockerfile in `cync-controller/` consumes `cync-controller/src`; keep it in sync with root via `rsync -a --delete src/cync_controller/ cync-controller/src/cync_controller/` (handled automatically by `cync-controller/rebuild.sh`).

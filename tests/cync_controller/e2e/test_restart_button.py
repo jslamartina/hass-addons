@@ -91,7 +91,7 @@ def test_config_persistence_check(ingress_page: Page):
     inner_iframe = outer_iframe.frame_locator("iframe[title='Cync Controller']")
 
     # Debug: Check what buttons are available
-    _buttons = inner_iframe.get_by_role("button").all()  # pyright: ignore[reportUnknownVariableType, reportUnknownMemberType, reportCallIssue]
+    _ = inner_iframe.get_by_role("button").all()
 
     # Check if restart button is visible
     restart_button = inner_iframe.get_by_role("button", name="Restart Server")

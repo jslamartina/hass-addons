@@ -737,17 +737,17 @@ def test_encode_status_broadcast_input_validation() -> None:
 
     # Test endpoint validation
     with pytest.raises(ValueError, match="Endpoint must be 5 bytes"):
-        CyncProtocol.encode_status_broadcast(bytes(4), valid_msg_id, payload)
+        _ = CyncProtocol.encode_status_broadcast(bytes(4), valid_msg_id, payload)
 
     with pytest.raises(ValueError, match="Endpoint must be 5 bytes"):
-        CyncProtocol.encode_status_broadcast(bytes(6), valid_msg_id, payload)
+        _ = CyncProtocol.encode_status_broadcast(bytes(6), valid_msg_id, payload)
 
     # Test msg_id validation
     with pytest.raises(ValueError, match="msg_id must be 2 bytes"):
-        CyncProtocol.encode_status_broadcast(valid_endpoint, bytes(1), payload)
+        _ = CyncProtocol.encode_status_broadcast(valid_endpoint, bytes(1), payload)
 
     with pytest.raises(ValueError, match="msg_id must be 2 bytes"):
-        CyncProtocol.encode_status_broadcast(valid_endpoint, bytes(3), payload)
+        _ = CyncProtocol.encode_status_broadcast(valid_endpoint, bytes(3), payload)
 
 
 def test_encode_status_broadcast_checksum_valid() -> None:

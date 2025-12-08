@@ -9,14 +9,14 @@ from __future__ import annotations
 import asyncio
 import contextlib
 from collections.abc import Iterator
-from typing import Any, cast, override
+from typing import override
 
 import pytest
 
 from cync_controller.mqtt.commands import CommandProcessor, DeviceCommand
 
 # Filter RuntimeWarning about unawaited AsyncMockMixin coroutines from test cleanup
-filterwarnings_mark = cast(Any, pytest.mark.filterwarnings)
+filterwarnings_mark: pytest.MarkDecorator = pytest.mark.filterwarnings
 pytestmark = filterwarnings_mark("ignore:coroutine 'AsyncMockMixin._execute_mock_call'.*")
 
 
@@ -27,11 +27,11 @@ class TestCommandProcessorExecution:
     def reset_processor_singleton(self) -> Iterator[None]:
         """Reset CommandProcessor singleton between tests."""
         original_instance = getattr(CommandProcessor, "_instance", None)
-        CommandProcessor._instance = None  # pyright: ignore[reportPrivateUsage]
+        CommandProcessor._instance = None
         try:
             yield
         finally:
-            CommandProcessor._instance = original_instance  # pyright: ignore[reportPrivateUsage]
+            CommandProcessor._instance = original_instance
 
 
 class CommandProcessorTestHarness(CommandProcessor):
@@ -50,7 +50,7 @@ class CommandProcessorTestHarness(CommandProcessor):
         try:
             await asyncio.sleep(duration)
         finally:
-            task.cancel()
+            _ = task.cancel()
             with contextlib.suppress(asyncio.CancelledError):
                 await task
 
@@ -69,7 +69,7 @@ class CommandProcessorTestHarness(CommandProcessor):
 
         class TestCommand(DeviceCommand):
             def __init__(self, cmd_id: int) -> None:
-                self.cmd_id = cmd_id
+                self.cmd_id: int = cmd_id
                 super().__init__(f"test_{cmd_id}", cmd_id)
 
             @override

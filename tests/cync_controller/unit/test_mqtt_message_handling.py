@@ -8,7 +8,9 @@ from __future__ import annotations
 
 import asyncio
 import json
-from collections.abc import Generator
+from collections.abc import Iterator
+from dataclasses import dataclass, field
+from typing import cast
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -16,11 +18,49 @@ import pytest
 from cync_controller.mqtt_client import MQTTClient
 
 
+@dataclass
+class MessageDevice:
+    """Typed device stub for MQTT message handling tests."""
+
+    id: int
+    set_power: AsyncMock = field(default_factory=AsyncMock)
+    set_brightness: AsyncMock = field(default_factory=AsyncMock)
+    set_rgb: AsyncMock = field(default_factory=AsyncMock)
+    supports_rgb: bool = False
+
+
+@dataclass
+class MessageGroup:
+    """Typed group stub for MQTT message handling tests."""
+
+    id: int
+    set_power: AsyncMock = field(default_factory=AsyncMock)
+
+
+@dataclass
+class MessageServer:
+    """Typed ncync server stub for message handling tests."""
+
+    devices: dict[int, MessageDevice]
+    groups: dict[int, MessageGroup]
+
+
+def _configure_server(
+    mock_g: MagicMock,
+    devices: dict[int, MessageDevice],
+    groups: dict[int, MessageGroup] | None = None,
+) -> MessageServer:
+    """Attach a typed ncync_server to the patched global object."""
+    server = MessageServer(devices=devices, groups=groups or {})
+    mock_g.ncync_server = server
+    return server
+
+
 class TestMQTTClientMessageHandling:
     """Tests for MQTTClient message handling and MQTT routing."""
 
     @pytest.fixture(autouse=True)
-    def reset_mqtt_singleton(self) -> Generator[None]:
+    def reset_mqtt_singleton(self) -> Iterator[None]:
         """Reset MQTTClient singleton between tests."""
         with (
             patch.object(MQTTClient, "_instance", None),
@@ -36,19 +76,15 @@ class TestMQTTClientMessageHandling:
             patch("cync_controller.mqtt_client.aiomqtt.Client"),
         ):
             mock_g.uuid = "test-uuid"
-            mock_device = MagicMock()
-            mock_device.id = 0x1234
-            mock_device.set_power = AsyncMock()
-            mock_g.ncync_server = MagicMock()
-            mock_g.ncync_server.devices = {0x1234: mock_device}
+            devices = {0x1234: MessageDevice(id=0x1234)}
+            server = _configure_server(mock_g, devices)
             mock_g.mqtt_client = None
 
             client = MQTTClient()
             client.set_connected(True)
-            client.client = MagicMock()
 
             # Verify device exists and can receive commands
-            device = mock_g.ncync_server.devices.get(0x1234)
+            device = server.devices.get(0x1234)
             assert device is not None
             assert hasattr(device, "set_power")
 
@@ -60,16 +96,13 @@ class TestMQTTClientMessageHandling:
             patch("cync_controller.mqtt_client.aiomqtt.Client"),
         ):
             mock_g.uuid = "test-uuid"
-            mock_device = MagicMock()
-            mock_device.id = 0x5678
-            mock_device.set_brightness = AsyncMock()
-            mock_g.ncync_server = MagicMock()
-            mock_g.ncync_server.devices = {0x5678: mock_device}
+            devices = {0x5678: MessageDevice(id=0x5678)}
+            server = _configure_server(mock_g, devices)
 
             _ = MQTTClient()
 
             # Verify device can be accessed for brightness commands
-            device = mock_g.ncync_server.devices.get(0x5678)
+            device = server.devices.get(0x5678)
             assert device is not None
             assert hasattr(device, "set_brightness")
 
@@ -81,17 +114,13 @@ class TestMQTTClientMessageHandling:
             patch("cync_controller.mqtt_client.aiomqtt.Client"),
         ):
             mock_g.uuid = "test-uuid"
-            mock_device = MagicMock()
-            mock_device.id = 0xABCD
-            mock_device.supports_rgb = True
-            mock_device.set_rgb = AsyncMock()
-            mock_g.ncync_server = MagicMock()
-            mock_g.ncync_server.devices = {0xABCD: mock_device}
+            devices = {0xABCD: MessageDevice(id=0xABCD, supports_rgb=True)}
+            server = _configure_server(mock_g, devices)
 
             _ = MQTTClient()
 
             # Verify RGB device can be accessed
-            device = mock_g.ncync_server.devices.get(0xABCD)
+            device = server.devices.get(0xABCD)
             assert device is not None
             assert device.supports_rgb is True
 
@@ -103,8 +132,7 @@ class TestMQTTClientMessageHandling:
             patch("cync_controller.mqtt_client.aiomqtt.Client"),
         ):
             mock_g.uuid = "test-uuid"
-            mock_g.ncync_server = MagicMock()
-            mock_g.ncync_server.devices = {}
+            _ = _configure_server(mock_g, {})
 
             client = MQTTClient()
             client.set_connected(True)
@@ -122,12 +150,10 @@ class TestMQTTClientMessageHandling:
             patch("cync_controller.mqtt_client.aiomqtt.Client"),
         ):
             mock_g.uuid = "test-uuid"
-            mock_g.ncync_server = MagicMock()
-            mock_g.ncync_server.devices = {}
+            _ = _configure_server(mock_g, {})
 
             client = MQTTClient()
             client.set_connected(True)
-            client.client = MagicMock()
 
             # Verify client can be instantiated without crashing
             assert client is not None
@@ -141,13 +167,12 @@ class TestMQTTClientMessageHandling:
             patch("cync_controller.mqtt_client.aiomqtt.Client"),
         ):
             mock_g.uuid = "test-uuid"
-            mock_g.ncync_server = MagicMock()
-            mock_g.ncync_server.devices = {0x1234: MagicMock()}
+            server = _configure_server(mock_g, {0x1234: MessageDevice(id=0x1234)})
 
             _ = MQTTClient()
 
             # Try to access non-existent device
-            device = mock_g.ncync_server.devices.get(0x9999)
+            device = server.devices.get(0x9999)
             assert device is None  # Device not found, handled gracefully
 
     @pytest.mark.asyncio
@@ -158,18 +183,14 @@ class TestMQTTClientMessageHandling:
             patch("cync_controller.mqtt_client.aiomqtt.Client"),
         ):
             mock_g.uuid = "test-uuid"
-            mock_group = MagicMock()
-            mock_group.id = 100
-            mock_group.set_power = AsyncMock()
-            mock_g.ncync_server = MagicMock()
-            mock_g.ncync_server.groups = {100: mock_group}
-            mock_g.ncync_server.devices = {}
+            group = MessageGroup(id=100)
+            server = _configure_server(mock_g, {}, {100: group})
 
             _ = MQTTClient()
 
             # Verify group can be accessed
-            group = mock_g.ncync_server.groups.get(100)
-            assert group is not None
+            fetched_group = server.groups.get(100)
+            assert fetched_group is not None
 
     @pytest.mark.asyncio
     async def test_receiver_handles_task_exception(self):
@@ -179,8 +200,7 @@ class TestMQTTClientMessageHandling:
             patch("cync_controller.mqtt_client.aiomqtt.Client"),
         ):
             mock_g.uuid = "test-uuid"
-            mock_g.ncync_server = MagicMock()
-            mock_g.ncync_server.devices = {}
+            _ = _configure_server(mock_g, {})
 
             _ = MQTTClient()
 
@@ -204,8 +224,7 @@ class TestMQTTClientMessageHandling:
             patch("cync_controller.mqtt_client.aiomqtt.Client"),
         ):
             mock_g.uuid = "test-uuid"
-            mock_g.ncync_server = MagicMock()
-            mock_g.ncync_server.devices = {}
+            _ = _configure_server(mock_g, {})
 
             _ = MQTTClient()
 
@@ -229,8 +248,7 @@ class TestMQTTClientMessageHandling:
             patch("cync_controller.mqtt_client.aiomqtt.Client"),
         ):
             mock_g.uuid = "test-uuid"
-            mock_g.ncync_server = MagicMock()
-            mock_g.ncync_server.devices = {}
+            _ = _configure_server(mock_g, {})
 
             _ = MQTTClient()
 
@@ -247,6 +265,6 @@ class TestMQTTClientMessageHandling:
 
             # Test parsing JSON payload
             payload_json = b'{"brightness": 100, "transition": 5}'
-            data = json.loads(payload_json)
+            data: dict[str, int] = cast(dict[str, int], json.loads(payload_json))
             assert data["brightness"] == 100
             assert data["transition"] == 5

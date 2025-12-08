@@ -4,11 +4,54 @@ Tests CyncCloudAPI class for authentication, token management, and device export
 """
 
 import datetime
-from unittest.mock import AsyncMock, MagicMock, mock_open, patch
+import io
+from typing import IO, cast
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+from aiohttp import ClientResponse, ClientResponseError, RequestInfo
 
 from cync_controller.cloud_api import ComputedTokenData, CyncAuthenticationError, CyncCloudAPI
+from tests.cync_controller.unit.conftest import make_dummy_secret
+
+ACCESS_TOKEN = make_dummy_secret("access-token")
+REFRESH_TOKEN = make_dummy_secret("refresh-token")
+AUTHORIZE_TOKEN = make_dummy_secret("authorize-token")
+EXPIRED_ACCESS_TOKEN = make_dummy_secret("expired-token")
+
+
+def _make_session_mock() -> MagicMock:
+    """Create a minimal aiohttp ClientSession mock."""
+    session = MagicMock()
+    session.__aenter__ = AsyncMock(return_value=session)
+    session.__aexit__ = AsyncMock(return_value=None)
+    session.close = AsyncMock()
+    post_mock: AsyncMock = AsyncMock()
+    session.post = post_mock
+    session.closed = False
+    return session
+
+
+def _make_response_mock(json_payload: object | None = None) -> ClientResponse:
+    """Create a typed aiohttp ClientResponse mock."""
+    response = AsyncMock(spec=ClientResponse)
+    response.raise_for_status = MagicMock()
+    if json_payload is not None:
+        response.json = AsyncMock(return_value=json_payload)
+    return cast(ClientResponse, response)
+
+
+def _assign_open_mock(mock_path: MagicMock) -> MagicMock:
+    """Assign a typed mock_open to a patched Path.open."""
+    path_obj: MagicMock = MagicMock()
+    file_handle: IO[str] = io.StringIO()
+
+    def _open(*_args: object, **_kwargs: object) -> IO[str]:
+        return file_handle
+
+    path_obj.open = _open
+    mock_path.return_value = path_obj
+    return path_obj
 
 
 @pytest.fixture(autouse=True)
@@ -52,8 +95,7 @@ class TestCyncCloudAPISession:
     async def test_check_session_creates_new_session(self):
         """Test that _check_session creates session if none exists."""
         with patch("cync_controller.cloud_api.aiohttp.ClientSession") as mock_session_class:
-            mock_session = AsyncMock()
-            mock_session.__aenter__ = AsyncMock()
+            mock_session = _make_session_mock()
             mock_session_class.return_value = mock_session
 
             api = CyncCloudAPI()
@@ -61,13 +103,14 @@ class TestCyncCloudAPISession:
             await api._check_session()
 
             assert api.http_session is mock_session
-            assert mock_session.__aenter__.called
+            enter_mock = cast(AsyncMock, mock_session.__aenter__)
+            assert enter_mock.called
 
     @pytest.mark.asyncio
     async def test_check_session_reuses_open_session(self):
         """Test that _check_session doesn't recreate open session."""
         with patch("cync_controller.cloud_api.aiohttp.ClientSession") as mock_session_class:
-            mock_session = AsyncMock()
+            mock_session = _make_session_mock()
             mock_session.closed = False
             mock_session_class.return_value = mock_session
 
@@ -83,15 +126,15 @@ class TestCyncCloudAPISession:
     async def test_close_session(self):
         """Test closing HTTP session."""
         api = CyncCloudAPI()
-        mock_session = AsyncMock()
+        mock_session = _make_session_mock()
         mock_session.closed = False
-        mock_session.close = AsyncMock()
         api.http_session = mock_session
 
         await api.close()
 
         # Session should be closed
-        assert mock_session.close.called
+        close_mock = cast(AsyncMock, mock_session.close)
+        assert close_mock.called
         # http_session should be set to None after close
         assert api.http_session is None
 
@@ -105,9 +148,9 @@ class TestCyncCloudAPITokenManagement:
         api = CyncCloudAPI()
 
         with patch("cync_controller.cloud_api.Path") as mock_path:
-            mock_file = MagicMock()
-            mock_file.open.side_effect = FileNotFoundError()
-            mock_path.return_value = mock_file
+            path_obj = MagicMock()
+            path_obj.open = MagicMock(side_effect=FileNotFoundError())
+            mock_path.return_value = path_obj
 
             result = await api.read_token_cache()
 
@@ -121,10 +164,10 @@ class TestCyncCloudAPITokenManagement:
         # Create sample token data with all required fields
         sample_token = ComputedTokenData(
             user_id="test-user",
-            access_token="test-token",
-            authorize="test-auth",
+            access_token=ACCESS_TOKEN,
+            authorize=AUTHORIZE_TOKEN,
             expire_in=3600,  # Note: expire_in not expires_in
-            refresh_token="test-refresh-token",
+            refresh_token=REFRESH_TOKEN,
             issued_at=datetime.datetime.now(datetime.UTC),
         )
 
@@ -133,7 +176,7 @@ class TestCyncCloudAPITokenManagement:
             patch("cync_controller.cloud_api.pickle.load") as mock_pickle,
         ):
             _ = MagicMock()
-            mock_path.return_value.open = mock_open()
+            _ = _assign_open_mock(mock_path)
             mock_pickle.return_value = sample_token
 
             result = await api.read_token_cache()
@@ -147,10 +190,10 @@ class TestCyncCloudAPITokenManagement:
 
         sample_token = ComputedTokenData(
             user_id="test-user",
-            access_token="test-token",
-            authorize="test-auth",
+            access_token=ACCESS_TOKEN,
+            authorize=AUTHORIZE_TOKEN,
             expire_in=3600,
-            refresh_token="test-refresh-token",
+            refresh_token=REFRESH_TOKEN,
             issued_at=datetime.datetime.now(datetime.UTC),
         )
 
@@ -158,8 +201,7 @@ class TestCyncCloudAPITokenManagement:
             patch("cync_controller.cloud_api.Path") as mock_path,
             patch("cync_controller.cloud_api.pickle.dump") as mock_pickle,
         ):
-            mock_file = mock_open()
-            mock_path.return_value.open = mock_file
+            _ = _assign_open_mock(mock_path)
 
             result = await api.write_token_cache(sample_token)
 
@@ -174,10 +216,10 @@ class TestCyncCloudAPITokenManagement:
         # Create token that expires in the future (issued now, expires in 1 hour)
         sample_token = ComputedTokenData(
             user_id="test-user",
-            access_token="test-token",
-            authorize="test-auth",
+            access_token=ACCESS_TOKEN,
+            authorize=AUTHORIZE_TOKEN,
             expire_in=3600,
-            refresh_token="test-refresh-token",
+            refresh_token=REFRESH_TOKEN,
             issued_at=datetime.datetime.now(datetime.UTC),
         )
         # expires_at is computed from issued_at + expire_in
@@ -197,10 +239,10 @@ class TestCyncCloudAPITokenManagement:
         # Create token that expired in the past (issued 2 hours ago, expires in 1 hour = expired 1 hour ago)
         sample_token = ComputedTokenData(
             user_id="test-user",
-            access_token="test-token",
-            authorize="test-auth",
+            access_token=ACCESS_TOKEN,
+            authorize=AUTHORIZE_TOKEN,
             expire_in=3600,  # 1 hour
-            refresh_token="test-refresh-token",
+            refresh_token=REFRESH_TOKEN,
             issued_at=datetime.datetime.now(datetime.UTC) - datetime.timedelta(hours=2),
         )
         # expires_at is computed: issued_at + 1 hour = 1 hour ago (expired)
@@ -235,9 +277,8 @@ class TestCyncCloudAPIAuthentication:
             api = CyncCloudAPI()
 
             # Mock HTTP session
-            mock_session = AsyncMock()
-            mock_response = AsyncMock()
-            mock_response.raise_for_status = MagicMock()
+            mock_session = _make_session_mock()
+            mock_response = _make_response_mock()
             mock_session.post = AsyncMock(return_value=mock_response)
             api.http_session = mock_session
 
@@ -246,7 +287,8 @@ class TestCyncCloudAPIAuthentication:
             result = await api.request_otp()
 
             assert result is True
-            assert mock_session.post.called
+            post_mock = cast(AsyncMock, mock_session.post)
+            assert post_mock.called
 
     @pytest.mark.asyncio
     async def test_request_otp_no_credentials(self):
@@ -272,9 +314,7 @@ class TestCyncCloudAPIAuthentication:
             api = CyncCloudAPI()
 
             # Mock HTTP session with error
-            mock_session = AsyncMock()
-            from aiohttp import ClientResponseError, RequestInfo
-
+            mock_session = _make_session_mock()
             mock_request_info = MagicMock(spec=RequestInfo)
             mock_session.post = AsyncMock(side_effect=ClientResponseError(mock_request_info, ()))
             api.http_session = mock_session
@@ -295,16 +335,14 @@ class TestCyncCloudAPIAuthentication:
             api = CyncCloudAPI()
 
             # Mock HTTP session
-            mock_session = AsyncMock()
-            mock_response = AsyncMock()
-            mock_response.raise_for_status = MagicMock()
-            mock_response.json = AsyncMock(
-                return_value={
+            mock_session = _make_session_mock()
+            mock_response = _make_response_mock(
+                {
                     "user_id": "test-user",
-                    "access_token": "test-token",
-                    "authorize": "test-auth",
+                    "access_token": ACCESS_TOKEN,
+                    "authorize": AUTHORIZE_TOKEN,
                     "expire_in": 604800,
-                    "refresh_token": "test-refresh-token",
+                    "refresh_token": REFRESH_TOKEN,
                 },
             )
             mock_session.post = AsyncMock(return_value=mock_response)
@@ -338,16 +376,14 @@ class TestCyncCloudAPIAuthentication:
             api = CyncCloudAPI()
 
             # Mock HTTP session
-            mock_session = AsyncMock()
-            mock_response = AsyncMock()
-            mock_response.raise_for_status = MagicMock()
-            mock_response.json = AsyncMock(
-                return_value={
+            mock_session = _make_session_mock()
+            mock_response = _make_response_mock(
+                {
                     "user_id": "test-user",
-                    "access_token": "test-token",
-                    "authorize": "test-auth",
+                    "access_token": ACCESS_TOKEN,
+                    "authorize": AUTHORIZE_TOKEN,
                     "expire_in": 604800,
-                    "refresh_token": "test-refresh-token",
+                    "refresh_token": REFRESH_TOKEN,
                 },
             )
             mock_session.post = AsyncMock(return_value=mock_response)
@@ -370,16 +406,14 @@ class TestCyncCloudAPIAuthentication:
             api = CyncCloudAPI()
 
             # Mock HTTP session
-            mock_session = AsyncMock()
-            mock_response = AsyncMock()
-            mock_response.raise_for_status = MagicMock()
-            mock_response.json = AsyncMock(
-                return_value={
+            mock_session = _make_session_mock()
+            mock_response = _make_response_mock(
+                {
                     "user_id": "test-user",
-                    "access_token": "test-token",
-                    "authorize": "test-auth",
+                    "access_token": ACCESS_TOKEN,
+                    "authorize": AUTHORIZE_TOKEN,
                     "expire_in": 604800,
-                    "refresh_token": "test-refresh-token",
+                    "refresh_token": REFRESH_TOKEN,
                 },
             )
             mock_session.post = AsyncMock(return_value=mock_response)
@@ -392,10 +426,10 @@ class TestCyncCloudAPIAuthentication:
             mock_response.json = AsyncMock(
                 return_value={
                     "user_id": "test-user",
-                    "access_token": "test-token",
-                    "authorize": "test-auth",
+                    "access_token": ACCESS_TOKEN,
+                    "authorize": AUTHORIZE_TOKEN,
                     "expire_in": 3600,
-                    "refresh_token": "test-refresh-token",
+                    "refresh_token": REFRESH_TOKEN,
                 },
             )
 
@@ -417,10 +451,10 @@ class TestCyncCloudAPIDeviceOperations:
         _ = datetime.datetime.now(datetime.UTC) + datetime.timedelta(hours=1)
         sample_token = ComputedTokenData(
             user_id="test-user",
-            access_token="test-token",
-            authorize="test-auth",
+            access_token=ACCESS_TOKEN,
+            authorize=AUTHORIZE_TOKEN,
             expire_in=3600,
-            refresh_token="test-refresh-token",
+            refresh_token=REFRESH_TOKEN,
             issued_at=datetime.datetime.now(datetime.UTC),
         )
         # expires_at is computed from issued_at + expire_in
@@ -439,7 +473,8 @@ class TestCyncCloudAPIDeviceOperations:
         result = await api.request_devices()
 
         assert result is not None
-        assert mock_session.get.called
+        get_mock = cast(AsyncMock, mock_session.get)
+        assert get_mock.called
 
     @pytest.mark.asyncio
     async def test_request_devices_no_token(self):
@@ -451,7 +486,7 @@ class TestCyncCloudAPIDeviceOperations:
         # request_devices requires a valid token cache and should raise
         # an explicit authentication error when it is missing
         with pytest.raises(CyncAuthenticationError):
-            await api.request_devices()
+            _ = await api.request_devices()
 
     @pytest.mark.asyncio
     async def test_get_properties_success(self):
@@ -459,10 +494,10 @@ class TestCyncCloudAPIDeviceOperations:
         api = CyncCloudAPI()
         api.token_cache = ComputedTokenData(
             user_id="test-user",
-            access_token="test-token",
-            authorize="test-auth",
+            access_token=ACCESS_TOKEN,
+            authorize=AUTHORIZE_TOKEN,
             expire_in=3600,
-            refresh_token="test-refresh",
+            refresh_token=REFRESH_TOKEN,
             issued_at=datetime.datetime.now(datetime.UTC),
         )
         api._check_session = AsyncMock()
@@ -471,14 +506,15 @@ class TestCyncCloudAPIDeviceOperations:
         mock_response = AsyncMock()
         mock_response.json = AsyncMock(return_value={"properties": {"brightness": 100, "power": True}})
 
-        mock_session = AsyncMock()
-        mock_session.get = AsyncMock(return_value=mock_response)
+        mock_session = MagicMock()
+        get_mock: AsyncMock = AsyncMock(return_value=mock_response)
+        mock_session.get = get_mock
         api.http_session = mock_session
 
         result = await api.get_properties(product_id="123", device_id="456")
 
         assert result == {"properties": {"brightness": 100, "power": True}}
-        mock_session.get.assert_called_once()
+        get_mock.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_get_properties_access_token_expired(self):
@@ -488,10 +524,10 @@ class TestCyncCloudAPIDeviceOperations:
         api = CyncCloudAPI()
         api.token_cache = ComputedTokenData(
             user_id="test-user",
-            access_token="expired-token",
-            authorize="test-auth",
+            access_token=EXPIRED_ACCESS_TOKEN,
+            authorize=AUTHORIZE_TOKEN,
             expire_in=3600,
-            refresh_token="test-refresh",
+            refresh_token=REFRESH_TOKEN,
             issued_at=datetime.datetime.now(datetime.UTC),
         )
         api._check_session = AsyncMock()
@@ -513,10 +549,10 @@ class TestCyncCloudAPIDeviceOperations:
         api = CyncCloudAPI()
         api.token_cache = ComputedTokenData(
             user_id="test-user",
-            access_token="test-token",
-            authorize="test-auth",
+            access_token=ACCESS_TOKEN,
+            authorize=AUTHORIZE_TOKEN,
             expire_in=3600,
-            refresh_token="test-refresh",
+            refresh_token=REFRESH_TOKEN,
             issued_at=datetime.datetime.now(datetime.UTC),
         )
         api._check_session = AsyncMock()
@@ -540,10 +576,10 @@ class TestCyncCloudAPIDeviceOperations:
         api = CyncCloudAPI()
         api.token_cache = ComputedTokenData(
             user_id="test-user",
-            access_token="test-token",
-            authorize="test-auth",
+            access_token=ACCESS_TOKEN,
+            authorize=AUTHORIZE_TOKEN,
             expire_in=3600,
-            refresh_token="test-refresh",
+            refresh_token=REFRESH_TOKEN,
             issued_at=datetime.datetime.now(datetime.UTC),
         )
         api._check_session = AsyncMock()
@@ -595,8 +631,7 @@ class TestCyncCloudAPIDeviceOperations:
         ]
 
         with patch("cync_controller.cloud_api.Path") as mock_path:
-            mock_file = mock_open()
-            mock_path.return_value.open = mock_file
+            _ = _assign_open_mock(mock_path)
 
             result = await api._mesh_to_config(mesh_info)  # pyright: ignore[reportArgumentType]
 
@@ -626,8 +661,7 @@ class TestCyncCloudAPIDeviceOperations:
         ]
 
         with patch("cync_controller.cloud_api.Path") as mock_path:
-            mock_file = mock_open()
-            mock_path.return_value.open = mock_file
+            _ = _assign_open_mock(mock_path)
 
             result = await api._mesh_to_config(mesh_info)
 
@@ -648,8 +682,7 @@ class TestCyncCloudAPIDeviceOperations:
         ]
 
         with patch("cync_controller.cloud_api.Path") as mock_path:
-            mock_file = mock_open()
-            mock_path.return_value.open = mock_file
+            _ = _assign_open_mock(mock_path)
 
             result = await api._mesh_to_config(mesh_info)
 
@@ -673,8 +706,7 @@ class TestCyncCloudAPIDeviceOperations:
         ]
 
         with patch("cync_controller.cloud_api.Path") as mock_path:
-            mock_file = mock_open()
-            mock_path.return_value.open = mock_file
+            _ = _assign_open_mock(mock_path)
 
             result = await api._mesh_to_config(mesh_info)
 
@@ -711,8 +743,7 @@ class TestCyncCloudAPIDeviceOperations:
         ]
 
         with patch("cync_controller.cloud_api.Path") as mock_path:
-            mock_file = mock_open()
-            mock_path.return_value.open = mock_file
+            _ = _assign_open_mock(mock_path)
 
             result = await api._mesh_to_config(mesh_info)  # pyright: ignore[reportArgumentType]
 
@@ -756,8 +787,7 @@ class TestCyncCloudAPIDeviceOperations:
         ]
 
         with patch("cync_controller.cloud_api.Path") as mock_path:
-            mock_file = mock_open()
-            mock_path.return_value.open = mock_file
+            _ = _assign_open_mock(mock_path)
 
             result = await api._mesh_to_config(mesh_info)  # pyright: ignore[reportArgumentType]
 
@@ -810,8 +840,7 @@ class TestCyncCloudAPIDeviceOperations:
         ]
 
         with patch("cync_controller.cloud_api.Path") as mock_path:
-            mock_file = mock_open()
-            mock_path.return_value.open = mock_file
+            _ = _assign_open_mock(mock_path)
 
             result = await api._mesh_to_config(mesh_info)  # pyright: ignore[reportArgumentType]
 
@@ -850,8 +879,7 @@ class TestCyncCloudAPIDeviceOperations:
         ]
 
         with patch("cync_controller.cloud_api.Path") as mock_path:
-            mock_file = mock_open()
-            mock_path.return_value.open = mock_file
+            _ = _assign_open_mock(mock_path)
 
             result = await api._mesh_to_config(mesh_info)
 

@@ -180,7 +180,7 @@ test.describe("Fan Speed Control E2E Tests", () => {
       } catch {
         // Dialog closed - reopen it
         console.log(`   Dialog closed, reopening...`);
-        const newCard = await findFanCard(page, FAN_ENTITY_NAME);
+        await findFanCard(page, FAN_ENTITY_NAME);
         await page.waitForTimeout(1000);
       }
 

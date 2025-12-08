@@ -1,7 +1,11 @@
 {
-  "include": ["src", "tests", "scripts", "scripts/playwright"],
-  "exclude": ["src/cync_controller/mitm/validate-checksum-REFERENCE-ONLY.py"],
-  "extraPaths": [".", "src", "tests", "scripts", "scripts/playwright"],
+  "enableReachabilityAnalysis": true,
+  "include": ["."],
+  "exclude": [
+    ".venv",
+    "node_modules",
+    "src/cync_controller/mitm/validate-checksum-REFERENCE-ONLY.py"
+  ],
   "venvPath": ".",
   "venv": ".venv",
   "pythonVersion": "3.14",
@@ -10,19 +14,18 @@
   "executionEnvironments": [
     {
       "root": "src",
-      "extraPaths": ["src"],
       "pythonVersion": "3.14",
       "reportPrivateUsage": true
     },
     {
       "root": "tests",
-      "extraPaths": ["src", "tests", ".", "scripts", "scripts/playwright"],
+      "extraPaths": ["src", "scripts"],
       "pythonVersion": "3.14",
       "reportPrivateUsage": false
     },
     {
       "root": "scripts",
-      "extraPaths": [".", "src", "tests", "scripts", "scripts/playwright"],
+      "extraPaths": ["src", "tests"],
       "pythonVersion": "3.14",
       "reportPrivateUsage": false
     }

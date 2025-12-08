@@ -10,8 +10,9 @@ if [ -d "$PYTHON_BIN_DIR" ]; then
 fi
 
 echo "Workspace structure:"
-echo "  ${WORKSPACE_DIRECTORY}/     - Home Assistant addon repository (with integrated cync_lan package)"
-echo "  ${WORKSPACE_DIRECTORY}/src/cync_lan/ - Python package source (integrated)"
+echo "  ${WORKSPACE_DIRECTORY}/                - hass-addons monorepo root"
+echo "  ${WORKSPACE_DIRECTORY}/src/cync_controller/ - Python package source"
+echo "  ${WORKSPACE_DIRECTORY}/tests/          - Test suite entry point"
 
 # Make all scripts executable
 chmod +x "${WORKSPACE_DIRECTORY}/.devcontainer"/*.sh
@@ -33,9 +34,9 @@ bash "${WORKSPACE_DIRECTORY}/.devcontainer/01-05-python-venv-setup.sh" "${WORKSP
 
 echo "✅ Complete devcontainer setup finished!"
 echo ""
-echo "Workspace ready with integrated cync-controller package:"
-echo "   - hass-addons (Home Assistant addon with integrated Python package)"
-echo "   - Source code: ${WORKSPACE_DIRECTORY}/src/cync_lan/"
+echo "Workspace ready with integrated cync_controller package:"
+echo "   - hass-addons monorepo"
+echo "   - Source code: ${WORKSPACE_DIRECTORY}/src/cync_controller/"
 echo ""
 echo "Available commands:"
 echo "  - ha addons rebuild local_cync-controller: Rebuild the add-on"

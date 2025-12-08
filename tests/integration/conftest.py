@@ -3,7 +3,6 @@
 import asyncio
 import json
 import logging
-import socket
 from collections.abc import AsyncGenerator
 from dataclasses import dataclass
 from enum import Enum
@@ -79,7 +78,7 @@ class MockTCPServer:
         )
         # Get the actual port assigned
         if self.port == 0 and self.server.sockets:
-            sock = cast(socket.socket, self.server.sockets[0])
+            sock = self.server.sockets[0]
             self.port = cast(int, sock.getsockname()[1])
         logger.info("Mock TCP server started on %s:%d", self.host, self.port)
 
@@ -334,5 +333,5 @@ def _init_performance_tracker(  # pyright: ignore[reportUnusedFunction]
 ) -> PerformanceTracker:
     """Initialize performance tracker in pytest config."""
     config: Config = request.config
-    config._performance_tracker = performance_tracker  # type: ignore[attr-defined]
+    config.__dict__["_performance_tracker"] = performance_tracker
     return performance_tracker

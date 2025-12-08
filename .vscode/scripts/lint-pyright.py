@@ -111,9 +111,6 @@ def run_pyright(args: list[str]) -> subprocess.CompletedProcess[str]:
         LOGGER.error("basedpyright not found. Install via: pip install basedpyright")
         raise FileNotFoundError("basedpyright executable not found")
 
-
-    print(f"Running basedpyright: {cmd} {args}")
-
     result = subprocess.run(
         [*cmd, *args],
         capture_output=True,
@@ -167,11 +164,13 @@ def main() -> int:
                 overall_exit_code = result.returncode
         except (FileNotFoundError, PermissionError, OSError) as e:
             LOGGER.error(
-                "✗ basedpyright executable error",
-                "error_type: " + type(e).__name__,
-                "error: " + str(e),
-                "hint: Install basedpyright via: pip install basedpyright",
-                "project: " + project["name"],
+                (
+                    "✗ basedpyright executable error (%s): %s; "
+                    "project=%s; hint=Install basedpyright via: pip install basedpyright"
+                ),
+                type(e).__name__,
+                str(e),
+                project["name"],
             )
             if overall_exit_code == 0:
                 overall_exit_code = 1

@@ -10,6 +10,7 @@ Tests cover:
 from __future__ import annotations
 
 import asyncio
+from typing import cast
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -101,7 +102,7 @@ async def test_connect_oserror(tcp_connection: TCPConnectionTestHarness) -> None
 @pytest.mark.asyncio
 async def test_send_success(tcp_connection: TCPConnectionTestHarness) -> None:
     """Test successful send."""
-    mock_writer = AsyncMock()
+    mock_writer = cast(asyncio.StreamWriter, AsyncMock(spec=asyncio.StreamWriter))
     mock_writer.write = MagicMock()
     mock_writer.drain = AsyncMock()
     tcp_connection.writer = mock_writer
@@ -126,7 +127,7 @@ async def test_send_not_connected(tcp_connection: TCPConnectionTestHarness) -> N
 @pytest.mark.asyncio
 async def test_send_timeout(tcp_connection: TCPConnectionTestHarness) -> None:
     """Test send timeout."""
-    mock_writer = AsyncMock(spec=asyncio.StreamWriter)
+    mock_writer = cast(asyncio.StreamWriter, AsyncMock(spec=asyncio.StreamWriter))
     mock_writer.write = MagicMock()
 
     async def slow_drain() -> None:
@@ -143,7 +144,7 @@ async def test_send_timeout(tcp_connection: TCPConnectionTestHarness) -> None:
 @pytest.mark.asyncio
 async def test_send_oserror(tcp_connection: TCPConnectionTestHarness) -> None:
     """Test send with OSError."""
-    mock_writer = AsyncMock(spec=asyncio.StreamWriter)
+    mock_writer = cast(asyncio.StreamWriter, AsyncMock(spec=asyncio.StreamWriter))
     mock_writer.write = MagicMock(side_effect=OSError("Broken pipe"))
     mock_writer.drain = AsyncMock()
     tcp_connection.writer = mock_writer
@@ -156,7 +157,7 @@ async def test_send_oserror(tcp_connection: TCPConnectionTestHarness) -> None:
 @pytest.mark.asyncio
 async def test_recv_success(tcp_connection: TCPConnectionTestHarness) -> None:
     """Test successful receive."""
-    mock_reader = AsyncMock(spec=asyncio.StreamReader)
+    mock_reader = cast(asyncio.StreamReader, AsyncMock(spec=asyncio.StreamReader))
     mock_reader.read = AsyncMock(return_value=b"received data")
     tcp_connection.reader = mock_reader
     tcp_connection.set_connected_state(True)
@@ -178,7 +179,7 @@ async def test_recv_not_connected(tcp_connection: TCPConnectionTestHarness) -> N
 @pytest.mark.asyncio
 async def test_recv_timeout(tcp_connection: TCPConnectionTestHarness) -> None:
     """Test receive timeout."""
-    mock_reader = AsyncMock(spec=asyncio.StreamReader)
+    mock_reader = cast(asyncio.StreamReader, AsyncMock(spec=asyncio.StreamReader))
 
     async def slow_read(*_args: object, **_kwargs: object) -> bytes:
         await asyncio.sleep(1.0)  # Longer than timeout
@@ -195,7 +196,7 @@ async def test_recv_timeout(tcp_connection: TCPConnectionTestHarness) -> None:
 @pytest.mark.asyncio
 async def test_recv_oserror(tcp_connection: TCPConnectionTestHarness) -> None:
     """Test receive with OSError."""
-    mock_reader = AsyncMock(spec=asyncio.StreamReader)
+    mock_reader = cast(asyncio.StreamReader, AsyncMock(spec=asyncio.StreamReader))
     mock_reader.read = AsyncMock(side_effect=OSError("Connection reset"))
     tcp_connection.reader = mock_reader
     tcp_connection.set_connected_state(True)
@@ -207,7 +208,7 @@ async def test_recv_oserror(tcp_connection: TCPConnectionTestHarness) -> None:
 @pytest.mark.asyncio
 async def test_close_success(tcp_connection: TCPConnectionTestHarness) -> None:
     """Test successful close."""
-    mock_writer = AsyncMock(spec=asyncio.StreamWriter)
+    mock_writer = cast(asyncio.StreamWriter, AsyncMock(spec=asyncio.StreamWriter))
     mock_writer.close = MagicMock()
     mock_writer.wait_closed = AsyncMock()
     tcp_connection.writer = mock_writer
@@ -234,7 +235,7 @@ async def test_close_not_connected(tcp_connection: TCPConnectionTestHarness) -> 
 @pytest.mark.asyncio
 async def test_close_oserror_continues(tcp_connection: TCPConnectionTestHarness) -> None:
     """Test that OSError during close doesn't fail cleanup."""
-    mock_writer = AsyncMock(spec=asyncio.StreamWriter)
+    mock_writer = cast(asyncio.StreamWriter, AsyncMock(spec=asyncio.StreamWriter))
     mock_writer.close = MagicMock(side_effect=OSError("Already closed"))
     mock_writer.wait_closed = AsyncMock()
     tcp_connection.writer = mock_writer
@@ -248,7 +249,7 @@ async def test_close_oserror_continues(tcp_connection: TCPConnectionTestHarness)
 @pytest.mark.asyncio
 async def test_close_unexpected_error_continues(tcp_connection: TCPConnectionTestHarness) -> None:
     """Test that unexpected errors during close don't fail cleanup."""
-    mock_writer = AsyncMock()
+    mock_writer = cast(asyncio.StreamWriter, AsyncMock(spec=asyncio.StreamWriter))
     mock_writer.close = MagicMock(side_effect=RuntimeError("Unexpected error"))
     mock_writer.wait_closed = AsyncMock()
     tcp_connection.writer = mock_writer
@@ -262,7 +263,7 @@ async def test_close_unexpected_error_continues(tcp_connection: TCPConnectionTes
 @pytest.mark.asyncio
 async def test_close_wait_closed_error_continues(tcp_connection: TCPConnectionTestHarness) -> None:
     """Test that wait_closed errors don't fail cleanup."""
-    mock_writer = AsyncMock()
+    mock_writer = cast(asyncio.StreamWriter, AsyncMock(spec=asyncio.StreamWriter))
     mock_writer.close = MagicMock()
     mock_writer.wait_closed = AsyncMock(side_effect=OSError("Connection error"))
     tcp_connection.writer = mock_writer

@@ -160,13 +160,13 @@ tests/
 
 ```bash
 ## Unit tests
-pytest cync-controller/tests/unit/
+pytest tests/cync_controller/unit/
 
 ## E2E tests
-npx playwright test tests/e2e/
+npx playwright test tests/cync_controller/e2e/
 
 ## With coverage
-pytest cync-controller/tests/unit/ --cov=cync_controller --cov-report=html
+pytest tests/cync_controller/unit/ --cov=cync_controller --cov-report=html
 ```
 
 ### Coverage

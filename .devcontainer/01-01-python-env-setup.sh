@@ -30,20 +30,20 @@ fi
 # Install cync-controller in editable mode with test dependencies
 # This allows the package to be imported in tests and includes pytest-xdist
 WORKSPACE_DIR="${WORKSPACE_DIRECTORY:-/workspaces/hass-addons}"
-CYNC_CONTROLLER_DIR="${WORKSPACE_DIR}/cync-controller"
+PYPROJECT_DIR="${WORKSPACE_DIR}"
 
-if [ -d "${CYNC_CONTROLLER_DIR}" ] && [ -f "${CYNC_CONTROLLER_DIR}/pyproject.toml" ]; then
-  echo "Installing cync-controller in editable mode with test dependencies..."
-  cd "${CYNC_CONTROLLER_DIR}"
+if [ -f "${PYPROJECT_DIR}/pyproject.toml" ]; then
+  echo "Installing hass-addons Python package in editable mode with test dependencies..."
+  cd "${PYPROJECT_DIR}"
   pip install -e '.[dev,test]' || {
-    echo "WARNING: Failed to install cync-controller in editable mode"
+    echo "WARNING: Failed to install hass-addons package in editable mode"
     echo "Tests may fail with 'ModuleNotFoundError: No module named cync_controller'"
-    echo "Run manually: cd cync-controller && pip install -e '.[dev,test]'"
+    echo "Run manually: cd \"${PYPROJECT_DIR}\" && pip install -e '.[dev,test]'"
   }
-  echo "✓ cync-controller installed in editable mode"
+  echo "✓ hass-addons package installed in editable mode"
 else
-  echo "WARNING: cync-controller directory not found at ${CYNC_CONTROLLER_DIR}"
-  echo "Tests will fail until package is installed: cd cync-controller && pip install -e '.[dev,test]'"
+  echo "WARNING: pyproject.toml not found at ${PYPROJECT_DIR}"
+  echo "Tests will fail until package is installed: cd \"${PYPROJECT_DIR}\" && pip install -e '.[dev,test]'"
 fi
 
 echo "Python development environment setup complete"

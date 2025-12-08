@@ -6,12 +6,13 @@ Tests utility functions including byte/hex conversions, signal handling, and for
 import asyncio
 import uuid
 import warnings
-from collections.abc import Awaitable, Callable
+from collections.abc import Awaitable, Callable, Sequence
 from pathlib import Path
 from typing import TypeVar, cast
 from unittest.mock import AsyncMock, MagicMock, create_autospec, patch
 
 import pytest
+from _pytest.mark import ParameterSet
 
 from cync_controller.utils import (
     _async_signal_cleanup,
@@ -35,11 +36,19 @@ signal_handler_fn: SignalHandlerFunc = cast(SignalHandlerFunc, signal_handler)  
 _F = TypeVar("_F", bound=Callable[..., object])
 
 
-def parametrize(*args: object, **kwargs: object) -> Callable[[_F], _F]:
+ParametrizeArg = ParameterSet | Sequence[object]
+
+
+def parametrize(
+    argnames: str | Sequence[str],
+    *argvalues: ParametrizeArg,
+    **kwargs: object,
+) -> Callable[[_F], _F]:
     """Typed wrapper around pytest.mark.parametrize for pyright."""
 
     def decorator(func: _F) -> _F:
-        mark = cast(Callable[[_F], _F], pytest.mark.parametrize(*args, **kwargs))
+        typed_values: tuple[ParametrizeArg, ...] = argvalues
+        mark = cast(Callable[[_F], _F], pytest.mark.parametrize(argnames, *typed_values, **kwargs))
         return mark(func)
 
     return decorator

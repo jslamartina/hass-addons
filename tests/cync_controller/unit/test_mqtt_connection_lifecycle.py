@@ -12,6 +12,20 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from cync_controller.mqtt_client import MQTTClient
+from cync_controller.structs import GlobalObjEnv
+from tests.cync_controller.unit.conftest import make_dummy_secret
+
+MQTT_PASSWORD = make_dummy_secret("mqtt-pass")
+
+
+def _seed_env(mock_g: MagicMock, mqtt_pass: str = MQTT_PASSWORD) -> None:
+    """Populate a typed env on the patched global."""
+    env = GlobalObjEnv()
+    env.mqtt_host = "localhost"
+    env.mqtt_port = 1883
+    env.mqtt_user = "test"
+    env.mqtt_pass = mqtt_pass
+    mock_g.env = env
 
 
 class TestMQTTClientConnectionLifecycle:
@@ -25,10 +39,7 @@ class TestMQTTClientConnectionLifecycle:
             patch("cync_controller.mqtt_client.aiomqtt.Client"),
         ):
             mock_g.uuid = "test-uuid"
-            mock_g.env.mqtt_host = "localhost"
-            mock_g.env.mqtt_port = 1883
-            mock_g.env.mqtt_user = "test"
-            mock_g.env.mqtt_pass = "test"
+            _seed_env(mock_g)
             mock_g.reload_env = MagicMock()
 
             client = MQTTClient()
@@ -54,10 +65,7 @@ class TestMQTTClientConnectionLifecycle:
             patch("cync_controller.mqtt_client.aiomqtt.Client"),
         ):
             mock_g.uuid = "test-uuid"
-            mock_g.env.mqtt_host = "localhost"
-            mock_g.env.mqtt_port = 1883
-            mock_g.env.mqtt_user = "test"
-            mock_g.env.mqtt_pass = "test"
+            _seed_env(mock_g)
             mock_g.reload_env = MagicMock()
 
             client = MQTTClient()
@@ -85,10 +93,7 @@ class TestMQTTClientConnectionLifecycle:
             patch("cync_controller.mqtt_client.aiomqtt.Client"),
         ):
             mock_g.uuid = "test-uuid"
-            mock_g.env.mqtt_host = "localhost"
-            mock_g.env.mqtt_port = 1883
-            mock_g.env.mqtt_user = "test"
-            mock_g.env.mqtt_pass = "test"
+            _seed_env(mock_g)
             mock_g.reload_env = MagicMock()
 
             client = MQTTClient()
@@ -114,10 +119,7 @@ class TestMQTTClientConnectionLifecycle:
             patch("cync_controller.mqtt_client.aiomqtt.Client"),
         ):
             mock_g.uuid = "test-uuid"
-            mock_g.env.mqtt_host = "localhost"
-            mock_g.env.mqtt_port = 1883
-            mock_g.env.mqtt_user = "test"
-            mock_g.env.mqtt_pass = "test"
+            _seed_env(mock_g)
             mock_g.reload_env = MagicMock()
             mock_g.ncync_server = MagicMock()
             mock_g.ncync_server.groups = {}
@@ -133,7 +135,8 @@ class TestMQTTClientConnectionLifecycle:
             # Mock the command_router's start_receiver_task method
             assert client.command_router is not None
             command_router = cast(MagicMock, client.command_router)
-            command_router.start_receiver_task = AsyncMock(side_effect=asyncio.CancelledError())
+            start_receiver_task: AsyncMock = AsyncMock(side_effect=asyncio.CancelledError())
+            command_router.start_receiver_task = start_receiver_task
 
             start_task = asyncio.create_task(client.start())
             await asyncio.sleep(0.15)
@@ -143,7 +146,7 @@ class TestMQTTClientConnectionLifecycle:
                 await start_task
 
             # Verify start_receiver_task was called when connect succeeded
-            command_router.start_receiver_task.assert_called()
+            start_receiver_task.assert_called()
 
     @pytest.mark.asyncio
     async def test_start_resilience_multiple_failures(self):
@@ -153,10 +156,7 @@ class TestMQTTClientConnectionLifecycle:
             patch("cync_controller.mqtt_client.aiomqtt.Client"),
         ):
             mock_g.uuid = "test-uuid"
-            mock_g.env.mqtt_host = "localhost"
-            mock_g.env.mqtt_port = 1883
-            mock_g.env.mqtt_user = "test"
-            mock_g.env.mqtt_pass = "test"
+            _seed_env(mock_g, mqtt_pass=make_dummy_secret("mqtt-pass"))
             mock_g.reload_env = MagicMock()
 
             client = MQTTClient()

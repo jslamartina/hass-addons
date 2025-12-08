@@ -19,5 +19,6 @@
 *.tar.gz
 *.tar
 *.zip
+*.lock
 
 

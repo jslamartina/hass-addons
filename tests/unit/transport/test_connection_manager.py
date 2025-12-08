@@ -28,6 +28,26 @@ from tests.helpers.expectations import expect_async_exception
 MAX_EXPECTED_LOCK_HOLD_TIME_SECONDS = 0.1  # Should be very fast (< 100ms)
 
 
+def make_conn_mock() -> TCPConnection:
+    """Create a typed TCPConnection mock."""
+    return cast(TCPConnection, AsyncMock(spec=TCPConnection))
+
+
+def make_protocol_mock() -> CyncProtocol:
+    """Create a typed CyncProtocol mock."""
+    return cast(CyncProtocol, MagicMock(spec=CyncProtocol))
+
+
+def magic(method: object) -> MagicMock:
+    """Cast helper for sync mock methods."""
+    return cast(MagicMock, method)
+
+
+def async_magic(method: object) -> AsyncMock:
+    """Cast helper for async mock methods."""
+    return cast(AsyncMock, method)
+
+
 class ConnectionManagerTestHarness(ConnectionManager):
     """Expose protected helpers for testing."""
 
@@ -59,7 +79,7 @@ class TestConnectionManagerInit:
     def test_init_defaults(self):
         """Test ConnectionManager initialization with defaults."""
         conn = MagicMock(spec=TCPConnection)
-        protocol = MagicMock(spec=CyncProtocol)
+        protocol = make_protocol_mock()
 
         mgr = ConnectionManagerTestHarness(conn, protocol)
 
@@ -74,7 +94,7 @@ class TestConnectionManagerInit:
     def test_init_with_timeout_config(self):
         """Test ConnectionManager initialization with custom TimeoutConfig."""
         conn = MagicMock(spec=TCPConnection)
-        protocol = MagicMock(spec=CyncProtocol)
+        protocol = make_protocol_mock()
         timeout_config = TimeoutConfig(measured_p99_ms=100.0)
 
         mgr = ConnectionManagerTestHarness(conn, protocol, timeout_config=timeout_config)
@@ -84,7 +104,7 @@ class TestConnectionManagerInit:
     def test_init_with_ack_handler(self):
         """Test ConnectionManager initialization with ACK handler."""
         conn = MagicMock(spec=TCPConnection)
-        protocol = MagicMock(spec=CyncProtocol)
+        protocol = make_protocol_mock()
         ack_handler = AsyncMock()
 
         mgr = ConnectionManagerTestHarness(conn, protocol, ack_handler=ack_handler)
@@ -98,21 +118,21 @@ class TestConnectionManagerConnect:
     @pytest.mark.asyncio
     async def test_connect_success(self):
         """Test successful handshake."""
-        conn = AsyncMock(spec=TCPConnection)
-        protocol = MagicMock(spec=CyncProtocol)
+        conn = make_conn_mock()
+        protocol = make_protocol_mock()
         endpoint = b"\x01\x02\x03\x04\x05"
         auth_code = b"\x10" * 16
 
         # Mock handshake encoding
         handshake_packet = bytes([0x23, 0x00, 0x00, 0x00, 0x1A]) + b"handshake_data"
-        protocol.encode_handshake.return_value = handshake_packet
+        magic(protocol.encode_handshake).return_value = handshake_packet
 
         # Mock successful send
-        conn.send.return_value = True
+        async_magic(conn.send).return_value = True
 
         # Mock successful ACK response
         ack_response = bytes([PACKET_TYPE_HELLO_ACK]) + b"ack_data"
-        conn.recv.return_value = ack_response
+        async_magic(conn.recv).return_value = ack_response
 
         mgr = ConnectionManagerTestHarness(conn, protocol)
 
@@ -123,12 +143,12 @@ class TestConnectionManagerConnect:
         assert mgr.endpoint == endpoint
         assert mgr.auth_code == auth_code
         assert mgr.packet_router_task is not None
-        protocol.encode_handshake.assert_called_once_with(endpoint, auth_code)
-        conn.send.assert_called_once_with(handshake_packet)
+        magic(protocol.encode_handshake).assert_called_once_with(endpoint, auth_code)
+        async_magic(conn.send).assert_called_once_with(handshake_packet)
 
         # Clean up packet router task
         if mgr.packet_router_task and not mgr.packet_router_task.done():
-            mgr.packet_router_task.cancel()
+            _ = mgr.packet_router_task.cancel()
             with contextlib.suppress(asyncio.CancelledError):
                 await mgr.packet_router_task
         mgr.packet_router_task = None
@@ -136,16 +156,16 @@ class TestConnectionManagerConnect:
     @pytest.mark.asyncio
     async def test_connect_handshake_timeout(self):
         """Test handshake timeout."""
-        conn = AsyncMock(spec=TCPConnection)
-        protocol = MagicMock(spec=CyncProtocol)
+        conn = make_conn_mock()
+        protocol = make_protocol_mock()
         endpoint = b"\x01\x02\x03\x04\x05"
         auth_code = b"\x10" * 16
 
         handshake_packet = bytes([0x23, 0x00, 0x00, 0x00, 0x1A]) + b"handshake_data"
-        protocol.encode_handshake.return_value = handshake_packet
+        magic(protocol.encode_handshake).return_value = handshake_packet
 
-        conn.send.return_value = True
-        conn.recv.side_effect = TimeoutError()
+        async_magic(conn.send).return_value = True
+        async_magic(conn.recv).side_effect = TimeoutError()
 
         mgr = ConnectionManagerTestHarness(conn, protocol)
 
@@ -157,17 +177,17 @@ class TestConnectionManagerConnect:
     @pytest.mark.asyncio
     async def test_connect_invalid_ack(self):
         """Test handshake with invalid ACK response."""
-        conn = AsyncMock(spec=TCPConnection)
-        protocol = MagicMock(spec=CyncProtocol)
+        conn = make_conn_mock()
+        protocol = make_protocol_mock()
         endpoint = b"\x01\x02\x03\x04\x05"
         auth_code = b"\x10" * 16
 
         handshake_packet = bytes([0x23, 0x00, 0x00, 0x00, 0x1A]) + b"handshake_data"
-        protocol.encode_handshake.return_value = handshake_packet
+        magic(protocol.encode_handshake).return_value = handshake_packet
 
-        conn.send.return_value = True
+        async_magic(conn.send).return_value = True
         # Invalid ACK (wrong packet type)
-        conn.recv.return_value = bytes([0x7B]) + b"wrong_ack"
+        async_magic(conn.recv).return_value = bytes([0x7B]) + b"wrong_ack"
 
         mgr = ConnectionManagerTestHarness(conn, protocol)
 
@@ -179,15 +199,15 @@ class TestConnectionManagerConnect:
     @pytest.mark.asyncio
     async def test_connect_send_failure(self):
         """Test handshake with send failure."""
-        conn = AsyncMock(spec=TCPConnection)
-        protocol = MagicMock(spec=CyncProtocol)
+        conn = make_conn_mock()
+        protocol = make_protocol_mock()
         endpoint = b"\x01\x02\x03\x04\x05"
         auth_code = b"\x10" * 16
 
         handshake_packet = bytes([0x23, 0x00, 0x00, 0x00, 0x1A]) + b"handshake_data"
-        protocol.encode_handshake.return_value = handshake_packet
+        magic(protocol.encode_handshake).return_value = handshake_packet
 
-        conn.send.return_value = False  # Send failure
+        async_magic(conn.send).return_value = False  # Send failure
 
         mgr = ConnectionManagerTestHarness(conn, protocol)
 
@@ -203,8 +223,8 @@ class TestConnectionManagerPacketRouter:
     @pytest.mark.asyncio
     async def test_packet_router_data_packet_routing(self):
         """Test packet router routes data packets to queue."""
-        conn = AsyncMock(spec=TCPConnection)
-        protocol = MagicMock(spec=CyncProtocol)
+        conn = make_conn_mock()
+        protocol = make_protocol_mock()
 
         # Mock decoded packet
         # Valid packet format: type=0x73, reserved=0x00 0x00,
@@ -216,10 +236,10 @@ class TestConnectionManagerPacketRouter:
             payload=b"test",
             raw=packet_bytes,
         )
-        protocol.decode_packet.return_value = data_packet
+        magic(protocol.decode_packet).return_value = data_packet
 
         # Mock TCP read returning complete packet bytes, then StopAsyncIteration to stop loop
-        conn.recv.side_effect = [
+        async_magic(conn.recv).side_effect = [
             packet_bytes,
             StopAsyncIteration(),
         ]  # StopAsyncIteration signals connection closed
@@ -242,8 +262,8 @@ class TestConnectionManagerPacketRouter:
     @pytest.mark.asyncio
     async def test_packet_router_heartbeat_ack(self):
         """Test packet router handles heartbeat ACK."""
-        conn = AsyncMock(spec=TCPConnection)
-        protocol = MagicMock(spec=CyncProtocol)
+        conn = make_conn_mock()
+        protocol = make_protocol_mock()
 
         # Mock heartbeat ACK packet
         heartbeat_ack = CyncPacket(
@@ -252,10 +272,10 @@ class TestConnectionManagerPacketRouter:
             payload=b"",
             raw=b"\xd8\x00\x00\x00\x00",
         )
-        protocol.decode_packet.return_value = heartbeat_ack
+        magic(protocol.decode_packet).return_value = heartbeat_ack
 
         packet_bytes = b"\xd8\x00\x00\x00\x00"
-        conn.recv.side_effect = [
+        async_magic(conn.recv).side_effect = [
             packet_bytes,
             StopAsyncIteration(),
         ]  # StopAsyncIteration signals connection closed
@@ -268,7 +288,7 @@ class TestConnectionManagerPacketRouter:
 
         await asyncio.sleep(0.1)
 
-        router_task.cancel()
+        _ = router_task.cancel()
         with contextlib.suppress(asyncio.CancelledError):
             await router_task
 
@@ -278,8 +298,8 @@ class TestConnectionManagerPacketRouter:
     @pytest.mark.asyncio
     async def test_packet_router_ack_handler_callback(self):
         """Test packet router calls ACK handler callback."""
-        conn = AsyncMock(spec=TCPConnection)
-        protocol = MagicMock(spec=CyncProtocol)
+        conn = make_conn_mock()
+        protocol = make_protocol_mock()
         ack_handler = AsyncMock()
 
         # Mock ACK packet
@@ -289,10 +309,10 @@ class TestConnectionManagerPacketRouter:
             payload=b"",
             raw=b"\x28\x00\x00\x00\x02ack",
         )
-        protocol.decode_packet.return_value = ack_packet
+        magic(protocol.decode_packet).return_value = ack_packet
 
         packet_bytes = b"\x28\x00\x00\x00\x02ack"
-        conn.recv.side_effect = [
+        async_magic(conn.recv).side_effect = [
             packet_bytes,
             StopAsyncIteration(),
         ]  # StopAsyncIteration signals connection closed
@@ -304,7 +324,7 @@ class TestConnectionManagerPacketRouter:
 
         await asyncio.sleep(0.1)
 
-        router_task.cancel()
+        _ = router_task.cancel()
         with contextlib.suppress(asyncio.CancelledError):
             await router_task
 
@@ -314,8 +334,8 @@ class TestConnectionManagerPacketRouter:
     @pytest.mark.asyncio
     async def test_packet_router_packet_framer_integration(self):
         """Test packet router uses PacketFramer for partial packets."""
-        conn = AsyncMock(spec=TCPConnection)
-        protocol = MagicMock(spec=CyncProtocol)
+        conn = make_conn_mock()
+        protocol = make_protocol_mock()
 
         # Simulate partial packet (header only)
         # Valid packet: type=0x73, reserved=0x00 0x00,
@@ -327,7 +347,7 @@ class TestConnectionManagerPacketRouter:
         # First read: partial
         # Second read: complete
         # Third read: StopAsyncIteration to stop loop
-        conn.recv.side_effect = [partial_header, complete_packet_bytes[5:], StopAsyncIteration()]
+        async_magic(conn.recv).side_effect = [partial_header, complete_packet_bytes[5:], StopAsyncIteration()]
 
         data_packet = CyncPacket(
             packet_type=PACKET_TYPE_DATA_CHANNEL,
@@ -335,7 +355,7 @@ class TestConnectionManagerPacketRouter:
             payload=b"test_data",
             raw=complete_packet_bytes,
         )
-        protocol.decode_packet.return_value = data_packet
+        magic(protocol.decode_packet).return_value = data_packet
 
         mgr = ConnectionManagerTestHarness(conn, protocol)
         mgr.state = ConnectionState.CONNECTED
@@ -356,17 +376,17 @@ class TestConnectionManagerReconnect:
     @pytest.mark.asyncio
     async def test_reconnect_success(self):
         """Test successful reconnection."""
-        conn = AsyncMock(spec=TCPConnection)
-        protocol = MagicMock(spec=CyncProtocol)
+        conn = make_conn_mock()
+        protocol = make_protocol_mock()
         endpoint = b"\x01\x02\x03\x04\x05"
         auth_code = b"\x10" * 16
 
         handshake_packet = bytes([0x23, 0x00, 0x00, 0x00, 0x1A]) + b"handshake_data"
-        protocol.encode_handshake.return_value = handshake_packet
+        magic(protocol.encode_handshake).return_value = handshake_packet
 
-        conn.send.return_value = True
+        async_magic(conn.send).return_value = True
         ack_response = bytes([PACKET_TYPE_HELLO_ACK]) + b"ack_data"
-        conn.recv.return_value = ack_response
+        async_magic(conn.recv).return_value = ack_response
 
         mgr = ConnectionManagerTestHarness(conn, protocol)
         mgr.endpoint = endpoint
@@ -383,7 +403,7 @@ class TestConnectionManagerReconnect:
 
         # Clean up packet router task that was started by connect() during reconnect()
         if mgr.packet_router_task and not mgr.packet_router_task.done():
-            mgr.packet_router_task.cancel()
+            _ = mgr.packet_router_task.cancel()
             with contextlib.suppress(asyncio.CancelledError):
                 await mgr.packet_router_task
         mgr.packet_router_task = None
@@ -391,8 +411,8 @@ class TestConnectionManagerReconnect:
     @pytest.mark.asyncio
     async def test_reconnect_no_credentials(self):
         """Test reconnection fails without credentials."""
-        conn = AsyncMock(spec=TCPConnection)
-        protocol = MagicMock(spec=CyncProtocol)
+        conn = make_conn_mock()
+        protocol = make_protocol_mock()
 
         mgr = ConnectionManagerTestHarness(conn, protocol)
         mgr.endpoint = b""
@@ -408,8 +428,8 @@ class TestConnectionManagerDisconnect:
     @pytest.mark.asyncio
     async def test_disconnect_cleanup_order(self):
         """Test disconnect cleans up tasks in correct order."""
-        conn = AsyncMock(spec=TCPConnection)
-        protocol = MagicMock(spec=CyncProtocol)
+        conn = make_conn_mock()
+        protocol = make_protocol_mock()
 
         mgr = ConnectionManagerTestHarness(conn, protocol)
         mgr.state = ConnectionState.CONNECTED
@@ -429,7 +449,7 @@ class TestConnectionManagerDisconnect:
         assert mgr.reconnect_task is None
         assert packet_router_task.cancelled()
         assert reconnect_task.cancelled()
-        conn.close.assert_called_once()
+        async_magic(conn.close).assert_called_once()
 
         # Wait briefly to ensure cancellation completes (prevents unretrieved task warnings)
         await asyncio.sleep(0.01)
@@ -442,14 +462,14 @@ class TestConnectionManagerWithStateCheck:
     async def test_with_state_check_success(self):
         """Test with_state_check with CONNECTED state."""
         conn = MagicMock(spec=TCPConnection)
-        protocol = MagicMock(spec=CyncProtocol)
+        protocol = make_protocol_mock()
 
         mgr = ConnectionManagerTestHarness(conn, protocol)
         mgr.state = ConnectionState.CONNECTED
 
         action = AsyncMock(return_value="result")
 
-        result = await mgr.with_state_check("test_operation", action)
+        result: str = await mgr.with_state_check("test_operation", action)
 
         assert result == "result"
         action.assert_called_once()
@@ -458,7 +478,7 @@ class TestConnectionManagerWithStateCheck:
     async def test_with_state_check_not_connected(self):
         """Test with_state_check raises error when not CONNECTED."""
         conn = MagicMock(spec=TCPConnection)
-        protocol = MagicMock(spec=CyncProtocol)
+        protocol = make_protocol_mock()
 
         mgr = ConnectionManagerTestHarness(conn, protocol)
         mgr.state = ConnectionState.DISCONNECTED
@@ -473,19 +493,19 @@ class TestConnectionManagerWithStateCheck:
     async def test_with_state_check_lock_hold_time(self):
         """Test with_state_check records lock hold time."""
         conn = MagicMock(spec=TCPConnection)
-        protocol = MagicMock(spec=CyncProtocol)
+        protocol = make_protocol_mock()
 
         mgr = ConnectionManagerTestHarness(conn, protocol)
         mgr.state = ConnectionState.CONNECTED
 
         action = AsyncMock(return_value="result")
 
-        with patch("metrics.registry.record_state_lock_hold") as mock_record:
+        with patch("cync_controller.metrics.registry.record_state_lock_hold") as mock_record:
             await mgr.with_state_check("test_operation", action)
 
             # Should record lock hold time
             mock_record.assert_called_once()
-            hold_time = mock_record.call_args[0][0]
+            hold_time = cast(float, mock_record.call_args[0][0])
             assert hold_time >= 0
             assert hold_time < MAX_EXPECTED_LOCK_HOLD_TIME_SECONDS
 
@@ -496,17 +516,17 @@ class TestConnectionManagerFIFOQueue:
     @pytest.mark.asyncio
     async def test_fifo_queue_handshake_matching(self):
         """Test FIFO queue matches handshake ACK."""
-        conn = AsyncMock(spec=TCPConnection)
-        protocol = MagicMock(spec=CyncProtocol)
+        conn = make_conn_mock()
+        protocol = make_protocol_mock()
         endpoint = b"\x01\x02\x03\x04\x05"
         auth_code = b"\x10" * 16
 
         handshake_packet = bytes([0x23, 0x00, 0x00, 0x00, 0x1A]) + b"handshake_data"
-        protocol.encode_handshake.return_value = handshake_packet
+        magic(protocol.encode_handshake).return_value = handshake_packet
 
-        conn.send.return_value = True
+        async_magic(conn.send).return_value = True
         ack_response = bytes([PACKET_TYPE_HELLO_ACK]) + b"ack_data"
-        conn.recv.return_value = ack_response
+        async_magic(conn.recv).return_value = ack_response
 
         mgr = ConnectionManagerTestHarness(conn, protocol)
 
@@ -518,7 +538,7 @@ class TestConnectionManagerFIFOQueue:
 
         # Clean up packet router task
         if mgr.packet_router_task and not mgr.packet_router_task.done():
-            mgr.packet_router_task.cancel()
+            _ = mgr.packet_router_task.cancel()
             with contextlib.suppress(asyncio.CancelledError):
                 await mgr.packet_router_task
         mgr.packet_router_task = None
@@ -530,7 +550,7 @@ class TestConnectionManagerIsConnected:
     def test_is_connected_true(self):
         """Test is_connected returns True when CONNECTED."""
         conn = MagicMock(spec=TCPConnection)
-        protocol = MagicMock(spec=CyncProtocol)
+        protocol = make_protocol_mock()
 
         mgr = ConnectionManagerTestHarness(conn, protocol)
         mgr.state = ConnectionState.CONNECTED
@@ -540,7 +560,7 @@ class TestConnectionManagerIsConnected:
     def test_is_connected_false(self):
         """Test is_connected returns False when not CONNECTED."""
         conn = MagicMock(spec=TCPConnection)
-        protocol = MagicMock(spec=CyncProtocol)
+        protocol = make_protocol_mock()
 
         mgr = ConnectionManagerTestHarness(conn, protocol)
         mgr.state = ConnectionState.DISCONNECTED
@@ -554,18 +574,18 @@ class TestConnectionManagerExceptionHandling:
     @pytest.mark.asyncio
     async def test_connect_handshake_exception_propagates(self):
         """Test that exceptions during handshake are logged and retried."""
-        conn = AsyncMock(spec=TCPConnection)
-        protocol = MagicMock(spec=CyncProtocol)
+        conn = make_conn_mock()
+        protocol = make_protocol_mock()
         endpoint = b"\x01\x02\x03\x04\x05"
         auth_code = b"\x10" * 16
 
         handshake_packet = bytes([0x23, 0x00, 0x00, 0x00, 0x1A]) + b"handshake_data"
-        protocol.encode_handshake.return_value = handshake_packet
+        magic(protocol.encode_handshake).return_value = handshake_packet
 
         # First attempt raises exception, second succeeds
-        conn.send.side_effect = [OSError("Network error"), True]
+        async_magic(conn.send).side_effect = [OSError("Network error"), True]
         ack_response = bytes([PACKET_TYPE_HELLO_ACK]) + b"ack_data"
-        conn.recv.return_value = ack_response
+        async_magic(conn.recv).return_value = ack_response
 
         mgr = ConnectionManager(conn, protocol)
 
@@ -574,11 +594,11 @@ class TestConnectionManagerExceptionHandling:
         # Should succeed on retry
         assert result is True
         max_retries = 3
-        assert conn.send.call_count <= max_retries  # First attempt + retries
+        assert async_magic(conn.send).call_count <= max_retries  # First attempt + retries
 
         # Clean up packet router task
         if mgr.packet_router_task and not mgr.packet_router_task.done():
-            mgr.packet_router_task.cancel()
+            _ = mgr.packet_router_task.cancel()
             with contextlib.suppress(asyncio.CancelledError):
                 await mgr.packet_router_task
         mgr.packet_router_task = None
@@ -586,8 +606,8 @@ class TestConnectionManagerExceptionHandling:
     @pytest.mark.asyncio
     async def test_ack_handler_exception_protocol_error_raises(self):
         """Test that protocol errors in ACK handler are re-raised."""
-        conn = AsyncMock(spec=TCPConnection)
-        protocol = MagicMock(spec=CyncProtocol)
+        conn = make_conn_mock()
+        protocol = make_protocol_mock()
 
         ack_handler = AsyncMock(side_effect=CyncProtocolError("Protocol error"))
 
@@ -598,10 +618,10 @@ class TestConnectionManagerExceptionHandling:
             payload=b"",
             raw=b"\x28\x00\x00\x00\x02ack",
         )
-        protocol.decode_packet.return_value = ack_packet
+        magic(protocol.decode_packet).return_value = ack_packet
 
         packet_bytes = b"\x28\x00\x00\x00\x02ack"
-        conn.recv.side_effect = [packet_bytes, StopAsyncIteration()]
+        async_magic(conn.recv).side_effect = [packet_bytes, StopAsyncIteration()]
 
         mgr = ConnectionManagerTestHarness(conn, protocol, ack_handler=ack_handler)
         mgr.state = ConnectionState.CONNECTED
@@ -615,8 +635,8 @@ class TestConnectionManagerExceptionHandling:
     @pytest.mark.asyncio
     async def test_ack_handler_exception_unexpected_swallowed(self):
         """Test that unexpected exceptions in ACK handler are logged but not re-raised."""
-        conn = AsyncMock(spec=TCPConnection)
-        protocol = MagicMock(spec=CyncProtocol)
+        conn = make_conn_mock()
+        protocol = make_protocol_mock()
 
         ack_handler = AsyncMock(side_effect=ValueError("Unexpected error"))
 
@@ -627,10 +647,10 @@ class TestConnectionManagerExceptionHandling:
             payload=b"",
             raw=b"\x28\x00\x00\x00\x02ack",
         )
-        protocol.decode_packet.return_value = ack_packet
+        magic(protocol.decode_packet).return_value = ack_packet
 
         packet_bytes = b"\x28\x00\x00\x00\x02ack"
-        conn.recv.side_effect = [packet_bytes, StopAsyncIteration()]
+        async_magic(conn.recv).side_effect = [packet_bytes, StopAsyncIteration()]
 
         mgr = ConnectionManagerTestHarness(conn, protocol, ack_handler=ack_handler)
         mgr.state = ConnectionState.CONNECTED
@@ -647,8 +667,8 @@ class TestConnectionManagerExceptionHandling:
     @pytest.mark.asyncio
     async def test_packet_decode_error_continues_processing(self):
         """Test that packet decode errors are logged and processing continues."""
-        conn = AsyncMock(spec=TCPConnection)
-        protocol = MagicMock(spec=CyncProtocol)
+        conn = make_conn_mock()
+        protocol = make_protocol_mock()
 
         # Test _process_packets directly with decode errors
         bad_packet_bytes = b"bad_packet_data"
@@ -661,7 +681,7 @@ class TestConnectionManagerExceptionHandling:
         )
 
         # First packet fails to decode, second succeeds
-        protocol.decode_packet.side_effect = [
+        magic(protocol.decode_packet).side_effect = [
             PacketDecodeError("invalid_checksum", bad_packet_bytes),
             good_packet,
         ]
@@ -680,11 +700,11 @@ class TestConnectionManagerExceptionHandling:
     @pytest.mark.asyncio
     async def test_packet_router_exception_triggers_reconnect(self):
         """Test that exceptions in packet router trigger reconnection."""
-        conn = AsyncMock(spec=TCPConnection)
-        protocol = MagicMock(spec=CyncProtocol)
+        conn = make_conn_mock()
+        protocol = make_protocol_mock()
 
         # Simulate exception during packet processing
-        conn.recv.side_effect = RuntimeError("Unexpected error")
+        async_magic(conn.recv).side_effect = RuntimeError("Unexpected error")
 
         mgr = ConnectionManagerTestHarness(conn, protocol)
         mgr.state = ConnectionState.CONNECTED
@@ -703,7 +723,7 @@ class TestConnectionManagerExceptionHandling:
         # Clean up reconnect task (wait briefly to let it start)
         await asyncio.sleep(0.01)
         if mgr.reconnect_task and not mgr.reconnect_task.done():
-            mgr.reconnect_task.cancel()
+            _ = mgr.reconnect_task.cancel()
             with contextlib.suppress(asyncio.CancelledError, CyncConnectionError):
                 await mgr.reconnect_task
         mgr.reconnect_task = None

@@ -11,33 +11,15 @@ The Cync Controller add-on includes comprehensive test coverage across three tie
 ## Directory Structure
 
 ```text
-cync-controller/tests/
-├── unit/               # Unit tests (pytest)
-│   ├── test_cloud_api.py
-│   ├── test_correlation.py
-│   ├── test_device_*.py (multiple)
-│   ├── test_helpers.py
-│   ├── test_instrumentation.py
-│   ├── test_mqtt_client.py
-│   ├── test_packet_*.py
-│   ├── test_server.py
-│   ├── test_structs.py
-│   ├── test_tcp_device_*.py (multiple)
-│   ├── test_utils.py
-│   └── conftest.py
-├── integration/        # Integration tests
-│   └── test_mesh_refresh_performance.py
-└── e2e/               # E2E tests (Playwright)
-    ├── test_basic_commands.py
-    ├── test_cloud_relay.py
-    ├── test_config_changes.py
-    ├── test_device_discovery.py
-    ├── test_group_control.py
-    ├── test_log_levels.py
-    ├── test_mqtt_recovery.py
-    ├── test_state_sync.py
-    ├── test_restart_button.py
-    └── conftest.py
+tests/
+├── cync_controller/        # Add-on specific suites
+│   ├── unit/               # Core add-on pytest suites
+│   ├── integration/        # Add-on integration tests
+│   └── e2e/                # Playwright + pytest E2E
+├── unit/                   # Library/protocol/transport unit suites
+├── integration/            # Shared integration harness
+├── fixtures/               # Shared fixtures (packets, retries)
+└── helpers/                # Shared test helpers
 ```
 
 ## Running Tests
@@ -49,13 +31,13 @@ cync-controller/tests/
 npm run test:unit
 
 ## Run specific test file
-pytest cync-controller/tests/unit/test_devices.py
+pytest tests/cync_controller/unit/test_devices.py
 
 ## Run with coverage (sequential - required for coverage tools)
 npm run test:unit:cov
 
 ## Run specific test
-pytest cync-controller/tests/unit/test_devices.py::test_set_power
+pytest tests/cync_controller/unit/test_devices.py::test_set_power
 
 ## Sequential execution (for debugging)
 npm run test:unit:serial
@@ -79,23 +61,23 @@ The test suite uses **pytest-xdist** for parallel execution by default, configur
 
 ```bash
 ## Run all E2E tests
-npx playwright test tests/e2e/
+npx playwright test tests/cync_controller/e2e/
 
 ## Run specific test file
-npx playwright test tests/e2e/test_group_control.py
+npx playwright test tests/cync_controller/e2e/test_group_control.py
 
 ## Run with UI mode
-npx playwright test tests/e2e/ --ui
+npx playwright test tests/cync_controller/e2e/ --ui
 
 ## Run with debug mode
-npx playwright test tests/e2e/ --debug
+npx playwright test tests/cync_controller/e2e/ --debug
 ```
 
 ### Integration Tests
 
 ```bash
 ## Run integration tests
-pytest cync-controller/tests/integration/
+pytest tests/cync_controller/integration/
 ```
 
 ## Test Coverage

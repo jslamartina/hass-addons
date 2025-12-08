@@ -33,14 +33,14 @@ def create_typed_stream_writer() -> asyncio.StreamWriter:
 
 def create_mock_task() -> asyncio.Task[object]:
     """Create a typed Task mock with autospec for safer assertions."""
-    return create_autospec(asyncio.Task, instance=True)
+    return cast(asyncio.Task[object], create_autospec(asyncio.Task, instance=True))
 
 
 class TaskStub:
     """Simple task stub to track cancellation in tests."""
 
     def __init__(self, name: str) -> None:
-        self._name = name
+        self._name: str = name
         self.cancel_called: bool = False
 
     def done(self) -> bool:
@@ -208,19 +208,19 @@ class TestCyncTCPDevice:
 
         tcp_device = CyncTCPDevice(reader=reader, writer=writer, address="192.168.1.100")
 
-        # Use simple task stubs for cancellation verification
-        task1 = TaskStub("task1")
-        task2 = TaskStub("task2")
+        # Use task mocks for cancellation verification
+        tasks = tcp_device.tasks
+        receive_task = cast(asyncio.Task[None], MagicMock(spec=asyncio.Task))
+        send_task = cast(asyncio.Task[None], MagicMock(spec=asyncio.Task))
 
-        # Set tasks on the Tasks object (not replace the Tasks object itself)
-        tcp_device.tasks.receive = task1  # type: ignore[assignment]
-        tcp_device.tasks.send = task2  # type: ignore[assignment]
+        tasks.receive = receive_task
+        tasks.send = send_task
 
         _ = await tcp_device.close()
 
         # Should have cancelled tasks
-        assert task1.cancel_called
-        assert task2.cancel_called
+        cast(MagicMock, receive_task.cancel).assert_called()
+        cast(MagicMock, send_task.cancel).assert_called()
 
     @pytest.mark.asyncio
     async def test_tcp_device_close_with_no_tasks(self) -> None:

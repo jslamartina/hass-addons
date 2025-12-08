@@ -8,12 +8,10 @@ import contextlib
 from collections.abc import Awaitable, Callable
 from contextlib import AbstractContextManager
 from dataclasses import dataclass
-from typing import Any, cast, final, override
+from typing import cast, final, override
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-
-pytest = cast("Any", pytest)
 
 from cync_controller.devices.base_device import CyncDevice
 from cync_controller.devices.group import CyncGroup
@@ -74,7 +72,7 @@ class MQTTClientStub:
         self.parse_device_status: AsyncMock = AsyncMock()
         self.publish_group_state: AsyncMock = AsyncMock()
         # mimic real helper attributes used by server during state updates
-        self.state_updates = MagicMock()
+        self.state_updates: MagicMock = MagicMock()
 
 
 class RelayConnectionStub:

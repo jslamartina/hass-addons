@@ -224,8 +224,8 @@ npm run lint:python:fix                 # Auto-fix Python issues
 
 - **Markdown docs**: This folder (`docs/`)
 - **Shell scripts**: `../scripts/`
-- **Add-on files**: `../cync-controller/`
-- **Test files**: `../cync-controller/tests/` (unit and E2E tests)
+- **Add-on build assets**: `../cync-controller/`
+- **Test files**: `../tests/` (unit, integration, and E2E)
 - **MITM tools**: `../mitm/` (with docs in `docs/protocol/`)
 
 ---

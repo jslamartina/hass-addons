@@ -62,24 +62,21 @@ The Cync Controller add-on has complex async workflows involving:
 ### Directory Structure
 
 ```bash
-cync-controller/tests/
-├── unit/
-│ ├── __init__.py
-│ ├── conftest.py             # Shared fixtures
-│ ├── test_packet_parser.py   # 41 tests - packet parsing
-│ ├── test_packet_checksum.py # 28 tests - checksum calculation
-│ ├── test_devices.py         # 48 tests - device/group models
-│ ├── test_mqtt_client.py     # 36 tests - MQTT client
-│ ├── test_server.py          # 19 tests - server and cloud relay
-│ └── test_cloud_api.py       # 20 tests - authentication/export
-├── integration/              # Phase 3 (planned)
-└── e2e/                      # Phase 3/4 (planned)
+tests/
+├── cync_controller/
+│   ├── unit/                 # Add-on unit suites (pytest)
+│   ├── integration/          # Add-on integration
+│   └── e2e/                  # Playwright + pytest
+├── unit/                     # Library/protocol/transport tests
+├── integration/              # Shared integration harness
+├── fixtures/                 # Packet fixtures, retries
+└── helpers/                  # Shared helper utilities
 ```
 
 ### Test File Naming
 
 - **Pattern:** `test_<module_name>.py`
-- **Example:** `test_devices.py` for `cync_lan/devices.py`
+- **Example:** `test_devices.py` for `cync_controller/devices.py`
 - **Classes:** Group related tests in classes (for example, `TestCyncDevice`, `TestCyncGroup`)
 
 ### Test Class Organization
@@ -569,26 +566,26 @@ with pytest.raises(CyncAuthenticationError):
 ### Running Tests
 
 ```bash
-## All unit tests
-pytest tests/unit/
+## All add-on unit tests
+pytest tests/cync_controller/unit/
 
 ## Specific file
-pytest tests/unit/test_devices.py
+pytest tests/cync_controller/unit/test_devices.py
 
 ## Specific test
-pytest tests/unit/test_devices.py::TestCyncDevice::test_init
+pytest tests/cync_controller/unit/test_devices.py::TestCyncDevice::test_init
 
 ## With coverage
-pytest tests/unit/ --cov=src/cync_lan --cov-report=html
+pytest tests/cync_controller/unit/ --cov=cync_controller --cov-report=html
 
 ## Fast fail
-pytest tests/unit/ -x
+pytest tests/cync_controller/unit/ -x
 
 ## Verbose output
-pytest tests/unit/ -v
+pytest tests/cync_controller/unit/ -v
 
 ## Show print statements
-pytest tests/unit/ -s
+pytest tests/cync_controller/unit/ -s
 ```
 
 ### NPM Scripts
@@ -605,7 +602,7 @@ After running tests with coverage:
 
 ```bash
 ## View HTML report
-open cync-controller/htmlcov/index.html
+open htmlcov/index.html
 
 ## Terminal summary shows module-by-module coverage
 ```
@@ -715,7 +712,7 @@ npm run playwright:test
 npx playwright test --headed
 
 ## Run specific test file
-npx playwright test cync-controller/tests/e2e/happy-path.spec.ts
+npx playwright test tests/cync_controller/e2e/happy-path.spec.ts
 
 ## Run with specific browser
 npx playwright test --project=chromium
@@ -723,7 +720,7 @@ npx playwright test --project=chromium
 
 #### Test Flow
 
-The happy path test (`cync-controller/tests/e2e/happy-path.spec.ts`) performs these steps:
+The happy path test (`tests/cync_controller/e2e/happy-path.spec.ts`) performs these steps:
 
 1. **Login** - Authenticates to Home Assistant (defaults: dev/dev)
 2. **Verify MQTT Integration** - Ensures MQTT integration is installed

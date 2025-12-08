@@ -6,20 +6,51 @@ sync_group_switches(), and aggregate state calculations.
 
 from __future__ import annotations
 
-from collections.abc import Generator
-from typing import Any, cast
+from collections.abc import Iterator
+from dataclasses import dataclass
 from unittest.mock import MagicMock, patch
 
 import pytest
 
 from cync_controller.mqtt_client import MQTTClient
-from cync_controller.structs import CyncDeviceProtocol
 
 
-async def _update_device_state_stub(device: CyncDeviceProtocol, state: int) -> bool:
-    """Typed async stub used in tests to avoid AsyncMock GC warnings."""
-    _ = device, state
-    return True
+@dataclass
+class GroupSyncDevice:
+    """Typed device used for group sync tests."""
+
+    id: int
+    power: int | None = None
+    online: bool = True
+    is_switch: bool = False
+
+
+@dataclass
+class GroupSync:
+    """Typed group container for group sync tests."""
+
+    id: int
+    member_ids: list[int]
+    name: str
+
+
+@dataclass
+class GroupSyncServer:
+    """Minimal typed server container for group sync tests."""
+
+    devices: dict[int, GroupSyncDevice]
+    groups: dict[int, GroupSync]
+
+
+def _configure_server(
+    mock_g: MagicMock,
+    devices: dict[int, GroupSyncDevice],
+    group: GroupSync,
+) -> GroupSyncServer:
+    """Attach a typed ncync_server with the provided devices/groups."""
+    server = GroupSyncServer(devices=devices, groups={group.id: group})
+    mock_g.ncync_server = server
+    return server
 
 
 async def _publish_stub(*_args: object, **_kwargs: object) -> None:
@@ -31,7 +62,7 @@ class TestMQTTClientGroupSync:
     """Tests for MQTTClient group synchronization."""
 
     @pytest.fixture(autouse=True)
-    def reset_mqtt_singleton(self) -> Generator[None]:
+    def reset_mqtt_singleton(self) -> Iterator[None]:
         """Reset MQTTClient singleton between tests."""
         with (
             patch.object(MQTTClient, "_instance", None),
@@ -48,36 +79,18 @@ class TestMQTTClientGroupSync:
         ):
             mock_g.uuid = "test-uuid"
 
-            # Create 3 mock devices
-            devices: dict[int, MagicMock] = {}
-            for i in range(3):
-                device = MagicMock()
-                device.id = 0x1000 + i
-                device.power = 1
-                devices[device.id] = device
+            devices: dict[int, GroupSyncDevice] = {
+                0x1000 + i: GroupSyncDevice(id=0x1000 + i, power=1) for i in range(3)
+            }
 
-            # Create mock group
-            mock_group = MagicMock()
-            mock_group.id = 100
-            member_ids: list[int] = list(devices.keys())
-            mock_group.member_ids = member_ids
-            mock_group.name = "Test Group"
+            group = GroupSync(id=100, member_ids=list(devices.keys()), name="Test Group")
 
-            mock_g.ncync_server = MagicMock()
-            mock_g.ncync_server.devices = devices
-            mock_g.ncync_server.groups = {100: mock_group}
+            server = _configure_server(mock_g, devices, group)
 
-            client = MQTTClient()
-
-            client_any = cast(Any, client)
-            client_any.update_device_state = _update_device_state_stub
+            _ = MQTTClient()
 
             # Simulate group sync
-            synced_count = 0
-            for device_id in mock_group.member_ids:
-                device = mock_g.ncync_server.devices.get(device_id)
-                if device:
-                    synced_count += 1
+            synced_count = sum(1 for device_id in group.member_ids if device_id in server.devices)
 
             # Verify all members were synced
             assert synced_count == 3
@@ -92,26 +105,17 @@ class TestMQTTClientGroupSync:
             mock_g.uuid = "test-uuid"
 
             # Create devices with mixed states
-            devices: dict[int, MagicMock] = {
-                0x2001: MagicMock(id=0x2001, power=1),  # ON
-                0x2002: MagicMock(id=0x2002, power=0),  # OFF
-                0x2003: MagicMock(id=0x2003, power=1),  # ON
+            devices: dict[int, GroupSyncDevice] = {
+                0x2001: GroupSyncDevice(id=0x2001, power=1),  # ON
+                0x2002: GroupSyncDevice(id=0x2002, power=0),  # OFF
+                0x2003: GroupSyncDevice(id=0x2003, power=1),  # ON
             }
 
-            mock_group = MagicMock()
-            mock_group.id = 101
-            member_ids = list(devices.keys())
-            mock_group.member_ids = member_ids
-            mock_group.name = "Mixed Group"
+            group = GroupSync(id=101, member_ids=list(devices.keys()), name="Mixed Group")
 
-            mock_g.ncync_server = MagicMock()
-            mock_g.ncync_server.devices = devices
-            mock_g.ncync_server.groups = {101: mock_group}
+            _ = _configure_server(mock_g, devices, group)
 
-            client = MQTTClient()
-
-            client_any = cast(Any, client)
-            client_any.update_device_state = _update_device_state_stub
+            _ = MQTTClient()
 
             # Count on/off states
             on_count = sum(1 for d in devices.values() if d.power == 1)
@@ -130,26 +134,14 @@ class TestMQTTClientGroupSync:
             mock_g.uuid = "test-uuid"
 
             # Create empty group
-            mock_group = MagicMock()
-            mock_group.id = 102
-            mock_group.member_ids = []
-            mock_group.name = "Empty Group"
+            group = GroupSync(id=102, member_ids=[], name="Empty Group")
 
-            mock_g.ncync_server = MagicMock()
-            mock_g.ncync_server.devices = {}
-            mock_g.ncync_server.groups = {102: mock_group}
+            server = _configure_server(mock_g, {}, group)
 
-            client = MQTTClient()
-
-            client_any = cast(Any, client)
-            client_any.update_device_state = _update_device_state_stub
+            _ = MQTTClient()
 
             # Sync empty group
-            synced_count = 0
-            for device_id in mock_group.member_ids:
-                device = mock_g.ncync_server.devices.get(device_id)
-                if device:
-                    synced_count += 1
+            synced_count = sum(1 for device_id in group.member_ids if device_id in server.devices)
 
             # Should return 0 for empty group
             assert synced_count == 0
@@ -164,30 +156,22 @@ class TestMQTTClientGroupSync:
             mock_g.uuid = "test-uuid"
 
             # Create devices
-            devices: dict[int, MagicMock] = {
-                0x3001: MagicMock(id=0x3001, power=1),
-                0x3002: MagicMock(id=0x3002, power=1),
+            devices: dict[int, GroupSyncDevice] = {
+                0x3001: GroupSyncDevice(id=0x3001, power=1),
+                0x3002: GroupSyncDevice(id=0x3002, power=1),
             }
 
-            mock_group = MagicMock()
-            mock_group.id = 103
-            member_ids = list(devices.keys())
-            mock_group.member_ids = member_ids
+            group = GroupSync(id=103, member_ids=list(devices.keys()), name="Publish Group")
 
-            mock_g.ncync_server = MagicMock()
-            mock_g.ncync_server.devices = devices
-            mock_g.ncync_server.groups = {103: mock_group}
+            server = _configure_server(mock_g, devices, group)
 
-            client = MQTTClient()
-            client.client = MagicMock()
-
-            client.client.publish = _publish_stub  # type: ignore[assignment]
+            _ = MQTTClient()
 
             # Verify publish can be called for each device
             publish_count = 0
-            for device_id in mock_group.member_ids:
-                device = devices.get(device_id)
-                if device:
+            for device_id in group.member_ids:
+                if device_id in server.devices:
+                    await _publish_stub()
                     publish_count += 1
 
             assert publish_count == 2
@@ -202,24 +186,16 @@ class TestMQTTClientGroupSync:
             mock_g.uuid = "test-uuid"
 
             # Create switch devices
-            switches: dict[int, MagicMock] = {
-                0x4001: MagicMock(id=0x4001, is_switch=True, power=1),
-                0x4002: MagicMock(id=0x4002, is_switch=True, power=1),
+            switches: dict[int, GroupSyncDevice] = {
+                0x4001: GroupSyncDevice(id=0x4001, is_switch=True, power=1),
+                0x4002: GroupSyncDevice(id=0x4002, is_switch=True, power=1),
             }
 
-            mock_group = MagicMock()
-            mock_group.id = 104
-            member_ids = list(switches.keys())
-            mock_group.member_ids = member_ids
+            group = GroupSync(id=104, member_ids=list(switches.keys()), name="Switch Group")
 
-            mock_g.ncync_server = MagicMock()
-            mock_g.ncync_server.devices = switches
-            mock_g.ncync_server.groups = {104: mock_group}
+            _ = _configure_server(mock_g, switches, group)
 
-            client = MQTTClient()
-
-            client_any = cast(Any, client)
-            client_any.update_device_state = _update_device_state_stub
+            _ = MQTTClient()
 
             # Verify switches can be accessed
             switch_count = sum(1 for d in switches.values() if d.is_switch)
@@ -235,25 +211,17 @@ class TestMQTTClientGroupSync:
             mock_g.uuid = "test-uuid"
 
             # Create devices with one offline
-            devices: dict[int, MagicMock] = {
-                0x5001: MagicMock(id=0x5001, online=True),
-                0x5002: MagicMock(id=0x5002, online=False),  # Offline
-                0x5003: MagicMock(id=0x5003, online=True),
+            devices: dict[int, GroupSyncDevice] = {
+                0x5001: GroupSyncDevice(id=0x5001, online=True),
+                0x5002: GroupSyncDevice(id=0x5002, online=False),  # Offline
+                0x5003: GroupSyncDevice(id=0x5003, online=True),
             }
 
-            mock_group = MagicMock()
-            mock_group.id = 105
-            member_ids = list(devices.keys())
-            mock_group.member_ids = member_ids
+            group = GroupSync(id=105, member_ids=list(devices.keys()), name="Availability Group")
 
-            mock_g.ncync_server = MagicMock()
-            mock_g.ncync_server.devices = devices
-            mock_g.ncync_server.groups = {105: mock_group}
+            _ = _configure_server(mock_g, devices, group)
 
-            client = MQTTClient()
-
-            client_any = cast(Any, client)
-            client_any.update_device_state = _update_device_state_stub
+            _ = MQTTClient()
 
             # Count online/offline
             online_count = sum(1 for d in devices.values() if d.online)
@@ -272,26 +240,15 @@ class TestMQTTClientGroupSync:
             mock_g.uuid = "test-uuid"
 
             # Create 5 devices
-            devices: dict[int, MagicMock] = {0x6000 + i: MagicMock(id=0x6000 + i) for i in range(5)}
+            devices: dict[int, GroupSyncDevice] = {0x6000 + i: GroupSyncDevice(id=0x6000 + i) for i in range(5)}
 
-            mock_group = MagicMock()
-            mock_group.id = 106
-            member_ids = list(devices.keys())
-            mock_group.member_ids = member_ids
+            group = GroupSync(id=106, member_ids=list(devices.keys()), name="Count Group")
 
-            mock_g.ncync_server = MagicMock()
-            mock_g.ncync_server.devices = devices
-            mock_g.ncync_server.groups = {106: mock_group}
+            server = _configure_server(mock_g, devices, group)
 
-            client = MQTTClient()
-
-            client_any = cast(Any, client)
-            client_any.update_device_state = _update_device_state_stub
+            _ = MQTTClient()
 
             # Count synced
-            synced = 0
-            for device_id in mock_group.member_ids:
-                if device_id in devices:
-                    synced += 1
+            synced = sum(1 for device_id in group.member_ids if device_id in server.devices)
 
             assert synced == 5
