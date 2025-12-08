@@ -3,9 +3,8 @@ set -e
 
 echo "Setting up development workspace..."
 
-# Get the workspace parent directory
-WORKSPACE_PARENT="$(dirname "${WORKSPACE_DIRECTORY}")"
-CYNC_CONTROLLER_DIR="${WORKSPACE_PARENT}/cync-controller"
+# Use the workspace root
+CYNC_CONTROLLER_DIR="${WORKSPACE_DIRECTORY}/cync-controller"
 
 # Set up git hooks for the cync-controller repository if it exists
 if [ -d "${CYNC_CONTROLLER_DIR}" ]; then

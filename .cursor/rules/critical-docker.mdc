@@ -1,5 +1,5 @@
 ---
-description: Critical Docker and devcontainer rules
+description: Use when changing Docker or devcontainer configuration, images, or build behavior.
 ---
 
 # Critical Docker & Devcontainer Rules

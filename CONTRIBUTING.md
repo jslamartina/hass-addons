@@ -85,10 +85,10 @@ When you modify files, check for new errors by running `ruff check` on the speci
 
 ```bash
 ## ✅ CORRECT: Check the files you modified
-ruff check cync-controller/src/cync_lan/mqtt_client.py cync-controller/src/cync_lan/devices.py
+ruff check src/cync_controller/mqtt/client.py src/cync_controller/devices.py
 
 ## ❌ WRONG: Don't grep for specific line numbers or filter output
-ruff check cync-controller/src/cync_lan/mqtt_client.py | grep "1708" # Misses other errors!
+ruff check src/cync_controller/mqtt/client.py | grep "1708" # Misses other errors!
 
 ## ✅ CORRECT: Full output shows ALL errors (pre-existing + new)
 ## Compare error count before and after your changes

@@ -1,5 +1,5 @@
 ---
-description: Testing workflows and procedures
+description: Use when choosing which tests to run or extending the testing workflows.
 appliesTo:
   - "cync-controller/tests/**"
   - "scripts/test-*.sh"

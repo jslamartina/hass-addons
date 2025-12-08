@@ -19,8 +19,10 @@ RUN set -x \
     -subj '/CN=*.xlink.cn' -sha256 -days 3650 -nodes \
   && rm -rf /var/cache/apk/*
 
-# Copy local cync-controller Python package source
+# Copy local cync_controller Python package source and dependencies for packaging
 COPY src/cync_controller /tmp/src/cync_controller
+COPY scripts /tmp/scripts
+COPY tools/brave-ai-grounding-cli /tmp/tools/brave-ai-grounding-cli
 COPY pyproject.toml /tmp/pyproject.toml
 
 ARG BUILD_ARCH
@@ -28,7 +30,7 @@ ARG BUILD_VERSION
 RUN set -x \
   && pip install --no-cache-dir -U pip \
   && pip install --no-cache-dir /tmp \
-  && rm -rf /tmp/src /tmp/pyproject.toml
+  && rm -rf /tmp/src /tmp/scripts /tmp/tools /tmp/pyproject.toml
 
 ENV CYNC_HOST="0.0.0.0" \
   CYNC_TOPIC="cync_lan_addon" \

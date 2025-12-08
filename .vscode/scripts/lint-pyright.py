@@ -1,20 +1,32 @@
 #!/usr/bin/env python3
-"""Run pyright and normalize diagnostic paths for VS Code problem matchers."""
+"""Run basedpyright/pyright and normalize diagnostic paths for VS Code problem matchers."""
 
 from __future__ import annotations
 
 import logging
 import re
+import shutil
 import subprocess
 from pathlib import Path
+from typing import TypedDict
 
 ANSI_PATTERN = re.compile(r"\x1b\[[0-9;]*m")
 PYRIGHT_PATTERN = re.compile(
-    r"^(?P<path>.+?):(?P<line>\d+):(?P<column>\d+)\s+-\s+"
-    r"(?P<severity>error|warning|information):\s+"
-    r"(?P<message>.+?)(?:\s+\((?P<code>[^)]+)\))?$"
+    (
+        r"^(?P<path>.+?):(?P<line>\d+):(?P<column>\d+)\s+-\s+"
+        r"(?P<severity>error|warning|information):\s+"
+        r"(?P<message>.+?)(?:\s+\((?P<code>[^)]+)\))?$"
+    )
 )
 LOGGER = logging.getLogger("lint_pyright")
+
+
+class ProjectConfig(TypedDict):
+    """Project configuration for pyright linting."""
+
+    name: str
+    config: Path
+    default_targets: list[str]
 
 
 def configure_logger() -> None:
@@ -91,16 +103,22 @@ def transform_line(line: str, workspace_root: Path) -> str | None:
 
 
 def run_pyright(args: list[str]) -> subprocess.CompletedProcess[str]:
-    """Execute pyright with the provided argument list."""
-    LOGGER.info("→ Running pyright", extra={"pyright_args": args})
+    """Execute basedpyright with the provided argument list."""
+    if shutil.which("basedpyright"):
+        cmd = ["basedpyright"]
+        LOGGER.info("→ Running basedpyright: " + " ".join(args))
+    else:
+        LOGGER.error("basedpyright not found. Install via: pip install basedpyright")
+        raise FileNotFoundError("basedpyright executable not found")
+
     result = subprocess.run(
-        ["npx", "pyright", *args],
+        [*cmd, *args],
         capture_output=True,
         text=True,
         check=False,
     )
     LOGGER.info(
-        "✓ Pyright finished",
+        "✓ Type checker finished",
         extra={"exit_code": result.returncode, "diagnostic_bytes": len(result.stdout)},
     )
     return result
@@ -110,44 +128,70 @@ def main() -> int:
     configure_logger()
     workspace_root = Path(__file__).resolve().parents[2]
     LOGGER.info(
-        "→ lint-pyright start",
-        extra={"workspace_root": str(workspace_root)},
+        "→ lint-pyright start: " + str(workspace_root)
     )
 
-    project_config = workspace_root / "python-rebuild-tcp-comm" / "pyrightconfig.json"
-    default_targets = ["python-rebuild-tcp-comm/src", "python-rebuild-tcp-comm/tests"]
+    # Define single merged project to lint
+    projects: list[ProjectConfig] = [
+        {
+            "name": "repo",
+            "config": workspace_root / "pyrightconfig.json",
+            "default_targets": [
+                "src",
+                "tests",
+            ],
+        },
+    ]
 
-    if project_config.exists():
-        LOGGER.info("→ Using project config", extra={"config": str(project_config)})
-        pyright_args: list[str] = ["--project", str(project_config)]
-    else:
-        LOGGER.warning(
-            "⚠️ Project config missing, falling back to direct targets",
-            extra={"config": str(project_config)},
-        )
-        pyright_args = default_targets
+    all_results: list[subprocess.CompletedProcess[str]] = []
+    overall_exit_code = 0
 
-    try:
-        result = run_pyright(pyright_args)
-    except FileNotFoundError:
-        LOGGER.error(
-            "✗ pyright executable not found",
-            extra={"hint": "Install dev dependencies (npm install)."},
-        )
-        return 1
+    for project in projects:
+        project_config = project["config"]
+        default_targets = project["default_targets"]
 
-    combined_output = f"{result.stdout}\n{result.stderr}".strip("\n")
-    lines = combined_output.splitlines()
+        if project_config.exists():
+            LOGGER.info("→ Using project config: " + str(project_config))
+            pyright_args: list[str] = ["--project", str(project_config)]
+        else:
+            LOGGER.warning("⚠️ Project config missing, falling back to direct targets: " + str(project_config))
+            pyright_args = default_targets
 
-    for line in lines:
-        transformed = transform_line(line, workspace_root)
-        print(transformed if transformed else strip_ansi(line))
+        try:
+            result = run_pyright(pyright_args)
+            all_results.append(result)
+            if result.returncode != 0 and overall_exit_code == 0:
+                overall_exit_code = result.returncode
+        except (FileNotFoundError, PermissionError, OSError) as e:
+            LOGGER.error(
+                (
+                    "✗ basedpyright executable error (%s): %s; "
+                    "project=%s; hint=Install basedpyright via: pip install basedpyright"
+                ),
+                type(e).__name__,
+                str(e),
+                project["name"],
+            )
+            if overall_exit_code == 0:
+                overall_exit_code = 1
+            continue
+
+    # Process and output diagnostics from all projects
+    total_lines = 0
+    for result in all_results:
+        combined_output = f"{result.stdout}\n{result.stderr}".strip("\n")
+        lines = combined_output.splitlines()
+        total_lines += len(lines)
+
+        for line in lines:
+            transformed = transform_line(line, workspace_root)
+            print(transformed if transformed else strip_ansi(line))
 
     LOGGER.info(
         "✓ lint-pyright completed",
-        extra={"exit_code": result.returncode, "line_count": len(lines)},
+        extra={"exit_code": overall_exit_code, "line_count": total_lines},
     )
-    return result.returncode
+    return overall_exit_code
 
 
 if __name__ == "__main__":

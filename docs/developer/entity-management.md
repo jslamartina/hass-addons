@@ -40,13 +40,13 @@ When developing the Cync Controller Add-on, you often need to:
 
 ```bash
 ## Preview what will be deleted (dry run)
-sudo python3 scripts/delete-mqtt-safe.py --dry-run
+sudo python3 scripts/delete_mqtt_safe.py --dry-run
 
 ## Actually delete entities (preserves bridge, cleans registries)
-sudo python3 scripts/delete-mqtt-safe.py
+sudo python3 scripts/delete_mqtt_safe.py
 
 ## Delete and automatically restart addon
-sudo python3 scripts/delete-mqtt-safe.py --restart
+sudo python3 scripts/delete_mqtt_safe.py --restart
 ```
 
 ## Features
@@ -63,10 +63,10 @@ sudo python3 scripts/delete-mqtt-safe.py --restart
 
 ```bash
 ## 1. Preview what will be deleted (dry run)
-sudo python3 scripts/delete-mqtt-safe.py --dry-run
+sudo python3 scripts/delete_mqtt_safe.py --dry-run
 
 ## 2. Delete all entities (keep bridge, clean registries)
-sudo python3 scripts/delete-mqtt-safe.py
+sudo python3 scripts/delete_mqtt_safe.py
 
 ## 3. Restart addon to republish
 ha addons restart local_cync-controller
@@ -84,7 +84,7 @@ ha addons logs local_cync-controller | grep "Publishing MQTT discovery"
 cd cync-controller && ./rebuild.sh
 
 ## 2. Delete all entities except bridge (clean deletion)
-sudo python3 scripts/delete-mqtt-safe.py
+sudo python3 scripts/delete_mqtt_safe.py
 
 ## 3. Restart addon
 ha addons restart local_cync-controller

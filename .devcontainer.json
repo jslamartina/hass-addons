@@ -11,20 +11,17 @@
       "installDirectlyFromGitHubRelease": true,
       "version": "latest"
     },
-    "ghcr.io/devcontainers-community/features/deno": {},
     "ghcr.io/devcontainers/features/common-utils:2": {
       "installZsh": false,
       "installOhMyZsh": false,
       "upgradePackages": true
-    },
-    "ghcr.io/meaningful-ooo/devcontainer-features/fish:2": {},
-    "ghcr.io/eitsupi/devcontainer-features/nushell:0": {}
+    }
   },
   "postStartCommand": "bash ${containerWorkspaceFolder}/.devcontainer/post-start.sh",
   "postCreateCommand": "bash ${containerWorkspaceFolder}/.devcontainer/post-create.sh",
   "runArgs": [
     "--privileged",
-    "--memory=16g",
+    "--memory=24g",
     "-p",
     "8123:8123",
     "-p",
@@ -47,7 +44,7 @@
     "vscode": {
       "extensions": [
         "ms-python.python",
-        "anysphere.cursorpyright",
+        "detachhead.basedpyright",
         "charliermarsh.ruff",
         "redhat.vscode-yaml",
         "ms-azuretools.vscode-docker",
@@ -57,46 +54,11 @@
         "timonwong.shellcheck",
         "esbenp.prettier-vscode",
         "bierner.markdown-mermaid",
-        "dbaeumer.vscode-eslint",
-        "vale.valeCLI"
+        "dbaeumer.vscode-eslint"
       ],
       "settings": {
-        "terminal.integrated.scrollback": 10000,
-        "terminal.integrated.profiles.linux": {
-          "zsh": {
-            "path": "/usr/bin/zsh"
-          }
-        },
-        "terminal.integrated.defaultProfile.linux": "zsh",
         "remote.autoForwardPorts": true,
-        "remote.autoForwardPortsSource": "hybrid",
-        "editor.formatOnPaste": false,
-        "editor.formatOnSave": true,
-        "editor.formatOnType": true,
-        "files.trimTrailingWhitespace": true,
-        "editor.defaultFormatter": "esbenp.prettier-vscode",
-        "[shellscript]": {
-          "editor.defaultFormatter": "esbenp.prettier-vscode"
-        },
-        "[python]": {
-          "editor.defaultFormatter": "charliermarsh.ruff",
-          "editor.codeActionsOnSave": {
-            "source.fixAll": "explicit",
-            "source.organizeImports": "explicit"
-          }
-        },
-        "prettier.prettierPath": "${containerWorkspaceFolder}/node_modules/prettier",
-        "prettier.requireConfig": false,
-        "prettier.documentSelectors": ["**/*.sh"],
-        "prettier.enable": true,
-        "python.defaultInterpreterPath": "/root/.pyenv/shims/python",
-        "python.linting.enabled": true,
-        "python.linting.pylintEnabled": false,
-        "cursorpyright.analysis.typeCheckingMode": "strict",
-        "cursorpyright.analysis.useLibraryCodeForTypes": true,
-        "cursorpyright.analysis.autoImportCompletions": true,
-        "vale.valeCLI.config": "/workspaces/hass-addons/.vale.ini",
-        "vale.valeCLI.path": "/usr/local/bin/vale"
+        "remote.autoForwardPortsSource": "hybrid"
       }
     }
   }

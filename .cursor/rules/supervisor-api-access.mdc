@@ -1,5 +1,5 @@
 ---
-description: Supervisor API Auth
+description: Use when calling the Home Assistant Supervisor API or handling its authentication.
 alwaysApply: false
 ---
 
@@ -17,12 +17,11 @@ ha addons info local_cync-controller --raw-json | jq '.data.options'
 docker exec hassio_cli curl -sf \
   -H "Authorization: Bearer $SUPERVISOR_TOKEN" \
   http://supervisor/addons/local_cync-controller/options
-$()$(
-  markdown
+```
 
-  ## Incorrect Approaches
+## Incorrect Approaches
 
-)$()bash
+```bash
 ## ❌ WRONG - Will fail with "Could not resolve host: supervisor"
 ./scripts/configure-addon.sh get
 

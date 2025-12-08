@@ -12,10 +12,12 @@
 
 ## Source Code Location
 
-All Python source code for the Cync Controller add-on is located in this directory:
+Python source now lives at the repository root:
 
-- `src/cync_lan/` - Python package source code
-- `pyproject.toml` - Package configuration and dependencies
+- `../src/cync_controller/` - Python package source code
+- `../pyproject.toml` - Package configuration and dependencies
+
+The add-on build context (`cync-controller/`) is synced from the root sources by `rebuild.sh`.
 
 ## Python Runtime Baseline
 
@@ -57,14 +59,14 @@ Advanced AI agent development tools:
 
 ### Basic Workflow
 
-1. Edit code in `src/cync_lan/` or `pyproject.toml`
+1. Edit code in `../src/cync_controller/` or `../pyproject.toml`
 2. **Run `./rebuild.sh` to rebuild and restart the add-on**
 3. Check logs: `ha addons logs local_cync-controller`
 4. Test functionality in Home Assistant
 
 ### Enhanced Workflow (v0.0.4.4)
 
-1. Edit code in `src/cync_lan/` or `pyproject.toml`
+1. Edit code in `../src/cync_controller/` or `../pyproject.toml`
 2. **Run linting**: `npm run lint:python:fix` (auto-fixes issues)
 3. **Run formatting**: `npm run format:python` (formats code)
 4. **Rebuild**: `ha addons rebuild local_cync-controller`
@@ -80,29 +82,21 @@ Advanced AI agent development tools:
 ./scripts/test-cloud-relay.sh
 
 ## Check logs
-ha addons logs local_cync-controller --follow | grep -i "relay\|cloud"
-$()$(
-  bash
+ha addons logs local_cync-controller --follow | grep -i "relay\\|cloud"
 
-  ## Important Notes
+## Important Notes
 
-  - **Always rebuild after Python changes**: The Docker image must be rebuilt for code changes to take effect
-  - **Restart is not enough**:
-)ha addons restart$(
-  will not pick up Python code changes
-  - **Use
-)./rebuild.sh$(
-  ** which handles rebuild + restart automatically
-  - **Enhanced linting**: Run
-)npm run lint$(
-  to check all code quality standards
-  - **MCP tools**: Available via Cursor IDE for enhanced development capabilities
+- **Always rebuild after Python changes**: the Docker image must be rebuilt for code changes to take effect.
+- **Restart is not enough**: `ha addons restart` will not pick up Python code changes.
+- **Use `./rebuild.sh`** which handles rebuild + restart automatically.
+- **Enhanced linting**: Run `npm run lint` to check all code quality standards.
+- **MCP tools**: Available via Cursor IDE for enhanced development capabilities.
 
-  ## Development Tools
+## Development Tools
 
-  ### Quick Commands
+### Quick Commands
 
-)$()bash
+```bash
 ## Lint and format all code
 npm run lint && npm run format
 

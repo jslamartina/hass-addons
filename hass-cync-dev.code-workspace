@@ -3,6 +3,14 @@
     {
       "name": "hass-addons",
       "path": ".",
+      "ignore": [
+        "**/.venv",
+        "**/.pytest_cache",
+        "**/.mypy_cache",
+        "**/.ruff_cache",
+        "**/.cache-cync-controller-python",
+        "**/.cache-python-rebuild-tcp-comm",
+      ],
     },
   ],
   "settings": {
@@ -15,16 +23,29 @@
       },
     },
     "[shellscript]": { "editor.defaultFormatter": "esbenp.prettier-vscode" },
+    "[toml]": { "editor.defaultFormatter": "esbenp.prettier-vscode" },
+    "[markdown]": { "editor.defaultFormatter": "esbenp.prettier-vscode" },
+
+    "terminal.integrated.defaultProfile.linux": "zsh",
     "files.exclude": {
       "**/node_modules": true,
       "**/__pycache__": true,
       "**/.pytest_cache": true,
-      "**/.git": false,
+      "**/.git": true,
+      "**/.mypy_cache": true,
+      "**/.venv": true,
+      "**/.hass_addons_tools.egg-info": true,
+      "**/.ruff_cache": true,
     },
     "search.exclude": {
       "**/node_modules": true,
       "**/__pycache__": true,
       "**/.pytest_cache": true,
+    },
+    "terminal.integrated.profiles.linux": {
+      "zsh": {
+        "path": "/usr/bin/zsh",
+      },
     },
     "terminal.integrated.allowChords": false,
     "terminal.integrated.sendKeybindingsToShell": true,
@@ -41,9 +62,14 @@
     "ruff.lint.extendSelect": ["ALL"],
     "ruff.lint.enable": true,
     "ruff.lint.select": ["ALL"],
-    "ruff.nativeServer": "on",
-    "prettier.documentSelectors": ["**/*.sh"],
-    "prettier.prettierPath": "${workspaceFolder}/node_modules/prettier",
+    "prettier.documentSelectors": ["**/*.sh", "**/*.toml", "**/*.md"],
+    "prettier.prettierPath": "./node_modules/prettier",
     "prettier.requireConfig": true,
+    "ruff.configurationPreference": "filesystemFirst",
+    "prettier.embeddedLanguageFormatting": "off",
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "basedpyright.analysis.diagnosticMode": "workspace",
+    "python.pythonPath": "/workspaces/hass-addons/.venv/bin/python",
+    "eslint.lintTask.enable": true,
   },
 }

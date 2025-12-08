@@ -1,0 +1,15 @@
+model = "gpt-5.1-codex-max"
+model_reasoning_effort = "high"
+
+[features]
+web_search_request = true
+apply_patch_freeform = true
+
+[sandbox_workspace_write]
+network_access = true
+
+[projects."/workspaces/hass-addons"]
+trust_level = "trusted"
+
+[notice]
+hide_full_access_warning = true

@@ -2,7 +2,7 @@
 
 ## Overview
 
-The `validate-edit-context.py` utility performs **byte-to-byte comparison** of context strings against actual file content to catch mismatches before `edit_file` tool calls fail.
+The `validate_edit_context.py` utility performs **byte-to-byte comparison** of context strings against actual file content to catch mismatches before `edit_file` tool calls fail.
 
 **Note:** Always run the validator before each `edit_file` call to ensure your context matches exactly. This prevents silent failures due to whitespace or encoding mismatches.
 
@@ -36,7 +36,7 @@ REPO_ROOT="${HASS_ADDONS_ROOT:-$(git rev-parse --show-toplevel)}"
 cd "$REPO_ROOT"
 
 ## Validate the context exists in the file
-python3 scripts/validate-edit-context.py \
+python3 scripts/validate_edit_context.py \
   cync-controller/src/app.py \
   "def validate_input(data):"
 ```
@@ -72,20 +72,20 @@ python3 scripts/validate-edit-context.py \
 
 ```bash
 ## Single-line context
-python3 scripts/validate-edit-context.py src/app.py "def foo():"
+python3 scripts/validate_edit_context.py src/app.py "def foo():"
 
 ## Multiline context (use quotes and \n)
-python3 scripts/validate-edit-context.py src/app.py "def foo():\n    pass"
+python3 scripts/validate_edit_context.py src/app.py "def foo():\n    pass"
 ```
 
 ### Optional Arguments
 
 ```bash
 ## Specify starting line (1-indexed)
-python3 scripts/validate-edit-context.py src/app.py "def foo():" --line 42
+python3 scripts/validate_edit_context.py src/app.py "def foo():" --line 42
 
 ## Verbose output
-python3 scripts/validate-edit-context.py src/app.py "def foo():" --verbose
+python3 scripts/validate_edit_context.py src/app.py "def foo():" --verbose
 ```
 
 ## Programmatic Usage
@@ -145,7 +145,7 @@ old_string = """def process_data(items):
 ### Step 2: Validate it exists in the file
 
 ```bash
-python3 scripts/validate-edit-context.py \
+python3 scripts/validate_edit_context.py \
   cync-controller/src/handler.py \
   "def process_data(items):\n    for item in items:\n        handle(item)"
 ```
@@ -236,7 +236,7 @@ sed -n '40,45p' cync-controller/src/app.py
 Run comprehensive tests:
 
 ```bash
-python3 scripts/test-validate-edit-context.py
+python3 scripts/test_validate_edit_context.py
 ```
 
 Test coverage includes:
@@ -304,7 +304,7 @@ For automated workflows:
 ```bash
 #!/bin/bash
 ## Validate before making edits
-python3 scripts/validate-edit-context.py "$FILE" "$CONTEXT" || {
+python3 scripts/validate_edit_context.py "$FILE" "$CONTEXT" || {
   echo "Context validation failed"
   exit 1
 }
@@ -316,6 +316,6 @@ python3 scripts/validate-edit-context.py "$FILE" "$CONTEXT" || {
 ## See Also
 
 - `edit_file` Tool Documentation
-- `scripts/validate-edit-context.py` - Source code
-- `scripts/test-validate-edit-context.py` - Test suite
+- `scripts/validate_edit_context.py` - Source code
+- `scripts/test_validate_edit_context.py` - Test suite
 - `development-workflow.mdc` - Full development workflow

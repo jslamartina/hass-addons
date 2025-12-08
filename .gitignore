@@ -190,9 +190,6 @@ ENV/
 env.bak/
 venv.bak/
 
-# Docker
-.dockerignore
-
 # Home Assistant specific
 *.db
 *.db-journal
@@ -219,6 +216,8 @@ dist/
 
 code-reviews/**
 working-files/**
+error_reports/**
+**/captures/**
 
 .ruff_cache/
 **/__pycache__/

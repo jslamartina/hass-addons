@@ -198,4 +198,4 @@
   - Benefit: Devices with similar names are now grouped together on the Home Assistant dashboard
   - Impact: Switches like "Hallway 4way Switch", "Hallway Counter Switch", and "Hallway Front Switch" now appear in a single "Hallway" card instead of separate cards
   - Implementation: Adds `suggested_area` field to MQTT discovery payload
-  - Location: `/src/cync_lan/mqtt_client.py`
+  - Location: `/src/cync_controller/mqtt/client.py`

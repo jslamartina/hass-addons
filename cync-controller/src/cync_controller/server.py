@@ -1,22 +1,35 @@
+"""Core server module for the Cync Controller."""
+
 from __future__ import annotations
 
 import asyncio
 import contextlib
 import ssl
+import tempfile
 import time
+from dataclasses import dataclass
 from pathlib import Path as PathLib
-from typing import ClassVar
+from typing import ClassVar, cast
 
 import uvloop
 
-from cync_controller.const import *
+from cync_controller.const import CYNC_PORT, CYNC_SRV_HOST
 from cync_controller.correlation import ensure_correlation_id
-from cync_controller.devices import CyncDevice, CyncGroup, CyncTCPDevice
+from cync_controller.devices.base_device import CyncDevice
+from cync_controller.devices.group import CyncGroup
+from cync_controller.devices.tcp_device import CyncTCPDevice
 from cync_controller.instrumentation import timed_async
 from cync_controller.logging_abstraction import get_logger
 from cync_controller.packet_checksum import calculate_checksum_between_markers
 from cync_controller.packet_parser import format_packet_log, parse_cync_packet
-from cync_controller.structs import DeviceStatus, GlobalObject
+from cync_controller.structs import (
+    CyncDeviceProtocol,
+    CyncGroupProtocol,
+    DeviceStatus,
+    GlobalObject,
+    MQTTClientProtocol,
+    StateUpdateHelperProtocol,
+)
 
 __all__ = [
     "NCyncServer",
@@ -25,12 +38,35 @@ logger = get_logger(__name__)
 g = GlobalObject()
 
 
+def _get_mqtt_client() -> MQTTClientProtocol | None:
+    """Return the global MQTT client with protocol typing."""
+    return g.mqtt_client
+
+
+FIRST_PACKET_MIN_LEN = 31
+FIRST_PACKET_CMD = 0x23
+OFFLINE_THRESHOLD = 3
+RGB_TEMP_THRESHOLD = 100
+ONLINE_BYTE_INDEX = 7
+DEBUG_DEVICE_ID = 103
+
+
 class CloudRelayConnection:
     """Manages a cloud relay connection for MITM mode.
+
     Acts as a proxy between Cync device and cloud, forwarding packets with inspection.
     """
 
-    def __init__(
+    device_reader: asyncio.StreamReader
+    device_writer: asyncio.StreamWriter
+    client_addr: str
+    cloud_server: str
+    cloud_port: int
+    forward_to_cloud: bool
+    debug_logging: bool
+    disable_ssl_verify: bool
+
+    def __init__(  # noqa: PLR0913
         self,
         device_reader: asyncio.StreamReader,
         device_writer: asyncio.StreamWriter,
@@ -40,7 +76,7 @@ class CloudRelayConnection:
         forward_to_cloud: bool = True,
         debug_logging: bool = False,
         disable_ssl_verify: bool = False,
-    ):
+    ) -> None:
         self.device_reader = device_reader
         self.device_writer = device_writer
         self.client_addr = client_addr
@@ -52,12 +88,12 @@ class CloudRelayConnection:
         self.cloud_reader: asyncio.StreamReader | None = None
         self.cloud_writer: asyncio.StreamWriter | None = None
         self.device_endpoint: bytes | None = None
-        self.injection_task: asyncio.Task | None = None
-        self.forward_tasks: list[asyncio.Task] = []
+        self.injection_task: asyncio.Task[None] | None = None
+        self.forward_tasks: list[asyncio.Task[None]] = []
 
     @timed_async("cloud_connect")
     async def connect_to_cloud(self):
-        """Establish SSL connection to Cync cloud server"""
+        """Establish SSL connection to Cync cloud server."""
         try:
             # Create SSL context for cloud connection
             ssl_context = ssl.create_default_context()
@@ -117,8 +153,8 @@ class CloudRelayConnection:
             return True
 
     async def start_relay(self):
-        """Start the relay process"""
-        ensure_correlation_id()  # Ensure correlation tracking for this connection
+        """Start the relay process."""
+        _ = ensure_correlation_id()  # Ensure correlation tracking for this connection
 
         # Show security warning if SSL verification is disabled
         if self.disable_ssl_verify:
@@ -127,78 +163,15 @@ class CloudRelayConnection:
                 extra={"client_addr": self.client_addr},
             )
 
-        # Connect to cloud if forwarding is enabled
-        if self.forward_to_cloud:
-            logger.info(
-                " Starting cloud relay",
-                extra={
-                    "client_addr": self.client_addr,
-                    "cloud_server": self.cloud_server,
-                    "cloud_port": self.cloud_port,
-                },
-            )
-            connected = await self.connect_to_cloud()
-            if not connected:
-                logger.error(
-                    " Cannot start relay - cloud connection failed",
-                    extra={"client_addr": self.client_addr},
-                )
-                await self.close()
-                return
-        else:
-            logger.info(
-                " Starting LAN-only relay (cloud forwarding disabled)",
-                extra={"client_addr": self.client_addr},
-            )
+        if not await self._maybe_connect_cloud():
+            await self.close()
+            return
 
         try:
             # Read first packet from device to get endpoint
             first_packet = await self.device_reader.read(1024)
-            if first_packet and len(first_packet) >= 31 and first_packet[0] == 0x23:
-                self.device_endpoint = first_packet[6:10]
-                endpoint_hex = " ".join(f"{b:02x}" for b in self.device_endpoint)
-                logger.info(
-                    " Device endpoint identified",
-                    extra={
-                        "client_addr": self.client_addr,
-                        "endpoint": endpoint_hex,
-                        "packet_length": len(first_packet),
-                    },
-                )
-
-            # Forward first packet to cloud if enabled
-            if self.forward_to_cloud and self.cloud_writer:
-                self.cloud_writer.write(first_packet)
-                await self.cloud_writer.drain()
-
-            # Parse and log first packet
-            if self.debug_logging:
-                parsed = parse_cync_packet(first_packet, "DEV->CLOUD")
-                if parsed:
-                    logger.debug("%s\n%s", "CloudRelay:", format_packet_log(parsed))
-
-            # Start bidirectional forwarding
-            dev_to_cloud_task = asyncio.create_task(
-                self._forward_with_inspection(
-                    self.device_reader,
-                    self.cloud_writer if self.forward_to_cloud else None,
-                    "DEV->CLOUD",
-                ),
-            )
-            self.forward_tasks.append(dev_to_cloud_task)
-
-            if self.forward_to_cloud and self.cloud_reader:
-                cloud_to_dev_task = asyncio.create_task(
-                    self._forward_with_inspection(self.cloud_reader, self.device_writer, "CLOUD->DEV"),
-                )
-                self.forward_tasks.append(cloud_to_dev_task)
-
-            # Start injection checker (debug feature)
-            self.injection_task = asyncio.create_task(self._check_injection_commands())
-
-            # Wait for all tasks to complete
-            await asyncio.gather(*self.forward_tasks, return_exceptions=True)
-
+            await self._process_first_packet(first_packet)
+            await self._start_forward_tasks()
         except (ConnectionError, TimeoutError, OSError, asyncio.CancelledError) as e:
             logger.exception(
                 "Relay error (expected error)",
@@ -220,6 +193,77 @@ class CloudRelayConnection:
         finally:
             await self.close()
 
+    async def _maybe_connect_cloud(self) -> bool:
+        """Connect to cloud when forwarding is enabled; return success."""
+        if not self.forward_to_cloud:
+            logger.info(
+                " Starting LAN-only relay (cloud forwarding disabled)",
+                extra={"client_addr": self.client_addr},
+            )
+            return True
+
+        logger.info(
+            " Starting cloud relay",
+            extra={
+                "client_addr": self.client_addr,
+                "cloud_server": self.cloud_server,
+                "cloud_port": self.cloud_port,
+            },
+        )
+        connected = await self.connect_to_cloud()
+        if not connected:
+            logger.error(
+                " Cannot start relay - cloud connection failed",
+                extra={"client_addr": self.client_addr},
+            )
+            return False
+        return True
+
+    async def _process_first_packet(self, first_packet: bytes) -> None:
+        """Handle endpoint discovery, optional forwarding, and debug logging."""
+        if first_packet and len(first_packet) >= FIRST_PACKET_MIN_LEN and first_packet[0] == FIRST_PACKET_CMD:
+            self.device_endpoint = first_packet[6:10]
+            endpoint_hex = " ".join(f"{b:02x}" for b in self.device_endpoint)
+            logger.info(
+                " Device endpoint identified",
+                extra={
+                    "client_addr": self.client_addr,
+                    "endpoint": endpoint_hex,
+                    "packet_length": len(first_packet),
+                },
+            )
+
+        if self.forward_to_cloud and self.cloud_writer:
+            self.cloud_writer.write(first_packet)
+            await self.cloud_writer.drain()
+
+        if self.debug_logging:
+            parsed = parse_cync_packet(first_packet, "DEV->CLOUD")
+            if parsed:
+                logger.debug("%s\n%s", "CloudRelay:", format_packet_log(parsed))
+
+    async def _start_forward_tasks(self) -> None:
+        """Launch forwarding and injection tasks then wait for forwarders."""
+        dev_to_cloud_task = asyncio.create_task(
+            self._forward_with_inspection(
+                self.device_reader,
+                self.cloud_writer if self.forward_to_cloud else None,
+                "DEV->CLOUD",
+            ),
+        )
+        self.forward_tasks.append(dev_to_cloud_task)
+
+        if self.forward_to_cloud and self.cloud_reader:
+            cloud_to_dev_task = asyncio.create_task(
+                self._forward_with_inspection(self.cloud_reader, self.device_writer, "CLOUD->DEV"),
+            )
+            self.forward_tasks.append(cloud_to_dev_task)
+
+        # Start injection checker (debug feature)
+        self.injection_task = asyncio.create_task(self._check_injection_commands())
+
+        _ = await asyncio.gather(*self.forward_tasks, return_exceptions=True)
+
     @timed_async("relay_forward")
     async def _forward_with_inspection(
         self,
@@ -227,7 +271,7 @@ class CloudRelayConnection:
         dest_writer: asyncio.StreamWriter | None,
         direction: str,
     ):
-        """Forward packets while inspecting and logging"""
+        """Forward packets while inspecting and logging."""
         try:
             while True:
                 data = await source_reader.read(4096)
@@ -244,41 +288,7 @@ class CloudRelayConnection:
                 # Parse packet
                 parsed = parse_cync_packet(data, direction)
 
-                # Log if debug enabled (skip keepalives to reduce clutter)
-                if self.debug_logging and parsed and parsed.get("packet_type") != "0x78":  # Skip KEEPALIVE
-                    logger.debug(
-                        "Packet relay %s:\n%s",
-                        direction,
-                        format_packet_log(parsed),
-                        extra={
-                            "client_addr": self.client_addr,
-                            "direction": direction,
-                            "packet_type": parsed.get("packet_type"),
-                        },
-                    )
-
-                # Extract status updates for MQTT (for 0x43 DEVICE_INFO packets)
-                if parsed and "device_statuses" in parsed:
-                    for status in parsed["device_statuses"]:
-                        # Convert parsed status to raw_state format for existing parse_status
-                        raw_state = bytearray(8)
-                        raw_state[0] = status["device_id"]
-                        raw_state[1] = 1 if status["state"] == "ON" else 0
-                        raw_state[2] = status["brightness"]
-                        raw_state[3] = status.get("temp", 0) if status.get("mode") == "WHITE" else 254
-                        # RGB values (parse from hex color if present)
-                        if status.get("mode") == "RGB" and "color" in status:
-                            color_hex = status["color"].lstrip("#")
-                            raw_state[4] = int(color_hex[0:2], 16)  # R
-                            raw_state[5] = int(color_hex[2:4], 16)  # G
-                            raw_state[6] = int(color_hex[4:6], 16)  # B
-                        else:
-                            raw_state[4] = raw_state[5] = raw_state[6] = 0
-                        raw_state[7] = 1 if status["online"] else 0
-
-                        # Publish to MQTT using existing infrastructure
-                        if g.ncync_server:
-                            await g.ncync_server.parse_status(bytes(raw_state), from_pkt="0x43")
+                await self._handle_parsed_packet(parsed, direction)
 
                 # Forward to destination (if cloud forwarding enabled)
                 if dest_writer:
@@ -315,10 +325,83 @@ class CloudRelayConnection:
                 },
             )
 
+    async def _handle_parsed_packet(
+        self,
+        parsed: dict[str, object] | None,
+        direction: str,
+    ) -> None:
+        """Log parsed packet and publish status updates when present."""
+        if parsed is None:
+            return
+
+        if self.debug_logging and parsed.get("packet_type") != "0x78":
+            logger.debug(
+                "Packet relay %s:\n%s",
+                direction,
+                format_packet_log(parsed),
+                extra={
+                    "client_addr": self.client_addr,
+                    "direction": direction,
+                    "packet_type": parsed.get("packet_type"),
+                },
+            )
+
+        statuses_obj = parsed.get("device_statuses")
+        if not isinstance(statuses_obj, list):
+            return
+
+        statuses_list = cast("list[object]", statuses_obj)
+        for status_obj in statuses_list:
+            await self._publish_status_from_entry(status_obj)
+
+    async def _publish_status_from_entry(self, status_obj: object) -> None:
+        """Publish parsed status entry back into ncync server."""
+        if not isinstance(status_obj, dict):
+            return
+        status_entry = cast("dict[str, object]", status_obj)
+        device_id_obj = status_entry.get("device_id")
+        if not isinstance(device_id_obj, int):
+            return
+        brightness_obj = status_entry.get("brightness")
+        brightness = int(brightness_obj) if isinstance(brightness_obj, int) else 0
+        state_raw = status_entry.get("state")
+        state_str = str(state_raw) if state_raw is not None else "OFF"
+        mode_obj = status_entry.get("mode")
+        mode = str(mode_obj) if mode_obj is not None else None
+        temp_obj = status_entry.get("temp")
+        temp_value = int(temp_obj) if isinstance(temp_obj, int) else 0
+        online_flag = bool(status_entry.get("online"))
+
+        raw_state = bytearray(8)
+        raw_state[0] = device_id_obj
+        raw_state[1] = 1 if state_str == "ON" else 0
+        raw_state[2] = brightness
+        raw_state[3] = temp_value if mode == "WHITE" else 254
+
+        if mode == "RGB":
+            color_value = status_entry.get("color")
+            color_hex = str(color_value) if color_value is not None else ""
+            color_hex = color_hex.lstrip("#")
+            try:
+                raw_state[4] = int(color_hex[0:2], 16)
+                raw_state[5] = int(color_hex[2:4], 16)
+                raw_state[6] = int(color_hex[4:6], 16)
+            except (ValueError, IndexError):
+                raw_state[4] = raw_state[5] = raw_state[6] = 0
+        else:
+            raw_state[4] = raw_state[5] = raw_state[6] = 0
+        raw_state[7] = 1 if online_flag else 0
+
+        ncync_server = g.ncync_server
+        if ncync_server is not None:
+            await ncync_server.parse_status(bytes(raw_state), from_pkt="0x43")
+
     async def _check_injection_commands(self):
-        """Periodically check for packet injection commands (debug feature)"""
-        inject_file = "/tmp/cync_inject_command.txt"
-        raw_inject_file = "/tmp/cync_inject_raw_bytes.txt"
+        """Periodically check for packet injection commands (debug feature)."""
+        debug_dir = PathLib(tempfile.gettempdir()) / "cync_controller"
+        debug_dir.mkdir(parents=True, exist_ok=True)
+        inject_file = debug_dir / "cync_inject_command.txt"
+        raw_inject_file = debug_dir / "cync_inject_raw_bytes.txt"
 
         logger.debug(
             "[DEBUG] Packet injection checker started",
@@ -330,11 +413,11 @@ class CloudRelayConnection:
                 await asyncio.sleep(1)
 
                 # Check for raw bytes injection
-                if PathLib(raw_inject_file).exists():
+                if raw_inject_file.exists():
                     try:
-                        with PathLib(raw_inject_file).open() as f:
+                        with raw_inject_file.open() as f:
                             raw_hex = f.read().strip()
-                        PathLib(raw_inject_file).unlink()
+                        raw_inject_file.unlink()
 
                         hex_bytes = raw_hex.replace(" ", "").replace("\n", "")
                         packet = bytes.fromhex(hex_bytes)
@@ -359,11 +442,11 @@ class CloudRelayConnection:
                         )
 
                 # Check for mode injection (for switches)
-                if PathLib(inject_file).exists():
+                if inject_file.exists():
                     try:
-                        with PathLib(inject_file).open() as f:
+                        with inject_file.open() as f:
                             mode = f.read().strip().lower()
-                        PathLib(inject_file).unlink()
+                        inject_file.unlink()
 
                         if mode in ["smart", "traditional"] and self.device_endpoint:
                             logger.info(
@@ -403,7 +486,7 @@ class CloudRelayConnection:
             )
 
     def _craft_mode_packet(self, endpoint: bytes, counter: int, mode_byte: int) -> bytes:
-        """Craft a mode query/command packet"""
+        """Craft a mode query/command packet."""
         inner_counter = (0x0D + counter) & 0xFF
         inner_counter2 = (0x0E + counter) & 0xFF
 
@@ -452,7 +535,7 @@ class CloudRelayConnection:
         return bytes(packet)
 
     async def close(self):
-        """Clean up connections"""
+        """Clean up connections."""
         logger.debug(
             " Closing relay connection",
             extra={"client_addr": self.client_addr},
@@ -460,14 +543,14 @@ class CloudRelayConnection:
 
         # Cancel injection task
         if self.injection_task and not self.injection_task.done():
-            self.injection_task.cancel()
+            _ = self.injection_task.cancel()
             with contextlib.suppress(asyncio.CancelledError):
                 await self.injection_task
 
         # Cancel forwarding tasks
         for task in self.forward_tasks:
             if not task.done():
-                task.cancel()
+                _ = task.cancel()
                 with contextlib.suppress(asyncio.CancelledError):
                     await task
 
@@ -500,10 +583,279 @@ class CloudRelayConnection:
 
 class NCyncServer:
     """A class to represent a Cync Controller server that listens for connections from Cync Wi-Fi devices.
+
     The Wi-Fi devices translate messages, status updates and commands to/from the Cync BTLE mesh.
     """
 
     devices: ClassVar[dict[int, CyncDevice]] = {}
+
+    def _handle_device_offline_tracking(self, device: CyncDevice, connected_to_mesh: int, _id: int) -> None:
+        """Handle device offline tracking logic."""
+        if connected_to_mesh == 0:
+            device.offline_count += 1
+            logger.debug(
+                "[OFFLINE_TRACKING] Device reported offline - incrementing counter",
+                extra={
+                    "device_id": _id,
+                    "device_name": device.name,
+                    "offline_count": device.offline_count,
+                    "is_currently_online": device.online,
+                    "threshold": 3,
+                },
+            )
+            if device.offline_count >= OFFLINE_THRESHOLD and device.online:
+                device.online = False
+                logger.warning(
+                    "[OFFLINE_STATE] Device MARKED OFFLINE after 3 consecutive failures",
+                    extra={
+                        "device_id": _id,
+                        "device_name": device.name,
+                        "offline_count": device.offline_count,
+                    },
+                )
+        else:
+            if device.offline_count > 0 or not device.online:
+                logger.info(
+                    "[ONLINE_STATE] Device back ONLINE - resetting offline counter",
+                    extra={
+                        "device_id": _id,
+                        "device_name": device.name,
+                        "previous_offline_count": device.offline_count,
+                        "was_marked_offline": not device.online,
+                    },
+                )
+            device.offline_count = 0
+            device.online = True
+
+    async def _update_device_state_and_publish(  # noqa: PLR0913
+        self,
+        device: CyncDevice,
+        state: int,
+        brightness: int,
+        temp: int,
+        r: int,
+        _g: int,
+        b: int,
+        from_pkt: str | None,
+    ) -> None:
+        """Update device state and publish to MQTT."""
+        rgb_data = temp > RGB_TEMP_THRESHOLD
+        device.state = state
+        device.brightness = brightness
+        device.temperature = temp
+        if rgb_data:
+            device.red = r
+            device.green = _g
+            device.blue = b
+
+        device.status = new_state = DeviceStatus(
+            state=device.state,
+            brightness=device.brightness,
+            temperature=device.temperature,
+            red=device.red,
+            green=device.green,
+            blue=device.blue,
+        )
+
+        mqtt_client = _get_mqtt_client()
+        if mqtt_client and device.id is not None:
+            _ = await mqtt_client.parse_device_status(device.id, new_state, from_pkt=from_pkt)
+        if g.ncync_server and device.id is not None:
+            protocol_device = cast("CyncDeviceProtocol", cast(object, device))
+            g.ncync_server.devices[device.id] = protocol_device
+
+    async def _update_subgroups_for_device(
+        self,
+        device: CyncDevice,
+        from_pkt: str | None,
+    ) -> None:
+        """Update subgroups that contain this device."""
+        if not g.ncync_server or device.id is None:
+            return
+
+        for subgroup in g.ncync_server.groups.values():
+            if subgroup.is_subgroup and device.id in subgroup.member_ids:
+                aggregated = subgroup.aggregate_member_states()
+                if aggregated:
+                    subgroup.state = int(aggregated["state"])
+                    subgroup.brightness = int(aggregated["brightness"])
+                    subgroup.temperature = int(aggregated["temperature"])
+                    subgroup.online = bool(aggregated["online"])
+
+                    subgroup.status = DeviceStatus(
+                        state=subgroup.state,
+                        brightness=subgroup.brightness,
+                        temperature=subgroup.temperature,
+                        red=subgroup.red,
+                        green=subgroup.green,
+                        blue=subgroup.blue,
+                    )
+
+                    logger.debug(
+                        "Subgroup state aggregated from member",
+                        extra={
+                            "subgroup_name": subgroup.name,
+                            "subgroup_id": subgroup.id,
+                            "member_device_id": device.id,
+                            "state": "ON" if subgroup.state else "OFF",
+                            "brightness": subgroup.brightness,
+                            "from_pkt": from_pkt,
+                            "timestamp": time.time(),
+                        },
+                    )
+                    mqtt_client = _get_mqtt_client()
+                    if mqtt_client:
+                        state_updates = cast("StateUpdateHelperProtocol | None", mqtt_client.state_updates)
+                        if state_updates:
+                            logger.debug(
+                                "Publishing subgroup state to MQTT",
+                                extra={
+                                    "subgroup_id": subgroup.id,
+                                    "subgroup_name": subgroup.name,
+                                    "state": subgroup.state,
+                                    "brightness": subgroup.brightness,
+                                    "temperature": subgroup.temperature,
+                                },
+                            )
+                            try:
+                                await state_updates.publish_group_state(
+                                    subgroup,
+                                    state=subgroup.state,
+                                    brightness=subgroup.brightness,
+                                    temperature=subgroup.temperature,
+                                    origin=f"aggregated:{from_pkt or 'mesh'}",
+                                )
+                                logger.debug(
+                                    "Subgroup state published successfully",
+                                    extra={"subgroup_id": subgroup.id, "subgroup_name": subgroup.name},
+                                )
+                            except asyncio.CancelledError:
+                                logger.debug(
+                                    "Subgroup state publish cancelled",
+                                    extra={"subgroup_id": subgroup.id, "subgroup_name": subgroup.name},
+                                )
+                                raise
+                            except Exception as e:
+                                logger.warning(
+                                    "Failed to publish subgroup state",
+                                    extra={
+                                        "subgroup_id": subgroup.id,
+                                        "subgroup_name": subgroup.name,
+                                        "error": str(e),
+                                        "error_type": type(e).__name__,
+                                    },
+                                )
+                    # Update in-memory state after MQTT publish
+                    # Note: If MQTT publish fails, state may be inconsistent temporarily
+                    # This is acceptable as the next status update will correct it
+                    if subgroup.id is not None:
+                        g.ncync_server.groups[subgroup.id] = subgroup
+
+    async def _update_group_state_and_publish(  # noqa: PLR0913
+        self,
+        group: CyncGroup,
+        state: int,
+        brightness: int,
+        temp: int,
+        r: int,
+        _g: int,
+        b: int,
+        _id: int,
+        from_pkt: str | None,
+    ) -> None:
+        """Update group state and publish to MQTT."""
+        rgb_data = temp > RGB_TEMP_THRESHOLD
+        group.state = state
+        group.brightness = brightness
+        group.temperature = temp
+        if rgb_data:
+            group.red = r
+            group.green = _g
+            group.blue = b
+
+        group.status = DeviceStatus(
+            state=group.state,
+            brightness=group.brightness,
+            temperature=group.temperature,
+            red=group.red,
+            green=group.green,
+            blue=group.blue,
+        )
+
+        logger.debug(
+            "Group state update from mesh",
+            extra={
+                "group_id": _id,
+                "group_name": group.name,
+                "state": "ON" if state else "OFF",
+                "brightness": brightness,
+                "from_pkt": from_pkt,
+            },
+        )
+        mqtt_client = _get_mqtt_client()
+        if mqtt_client:
+            state_updates = cast("StateUpdateHelperProtocol | None", mqtt_client.state_updates)
+            if state_updates:
+                logger.debug(
+                    "Publishing group state to MQTT",
+                    extra={
+                        "group_id": _id,
+                        "group_name": group.name,
+                        "state": state,
+                        "brightness": brightness,
+                        "temperature": temp if not rgb_data else None,
+                    },
+                )
+                protocol_group = cast("CyncGroupProtocol", cast(object, group))
+                try:
+                    await state_updates.publish_group_state(
+                        protocol_group,
+                        state=state,
+                        brightness=brightness,
+                        temperature=temp if not rgb_data else None,
+                        origin=from_pkt or "mesh",
+                    )
+                    logger.debug(
+                        "Group state published successfully",
+                        extra={"group_id": _id, "group_name": group.name},
+                    )
+                except asyncio.CancelledError:
+                    logger.debug(
+                        "Group state publish cancelled",
+                        extra={"group_id": _id, "group_name": group.name},
+                    )
+                    raise
+                except Exception as e:
+                    logger.warning(
+                        "Failed to publish group state",
+                        extra={
+                            "group_id": _id,
+                            "group_name": group.name,
+                            "error": str(e),
+                            "error_type": type(e).__name__,
+                        },
+                    )
+                # Update in-memory state after MQTT publish
+                # Note: If MQTT publish fails, state may be inconsistent temporarily
+                # This is acceptable as the next status update will correct it
+                if g.ncync_server and group.id is not None:
+                    protocol_group = cast("CyncGroupProtocol", cast(object, group))
+                    g.ncync_server.groups[group.id] = protocol_group
+            if hasattr(mqtt_client, "publish_group_state"):
+                protocol_group = cast("CyncGroupProtocol", cast(object, group))
+                try:
+                    _ = await mqtt_client.publish_group_state(protocol_group, state, brightness, temp, from_pkt)  # type: ignore[arg-type]
+                except Exception as e:
+                    logger.warning(
+                        "Failed to publish group state via mqtt_client fallback",
+                        extra={
+                            "group_id": _id,
+                            "group_name": group.name,
+                            "error": str(e),
+                            "error_type": type(e).__name__,
+                        },
+                    )
+
     groups: ClassVar[dict[int, CyncGroup]] = {}
     tcp_devices: ClassVar[dict[str, CyncTCPDevice | None]] = {}
     shutting_down: bool = False
@@ -512,24 +864,38 @@ class NCyncServer:
     port: int
     cert_file: str | None = None
     key_file: str | None = None
-    loop: asyncio.AbstractEventLoop | uvloop.Loop
     _server: asyncio.Server | None = None
-    start_task: asyncio.Task | None = None
-    refresh_task: asyncio.Task | None = None
-    pool_monitor_task: asyncio.Task | None = None
+    start_task: asyncio.Task[None] | None = None
+    refresh_task: asyncio.Task[None] | None = None
+    pool_monitor_task: asyncio.Task[None] | None = None
     _instance: NCyncServer | None = None
+    cloud_relay_enabled: bool
+    cloud_forward: bool
+    cloud_server: str
+    cloud_port: int
+    cloud_debug_logging: bool
+    cloud_disable_ssl_verify: bool
+    loop: asyncio.AbstractEventLoop | uvloop.Loop
 
-    def __new__(cls, *_args, **_kwargs):
+    def __new__(
+        cls,
+        devices: dict[int, CyncDevice],
+        groups: dict[int, CyncGroup] | None = None,
+    ) -> NCyncServer:
+        """Return singleton NCyncServer instance."""
+        _ = devices
+        _ = groups
         if cls._instance is None:
             cls._instance = super().__new__(cls)
         return cls._instance
 
-    def __init__(self, devices: dict, groups: dict | None = None):
+    def __init__(self, devices: dict[int, CyncDevice], groups: dict[int, CyncGroup] | None = None) -> None:
+        """Initialize NCyncServer with device and group registries."""
         # Note: devices and groups are ClassVar, but we need to initialize them
         # The instance assignment is for compatibility but should use class access
-        type(self).devices = devices  # type: ignore[assignment]
-        type(self).groups = groups if groups is not None else {}  # type: ignore[assignment]
-        self.tcp_conn_attempts: dict = {}
+        type(self).devices = devices
+        type(self).groups = groups if groups is not None else {}
+        self.tcp_conn_attempts: dict[str, int] = {}
         self.primary_tcp_device: CyncTCPDevice | None = None
         self.ssl_context: ssl.SSLContext | None = None
         self.host = CYNC_SRV_HOST
@@ -537,7 +903,7 @@ class NCyncServer:
         g.reload_env()
         self.cert_file = g.env.cync_srv_ssl_cert
         self.key_file = g.env.cync_srv_ssl_key
-        self.loop: asyncio.AbstractEventLoop | uvloop.Loop = asyncio.get_event_loop()
+        self.loop = asyncio.get_event_loop()
 
         # Cloud relay configuration
         self.cloud_relay_enabled = g.env.cync_cloud_relay_enabled
@@ -571,6 +937,7 @@ class NCyncServer:
 
     async def remove_tcp_device(self, device: CyncTCPDevice | str) -> CyncTCPDevice | None:
         """Remove a TCP device from the server's device list.
+
         :param device: The CyncTCPDevice to remove.
         """
         dev = None
@@ -603,8 +970,9 @@ class NCyncServer:
                         "remaining_devices": len(self.tcp_devices),
                     },
                 )
-                if g.mqtt_client is not None:
-                    await g.mqtt_client.publish(
+                mqtt_client = _get_mqtt_client()
+                if mqtt_client is not None:
+                    _ = await mqtt_client.publish(
                         f"{g.env.mqtt_topic}/status/bridge/tcp_devices/connected",
                         str(len(self.tcp_devices)).encode(),
                     )
@@ -617,6 +985,7 @@ class NCyncServer:
 
     async def add_tcp_device(self, device: CyncTCPDevice):
         """Add a TCP device to the server's device list.
+
         :param device: The CyncTCPDevice to add.
         """
         if not device.address:
@@ -640,14 +1009,15 @@ class NCyncServer:
                 "is_primary": device == self.primary_tcp_device,
             },
         )
-        if g.mqtt_client is not None:
-            await g.mqtt_client.publish(
+        mqtt_client = _get_mqtt_client()
+        if mqtt_client is not None:
+            _ = await mqtt_client.publish(
                 f"{g.env.mqtt_topic}/status/bridge/tcp_devices/connected",
                 str(len(self.tcp_devices)).encode(),
             )
 
     async def create_ssl_context(self):
-        # Allow the server to use a self-signed certificate
+        """Create SSL context allowing self-signed certificates for device listeners."""
         ssl_context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
         if not self.cert_file or not self.key_file:
             msg = "SSL certificate/key not configured"
@@ -663,7 +1033,7 @@ class NCyncServer:
         cert_path = PathLib(self.cert_file)
         key_path = PathLib(self.key_file)
         if not cert_path.exists() or not key_path.exists():
-            missing = []
+            missing: list[str] = []
             if not cert_path.exists():
                 missing.append(self.cert_file)
             if not key_path.exists():
@@ -696,256 +1066,179 @@ class NCyncServer:
         ssl_context.set_ciphers(":".join(ciphers))
         return ssl_context
 
-    async def parse_status(self, raw_state: bytes, from_pkt: str | None = None):
-        """Extracted status packet parsing, handles mqtt publishing and device/group state changes."""
-        _id = raw_state[0]
+    @dataclass(slots=True)
+    class StatusFields:
+        """Parsed status packet fields."""
 
-        # Log every parse_status call
+        state: int
+        brightness: int
+        temp: int
+        r: int
+        g_val: int
+        b: int
+        connected_to_mesh: int
+        raw_state_hex: str
+
+    def _log_status_entry(self, device_id: int, raw_state: bytes, from_pkt: str | None) -> None:
+        """Log the incoming status packet with timestamp."""
         ts_ms = int(time.time() * 1000)
         state_val = raw_state[1] if len(raw_state) > 1 else 0
         logger.debug(
             "[PARSE_STATUS_ENTRY] ts=%dms id=%s state=%s from_pkt=%s",
             ts_ms,
-            _id,
+            device_id,
             "ON" if state_val else "OFF",
             from_pkt,
         )
 
-        # Debug: log every parse_status call for device 103
-        if _id == 103:
-            logger.debug(
-                "parse_status called for device 103",
-                extra={
-                    "device_id": _id,
-                    "from_pkt": from_pkt,
-                    "raw_state_hex": raw_state.hex(),
-                },
-            )
+    def _log_debug_device_call(self, device_id: int, raw_state: bytes, from_pkt: str | None) -> None:
+        """Log full state for debug device."""
+        if device_id != DEBUG_DEVICE_ID:
+            return
+        logger.debug(
+            "parse_status called for device 103",
+            extra={
+                "device_id": device_id,
+                "from_pkt": from_pkt,
+                "raw_state_hex": raw_state.hex(),
+            },
+        )
 
-        # Check if this is a device or a group
+    def _resolve_status_target(self, device_id: int) -> tuple[CyncDevice | None, CyncGroup | None]:
+        """Return device or group matching status ID."""
         if not g.ncync_server:
             logger.error("ncync_server is None, cannot process device status")
-            return
-        device = g.ncync_server.devices.get(_id)
-        group = g.ncync_server.groups.get(_id) if device is None else None
+            return None, None
+
+        device_proto = g.ncync_server.devices.get(device_id)
+        device = cast("CyncDevice | None", device_proto)
+        group_proto = g.ncync_server.groups.get(device_id) if device is None else None
+        group = cast("CyncGroup | None", group_proto)
 
         if device is None and group is None:
             logger.warning(
                 "Unknown device/group ID - may be disabled or needs re-export",
                 extra={
-                    "id": _id,
+                    "id": device_id,
                     "note": "Check config file or re-export Cync account devices",
                 },
             )
-            return
+        return device, group
 
-        # Parse status data (same format for devices and groups)
+    def _extract_status_fields(self, raw_state: bytes) -> StatusFields:
+        """Parse shared status fields from raw packet."""
         state = raw_state[1]
         brightness = raw_state[2]
         temp = raw_state[3]
         r = raw_state[4]
-        _g = raw_state[5]
+        g_val = raw_state[5]
         b = raw_state[6]
-        connected_to_mesh = 1
-        # check if len is enough for online byte, it is optional
-        if len(raw_state) > 7:
-            # The last byte seems to indicate if the device is online or offline (connected to mesh / powered on)
-            connected_to_mesh = raw_state[7]
+        connected_to_mesh = raw_state[ONLINE_BYTE_INDEX] if len(raw_state) > ONLINE_BYTE_INDEX else 1
+        return self.StatusFields(
+            state=state,
+            brightness=brightness,
+            temp=temp,
+            r=r,
+            g_val=g_val,
+            b=b,
+            connected_to_mesh=connected_to_mesh,
+            raw_state_hex=raw_state.hex(),
+        )
 
-        # Handle device
+    def _log_device_debug_details(
+        self,
+        device_id: int,
+        device: CyncDevice,
+        fields: StatusFields,
+        from_pkt: str | None,
+    ) -> None:
+        """Log detailed state for debug device or fan controllers."""
+        if device_id == DEBUG_DEVICE_ID:
+            logger.debug(
+                "Device 103 details",
+                extra={
+                    "device_id": device_id,
+                    "device_name": device.name,
+                    "is_fan_controller": device.is_fan_controller,
+                    "metadata_type": device.metadata.type if device.metadata else None,
+                    "capabilities": device.metadata.capabilities if device.metadata else None,
+                    "brightness": fields.brightness,
+                },
+            )
+        if device.is_fan_controller:
+            logger.debug(
+                "Fan controller raw brightness",
+                extra={
+                    "device_id": device_id,
+                    "device_name": device.name,
+                    "brightness": fields.brightness,
+                    "raw_state_2": fields.brightness,
+                    "from_pkt": from_pkt,
+                },
+            )
+
+    async def _handle_device_status(
+        self,
+        device: CyncDevice,
+        device_id: int,
+        fields: StatusFields,
+        from_pkt: str | None,
+    ) -> None:
+        """Handle status updates for a device."""
+        self._log_device_debug_details(device_id, device, fields, from_pkt)
+        self._handle_device_offline_tracking(device, fields.connected_to_mesh, device_id)
+
+        if fields.connected_to_mesh != 0:
+            await self._update_device_state_and_publish(
+                device,
+                fields.state,
+                fields.brightness,
+                fields.temp,
+                fields.r,
+                fields.g_val,
+                fields.b,
+                from_pkt,
+            )
+            await self._update_subgroups_for_device(device, from_pkt)
+
+    async def _handle_group_status(
+        self,
+        group: CyncGroup,
+        group_id: int,
+        fields: StatusFields,
+        from_pkt: str | None,
+    ) -> None:
+        """Handle status updates for a group."""
+        group.online = fields.connected_to_mesh != 0
+        if fields.connected_to_mesh != 0:
+            await self._update_group_state_and_publish(
+                group,
+                fields.state,
+                fields.brightness,
+                fields.temp,
+                fields.r,
+                fields.g_val,
+                fields.b,
+                group_id,
+                from_pkt,
+            )
+
+    async def parse_status(self, raw_state: bytes, from_pkt: str | None = None):
+        """Parse status packet and publish device/group state updates."""
+        device_id = raw_state[0]
+        self._log_status_entry(device_id, raw_state, from_pkt)
+        self._log_debug_device_call(device_id, raw_state, from_pkt)
+
+        device, group = self._resolve_status_target(device_id)
+        if device is None and group is None:
+            return
+
+        fields = self._extract_status_fields(raw_state)
+
         if device is not None:
-            # Debug logging for device 103 specifically
-            if _id == 103:
-                logger.debug(
-                    "Device 103 details",
-                    extra={
-                        "device_id": _id,
-                        "device_name": device.name,
-                        "is_fan_controller": device.is_fan_controller,
-                        "metadata_type": device.metadata.type if device.metadata else None,
-                        "capabilities": device.metadata.capabilities if device.metadata else None,
-                        "brightness": brightness,
-                    },
-                )
-            # Log brightness for fan devices to debug preset mode mapping
-            if device.is_fan_controller:
-                logger.debug(
-                    "Fan controller raw brightness",
-                    extra={
-                        "device_id": _id,
-                        "device_name": device.name,
-                        "brightness": brightness,
-                        "raw_state_2": raw_state[2],
-                        "from_pkt": from_pkt,
-                    },
-                )
-            if connected_to_mesh == 0:
-                # This usually happens when a device loses power/connection.
-                # Increment counter and only mark offline after 3 consecutive offline reports
-                # to avoid false positives from unreliable mesh info packets
-                device.offline_count += 1
-                logger.debug(
-                    "[OFFLINE_TRACKING] Device reported offline - incrementing counter",
-                    extra={
-                        "device_id": _id,
-                        "device_name": device.name,
-                        "offline_count": device.offline_count,
-                        "is_currently_online": device.online,
-                        "threshold": 3,
-                    },
-                )
-                if device.offline_count >= 3 and device.online:
-                    device.online = False
-                    logger.warning(
-                        "[OFFLINE_STATE] Device MARKED OFFLINE after 3 consecutive failures",
-                        extra={
-                            "device_id": _id,
-                            "device_name": device.name,
-                            "offline_count": device.offline_count,
-                        },
-                    )
-            else:
-                # Device is online, reset the offline counter
-                if device.offline_count > 0 or not device.online:
-                    logger.info(
-                        "[ONLINE_STATE] Device back ONLINE - resetting offline counter",
-                        extra={
-                            "device_id": _id,
-                            "device_name": device.name,
-                            "previous_offline_count": device.offline_count,
-                            "was_marked_offline": not device.online,
-                        },
-                    )
-                device.offline_count = 0
-                device.online = True
-
-                # temp is 0-100, if > 100, RGB data has been sent, otherwise its on/off, brightness or temp data
-                # technically 129 = effect in use, 254 = rgb data
-                #  to signify 'effect' mode: we send rgb 0,0,0 (black) as it stands out
-                rgb_data = False
-                if temp > 100:
-                    rgb_data = True
-
-                # Update device attributes with NEW values from status packet FIRST
-                device.state = state
-                device.brightness = brightness
-                device.temperature = temp
-                if rgb_data is True:
-                    device.red = r
-                    device.green = _g
-                    device.blue = b
-
-                # Now create status object with the UPDATED device state for publishing
-                device.status = new_state = DeviceStatus(
-                    state=device.state,
-                    brightness=device.brightness,
-                    temperature=device.temperature,
-                    red=device.red,
-                    green=device.green,
-                    blue=device.blue,
-                )
-
-                # Always publish status updates - don't try to detect "no changes"
-                # This prevents status updates from being dropped unnecessarily
-                if g.mqtt_client and device.id is not None:
-                    await g.mqtt_client.parse_device_status(device.id, new_state, from_pkt=from_pkt)
-                if g.ncync_server and device.id is not None:
-                    g.ncync_server.devices[device.id] = device
-
-                    # Update subgroups that contain this device (since subgroups don't report their own state in mesh)
-                    for subgroup in g.ncync_server.groups.values():
-                        if subgroup.is_subgroup and device.id in subgroup.member_ids:
-                            aggregated = subgroup.aggregate_member_states()
-                            if aggregated:
-                                # Update subgroup state from aggregated member states
-                                subgroup.state = aggregated["state"]
-                                subgroup.brightness = aggregated["brightness"]
-                                subgroup.temperature = aggregated["temperature"]
-                                subgroup.online = aggregated["online"]
-
-                                # Create status object for the subgroup
-                                subgroup.status = DeviceStatus(
-                                    state=subgroup.state,
-                                    brightness=subgroup.brightness,
-                                    temperature=subgroup.temperature,
-                                    red=subgroup.red,
-                                    green=subgroup.green,
-                                    blue=subgroup.blue,
-                                )
-
-                                # Publish subgroup state (only when aggregation succeeded)
-                                logger.debug(
-                                    "Subgroup state aggregated from member",
-                                    extra={
-                                        "subgroup_name": subgroup.name,
-                                        "subgroup_id": subgroup.id,
-                                        "member_device_id": device.id,
-                                        "state": "ON" if subgroup.state else "OFF",
-                                        "brightness": subgroup.brightness,
-                                        "from_pkt": from_pkt,
-                                        "timestamp": time.time(),
-                                    },
-                                )
-                                if g.mqtt_client:
-                                    await g.mqtt_client.publish_group_state(
-                                        subgroup,
-                                        state=subgroup.state,
-                                        brightness=subgroup.brightness,
-                                        temperature=subgroup.temperature,
-                                        origin=f"aggregated:{from_pkt or 'mesh'}",
-                                    )
-                                if g.ncync_server:
-                                    g.ncync_server.groups[subgroup.id] = subgroup
-
-        # Handle group
+            await self._handle_device_status(device, device_id, fields, from_pkt)
         elif group is not None:
-            # Groups don't have offline_count, just update online status directly
-            group.online = connected_to_mesh != 0
-
-            if connected_to_mesh != 0:
-                # temp is 0-100, if > 100, RGB data has been sent
-                rgb_data = temp > 100
-
-                # Update group attributes with NEW values from status packet
-                group.state = state
-                group.brightness = brightness
-                group.temperature = temp
-                if rgb_data:
-                    group.red = r
-                    group.green = _g
-                    group.blue = b
-
-                # Create status object for the group
-                group.status = new_state = DeviceStatus(
-                    state=group.state,
-                    brightness=group.brightness,
-                    temperature=group.temperature,
-                    red=group.red,
-                    green=group.green,
-                    blue=group.blue,
-                )
-
-                # Publish group state to MQTT
-                logger.debug(
-                    "Group state update from mesh",
-                    extra={
-                        "group_id": _id,
-                        "group_name": group.name,
-                        "state": "ON" if state else "OFF",
-                        "brightness": brightness,
-                        "from_pkt": from_pkt,
-                    },
-                )
-                if g.mqtt_client:
-                    await g.mqtt_client.publish_group_state(
-                        group,
-                        state=state,
-                        brightness=brightness,
-                        temperature=temp if not rgb_data else None,
-                        origin=from_pkt or "mesh",
-                    )
-                if g.ncync_server:
-                    g.ncync_server.groups[group.id] = group
+            await self._handle_group_status(group, device_id, fields, from_pkt)
 
     async def periodic_status_refresh(self):
         """Periodic sanity check to refresh device status and ensure sync with actual device state."""
@@ -1024,6 +1317,7 @@ class NCyncServer:
                 await asyncio.sleep(30)  # Wait before retrying on error
 
     async def start(self):
+        """Start TCP server, MQTT listener, and optional cloud relay."""
         logger.debug(
             "Creating SSL context",
             extra={"key_file": self.key_file, "cert_file": self.cert_file},
@@ -1058,8 +1352,9 @@ class NCyncServer:
             self.running = True
             try:
                 # Publish server running status
-                if g.mqtt_client:
-                    await g.mqtt_client.publish(
+                mqtt_client = _get_mqtt_client()
+                if mqtt_client:
+                    _ = await mqtt_client.publish(
                         f"{g.env.mqtt_topic}/status/bridge/tcp_server/running",
                         b"ON",
                     )
@@ -1079,55 +1374,61 @@ class NCyncServer:
             except Exception as e:
                 logger.exception(" Server exception", extra={"error": str(e)})
 
+    async def _close_all_devices(self) -> None:
+        """Close all TCP device connections."""
+        device: CyncTCPDevice
+        devices = [d for d in self.tcp_devices.values() if d is not None]
+
+        if devices:
+            logger.info(
+                " Shutting down server, closing device connections",
+                extra={"device_count": len(devices)},
+            )
+            for device in devices:
+                try:
+                    await device.close()
+                    logger.debug(
+                        " Device connection closed",
+                        extra={"address": device.address if device.address else "unknown"},
+                    )
+                except asyncio.CancelledError as ce:
+                    logger.debug("Device close cancelled", extra={"reason": str(ce)})
+                    raise
+                except Exception as e:
+                    logger.exception(
+                        " Error closing device connection",
+                        extra={"address": device.address, "error": str(e)},
+                    )
+        else:
+            logger.info("No devices connected during shutdown")
+
+    async def _close_tcp_server(self) -> None:
+        """Close TCP server and publish status."""
+        if not self._server or not self._server.is_serving():
+            logger.debug("Server not running")
+            return
+
+        logger.debug("Closing TCP server...")
+        self._server.close()
+        await self._server.wait_closed()
+
+        mqtt_client = _get_mqtt_client()
+        if mqtt_client:
+            _ = await mqtt_client.publish(
+                f"{g.env.mqtt_topic}/status/bridge/tcp_server/running",
+                b"OFF",
+            )
+        logger.debug(" TCP server closed")
+
     async def stop(self):
+        """Stop TCP server and cancel background tasks."""
         try:
             self.shutting_down = True
-            device: CyncTCPDevice
-            devices = [d for d in self.tcp_devices.values() if d is not None]
-
-            if devices:
-                logger.info(
-                    " Shutting down server, closing device connections",
-                    extra={"device_count": len(devices)},
-                )
-                for device in devices:
-                    try:
-                        await device.close()
-                        logger.debug(
-                            " Device connection closed",
-                            extra={"address": device.address if device.address else "unknown"},
-                        )
-                    except asyncio.CancelledError as ce:
-                        logger.debug("Device close cancelled", extra={"reason": str(ce)})
-                        # propagate the cancellation
-                        raise
-                    except Exception as e:
-                        logger.exception(
-                            " Error closing device connection",
-                            extra={"address": device.address, "error": str(e)},
-                        )
-            else:
-                logger.info("No devices connected during shutdown")
-
-            if self._server:
-                if self._server.is_serving():
-                    logger.debug("Closing TCP server...")
-                    self._server.close()
-                    await self._server.wait_closed()
-
-                    # Publish server stopped status
-                    if g.mqtt_client:
-                        await g.mqtt_client.publish(
-                            f"{g.env.mqtt_topic}/status/bridge/tcp_server/running",
-                            b"OFF",
-                        )
-                    logger.debug(" TCP server closed")
-                else:
-                    logger.debug("Server not running")
+            await self._close_all_devices()
+            await self._close_tcp_server()
 
         except asyncio.CancelledError as ce:
             logger.debug("Server stop cancelled", extra={"reason": str(ce)})
-            # propagate the cancellation
             raise
         except Exception as e:
             logger.exception(" Error during server shutdown", extra={"error": str(e)})
@@ -1136,17 +1437,20 @@ class NCyncServer:
         finally:
             if self.start_task and not self.start_task.done():
                 logger.debug("Cancelling start task")
-                self.start_task.cancel()
+                _ = self.start_task.cancel()
             if self.refresh_task and not self.refresh_task.done():
                 logger.debug("Cancelling refresh task")
-                self.refresh_task.cancel()
+                _ = self.refresh_task.cancel()
             if self.pool_monitor_task and not self.pool_monitor_task.done():
                 logger.debug("Cancelling pool monitor task")
-                self.pool_monitor_task.cancel()
+                _ = self.pool_monitor_task.cancel()
 
     async def _register_new_connection(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter):
-        ensure_correlation_id()
-        peername = writer.get_extra_info("peername")
+        _ = ensure_correlation_id()
+        peername = cast("tuple[str, int] | None", writer.get_extra_info("peername"))
+        if peername is None:
+            logger.warning("Could not get peername from writer")
+            return
         client_ip: str = peername[0]
         client_port: int = peername[1]
         client_addr: str = f"{client_ip}:{client_port}"  # Use IP:port to allow multiple connections from same IP
@@ -1156,7 +1460,7 @@ class NCyncServer:
         else:
             self.tcp_conn_attempts[client_addr] = 1
 
-        connection_attempt = self.tcp_conn_attempts[client_addr]
+        connection_attempt: int = self.tcp_conn_attempts[client_addr]
 
         # Branch based on relay mode
         if self.cloud_relay_enabled:

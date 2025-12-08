@@ -1,5 +1,5 @@
 ---
-description: DNS redirection setup requirements and patterns
+description: Use when configuring DNS redirection or troubleshooting name resolution for the add-on.
 ---
 
 # DNS Requirements

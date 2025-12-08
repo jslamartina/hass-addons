@@ -1,15 +1,11 @@
 ---
-description: Web search using Brave Search MCP server
-alwaysApply: true
+description: Use when you need details on using Brave Search MCP tools for web, news, image, or video search.
+alwaysApply: false
 ---
 
 # Web Search - Use Brave Search MCP
 
-## Critical: Built-in web_search is Broken
-
-**DON'T use the built-in `web_search` tool** - it doesn't work properly in this environment.
-
-**ALWAYS use Brave Search MCP tools instead** for any web searches.
+## Critical: Use this when the built-in web_search does not appear to be working properly. This is a **backup** tool
 
 ## Available Brave Search Tools
 

@@ -112,22 +112,46 @@ setup_python_environment() {
     pytest-xdist \
     pre-commit \
     uv \
+    basedpyright \
     > /dev/null
 
-  if [ -d "$REPO_ROOT/cync-controller" ] && [ -f "$REPO_ROOT/cync-controller/pyproject.toml" ]; then
-    log_info "Installing cync-controller in editable mode with dev/test extras"
-    python -m pip install -e "$REPO_ROOT/cync-controller[dev,test]" > /dev/null
-  else
-    log_warn "cync-controller project not found; skipping editable install"
-  fi
+  # Install dependencies from all Python projects
+  # All installations are required - script will fail immediately on any error
 
-  if [ -d "$REPO_ROOT/scripts" ] && [ -f "$REPO_ROOT/scripts/pyproject.toml" ]; then
-    log_info "Installing scripts package dependencies"
-    python -m pip install -e "$REPO_ROOT/scripts" > /dev/null
-  fi
+  # 1. Repository package + dev/test dependencies (Poetry)
+  log_info "Installing repository package and dev/test dependencies (Poetry)"
+  pushd "$REPO_ROOT" > /dev/null
+  export POETRY_VIRTUALENVS_CREATE=false
+  poetry install --with dev,test --no-interaction > /dev/null
+  unset POETRY_VIRTUALENVS_CREATE
+  popd > /dev/null
+  log_info "  ✓ Repository package installed successfully"
+
+  # 2. scripts (setuptools)
+  log_info "Installing scripts package dependencies"
+  python -m pip install -e "$REPO_ROOT/scripts" > /dev/null
+  log_info "  ✓ scripts installed successfully"
+
+  # 3. python-rebuild-tcp-comm (Poetry)
+  log_info "Installing python-rebuild-tcp-comm dependencies (Poetry project)"
+  pushd "$REPO_ROOT/python-rebuild-tcp-comm" > /dev/null
+  # Configure Poetry to not create its own venv and use the current Python
+  export POETRY_VENV_PATH="$VENV_DIR"
+  poetry config virtualenvs.create false --local
+  # Install dependencies without installing the package itself (--no-root)
+  # This installs all dependencies from pyproject.toml to the shared venv
+  poetry install > /dev/null
+  unset POETRY_VENV_PATH
+  popd > /dev/null
+  log_info "  ✓ Poetry dependencies installed successfully"
+
+  # 4. tools/brave-ai-grounding-cli (setuptools)
+  log_info "Installing brave-ai-grounding-cli dependencies"
+  python -m pip install -e "$REPO_ROOT/tools/brave-ai-grounding-cli" > /dev/null
+  log_info "  ✓ brave-ai-grounding-cli installed successfully"
 
   deactivate
-  log_success "Python environment ready"
+  log_success "Python environment ready with all project dependencies"
 }
 
 install_npm_dependencies() {

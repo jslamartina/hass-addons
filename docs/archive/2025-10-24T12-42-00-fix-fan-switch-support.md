@@ -110,7 +110,7 @@ After changes:
 
 ### Final Verification
 
-1. ✅ Deleted all old MQTT entities using `scripts/delete-mqtt-safe.py`
+1. ✅ Deleted all old MQTT entities using `scripts/delete_mqtt_safe.py`
 2. ✅ Restarted Home Assistant Core
 3. ✅ Triggered fresh discovery
 4. ✅ Verified only ONE Fan entity created: `fan.master_bedroom_fan_switch`

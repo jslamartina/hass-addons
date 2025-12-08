@@ -13,6 +13,51 @@ REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 CREDENTIALS_FILE="${CREDENTIALS_FILE:-$REPO_ROOT/hass-credentials.env}"
 CYNC_SLUG="local_cync-controller"
 
+# Sync canonical source into addon build context
+SRC_SOURCE="${REPO_ROOT}/src/cync_controller/"
+ADDON_SOURCE="${SCRIPT_DIR}/src/cync_controller/"
+SCRIPTS_SOURCE="${REPO_ROOT}/scripts/"
+SCRIPTS_TARGET="${SCRIPT_DIR}/scripts/"
+TOOLS_SOURCE="${REPO_ROOT}/tools/brave-ai-grounding-cli/"
+TOOLS_TARGET="${SCRIPT_DIR}/tools/brave-ai-grounding-cli/"
+PYPROJECT_SOURCE="${REPO_ROOT}/pyproject.toml"
+PYPROJECT_TARGET="${SCRIPT_DIR}/pyproject.toml"
+
+echo "Syncing source from ${SRC_SOURCE} to ${ADDON_SOURCE}..."
+if [ -d "$SRC_SOURCE" ]; then
+  mkdir -p "$ADDON_SOURCE"
+  rsync -a --delete "$SRC_SOURCE" "$ADDON_SOURCE"
+  echo "✓ Source synced into addon context"
+else
+  echo "⚠️  Source path not found at ${SRC_SOURCE}; addon build will fail without it"
+fi
+
+echo "Syncing scripts into addon context..."
+if [ -d "$SCRIPTS_SOURCE" ]; then
+  mkdir -p "$SCRIPTS_TARGET"
+  rsync -a --delete "$SCRIPTS_SOURCE" "$SCRIPTS_TARGET"
+  echo "✓ Scripts synced into addon context"
+else
+  echo "⚠️  Scripts path not found at ${SCRIPTS_SOURCE}; packaging may fail"
+fi
+
+echo "Syncing brave-ai-grounding-cli into addon context..."
+if [ -d "$TOOLS_SOURCE" ]; then
+  mkdir -p "$TOOLS_TARGET"
+  rsync -a --delete "$TOOLS_SOURCE" "$TOOLS_TARGET"
+  echo "✓ Tools synced into addon context"
+else
+  echo "⚠️  Tools path not found at ${TOOLS_SOURCE}; packaging may fail"
+fi
+
+echo "Copying pyproject.toml into addon context..."
+if [ -f "$PYPROJECT_SOURCE" ]; then
+  cp "$PYPROJECT_SOURCE" "$PYPROJECT_TARGET"
+  echo "✓ pyproject.toml copied"
+else
+  echo "⚠️  pyproject.toml not found at ${PYPROJECT_SOURCE}; addon build will fail"
+fi
+
 # Run Linting, Formatting, and Unit Tests
 npm run lint:python:fix && npm run format:python
 npm run test:unit

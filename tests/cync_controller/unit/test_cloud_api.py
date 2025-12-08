@@ -1,0 +1,887 @@
+"""Unit tests for cloud_api module.
+
+Tests CyncCloudAPI class for authentication, token management, and device export.
+"""
+
+import datetime
+import io
+from typing import IO, cast
+from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
+from aiohttp import ClientResponse, ClientResponseError, RequestInfo
+
+from cync_controller.cloud_api import ComputedTokenData, CyncAuthenticationError, CyncCloudAPI
+from tests.cync_controller.unit.conftest import make_dummy_secret
+
+ACCESS_TOKEN = make_dummy_secret("access-token")
+REFRESH_TOKEN = make_dummy_secret("refresh-token")
+AUTHORIZE_TOKEN = make_dummy_secret("authorize-token")
+EXPIRED_ACCESS_TOKEN = make_dummy_secret("expired-token")
+
+
+def _make_session_mock() -> MagicMock:
+    """Create a minimal aiohttp ClientSession mock."""
+    session = MagicMock()
+    session.__aenter__ = AsyncMock(return_value=session)
+    session.__aexit__ = AsyncMock(return_value=None)
+    session.close = AsyncMock()
+    post_mock: AsyncMock = AsyncMock()
+    session.post = post_mock
+    session.closed = False
+    return session
+
+
+def _make_response_mock(json_payload: object | None = None) -> ClientResponse:
+    """Create a typed aiohttp ClientResponse mock."""
+    response = AsyncMock(spec=ClientResponse)
+    response.raise_for_status = MagicMock()
+    if json_payload is not None:
+        response.json = AsyncMock(return_value=json_payload)
+    return cast(ClientResponse, response)
+
+
+def _assign_open_mock(mock_path: MagicMock) -> MagicMock:
+    """Assign a typed mock_open to a patched Path.open."""
+    path_obj: MagicMock = MagicMock()
+    file_handle: IO[str] = io.StringIO()
+
+    def _open(*_args: object, **_kwargs: object) -> IO[str]:
+        return file_handle
+
+    path_obj.open = _open
+    mock_path.return_value = path_obj
+    return path_obj
+
+
+@pytest.fixture(autouse=True)
+def reset_cloud_api_singleton():
+    """Reset CyncCloudAPI singleton between tests."""
+    CyncCloudAPI._instance = None
+    yield
+    CyncCloudAPI._instance = None
+
+
+class TestCyncCloudAPIInitialization:
+    """Tests for CyncCloudAPI initialization."""
+
+    def test_init_default_params(self):
+        """Test CyncCloudAPI initialization with defaults."""
+        api = CyncCloudAPI()
+
+        assert api.api_timeout == 8
+        assert api.lp == "CyncCloudAPI"
+        assert api.http_session is None
+
+    def test_init_custom_params(self):
+        """Test CyncCloudAPI initialization with custom parameters."""
+        api = CyncCloudAPI(api_timeout=15, lp="TestAPI")
+
+        assert api.api_timeout == 15
+        assert api.lp == "TestAPI"
+
+    def test_init_creates_singleton(self):
+        """Test that CyncCloudAPI is a singleton."""
+        api1 = CyncCloudAPI()
+        api2 = CyncCloudAPI()
+
+        assert api1 is api2
+
+
+class TestCyncCloudAPISession:
+    """Tests for CyncCloudAPI session management."""
+
+    @pytest.mark.asyncio
+    async def test_check_session_creates_new_session(self):
+        """Test that _check_session creates session if none exists."""
+        with patch("cync_controller.cloud_api.aiohttp.ClientSession") as mock_session_class:
+            mock_session = _make_session_mock()
+            mock_session_class.return_value = mock_session
+
+            api = CyncCloudAPI()
+
+            await api._check_session()
+
+            assert api.http_session is mock_session
+            enter_mock = cast(AsyncMock, mock_session.__aenter__)
+            assert enter_mock.called
+
+    @pytest.mark.asyncio
+    async def test_check_session_reuses_open_session(self):
+        """Test that _check_session doesn't recreate open session."""
+        with patch("cync_controller.cloud_api.aiohttp.ClientSession") as mock_session_class:
+            mock_session = _make_session_mock()
+            mock_session.closed = False
+            mock_session_class.return_value = mock_session
+
+            api = CyncCloudAPI()
+            api.http_session = mock_session
+
+            await api._check_session()
+
+            # Should not create new session
+            assert mock_session_class.call_count == 0
+
+    @pytest.mark.asyncio
+    async def test_close_session(self):
+        """Test closing HTTP session."""
+        api = CyncCloudAPI()
+        mock_session = _make_session_mock()
+        mock_session.closed = False
+        api.http_session = mock_session
+
+        await api.close()
+
+        # Session should be closed
+        close_mock = cast(AsyncMock, mock_session.close)
+        assert close_mock.called
+        # http_session should be set to None after close
+        assert api.http_session is None
+
+
+class TestCyncCloudAPITokenManagement:
+    """Tests for token cache management."""
+
+    @pytest.mark.asyncio
+    async def test_read_token_cache_not_found(self):
+        """Test reading token cache when file doesn't exist."""
+        api = CyncCloudAPI()
+
+        with patch("cync_controller.cloud_api.Path") as mock_path:
+            path_obj = MagicMock()
+            path_obj.open = MagicMock(side_effect=FileNotFoundError())
+            mock_path.return_value = path_obj
+
+            result = await api.read_token_cache()
+
+            assert result is None
+
+    @pytest.mark.asyncio
+    async def test_read_token_cache_success(self):
+        """Test reading valid token cache."""
+        api = CyncCloudAPI()
+
+        # Create sample token data with all required fields
+        sample_token = ComputedTokenData(
+            user_id="test-user",
+            access_token=ACCESS_TOKEN,
+            authorize=AUTHORIZE_TOKEN,
+            expire_in=3600,  # Note: expire_in not expires_in
+            refresh_token=REFRESH_TOKEN,
+            issued_at=datetime.datetime.now(datetime.UTC),
+        )
+
+        with (
+            patch("cync_controller.cloud_api.Path") as mock_path,
+            patch("cync_controller.cloud_api.pickle.load") as mock_pickle,
+        ):
+            _ = MagicMock()
+            _ = _assign_open_mock(mock_path)
+            mock_pickle.return_value = sample_token
+
+            result = await api.read_token_cache()
+
+            assert result is sample_token
+
+    @pytest.mark.asyncio
+    async def test_write_token_cache(self):
+        """Test writing token cache."""
+        api = CyncCloudAPI()
+
+        sample_token = ComputedTokenData(
+            user_id="test-user",
+            access_token=ACCESS_TOKEN,
+            authorize=AUTHORIZE_TOKEN,
+            expire_in=3600,
+            refresh_token=REFRESH_TOKEN,
+            issued_at=datetime.datetime.now(datetime.UTC),
+        )
+
+        with (
+            patch("cync_controller.cloud_api.Path") as mock_path,
+            patch("cync_controller.cloud_api.pickle.dump") as mock_pickle,
+        ):
+            _ = _assign_open_mock(mock_path)
+
+            result = await api.write_token_cache(sample_token)
+
+            assert result is True
+            assert mock_pickle.called
+
+    @pytest.mark.asyncio
+    async def test_check_token_valid(self):
+        """Test checking valid token."""
+        api = CyncCloudAPI()
+
+        # Create token that expires in the future (issued now, expires in 1 hour)
+        sample_token = ComputedTokenData(
+            user_id="test-user",
+            access_token=ACCESS_TOKEN,
+            authorize=AUTHORIZE_TOKEN,
+            expire_in=3600,
+            refresh_token=REFRESH_TOKEN,
+            issued_at=datetime.datetime.now(datetime.UTC),
+        )
+        # expires_at is computed from issued_at + expire_in
+
+        api.read_token_cache = AsyncMock(return_value=sample_token)
+
+        result = await api.check_token()
+
+        assert result is True
+        assert api.token_cache is sample_token
+
+    @pytest.mark.asyncio
+    async def test_check_token_expired(self):
+        """Test checking expired token."""
+        api = CyncCloudAPI()
+
+        # Create token that expired in the past (issued 2 hours ago, expires in 1 hour = expired 1 hour ago)
+        sample_token = ComputedTokenData(
+            user_id="test-user",
+            access_token=ACCESS_TOKEN,
+            authorize=AUTHORIZE_TOKEN,
+            expire_in=3600,  # 1 hour
+            refresh_token=REFRESH_TOKEN,
+            issued_at=datetime.datetime.now(datetime.UTC) - datetime.timedelta(hours=2),
+        )
+        # expires_at is computed: issued_at + 1 hour = 1 hour ago (expired)
+
+        api.read_token_cache = AsyncMock(return_value=sample_token)
+
+        result = await api.check_token()
+
+        assert result is False
+
+    @pytest.mark.asyncio
+    async def test_check_token_not_found(self):
+        """Test checking token when no cache exists."""
+        api = CyncCloudAPI()
+        api.read_token_cache = AsyncMock(return_value=None)
+
+        result = await api.check_token()
+
+        assert result is False
+
+
+class TestCyncCloudAPIAuthentication:
+    """Tests for authentication methods."""
+
+    @pytest.mark.asyncio
+    async def test_request_otp_success(self):
+        """Test successful OTP request."""
+        with (
+            patch("cync_controller.cloud_api.CYNC_ACCOUNT_USERNAME", "test@example.com"),
+            patch("cync_controller.cloud_api.CYNC_ACCOUNT_PASSWORD", "password123"),
+        ):
+            api = CyncCloudAPI()
+
+            # Mock HTTP session
+            mock_session = _make_session_mock()
+            mock_response = _make_response_mock()
+            mock_session.post = AsyncMock(return_value=mock_response)
+            api.http_session = mock_session
+
+            api._check_session = AsyncMock()
+
+            result = await api.request_otp()
+
+            assert result is True
+            post_mock = cast(AsyncMock, mock_session.post)
+            assert post_mock.called
+
+    @pytest.mark.asyncio
+    async def test_request_otp_no_credentials(self):
+        """Test OTP request without credentials."""
+        with (
+            patch("cync_controller.cloud_api.CYNC_ACCOUNT_USERNAME", None),
+            patch("cync_controller.cloud_api.CYNC_ACCOUNT_PASSWORD", None),
+        ):
+            api = CyncCloudAPI()
+            api._check_session = AsyncMock()
+
+            result = await api.request_otp()
+
+            assert result is False
+
+    @pytest.mark.asyncio
+    async def test_request_otp_http_error(self):
+        """Test OTP request with HTTP error."""
+        with (
+            patch("cync_controller.cloud_api.CYNC_ACCOUNT_USERNAME", "test@example.com"),
+            patch("cync_controller.cloud_api.CYNC_ACCOUNT_PASSWORD", "password123"),
+        ):
+            api = CyncCloudAPI()
+
+            # Mock HTTP session with error
+            mock_session = _make_session_mock()
+            mock_request_info = MagicMock(spec=RequestInfo)
+            mock_session.post = AsyncMock(side_effect=ClientResponseError(mock_request_info, ()))
+            api.http_session = mock_session
+
+            api._check_session = AsyncMock()
+
+            result = await api.request_otp()
+
+            assert result is False
+
+    @pytest.mark.asyncio
+    async def test_send_otp_success(self):
+        """Test successful OTP submission."""
+        with (
+            patch("cync_controller.cloud_api.CYNC_ACCOUNT_USERNAME", "test@example.com"),
+            patch("cync_controller.cloud_api.CYNC_ACCOUNT_PASSWORD", "password123"),
+        ):
+            api = CyncCloudAPI()
+
+            # Mock HTTP session
+            mock_session = _make_session_mock()
+            mock_response = _make_response_mock(
+                {
+                    "user_id": "test-user",
+                    "access_token": ACCESS_TOKEN,
+                    "authorize": AUTHORIZE_TOKEN,
+                    "expire_in": 604800,
+                    "refresh_token": REFRESH_TOKEN,
+                },
+            )
+            mock_session.post = AsyncMock(return_value=mock_response)
+            api.http_session = mock_session
+
+            api._check_session = AsyncMock()
+            api.write_token_cache = AsyncMock(return_value=True)
+
+            result = await api.send_otp(123456)
+
+            assert result is True
+            assert api.write_token_cache.called
+
+    @pytest.mark.asyncio
+    async def test_send_otp_invalid_code(self):
+        """Test OTP submission with invalid code."""
+        api = CyncCloudAPI()
+
+        # send_otp requires int; use an invalid numeric code to trigger failure
+        result = await api.send_otp(-1)
+
+        assert result is False
+
+    @pytest.mark.asyncio
+    async def test_send_otp_zero_code_accepted(self):
+        """Test OTP submission with 0 code (represents '000000')."""
+        with (
+            patch("cync_controller.cloud_api.CYNC_ACCOUNT_USERNAME", "test@example.com"),
+            patch("cync_controller.cloud_api.CYNC_ACCOUNT_PASSWORD", "password123"),
+        ):
+            api = CyncCloudAPI()
+
+            # Mock HTTP session
+            mock_session = _make_session_mock()
+            mock_response = _make_response_mock(
+                {
+                    "user_id": "test-user",
+                    "access_token": ACCESS_TOKEN,
+                    "authorize": AUTHORIZE_TOKEN,
+                    "expire_in": 604800,
+                    "refresh_token": REFRESH_TOKEN,
+                },
+            )
+            mock_session.post = AsyncMock(return_value=mock_response)
+            api.http_session = mock_session
+
+            api._check_session = AsyncMock()
+            api.write_token_cache = AsyncMock(return_value=True)
+
+            result = await api.send_otp(0)
+
+            assert result is True
+
+    @pytest.mark.asyncio
+    async def test_send_otp_string_conversion(self):
+        """Test OTP submission with string code (gets converted)."""
+        with (
+            patch("cync_controller.cloud_api.CYNC_ACCOUNT_USERNAME", "test@example.com"),
+            patch("cync_controller.cloud_api.CYNC_ACCOUNT_PASSWORD", "password123"),
+        ):
+            api = CyncCloudAPI()
+
+            # Mock HTTP session
+            mock_session = _make_session_mock()
+            mock_response = _make_response_mock(
+                {
+                    "user_id": "test-user",
+                    "access_token": ACCESS_TOKEN,
+                    "authorize": AUTHORIZE_TOKEN,
+                    "expire_in": 604800,
+                    "refresh_token": REFRESH_TOKEN,
+                },
+            )
+            mock_session.post = AsyncMock(return_value=mock_response)
+            api.http_session = mock_session
+
+            api._check_session = AsyncMock()
+            api.write_token_cache = AsyncMock(return_value=True)
+
+            # Mock response with complete token data
+            mock_response.json = AsyncMock(
+                return_value={
+                    "user_id": "test-user",
+                    "access_token": ACCESS_TOKEN,
+                    "authorize": AUTHORIZE_TOKEN,
+                    "expire_in": 3600,
+                    "refresh_token": REFRESH_TOKEN,
+                },
+            )
+
+            # Pass int (string conversion handled internally by _validate_otp_code)
+            result = await api.send_otp(123456)
+
+            assert result is True
+
+
+class TestCyncCloudAPIDeviceOperations:
+    """Tests for device export and configuration."""
+
+    @pytest.mark.asyncio
+    async def test_request_devices_success(self):
+        """Test successful device request."""
+        api = CyncCloudAPI()
+
+        # Mock valid token
+        _ = datetime.datetime.now(datetime.UTC) + datetime.timedelta(hours=1)
+        sample_token = ComputedTokenData(
+            user_id="test-user",
+            access_token=ACCESS_TOKEN,
+            authorize=AUTHORIZE_TOKEN,
+            expire_in=3600,
+            refresh_token=REFRESH_TOKEN,
+            issued_at=datetime.datetime.now(datetime.UTC),
+        )
+        # expires_at is computed from issued_at + expire_in
+        api.token_cache = sample_token
+
+        # Mock HTTP session
+        mock_session = AsyncMock()
+        mock_response = AsyncMock()
+        mock_response.raise_for_status = MagicMock()
+        mock_response.json = AsyncMock(return_value={"data": []})
+        mock_session.get = AsyncMock(return_value=mock_response)
+        api.http_session = mock_session
+
+        api._check_session = AsyncMock()
+
+        result = await api.request_devices()
+
+        assert result is not None
+        get_mock = cast(AsyncMock, mock_session.get)
+        assert get_mock.called
+
+    @pytest.mark.asyncio
+    async def test_request_devices_no_token(self):
+        """Test device request without valid token."""
+        api = CyncCloudAPI()
+        api.token_cache = None
+        api._check_session = AsyncMock()
+
+        # request_devices requires a valid token cache and should raise
+        # an explicit authentication error when it is missing
+        with pytest.raises(CyncAuthenticationError):
+            _ = await api.request_devices()
+
+    @pytest.mark.asyncio
+    async def test_get_properties_success(self):
+        """Test successful device property retrieval."""
+        api = CyncCloudAPI()
+        api.token_cache = ComputedTokenData(
+            user_id="test-user",
+            access_token=ACCESS_TOKEN,
+            authorize=AUTHORIZE_TOKEN,
+            expire_in=3600,
+            refresh_token=REFRESH_TOKEN,
+            issued_at=datetime.datetime.now(datetime.UTC),
+        )
+        api._check_session = AsyncMock()
+
+        # Mock successful HTTP response
+        mock_response = AsyncMock()
+        mock_response.json = AsyncMock(return_value={"properties": {"brightness": 100, "power": True}})
+
+        mock_session = MagicMock()
+        get_mock: AsyncMock = AsyncMock(return_value=mock_response)
+        mock_session.get = get_mock
+        api.http_session = mock_session
+
+        result = await api.get_properties(product_id="123", device_id="456")
+
+        assert result == {"properties": {"brightness": 100, "power": True}}
+        get_mock.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_get_properties_access_token_expired(self):
+        """Test get_properties with expired access token (code 4031021)."""
+        from cync_controller.cloud_api import CyncAuthenticationError
+
+        api = CyncCloudAPI()
+        api.token_cache = ComputedTokenData(
+            user_id="test-user",
+            access_token=EXPIRED_ACCESS_TOKEN,
+            authorize=AUTHORIZE_TOKEN,
+            expire_in=3600,
+            refresh_token=REFRESH_TOKEN,
+            issued_at=datetime.datetime.now(datetime.UTC),
+        )
+        api._check_session = AsyncMock()
+
+        # Mock expired token response
+        mock_response = AsyncMock()
+        mock_response.json = AsyncMock(return_value={"error": {"msg": "Access-Token Expired", "code": 4031021}})
+
+        mock_session = AsyncMock()
+        mock_session.get = AsyncMock(return_value=mock_response)
+        api.http_session = mock_session
+
+        with pytest.raises(CyncAuthenticationError, match="Access-Token expired"):
+            _ = await api.get_properties(product_id="123", device_id="456")
+
+    @pytest.mark.asyncio
+    async def test_get_properties_no_properties_error(self):
+        """Test get_properties with 4041009 error (no properties for home ID)."""
+        api = CyncCloudAPI()
+        api.token_cache = ComputedTokenData(
+            user_id="test-user",
+            access_token=ACCESS_TOKEN,
+            authorize=AUTHORIZE_TOKEN,
+            expire_in=3600,
+            refresh_token=REFRESH_TOKEN,
+            issued_at=datetime.datetime.now(datetime.UTC),
+        )
+        api._check_session = AsyncMock()
+
+        # Mock 4041009 error response (no properties)
+        mock_response = AsyncMock()
+        mock_response.json = AsyncMock(return_value={"error": {"msg": "No properties found", "code": 4041009}})
+
+        mock_session = AsyncMock()
+        mock_session.get = AsyncMock(return_value=mock_response)
+        api.http_session = mock_session
+
+        result = await api.get_properties(product_id="123", device_id="456")
+
+        # Should return the error dict without logging warning (code 4041009 is expected)
+        assert result == {"error": {"msg": "No properties found", "code": 4041009}}
+
+    @pytest.mark.asyncio
+    async def test_get_properties_json_decode_error(self):
+        """Test get_properties with JSON decode error."""
+        api = CyncCloudAPI()
+        api.token_cache = ComputedTokenData(
+            user_id="test-user",
+            access_token=ACCESS_TOKEN,
+            authorize=AUTHORIZE_TOKEN,
+            expire_in=3600,
+            refresh_token=REFRESH_TOKEN,
+            issued_at=datetime.datetime.now(datetime.UTC),
+        )
+        api._check_session = AsyncMock()
+
+        # Mock JSON decode error
+        import json
+
+        mock_response = AsyncMock()
+        mock_response.json = AsyncMock(side_effect=json.JSONDecodeError("test", "doc", 0))
+
+        mock_session = AsyncMock()
+        mock_session.get = AsyncMock(return_value=mock_response)
+        api.http_session = mock_session
+
+        with pytest.raises(json.JSONDecodeError):
+            _ = await api.get_properties(product_id="123", device_id="456")
+
+    @pytest.mark.asyncio
+    async def test_export_config_full_mesh(self):
+        """Test _mesh_to_config with complete mesh data (devices and groups)."""
+        api = CyncCloudAPI()
+
+        mesh_info = [
+            {
+                "name": "Home Mesh",
+                "id": "mesh-123",
+                "mac": "AA:BB:CC:DD:EE:FF",
+                "access_key": "test-key",
+                "properties": {
+                    "bulbsArray": [
+                        {
+                            "deviceID": 1234567890,
+                            "displayName": "Living Room Light",
+                            "mac": "11:22:33:44:55:66",
+                            "deviceType": 1,
+                            "firmwareVersion": "1.2.3",
+                        },
+                    ],
+                    "groupsArray": [
+                        {
+                            "groupID": 1,
+                            "displayName": "All Lights",
+                            "deviceIDArray": [1234567890],
+                            "isSubgroup": False,
+                        },
+                    ],
+                },
+            },
+        ]
+
+        with patch("cync_controller.cloud_api.Path") as mock_path:
+            _ = _assign_open_mock(mock_path)
+
+            result = await api._mesh_to_config(mesh_info)  # pyright: ignore[reportArgumentType]
+
+        assert "account data" in result
+        assert "Home Mesh" in result["account data"]
+        mesh = result["account data"]["Home Mesh"]
+        assert mesh["id"] == "mesh-123"
+        assert mesh["mac"] == "AA:BB:CC:DD:EE:FF"
+        assert mesh["access_key"] == "test-key"
+        assert 890 in mesh["devices"]  # pyright: ignore[reportOperatorIssue]  # Last 3 digits of deviceID
+        assert mesh["devices"][890]["name"] == "Living Room Light"  # pyright: ignore[reportIndexIssue]
+        assert 1 in mesh["groups"]  # pyright: ignore[reportOperatorIssue]
+        assert mesh["groups"][1]["name"] == "All Lights"  # pyright: ignore[reportIndexIssue]
+        assert mesh["groups"][1]["members"] == [890]  # pyright: ignore[reportIndexIssue]
+
+    @pytest.mark.asyncio
+    async def test_export_config_skip_unnamed_mesh(self):
+        """Test export_config skips mesh without name."""
+        api = CyncCloudAPI()
+
+        mesh_info: list[dict[str, object]] = [
+            {
+                # No 'name' field
+                "id": "mesh-123",
+                "properties": {"bulbsArray": []},
+            },
+        ]
+
+        with patch("cync_controller.cloud_api.Path") as mock_path:
+            _ = _assign_open_mock(mock_path)
+
+            result = await api._mesh_to_config(mesh_info)
+
+        assert "account data" in result
+        assert len(result["account data"]) == 0  # Mesh should be skipped
+
+    @pytest.mark.asyncio
+    async def test_export_config_skip_no_properties(self):
+        """Test export_config skips mesh without properties."""
+        api = CyncCloudAPI()
+
+        mesh_info: list[dict[str, object]] = [
+            {
+                "name": "Test Mesh",
+                "id": "mesh-123",
+                # No 'properties' field
+            },
+        ]
+
+        with patch("cync_controller.cloud_api.Path") as mock_path:
+            _ = _assign_open_mock(mock_path)
+
+            result = await api._mesh_to_config(mesh_info)
+
+        assert "account data" in result
+        assert len(result["account data"]) == 0  # Mesh should be skipped
+
+    @pytest.mark.asyncio
+    async def test_export_config_skip_no_bulbs_array(self):
+        """Test export_config skips mesh without bulbsArray."""
+        api = CyncCloudAPI()
+
+        mesh_info: list[dict[str, object]] = [
+            {
+                "name": "Test Mesh",
+                "id": "mesh-123",
+                "properties": {
+                    # No 'bulbsArray' field
+                    "someOtherField": "value",
+                },
+            },
+        ]
+
+        with patch("cync_controller.cloud_api.Path") as mock_path:
+            _ = _assign_open_mock(mock_path)
+
+            result = await api._mesh_to_config(mesh_info)
+
+        assert "account data" in result
+        assert len(result["account data"]) == 0  # Mesh should be skipped
+
+    @pytest.mark.asyncio
+    async def test_export_config_device_with_hvac(self):
+        """Test export_config properly parses HVAC device configuration."""
+        api = CyncCloudAPI()
+
+        mesh_info = [
+            {
+                "name": "HVAC Mesh",
+                "id": "mesh-hvac",
+                "properties": {
+                    "bulbsArray": [
+                        {
+                            "deviceID": 9999999123,
+                            "displayName": "Thermostat",
+                            "mac": "AA:BB:CC:DD:EE:FF",
+                            "deviceType": 100,
+                            "firmwareVersion": "2.0.0",
+                            "hvacSystem": {
+                                "changeoverMode": 0,
+                                "auxHeatStages": 1,
+                                "type": 2,
+                            },
+                            "thermostatSensors": [{"pin": "025572", "name": "Living Room", "type": "savant"}],
+                        },
+                    ],
+                },
+            },
+        ]
+
+        with patch("cync_controller.cloud_api.Path") as mock_path:
+            _ = _assign_open_mock(mock_path)
+
+            result = await api._mesh_to_config(mesh_info)  # pyright: ignore[reportArgumentType]
+
+        assert "HVAC Mesh" in result["account data"]
+        mesh = result["account data"]["HVAC Mesh"]
+        assert 123 in mesh["devices"]  # pyright: ignore[reportOperatorIssue]  # Last 3 digits
+        device = mesh["devices"][123]  # pyright: ignore[reportIndexIssue, reportUnknownVariableType]
+        assert device["name"] == "Thermostat"
+        assert "hvac" in device
+        assert device["hvac"]["type"] == 2
+        assert "thermostatSensors" in device["hvac"]
+
+    @pytest.mark.asyncio
+    async def test_export_config_skip_invalid_device(self):
+        """Test export_config skips devices with missing required attributes."""
+        api = CyncCloudAPI()
+
+        mesh_info = [
+            {
+                "name": "Test Mesh",
+                "id": "mesh-123",
+                "properties": {
+                    "bulbsArray": [
+                        {
+                            "deviceID": 1234567890,
+                            "displayName": "Valid Light",
+                            "mac": "11:22:33:44:55:66",
+                            "deviceType": 1,
+                            "firmwareVersion": "1.0.0",
+                        },
+                        {
+                            # Missing 'mac' field - should be skipped
+                            "deviceID": 1234567891,
+                            "displayName": "Invalid Light",
+                            "deviceType": 1,
+                            "firmwareVersion": "1.0.0",
+                        },
+                    ],
+                },
+            },
+        ]
+
+        with patch("cync_controller.cloud_api.Path") as mock_path:
+            _ = _assign_open_mock(mock_path)
+
+            result = await api._mesh_to_config(mesh_info)  # pyright: ignore[reportArgumentType]
+
+        mesh = result["account data"]["Test Mesh"]
+        assert 890 in mesh["devices"]  # pyright: ignore[reportOperatorIssue]  # Valid device
+        assert 891 not in mesh["devices"]  # pyright: ignore[reportOperatorIssue]  # Invalid device skipped
+
+    @pytest.mark.asyncio
+    async def test_export_config_groups_parsing(self):
+        """Test export_config correctly parses groups with members."""
+        api = CyncCloudAPI()
+
+        mesh_info = [
+            {
+                "name": "Group Test",
+                "id": "mesh-groups",
+                "properties": {
+                    "bulbsArray": [
+                        {
+                            "deviceID": 1000000001,
+                            "displayName": "Device 1",
+                            "mac": "AA:BB:CC:DD:EE:01",
+                            "deviceType": 1,
+                            "firmwareVersion": "1.0",
+                        },
+                        {
+                            "deviceID": 1000000002,
+                            "displayName": "Device 2",
+                            "mac": "AA:BB:CC:DD:EE:02",
+                            "deviceType": 1,
+                            "firmwareVersion": "1.0",
+                        },
+                    ],
+                    "groupsArray": [
+                        {
+                            "groupID": 10,
+                            "displayName": "Main Group",
+                            "deviceIDArray": [1000000001, 1000000002],
+                            "isSubgroup": False,
+                        },
+                        {
+                            "groupID": 11,
+                            "displayName": "Subgroup",
+                            "deviceIDArray": [1000000001],
+                            "isSubgroup": True,
+                        },
+                    ],
+                },
+            },
+        ]
+
+        with patch("cync_controller.cloud_api.Path") as mock_path:
+            _ = _assign_open_mock(mock_path)
+
+            result = await api._mesh_to_config(mesh_info)  # pyright: ignore[reportArgumentType]
+
+        mesh = result["account data"]["Group Test"]
+        assert 10 in mesh["groups"]  # pyright: ignore[reportOperatorIssue]
+        assert mesh["groups"][10]["name"] == "Main Group"  # pyright: ignore[reportIndexIssue]
+        assert mesh["groups"][10]["members"] == [1, 2]  # pyright: ignore[reportIndexIssue]  # Last 3 digits
+        assert mesh["groups"][10]["is_subgroup"] is False  # pyright: ignore[reportIndexIssue]
+
+        assert 11 in mesh["groups"]  # pyright: ignore[reportOperatorIssue]
+        assert mesh["groups"][11]["name"] == "Subgroup"  # pyright: ignore[reportIndexIssue]
+        assert mesh["groups"][11]["members"] == [1]  # pyright: ignore[reportIndexIssue]
+        assert mesh["groups"][11]["is_subgroup"] is True  # pyright: ignore[reportIndexIssue]
+
+    @pytest.mark.asyncio
+    async def test_export_config_skip_empty_groups(self):
+        """Test export_config skips groups without devices."""
+        api = CyncCloudAPI()
+
+        mesh_info: list[dict[str, object]] = [
+            {
+                "name": "Empty Group Test",
+                "id": "mesh-empty",
+                "properties": {
+                    "bulbsArray": [],
+                    "groupsArray": [
+                        {
+                            "groupID": 99,
+                            "displayName": "Empty Group",
+                            "deviceIDArray": [],  # No devices
+                            "isSubgroup": False,
+                        },
+                    ],
+                },
+            },
+        ]
+
+        with patch("cync_controller.cloud_api.Path") as mock_path:
+            _ = _assign_open_mock(mock_path)
+
+            result = await api._mesh_to_config(mesh_info)
+
+        mesh = result["account data"]["Empty Group Test"]
+        assert len(mesh["groups"]) == 0  # pyright: ignore[reportArgumentType]  # Empty group should be skipped

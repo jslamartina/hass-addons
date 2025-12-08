@@ -1,5 +1,6 @@
 ---
-alwaysApply: true
+alwaysApply: false
+description: Use when writing or updating project documentation, including length limits and living-doc rules.
 ---
 
 # Documentation Standards

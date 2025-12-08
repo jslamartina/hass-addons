@@ -97,7 +97,7 @@
 
 - DNS setup requirements and testing commands
 - Automated MQTT entity cleanup workflows
-- Helper script reference (setup-fresh-ha.sh, configure-addon.sh, delete-mqtt-safe.py)
+- Helper script reference (setup-fresh-ha.sh, configure-addon.sh, delete_mqtt_safe.py)
 - Performance tuning environment variables
 - Daily development command cheatsheet
 

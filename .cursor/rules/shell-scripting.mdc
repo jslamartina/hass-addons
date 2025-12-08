@@ -1,6 +1,6 @@
 ---
 globs: scripts/**/*.sh,cync-controller/*.sh
-description: Shell script standards and requirements
+description: Use when writing or editing shell scripts so they follow project standards.
 appliesTo:
   - "**/*.sh"
   - "scripts/**"

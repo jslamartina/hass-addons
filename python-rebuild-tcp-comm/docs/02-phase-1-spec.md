@@ -639,7 +639,7 @@ graph TD
 
     subgraph Testing["Testing Infrastructure (Phase 1d)"]
         Chaos[ChaosConfig<br/>- Latency injection<br/>- Packet loss<br/>- Reordering<br/>- Duplicates<br/>- Corruption]:::wideNode
-        Simulator[CyncDeviceSimulator<br/>Speaks real protocol<br/>ACK/response handling]:::wideNode
+        Simulator[CyncDeviceSimulator<br/>Speaks real protocol<br/>ACK/response handling]:::wißde
     end
 
     %% Send Path

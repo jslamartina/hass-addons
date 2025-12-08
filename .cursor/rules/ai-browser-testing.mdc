@@ -1,5 +1,5 @@
 ---
-description: Browser testing with Playwright patterns and workarounds
+description: Use when writing, debugging, or running Playwright-based browser tests.
 appliesTo:
   - "cync-controller/tests/e2e/**/*.ts"
   - "scripts/playwright/**"
